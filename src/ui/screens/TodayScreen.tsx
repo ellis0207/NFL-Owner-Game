@@ -1,0 +1,80 @@
+import { addDays, shortDate } from "../../engine/dates";
+import { GAMES_BY_DATE, SCHEDULE, teamLabel } from "../../engine/league";
+import { agenda, isSeasonOver } from "../../engine/season";
+import { matchup } from "../../engine/standings";
+import type { GameState } from "../../engine/types";
+import type { Screen } from "../GameShell";
+import { Score } from "../Score";
+
+const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
+
+export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  const items = agenda(game);
+  const yesterday = addDays(game.date, -1);
+  const played = (GAMES_BY_DATE[yesterday] ?? []).filter((g) => game.results[g.id]);
+  const todays = (GAMES_BY_DATE[game.date] ?? []).filter((g) => matchup(game, g));
+  const unread = game.inbox.filter((i) => !i.read).slice(0, 3);
+  const next = SCHEDULE.find((g) => g.date >= game.date && !game.results[g.id] && (() => {
+    const m = matchup(game, g);
+    return m && (m.home === game.userTeam || m.away === game.userTeam);
+  })());
+
+  return (
+    <>
+      {isSeasonOver(game) && game.champion && (
+        <section className="panel champion">
+          <span className="label">Super Bowl LXI champion</span>
+          <span className="big">{teamLabel(game.champion)}</span>
+          <p className="muted">The 2026 season is complete. The offseason (free agency, the draft and new contracts) is coming in a later update.</p>
+        </section>
+      )}
+      <section className="panel stack">
+        <h2>Today</h2>
+        <div className="agenda">
+          {items.length === 0 && <p className="muted">Nothing on the calendar.</p>}
+          {items.map((a, i) => (
+            <div key={i} className="agenda-item">
+              <span className={`kind ${a.kind}`}>{KIND_LABEL[a.kind]}</span>
+              <div><strong>{a.title}</strong>{a.detail && <div className="muted">{a.detail}</div>}</div>
+            </div>
+          ))}
+        </div>
+        {next && !items.some((a) => a.kind === "game") && (
+          <p className="muted">Next game: {shortDate(next.date)}, {(() => {
+            const m = matchup(game, next)!;
+            return m.home === game.userTeam ? `vs ${teamLabel(m.away)}` : `at ${teamLabel(m.home)}`;
+          })()}.</p>
+        )}
+      </section>
+      {unread.length > 0 && (
+        <section className="panel stack">
+          <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <h2>New in your inbox</h2>
+            <button className="btn small" onClick={() => go("Inbox")}>Open inbox</button>
+          </div>
+          {unread.map((m) => (
+            <div key={m.id}><strong>{m.title}</strong> <span className="muted">· {m.from}</span></div>
+          ))}
+        </section>
+      )}
+      {todays.length > 0 && (
+        <section className="stack">
+          <h3>Today's games</h3>
+          <div className="scores">{todays.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
+        </section>
+      )}
+      {played.length > 0 && (
+        <section className="stack">
+          <h3>Yesterday's scores</h3>
+          <div className="scores">{played.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
+        </section>
+      )}
+      {game.news.length > 0 && (
+        <section className="panel stack">
+          <h2>Around the league</h2>
+          {game.news.slice(0, 8).map((n, i) => <div key={i}><span className="muted">{shortDate(n.date)}</span> · {n.text}</div>)}
+        </section>
+      )}
+    </>
+  );
+}

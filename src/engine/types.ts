@@ -1,0 +1,183 @@
+// Shapes of the generated league data (data/league-2026) and of a saved game.
+
+export type Position =
+  | "QB" | "RB" | "FB" | "WR" | "TE" | "OT" | "OG" | "C"
+  | "EDGE" | "IDL" | "LB" | "CB" | "S" | "K" | "P" | "LS";
+
+export interface ContractSeason {
+  year: number;
+  team: string | null;
+  baseSalary: number;
+  proratedBonus: number;
+  rosterBonus: number;
+  optionBonus: number;
+  workoutBonus: number;
+  otherBonus: number;
+  guaranteedSalary: number;
+  capHit: number;
+}
+
+export interface Contract {
+  source: "overthecap" | "estimated-from-apy" | "estimated-minimum";
+  signedYear: number | null;
+  years: number | null;
+  totalValue: number | null;
+  apy: number | null;
+  guaranteed: number | null;
+  apyCapPct: number | null;
+  type: string | null;
+  otcTeam: string | null;
+  seasons: ContractSeason[];
+}
+
+/** One season of public stats. Keys are short names; absent means zero. */
+export interface SeasonStats {
+  season: number;
+  team: string;
+  [stat: string]: number | string;
+}
+
+export interface SnapSeason {
+  games: number;
+  offense: number;
+  defense: number;
+  st: number;
+  offShare: number;
+  defShare: number;
+  stShare: number;
+}
+
+export interface PlayerData {
+  id: string;
+  name: string;
+  firstName: string | null;
+  lastName: string | null;
+  team: string;
+  position: Position;
+  depthChartPosition: string | null;
+  jersey: number | null;
+  birthDate: string | null;
+  heightIn: number | null;
+  weightLb: number | null;
+  college: string | null;
+  yearsExp: number;
+  rookieYear: number | null;
+  draft: { team: string | null; round: number | null; overall: number | null };
+  contract: Contract;
+  ids: { pfr: string | null; espn: number | null; sleeper: string | number | null };
+  headshotUrl: string | null;
+  stats: SeasonStats[];
+  snaps: Record<string, SnapSeason>;
+}
+
+export interface HiddenRating {
+  overall: number;
+  potential: number;
+  durability: number;
+}
+
+export interface TeamData {
+  id: string;
+  city: string;
+  name: string;
+  conference: "AFC" | "NFC";
+  division: "East" | "North" | "South" | "West";
+  stadiumId: string;
+  stadium: string;
+  roof: string;
+  surface: string;
+  cap2026: { adjustedCap: number; deadMoney: number };
+}
+
+export type GameType = "PRE" | "REG" | "POST";
+export type PlayoffRound = "WC" | "DIV" | "CONF" | "SB";
+
+export interface ScheduledGame {
+  id: string;
+  type: GameType;
+  week?: number;
+  round?: PlayoffRound;
+  conference?: "AFC" | "NFC";
+  date: string;
+  weekday: string;
+  timeET: string;
+  away: string | null;
+  home: string | null;
+  neutral: boolean;
+  stadium?: string;
+  city?: string;
+  label?: string;
+  divisionGame?: boolean;
+}
+
+export interface Rules {
+  season: number;
+  salaryCap: number;
+  minimumSalary: Record<string, number>;
+  practiceSquadWeekly: { standard: number; veteranMin: number; veteranMax: number };
+  rosterLimits: { offseason: number; regularSeason: number; practiceSquad: number; gameDayActive: number };
+  veteranReportDaysBeforeOpener: number;
+  veteranReportDaysBeforeMondayOpener: number;
+  rookieEarlyReportDays: number;
+  keyDates: Record<string, string>;
+}
+
+// ---- Saved game ----
+
+/** camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. fa: free agent. */
+export type RosterStatus = "camp" | "active" | "ps" | "fa";
+
+export interface PlayerState {
+  team: string | null;
+  status: RosterStatus;
+}
+
+export interface GameResult {
+  away: string;
+  home: string;
+  awayScore: number;
+  homeScore: number;
+  overtime: boolean;
+}
+
+export type InboxKind = "staff" | "league" | "game" | "media" | "transaction" | "system";
+
+export interface InboxItem {
+  id: string;
+  date: string;
+  kind: InboxKind;
+  from: string;
+  title: string;
+  body: string;
+  read: boolean;
+}
+
+export interface Settings {
+  /** "real": the cap is enforced like the NFL does. "off": no cap at all. */
+  capRules: "real" | "off";
+}
+
+export interface GameState {
+  version: 1;
+  id: string;
+  createdAt: string;
+  ownerName: string;
+  userTeam: string;
+  settings: Settings;
+  date: string;
+  seed: number;
+  players: Record<string, PlayerState>;
+  /** Dead money a team carries, by team then season. */
+  deadMoney: Record<string, Record<string, number>>;
+  results: Record<string, GameResult>;
+  /** Teams filled into postseason slots as the bracket is decided. */
+  playoffTeams: Record<string, { away: string; home: string }>;
+  /** Seeds 1-7 per conference, set the day after the regular season ends. */
+  seeds?: Record<"AFC" | "NFC", string[]>;
+  champion?: string;
+  /** The owner's edited cutdown plan: the full list of players to keep on the 53. */
+  cutPlan?: string[];
+  inbox: InboxItem[];
+  /** Short league news feed, newest first. */
+  news: { date: string; text: string }[];
+}

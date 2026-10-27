@@ -167,16 +167,14 @@ def build_players(camp: pd.DataFrame, contracts: pd.DataFrame, master: pd.DataFr
     for row in camp.itertuples(index=False):
         years_exp = _int(row.years_exp) or 0
         rookie_year = _int(row.rookie_year) or _int(row.entry_year)
-        contract = lookup["by_id"].get(row.gsis_id)
-        if contract:
-            coverage["id-match"] += 1
-        else:
-            contract = lookup["by_name"].get(_norm_name(row.full_name))
-            if contract:
-                coverage["name-match"] += 1
-            else:
-                contract = _estimated_minimum_contract(years_exp, rookie=rookie_year == SEASON)
-                coverage["estimated-minimum"] += 1
+        contract, matched_by = lookup["by_id"].get(row.gsis_id), "id-match"
+        if not contract:
+            contract, matched_by = lookup["by_name"].get(_norm_name(row.full_name)), "name-match"
+        # A deal with no 2026 cap charge (a placeholder or a void year) still
+        # means the player is paid at least the minimum if he makes the team.
+        if not contract or not any(s["year"] == SEASON and s["capHit"] > 0 for s in contract["seasons"]):
+            contract, matched_by = _estimated_minimum_contract(years_exp, rookie=rookie_year == SEASON), "estimated-minimum"
+        coverage[matched_by] += 1
         m = master.loc[row.gsis_id] if row.gsis_id in master.index else None
         pfr_id = _clean(row.pfr_id) or (None if m is None else _clean(m.pfr_id))
         espn_id = _int(row.espn_id) or (None if m is None else _int(m.espn_id))

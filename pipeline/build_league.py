@@ -22,9 +22,20 @@ from stats import pass_rush_rates, season_snaps, season_stats
 OUT = Path(__file__).resolve().parent.parent / "data" / f"league-{SEASON}"
 
 
+def _no_nan(value):
+    if isinstance(value, float) and value != value:
+        return None
+    if isinstance(value, dict):
+        return {k: _no_nan(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_no_nan(v) for v in value]
+    return value
+
+
 def write(name: str, payload) -> None:
     path = OUT / name
-    path.write_text(json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
+    # allow_nan=False makes any NaN that slips past _no_nan fail loudly: it is not valid JSON.
+    path.write_text(json.dumps(_no_nan(payload), separators=(",", ":"), ensure_ascii=False, allow_nan=False))
     print(f"  wrote {path.relative_to(OUT.parent.parent)} ({path.stat().st_size / 1024:.0f} KB)")
 
 
