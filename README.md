@@ -11,7 +11,28 @@ decides how accurate those reports are.
 
 ## Status
 
-Step 1 of the plan, the real league data, is in place. The app itself is next.
+Playable: pick a team, run camp and the cut to 53, and play the full 2026
+season day by day through Super Bowl LXI. Saves autosave in the browser,
+go to the cloud on claude.ai, and export to a file.
+
+Next up (step 3): staff with real impact (GM, coaches, trainers, scouts),
+injuries, scouting reports, and a deeper game engine.
+
+## Playing locally
+
+```
+npm install
+npm run dev     # http://localhost:5173
+npm test        # engine tests, including three full simulated seasons
+npm run build   # dist/index.html (single file) and dist/game.html (claude.ai page)
+```
+
+## Code layout
+
+- `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim, standings and playoffs.
+  `HIDDEN_RATINGS` is only read here.
+- `src/ui/` React screens.
+- `src/save/` autosave (IndexedDB), cloud saves and save files.
 
 ## League data
 
