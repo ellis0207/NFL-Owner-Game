@@ -74,7 +74,39 @@ export interface HiddenRating {
   overall: number;
   potential: number;
   durability: number;
+  /** Position skills and athletic traits on the same scale as overall. */
+  traits: Record<string, number>;
 }
+
+export type StaffRole = "HC" | "OC" | "DC" | "STC" | "GM" | "TRN" | "PRO" | "COL";
+export type OffenseScheme = "wideZone" | "mcvay" | "westCoast" | "erhardtPerkins" | "spread" | "vertical" | "gapMotion";
+export type DefenseScheme = "fangio" | "cover3" | "pressure" | "multiple" | "macdonald";
+
+export interface StaffPerson {
+  id: string;
+  name: string;
+  team: string;
+  role: StaffRole;
+  birthYear: number;
+  birthYearEstimated: boolean;
+  hiredYear: number;
+  background: string | null;
+  side: "offense" | "defense" | null;
+  callsPlays: ("offense" | "defense")[];
+  scheme: OffenseScheme | DefenseScheme | null;
+  generated?: boolean;
+}
+
+export interface StaffData {
+  people: StaffPerson[];
+  teamSchemes: Record<string, { offense: OffenseScheme; defense: DefenseScheme }>;
+  schemeNames: { offense: Record<OffenseScheme, string>; defense: Record<DefenseScheme, string> };
+}
+
+/** Hidden staff attributes, 0-100. Which keys exist depends on the role. */
+export type StaffHidden = Partial<Record<
+  "playCalling" | "development" | "gameManagement" | "leadership" | "evaluation" | "specialTeams" |
+  "negotiation" | "capManagement" | "prevention" | "recovery", number>>;
 
 export interface TeamData {
   id: string;
@@ -124,12 +156,33 @@ export interface Rules {
 
 // ---- Saved game ----
 
-/** camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. fa: free agent. */
-export type RosterStatus = "camp" | "active" | "ps" | "fa";
+/** camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. ir: injured reserve. fa: free agent. */
+export type RosterStatus = "camp" | "active" | "ps" | "ir" | "fa";
+
+export interface Injury {
+  type: string;
+  /** Day the injury happened. */
+  date: string;
+  /** First day the player is expected to be able to play again. */
+  returnDate: string;
+  seasonEnding: boolean;
+}
 
 export interface PlayerState {
   team: string | null;
   status: RosterStatus;
+  injury?: Injury;
+  /** In-season development: change to true ability since the season began. */
+  dev?: number;
+  /** Date placed on injured reserve (eligible to return after four games). */
+  irDate?: string;
+}
+
+/** A contract signed during the game (practice squad call-ups, free agents). */
+export interface SignedContract {
+  team: string;
+  date: string;
+  seasons: { year: number; capHit: number; guaranteed: number }[];
 }
 
 export interface GameResult {
@@ -138,6 +191,50 @@ export interface GameResult {
   awayScore: number;
   homeScore: number;
   overtime: boolean;
+}
+
+/** Team totals for one game. */
+export interface TeamBox {
+  firstDowns: number;
+  plays: number;
+  yards: number;
+  passYds: number;
+  rushYds: number;
+  rushAtt: number;
+  passAtt: number;
+  cmp: number;
+  sacked: number;
+  sackYds: number;
+  thirdConv: number;
+  thirdAtt: number;
+  fourthConv: number;
+  fourthAtt: number;
+  turnovers: number;
+  penalties: number;
+  penYds: number;
+  top: number;
+  redZoneTd: number;
+  redZoneAtt: number;
+}
+
+export interface ScoringPlay {
+  q: number;
+  /** Game clock left in the quarter, seconds. */
+  clock: number;
+  team: string;
+  text: string;
+  away: number;
+  home: number;
+}
+
+export interface BoxScore {
+  quarters: { away: number[]; home: number[] };
+  team: { away: TeamBox; home: TeamBox };
+  /** Per-player stat lines, packed in STAT_KEYS order (see engine/stats.ts). */
+  players: { away: Record<string, number[]>; home: Record<string, number[]> };
+  scoring: ScoringPlay[];
+  inactives: { away: string[]; home: string[] };
+  injuries: { player: string; team: string; type: string }[];
 }
 
 export type InboxKind = "staff" | "league" | "game" | "media" | "transaction" | "system";
@@ -150,6 +247,8 @@ export interface InboxItem {
   title: string;
   body: string;
   read: boolean;
+  /** A game this message is about, for a box score link. */
+  gameId?: string;
 }
 
 export interface Settings {
@@ -158,7 +257,7 @@ export interface Settings {
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   id: string;
   createdAt: string;
   ownerName: string;
@@ -170,6 +269,10 @@ export interface GameState {
   /** Dead money a team carries, by team then season. */
   deadMoney: Record<string, Record<string, number>>;
   results: Record<string, GameResult>;
+  /** Box scores by game id. */
+  box: Record<string, BoxScore>;
+  /** Contracts signed in this save, by player. Overrides the player's original contract. */
+  contracts: Record<string, SignedContract>;
   /** Teams filled into postseason slots as the bracket is decided. */
   playoffTeams: Record<string, { away: string; home: string }>;
   /** Seeds 1-7 per conference, set the day after the regular season ends. */

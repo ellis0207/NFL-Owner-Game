@@ -1,17 +1,20 @@
 import { useMemo, useState } from "react";
 import { capHit, contractYearsLeft, teamPlayerIds } from "../../engine/cap";
 import { ageOn, shortDate } from "../../engine/dates";
-import { PLAYER_BY_ID, RULES } from "../../engine/league";
+import { isHurt } from "../../engine/injuries";
+import { PLAYER_BY_ID, RULES, SEASON } from "../../engine/league";
+import { gradeShort } from "../../engine/reports";
 import { depthChart, POSITION_ORDER, proposeFinal53 } from "../../engine/roster";
+import { outLabel } from "../../engine/season";
 import type { GameState, Position } from "../../engine/types";
 import { lastSeasonLine, money, POSITION_NAMES } from "../format";
-import { PlayerPanel } from "../PlayerPanel";
+import { useUi } from "../ui";
 
-type Filter = "all" | "active" | "ps";
+type Filter = "all" | "active" | "ps" | "ir";
 
 export function RosterScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const [open, setOpen] = useState<string | null>(null);
+  const ui = useUi();
   const team = game.userTeam;
   const beforeCutdown = game.date <= RULES.keyDates.rosterCutdown;
   const ids = teamPlayerIds(game, team);
@@ -41,6 +44,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
   }
 
   const shown = ids.filter((id) => filter === "all" || game.players[id].status === filter || (filter === "active" && game.players[id].status === "camp"));
+  const hurt = ids.filter((id) => isHurt(game, id));
   const byPos = new Map<Position, string[]>();
   for (const id of shown) {
     const pos = PLAYER_BY_ID[id].position;
@@ -65,29 +69,42 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
       )}
       {!beforeCutdown && (
         <div className="tabs" role="group" aria-label="Show">
-          {([["all", "Everyone"], ["active", "53-man roster"], ["ps", "Practice squad"]] as const).map(([k, label]) => (
+          {([["all", "Everyone"], ["active", "53-man roster"], ["ps", "Practice squad"], ["ir", "Injured reserve"]] as const).map(([k, label]) => (
             <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>
           ))}
+        </div>
+      )}
+      {hurt.length > 0 && (
+        <div className="notice stack tight">
+          <strong>Injury report</strong>
+          {hurt.map((id) => {
+            const inj = game.players[id].injury!;
+            return (
+              <button key={id} className="link" style={{ textDecoration: "none" }} onClick={() => ui.openPlayer(id)}>
+                <strong>{PLAYER_BY_ID[id].name}</strong> <span className="muted">{PLAYER_BY_ID[id].position}</span> · {inj.type} · {outLabel(game.date, inj.returnDate, inj.seasonEnding)}
+                {game.players[id].status === "ir" ? " · on IR" : ""}
+              </button>
+            );
+          })}
         </div>
       )}
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th className="num">#</th><th>Player</th><th>Depth</th><th className="num">Age</th><th className="num">Exp</th>
+              <th className="num">#</th><th>Player</th><th>Depth</th><th>Coach's view</th><th className="num">Age</th><th className="num">Exp</th>
               <th className="num">2026 cap</th><th className="num">Yrs</th><th>2025 season</th><th>{beforeCutdown ? "Cutdown" : "Status"}</th>
             </tr>
           </thead>
           <tbody>
             {POSITION_ORDER.filter((pos) => byPos.get(pos)?.length).map((pos) => (
               <PositionGroup key={pos} pos={pos} ids={byPos.get(pos)!} game={game} depthIndex={depthIndex}
-                plan={beforeCutdown ? plan : null} onToggle={toggleKeep} onOpen={setOpen} />
+                plan={beforeCutdown ? plan : null} onToggle={toggleKeep} onOpen={ui.openPlayer} />
             ))}
           </tbody>
         </table>
       </div>
-      <p className="muted">Depth is the coaching staff's current depth chart. You see what an owner sees: stats, contracts and your staff's decisions.</p>
-      {open && <PlayerPanel game={game} id={open} onClose={() => setOpen(null)} changed={changed} />}
+      <p className="muted">Depth is the coaching staff's current depth chart and "Coach's view" is how your head coach grades each player. Neither is gospel: coaches can be wrong. Tap a player for the full report.</p>
     </section>
   );
 }
@@ -99,29 +116,33 @@ function PositionGroup(props: {
   const { pos, ids, game, depthIndex, plan, onToggle, onOpen } = props;
   return (
     <>
-      <tr className="group"><td colSpan={9}>{POSITION_NAMES[pos]}</td></tr>
+      <tr className="group"><td colSpan={10}>{POSITION_NAMES[pos]}</td></tr>
       {ids.map((id) => {
         const p = PLAYER_BY_ID[id];
         const status = game.players[id].status;
         const keep = plan?.has(id);
+        const injured = isHurt(game, id);
         return (
           <tr key={id} className="clickable" onClick={() => onOpen(id)}>
             <td className="num">{p.jersey ?? ""}</td>
             <td className="name">{p.name}</td>
-            <td>{status === "ps" ? "PS" : `${pos}${depthIndex[id] ?? ""}`}</td>
+            <td>{status === "ps" ? "PS" : status === "ir" ? "IR" : injured ? <span className="bad">Inj</span> : `${pos}${depthIndex[id] ?? ""}`}</td>
+            <td className="muted">{gradeShort(game, id)}</td>
             <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
             <td className="num">{p.yearsExp === 0 ? "R" : p.yearsExp}</td>
-            <td className="num">{status === "ps" ? "PS" : money(capHit(id))}</td>
-            <td className="num">{status === "ps" ? "" : contractYearsLeft(id)}</td>
+            <td className="num">{status === "ps" ? "PS" : money(capHit(id, SEASON, game))}</td>
+            <td className="num">{status === "ps" ? "" : contractYearsLeft(id, SEASON, game)}</td>
             <td className="muted">{lastSeasonLine(p)}</td>
             <td onClick={(e) => e.stopPropagation()}>
-              {plan ? (
+              {plan && status === "ir" ? <span className="pill ir">IR</span> : plan ? (
                 <button className={`pill ${keep ? "keep" : "cut"}`} style={{ background: "transparent" }} onClick={() => onToggle(id)}
                   aria-label={`${keep ? "Keeping" : "Cutting"} ${p.name}. Tap to change.`}>
                   {keep ? "Keep" : "Cut"}
                 </button>
               ) : (
-                <span className={`pill ${status === "ps" ? "ps" : ""}`}>{status === "ps" ? "Practice squad" : status === "active" ? "Active" : "Camp"}</span>
+                <span className={`pill ${status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
+                  {status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
+                </span>
               )}
             </td>
           </tr>

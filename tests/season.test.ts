@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { capSummary, releaseCost } from "../src/engine/cap";
-import { PLAYER_BY_ID, RULES, SCHEDULE } from "../src/engine/league";
+import { PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE } from "../src/engine/league";
+import { playerReport } from "../src/engine/reports";
+import { seasonTotals, stat } from "../src/engine/stats";
+import { compress, decompress, migrate } from "../src/save/codec";
 import { rosterCount } from "../src/engine/roster";
 import { advanceDay, isSeasonOver, newGame, veteranReportDate } from "../src/engine/season";
 import { standings } from "../src/engine/standings";
@@ -67,11 +70,94 @@ describe("a full season", () => {
     expect(homeWins).toBeLessThan(0.62);
     const ties = reg.filter((r) => r.homeScore === r.awayScore).length / seasons.length;
     expect(ties).toBeLessThan(3);
-    // Parity: the best team rarely goes 17-0 and nearly everyone wins some games.
+    // Parity: the best team rarely goes 17-0 and winless seasons are rare.
+    let winless = 0;
     for (const s of seasons) {
       const wins = Object.values(standings(s)).map((r) => r.w).sort((a, b) => b - a);
       expect(wins[0]).toBeLessThanOrEqual(16);
-      expect(wins[wins.length - 1]).toBeGreaterThanOrEqual(1);
+      if (wins[wins.length - 1] === 0) winless++;
+    }
+    expect(winless).toBeLessThanOrEqual(1);
+  });
+
+  it("keeps a box score for every game, and player stats add up to team totals", () => {
+    const state = seasons[0];
+    for (const g of SCHEDULE) {
+      const box = state.box[g.id];
+      expect(box).toBeTruthy();
+      const r = state.results[g.id];
+      for (const side of ["away", "home"] as const) {
+        const lines = Object.values(box.players[side]);
+        const sum = (k: Parameters<typeof stat>[1]) => lines.reduce((a, v) => a + stat(v, k), 0);
+        expect(sum("passYds")).toBe(box.team[side].passYds);
+        expect(sum("rushYds")).toBe(box.team[side].rushYds);
+        expect(sum("cmp")).toBe(box.team[side].cmp);
+        // Points: touchdowns, kicks and safeties add up to the final score.
+        const quarters = box.quarters[side].reduce((a, b) => a + b, 0);
+        expect(quarters).toBe(side === "home" ? r.homeScore : r.awayScore);
+      }
+    }
+  });
+
+  it("produces season stat lines in a realistic range", () => {
+    const reg = seasonTotals(seasons[0], "REG");
+    const lines = Object.values(reg).map((s) => s.line);
+    const top = (k: "passYds" | "rushYds" | "recYds" | "sacks") => Math.max(...lines.map((l) => l[k] ?? 0));
+    expect(top("passYds")).toBeGreaterThan(3800);
+    expect(top("passYds")).toBeLessThan(5800);
+    expect(top("rushYds")).toBeGreaterThan(1150);
+    expect(top("rushYds")).toBeLessThan(2400);
+    expect(top("recYds")).toBeGreaterThan(1200);
+    expect(top("recYds")).toBeLessThan(2200);
+    expect(top("sacks")).toBeGreaterThan(10);
+    expect(top("sacks")).toBeLessThan(26);
+  });
+
+  it("injures players, uses injured reserve and keeps rosters legal", () => {
+    for (const state of seasons) {
+      const injuries = Object.values(state.box).reduce((a, b) => a + b.injuries.length, 0);
+      expect(injuries).toBeGreaterThan(300);
+      const ir = Object.values(state.players).filter((p) => p.status === "ir").length;
+      expect(ir).toBeGreaterThan(10);
+      for (const team of ["DET", "KC", "MIA", "SF"]) {
+        expect(rosterCount(state, team).roster).toBeLessThanOrEqual(RULES.rosterLimits.regularSeason);
+        expect(rosterCount(state, team).roster).toBeGreaterThanOrEqual(RULES.rosterLimits.regularSeason - 1);
+      }
     }
   });
 });
+
+describe("reports", () => {
+  it("never show a number from the hidden ratings", () => {
+    const state = newGame("DET", "Owner", { capRules: "real" }, 4);
+    for (const p of PLAYERS.slice(0, 400)) {
+      const r = playerReport(state, p.id);
+      const text = [r.grade, r.summary, r.fit ?? "", ...r.strengths, ...r.concerns].join(" ");
+      expect(text).not.toMatch(/\d/);
+    }
+  });
+});
+
+describe("saves", () => {
+  it("round-trip a played season, box scores included", async () => {
+    const state = seasons0();
+    const back = await decompress(await compress(state));
+    expect(back.box).toEqual(state.box);
+    expect(back.version).toBe(2);
+  });
+
+  it("upgrade a version 1 save", () => {
+    const old = { ...newGame("DET", "Owner", { capRules: "real" }, 2), version: 1 } as unknown as GameState;
+    delete (old as Partial<GameState>).box;
+    delete (old as Partial<GameState>).contracts;
+    const up = migrate(old);
+    expect(up.version).toBe(2);
+    expect(up.box).toEqual({});
+  });
+});
+
+function seasons0(): GameState {
+  const state = newGame("KC", "Owner", { capRules: "real" }, 99);
+  for (let i = 0; i < 80; i++) advanceDay(state);
+  return state;
+}

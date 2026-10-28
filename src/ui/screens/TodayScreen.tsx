@@ -1,6 +1,10 @@
 import { addDays, shortDate } from "../../engine/dates";
 import { GAMES_BY_DATE, SCHEDULE, teamLabel } from "../../engine/league";
+import { injuryStatus } from "../../engine/injuries";
+import { PLAYER_BY_ID } from "../../engine/league";
+import { teamPlayerIds } from "../../engine/cap";
 import { agenda, isSeasonOver } from "../../engine/season";
+import { useUi } from "../ui";
 import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
 import type { Screen } from "../GameShell";
@@ -9,6 +13,7 @@ import { Score } from "../Score";
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
 
 export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  const ui = useUi();
   const items = agenda(game);
   const yesterday = addDays(game.date, -1);
   const played = (GAMES_BY_DATE[yesterday] ?? []).filter((g) => game.results[g.id]);
@@ -46,6 +51,26 @@ export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => 
           })()}.</p>
         )}
       </section>
+      {next && (() => {
+        const report = teamPlayerIds(game, game.userTeam)
+          .filter((id) => game.players[id].status === "active" || game.players[id].status === "camp")
+          .map((id) => [id, injuryStatus(game, id, next.date)] as const)
+          .filter(([, st]) => st);
+        if (!report.length) return null;
+        return (
+          <section className="panel stack tight">
+            <h2>Injury report</h2>
+            <span className="muted">For {shortDate(next.date)}</span>
+            {report.map(([id, st]) => (
+              <div key={id}>
+                <span className={st === "Out" ? "bad" : "warn"}>{st}</span>{" "}
+                <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>{" "}
+                <span className="muted">{PLAYER_BY_ID[id].position} · {game.players[id].injury!.type}</span>
+              </div>
+            ))}
+          </section>
+        );
+      })()}
       {unread.length > 0 && (
         <section className="panel stack">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

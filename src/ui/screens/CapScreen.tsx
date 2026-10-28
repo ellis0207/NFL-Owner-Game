@@ -7,8 +7,8 @@ export function CapScreen({ game }: { game: GameState }) {
   const team = game.userTeam;
   const cap = capSummary(game, team);
   const ids = teamPlayerIds(game, team);
-  const top = [...ids].filter((id) => game.players[id].status !== "ps").sort((a, b) => capHit(b) - capHit(a)).slice(0, 15);
-  const nextYear = ids.reduce((sum, id) => sum + capHit(id, SEASON + 1), 0) + deadMoney(game, team, SEASON + 1);
+  const top = [...ids].filter((id) => game.players[id].status !== "ps").sort((a, b) => capHit(b, SEASON, game) - capHit(a, SEASON, game)).slice(0, 15);
+  const nextYear = ids.reduce((sum, id) => sum + capHit(id, SEASON + 1, game), 0) + deadMoney(game, team, SEASON + 1);
   const pct = (x: number) => `${Math.max(0, Math.min(100, (x / cap.limit) * 100))}%`;
   const off = game.settings.capRules === "off";
 
@@ -53,9 +53,9 @@ export function CapScreen({ game }: { game: GameState }) {
               <tr key={id}>
                 <td className="name">{PLAYER_BY_ID[id].name}</td>
                 <td>{PLAYER_BY_ID[id].position}</td>
-                <td className="num">{money(capHit(id))}</td>
-                <td className="num">{((capHit(id) / cap.limit) * 100).toFixed(1)}%</td>
-                <td className="num">{capHit(id, SEASON + 1) ? money(capHit(id, SEASON + 1)) : "Free agent"}</td>
+                <td className="num">{money(capHit(id, SEASON, game))}</td>
+                <td className="num">{((capHit(id, SEASON, game) / cap.limit) * 100).toFixed(1)}%</td>
+                <td className="num">{capHit(id, SEASON + 1, game) ? money(capHit(id, SEASON + 1, game)) : "Free agent"}</td>
               </tr>
             ))}
           </tbody>

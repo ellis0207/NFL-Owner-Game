@@ -3,8 +3,10 @@ import { SCHEDULE, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { gameTypeLabel } from "../../engine/season";
 import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
+import { useUi } from "../ui";
 
 export function ScheduleScreen({ game }: { game: GameState }) {
+  const ui = useUi();
   const us = game.userTeam;
   const games = SCHEDULE.filter((g) => {
     const m = matchup(game, g);
@@ -37,7 +39,7 @@ export function ScheduleScreen({ game }: { game: GameState }) {
               }
               const isToday = g.date === game.date;
               return (
-                <tr key={g.id} className={isToday ? "mine" : undefined}>
+                <tr key={g.id} className={`${isToday ? "mine" : ""} ${r ? "clickable" : ""}`} onClick={r ? () => ui.openBox(g.id) : undefined}>
                   <td>{g.type === "REG" ? g.week : gameTypeLabel(g)}</td>
                   <td className="num">{g.weekday.slice(0, 3)} {shortDate(g.date)}</td>
                   <td className="name">{g.neutral ? "vs" : home ? "vs" : "at"} {teamLabel(opp)}</td>
@@ -51,7 +53,7 @@ export function ScheduleScreen({ game }: { game: GameState }) {
           </tbody>
         </table>
       </div>
-      <p className="muted">Playoff games appear here once the bracket is set. All times Eastern.</p>
+      <p className="muted">Tap a result for the box score. Playoff games appear here once the bracket is set. All times Eastern.</p>
     </section>
   );
 }

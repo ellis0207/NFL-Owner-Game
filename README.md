@@ -15,8 +15,16 @@ Playable: pick a team, run camp and the cut to 53, and play the full 2026
 season day by day through Super Bowl LXI. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
 
-Next up (step 3): staff with real impact (GM, coaches, trainers, scouts),
-injuries, scouting reports, and a deeper game engine.
+Every game is simulated play by play, with box scores and per-game stats for
+preseason, regular season and playoffs, plus season totals and league leaders.
+Each team has its real 2026 head coach, coordinators, special teams coach and
+GM, running their real-life schemes. How well a player's traits fit those
+schemes changes how that player performs (in the engine, not on screen). Play callers,
+trainers and scouts all change results: injuries and recovery time, player
+development, and how accurate the written staff reports are.
+
+Next up: the business side, then the offseason (aging, retirements, the
+coaching carousel, free agency, trades and the draft).
 
 ## Playing locally
 
@@ -70,9 +78,12 @@ camps run 87-99 players instead of exactly 90.
   (`pipeline/team_cap_2026.py`), taken in October 2026.
 - About a third of contracts have no year-by-year line in the data; their cap
   hit is estimated as the deal's APY.
-- Hidden ratings are a first pass from snaps, production, contract value and
-  draft slot. They get calibrated against real results once the game engine exists.
-- GMs, coordinators, trainers and scouts are not in the data yet.
+- Hidden ratings come from snaps, production, contract value and draft slot;
+  traits add combine results and per-skill stats. The engine is calibrated to
+  real league averages (`npx vite-node tests/calibrate.ts 4`).
+- Staff (`pipeline/staff_2026.py`) is hand-entered: real HCs, OCs, DCs, STCs and
+  GMs with their schemes and play callers. Some birth years are estimates.
+  Trainers and scouting directors are generated.
 
 Real names and teams are used for a private game. A public release would need
 NFL and NFLPA licensing or a fictional league.

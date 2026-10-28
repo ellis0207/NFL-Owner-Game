@@ -47,8 +47,11 @@ def _usage(player: dict, snaps: dict) -> float | None:
     key = {"off": "offShare", "def": "defShare", "st": "stShare"}[SIDE.get(player["position"], "off")]
     total, weight = 0.0, 0.0
     for season, w in SEASON_WEIGHTS.items():
-        if season in seasons:
-            total += w * seasons[season][key]
+        s = seasons.get(season)
+        if s and s["games"] >= 4:
+            # Share per game played, so a season cut short by injury does not
+            # read as a benching (durability covers the missed games).
+            total += w * min(1.0, s[key] * 17 / s["games"])
             weight += w
     return total / weight if weight else None
 
@@ -139,13 +142,16 @@ def rate_players(players: list, stats: dict, snaps: dict) -> dict:
                 if value is not None:
                     signals[name][p["id"]] = value
         pct = {name: _percentiles(v) for name, v in signals.items()}
+        # Usage is already a 0-1 share. Ranking it would turn tiny differences
+        # between full-time starters (a QB rested in a blowout) into big ones.
+        pct["usage"] = dict(signals["usage"])
 
         blended = {}
         for p in group:
             pid, exp = p["id"], p["yearsExp"]
             weights = {
-                "usage": 0.40, "production": 0.25 if pos not in ("OT", "OG", "C", "LS") else 0.0,
-                "market": 0.30, "draft": max(0.10, 0.9 - 0.2 * exp),
+                "usage": 0.30, "production": 0.35 if pos not in ("OT", "OG", "C", "LS") else 0.0,
+                "market": 0.30, "draft": max(0.05, 0.6 - 0.2 * exp),
             }
             if exp == 0:
                 # Rookies are judged on draft slot alone, and even a top pick
@@ -156,15 +162,15 @@ def rate_players(players: list, stats: dict, snaps: dict) -> dict:
             den = sum(w for s, w in weights.items() if pid in pct[s])
             # Missing usage for a veteran is itself a signal: he was not playing.
             if exp > 0 and pid not in pct["usage"]:
-                num += 0.40 * 0.05
-                den += 0.40
+                num += 0.30 * 0.05
+                den += 0.30
             blended[pid] = num / den if den else 0.1
         ranked = _percentiles(blended)
 
         for p in group:
             pid = p["id"]
             rng = _rng(pid, "rating")
-            overall = 42 + 54 * ranked[pid] ** 1.5 + rng.gauss(0, 3)
+            overall = 42 + 54 * ranked[pid] ** 1.5 + rng.gauss(0, 2)
             age = _age(p["birthDate"])
             growth = 0.0
             if age < 24:
