@@ -96,10 +96,14 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
 // ---- What happens on a given day ----
 
 export interface AgendaItem {
+  /** Stable within a day: "game", "practice", "meeting:weekly", "league:tradeDeadline"... */
+  id: string;
   kind: "game" | "practice" | "meeting" | "off" | "league" | "travel";
   title: string;
   detail?: string;
   gameId?: string;
+  /** Something the owner plays out today, rather than something that happens when the day ends. */
+  action?: "game" | "practice" | "meeting" | "review";
 }
 
 export const KEY_DATE_LABELS: Record<string, string> = {
@@ -149,7 +153,7 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
   const items: AgendaItem[] = [];
   const team = state.userTeam;
   for (const [key, label] of Object.entries(KEY_DATE_LABELS)) {
-    if (KEY[key] === date) items.push({ kind: "league", title: label });
+    if (KEY[key] === date) items.push({ id: `league:${key}`, kind: "league", title: label });
   }
   const mine = (GAMES_BY_DATE[date] ?? []).find((g) => {
     const m = matchup(state, g);
@@ -160,13 +164,13 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
     const home = m.home === team;
     const opp = home ? m.away : m.home;
     items.push({
-      kind: "game", gameId: mine.id,
+      id: "game", kind: "game", gameId: mine.id, action: "game",
       title: `${mine.label ?? gameTypeLabel(mine)}: ${home ? "vs" : "at"} ${teamLabel(opp)}`,
       detail: `${kickoff(mine.timeET)} · ${mine.stadium ?? TEAM_BY_ID[m.home].stadium}${mine.city ? `, ${mine.city}` : ""}`,
     });
     return items;
   }
-  if (date === CAP_SET_DATE) items.push({ kind: "league", title: "The league announces the 2027 salary cap" });
+  if (date === CAP_SET_DATE) items.push({ id: "league:cap", kind: "league", title: "The league announces the 2027 salary cap" });
   if (date >= SEASON_OVER_DATE) {
     if (!items.length) items.push(offseasonItem(date));
     return items;
@@ -180,33 +184,55 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
   const inCamp = date < KEY.regularSeasonStart;
 
   if (!next && date > KEY.regularSeasonEnd) {
-    items.push({ kind: "off", title: "Season over for us", detail: "The staff is starting end-of-season evaluations." });
+    items.push({ id: "off", kind: "off", title: "Season over for us", detail: "The staff is starting end-of-season evaluations." });
     return items;
   }
-  if (wd === "Monday" && sinceLast > 1) items.push({ kind: "meeting", title: "Weekly front office meeting", detail: "GM and head coach brief you on the roster and the cap." });
+  if (wd === "Monday" && sinceLast > 1) items.push({ id: "meeting:weekly", kind: "meeting", action: "meeting", title: "Weekly front office meeting", detail: "GM and head coach brief you on the roster and the cap." });
+  const practice = (title: string, detail?: string) => items.push({ id: "practice", kind: "practice", action: "practice", title, detail });
   if (inCamp) {
-    if (date === veteranReportDate(team)) items.push({ kind: "meeting", title: "Veterans report to camp", detail: "Physicals, conditioning tests and the team meeting." });
-    else if (untilNext === 1) items.push({ kind: "practice", title: "Walkthrough and travel prep" });
-    else if (sinceLast === 1) items.push({ kind: "practice", title: "Film review and recovery" });
-    else if (daysBetween(veteranReportDate(team), date) % 6 === 5) items.push({ kind: "off", title: "Day off" });
-    else items.push({ kind: "practice", title: "Training camp practice", detail: "Full pads." });
-    if (date === addDays(KEY.rosterCutdown, -3)) items.push({ kind: "meeting", title: "Cutdown meeting", detail: "The GM's proposed 53 is ready for your review." });
+    if (date === veteranReportDate(team)) items.push({ id: "meeting:report", kind: "meeting", action: "meeting", title: "Veterans report to camp", detail: "Physicals, conditioning tests and the team meeting." });
+    else if (untilNext === 1) practice("Walkthrough and travel prep");
+    else if (sinceLast === 1) practice("Film review and recovery");
+    else if (daysBetween(veteranReportDate(team), date) % 6 === 5) items.push({ id: "off", kind: "off", title: "Day off" });
+    else practice("Training camp practice", "Full pads.");
+    if (date === addDays(KEY.rosterCutdown, -3)) items.push({ id: "meeting:cutdown", kind: "meeting", action: "review", title: "Cutdown meeting", detail: "The GM's proposed 53 is ready for your review." });
     return items;
   }
-  if (untilNext > 9) items.push({ kind: "off", title: "Bye week", detail: "Players are off; coaches self-scout." });
-  else if (untilNext === 1) items.push({ kind: "practice", title: "Walkthrough", detail: next?.away === team ? "Team flies out this afternoon." : undefined });
-  else if (sinceLast === 1) items.push({ kind: "practice", title: "Film review and recovery" });
-  else if (sinceLast === 2 && untilNext > 4) items.push({ kind: "off", title: "Players' day off", detail: "Coaches start the game plan." });
-  else items.push({ kind: "practice", title: "Practice", detail: untilNext <= 3 ? "Situational work: red zone and third down." : "Game plan install." });
+  if (untilNext > 9) items.push({ id: "off", kind: "off", title: "Bye week", detail: "Players are off; coaches self-scout." });
+  else if (untilNext === 1) practice("Walkthrough", next?.away === team ? "Team flies out this afternoon." : undefined);
+  else if (sinceLast === 1) practice("Film review and recovery");
+  else if (sinceLast === 2 && untilNext > 4) items.push({ id: "off", kind: "off", title: "Players' day off", detail: "Coaches start the game plan." });
+  else practice("Practice", untilNext <= 3 ? "Situational work: red zone and third down." : "Game plan install.");
+  return items;
+}
+
+/** What the calendar shows for a day: the agenda, plus waiver deadlines that involve us. */
+export function calendarItems(state: GameState, date: string): AgendaItem[] {
+  const items = agenda(state, date);
+  if (date >= state.date) {
+    for (const w of Object.values(state.waivers ?? {})) {
+      if (w.clears !== date) continue;
+      const ours = w.from === state.userTeam;
+      const claimed = w.claims.some((c) => c.team === state.userTeam);
+      if (!ours && !claimed) continue;
+      const p = PLAYER_BY_ID[w.player];
+      items.push({
+        id: `waiver:${w.player}`, kind: "league",
+        title: `Waiver claims on ${p.position} ${p.name} are awarded`,
+        detail: ours ? "We released this player." : "We put in a claim.",
+      });
+    }
+  }
   return items;
 }
 
 function offseasonItem(date: string): AgendaItem {
-  if (date < KEY.franchiseTagWindowOpens) return { kind: "meeting", title: "Season review", detail: "Exit interviews and end-of-season evaluations." };
-  if (date < KEY.scoutingCombineStart) return { kind: "meeting", title: "Free agency planning", detail: "The GM and cap staff work through our expiring contracts." };
-  if (date < KEY.negotiatingWindowOpens) return { kind: "meeting", title: "Combine and free agency prep", detail: "Scouts are in Indianapolis; the front office works on re-signings." };
-  if (date < addDays(KEY.newLeagueYear, 7)) return { kind: "meeting", title: "Free agency", detail: "The front office is on the phones with agents all day." };
-  return { kind: "meeting", title: "Offseason work", detail: "Free agency continues while the scouts finish the draft board." };
+  const item = (title: string, detail: string): AgendaItem => ({ id: "meeting:offseason", kind: "meeting", title, detail });
+  if (date < KEY.franchiseTagWindowOpens) return item("Season review", "Exit interviews and end-of-season evaluations.");
+  if (date < KEY.scoutingCombineStart) return item("Free agency planning", "The GM and cap staff work through our expiring contracts.");
+  if (date < KEY.negotiatingWindowOpens) return item("Combine and free agency prep", "Scouts are in Indianapolis; the front office works on re-signings.");
+  if (date < addDays(KEY.newLeagueYear, 7)) return item("Free agency", "The front office is on the phones with agents all day.");
+  return item("Offseason work", "Free agency continues while the scouts finish the draft board.");
 }
 
 export function gameTypeLabel(g: ScheduledGame): string {
@@ -235,39 +261,107 @@ export function isGameOver(state: GameState): boolean {
   return state.date >= GAME_OVER_DATE;
 }
 
-/** Plays out the current day and moves the clock to the next morning. */
-export function advanceDay(state: GameState): void {
-  if (isGameOver(state)) return;
+/** The start of the day, before any event: injuries heal, waiver claims are awarded, Week 1 moves. Runs once a day. */
+export function startDay(state: GameState): void {
+  if (state.day?.date === state.date) return;
   const date = state.date;
+  state.day = { date, done: {} };
   healInjuries(state);
   // Waiver claims are awarded first thing; practice squads form once the cutdown claims are in.
   processWaivers(state);
   if (date === KEY.practiceSquadSigningOpens) formPracticeSquads(state);
   if (date === KEY.regularSeasonStart) applyTerminationPay(state);
+}
 
-  const playedToday = new Set<string>();
-  for (const g of GAMES_BY_DATE[date] ?? []) {
-    if (state.results[g.id]) continue;
-    const m = matchup(state, g);
-    if (!m) continue;
-    if (g.type !== "PRE") {
-      for (const team of [m.away, m.home]) {
-        const up = gameDayElevations(state, team);
-        if (team === state.userTeam && up.length) {
-          send(state, "staff", `${teamStaff(team).HC?.name ?? "Head Coach"}, head coach`, "Practice squad elevations",
-            `We're thin, so I elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for today's game.`);
-        }
+/** Simulates one scheduled game, with game-day practice squad elevations and the reports that follow. */
+function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
+  if (state.results[g.id]) return state.results[g.id];
+  const m = matchup(state, g);
+  if (!m) return undefined;
+  if (g.type !== "PRE") {
+    for (const team of [m.away, m.home]) {
+      const up = gameDayElevations(state, team);
+      if (team === state.userTeam && up.length) {
+        send(state, "staff", `${teamStaff(team).HC?.name ?? "Head Coach"}, head coach`, "Practice squad elevations",
+          `We're thin, so I elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for today's game.`);
       }
     }
-    const { result, box } = simulateGame(state, g, m.away, m.home);
-    state.results[g.id] = result;
-    state.box[g.id] = box;
-    playedToday.add(m.away).add(m.home);
-    reportGame(state, g, result, box);
+  }
+  const { result, box } = simulateGame(state, g, m.away, m.home);
+  state.results[g.id] = result;
+  state.box[g.id] = box;
+  reportGame(state, g, result, box);
+  return result;
+}
+
+/** Today's events the owner still has to play out. */
+export function pendingEvents(state: GameState): AgendaItem[] {
+  if (isGameOver(state)) return [];
+  const done = state.day?.date === state.date ? state.day.done : {};
+  return agenda(state).filter((a) => a.action && !(a.id in done));
+}
+
+/** What came of an event the owner already handled today, if they did. */
+export function eventOutcome(state: GameState, id: string): string | undefined {
+  return state.day?.date === state.date ? state.day.done[id] : undefined;
+}
+
+/**
+ * Plays out one of today's events: simulates our game, runs practice, or holds a meeting.
+ * `byOwner` is false when the day is ending and the staff handle whatever the owner skipped.
+ */
+export function playEvent(state: GameState, id: string, byOwner = true): string | undefined {
+  const item = agenda(state).find((a) => a.id === id);
+  if (!item?.action || isGameOver(state)) return undefined;
+  startDay(state);
+  const done = state.day!.done;
+  if (id in done) return done[id];
+  let outcome = "";
+  const us = state.userTeam;
+  if (item.action === "game") {
+    const g = SCHEDULE.find((x) => x.id === item.gameId)!;
+    const r = playGame(state, g);
+    if (r) {
+      const ours = r.home === us ? r.homeScore : r.awayScore;
+      const theirs = r.home === us ? r.awayScore : r.homeScore;
+      outcome = `${ours > theirs ? "W" : ours < theirs ? "L" : "T"} ${ours}-${theirs}${r.overtime ? " (OT)" : ""}`;
+    }
+  } else if (item.action === "practice") {
+    const hurt = practiceInjuries(state, new Set(), [us]);
+    outcome = !practices(state, us, new Set()) ? "Light day: no contact work."
+      : hurt.length ? hurt.map((h) => `${PLAYER_BY_ID[h.id].position} ${PLAYER_BY_ID[h.id].name} hurt: ${h.type.toLowerCase()}, ${h.out}.`).join(" ")
+      : "Good work, everyone came out healthy.";
+  } else if (item.action === "meeting") {
+    if (id === "meeting:weekly") {
+      if (byOwner) {
+        briefing(state);
+        outcome = BRIEFED;
+      } else outcome = "The GM and head coach met without you.";
+    } else outcome = byOwner ? "You addressed the team." : "The head coach ran the meeting.";
+  } else if (item.action === "review") {
+    outcome = byOwner ? "You went over the GM's plan." : "The GM will submit the plan unless you change it.";
+  }
+  done[id] = outcome;
+  return outcome;
+}
+
+/** Plays out the current day and moves the clock to the next morning. Events the owner skipped are simmed. */
+export function advanceDay(state: GameState): void {
+  if (isGameOver(state)) return;
+  const date = state.date;
+  startDay(state);
+  for (const a of pendingEvents(state)) playEvent(state, a.id, false);
+
+  for (const g of GAMES_BY_DATE[date] ?? []) playGame(state, g);
+  const playedToday = new Set<string>();
+  for (const g of GAMES_BY_DATE[date] ?? []) {
+    const r = state.results[g.id];
+    if (r) playedToday.add(r.away).add(r.home);
   }
 
   const offseason = isOffseason(date);
-  if (!offseason) practiceInjuries(state, playedToday);
+  // Our practice, if there was one, was an event of its own.
+  if (!offseason) practiceInjuries(state, playedToday, Object.keys(TEAM_BY_ID).filter((t) => t !== state.userTeam));
   if (date === KEY.rosterCutdown) runCutdown(state);
   if (!offseason) rosterUpkeep(state);
   offseasonDaily(state);
@@ -311,7 +405,8 @@ export function advanceDay(state: GameState): void {
       "My cut plan is on the Roster page under Cutdown. Look it over and swap anyone you feel strongly about. " +
       `If you change nothing, I'll submit it on ${shortDate(KEY.rosterCutdown)}.`);
   }
-  if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd) weeklyReport(state);
+  const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
+  if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
 
   state.date = addDays(date, 1);
 }
@@ -415,9 +510,11 @@ function practices(state: GameState, team: string, playedToday: Set<string>): bo
   return ["Wednesday", "Thursday", "Friday"].includes(weekday(date));
 }
 
-function practiceInjuries(state: GameState, playedToday: Set<string>): void {
+/** Practice injuries for the given teams; returns ours. */
+function practiceInjuries(state: GameState, playedToday: Set<string>, teams: string[]): { id: string; type: string; out: string }[] {
   const camp = state.date < KEY.regularSeasonStart;
-  for (const team of Object.keys(TEAM_BY_ID)) {
+  const ours: { id: string; type: string; out: string }[] = [];
+  for (const team of teams) {
     if (!practices(state, team, playedToday)) continue;
     const rng = rngFor(state.seed, `practice:${state.date}:${team}`);
     if (rng() > (camp ? 0.09 : 0.03)) continue;
@@ -430,12 +527,14 @@ function practiceInjuries(state: GameState, playedToday: Set<string>): void {
     if (rng() > Math.min(1, 0.7 * injuryRisk(state, id, team))) continue;
     const { injury } = injure(state, id, team, rng, true);
     if (team === state.userTeam) {
+      ours.push({ id, type: injury.type, out: outLabel(state.date, injury.returnDate, injury.seasonEnding) });
       const trn = teamStaff(team).TRN?.name ?? "Head athletic trainer";
       send(state, "staff", `${trn}, head athletic trainer`, `${PLAYER_BY_ID[id].name} hurt in practice`,
         `${PLAYER_BY_ID[id].name} (${PLAYER_BY_ID[id].position}) came up with a ${injury.type.toLowerCase()} in practice today. ` +
         `We expect ${PLAYER_BY_ID[id].name.split(" ").slice(-1)[0]} to be ${outLabel(state.date, injury.returnDate, injury.seasonEnding)}.`);
     }
   }
+  return ours;
 }
 
 /** Daily roster upkeep for every team: injured reserve, returns, and emergency signings. */
@@ -463,6 +562,27 @@ function playedLastWeek(state: GameState): Set<string> {
     }
   }
   return out;
+}
+
+const BRIEFED = "The GM's briefing notes are in your inbox.";
+
+/** The owner sat in on the weekly meeting: the GM's notes, which stand in for the weekly report. */
+function briefing(state: GameState): void {
+  const us = state.userTeam;
+  const cap = capSummary(state, us);
+  const rec = standings(state)[us];
+  const next = nextTeamGame(us, state.date, state);
+  const m = next && matchup(state, next);
+  const hurt = Object.values(state.players).filter((p) => p.team === us && p.injury && p.status !== "fa").length;
+  const talks = Object.values(state.negotiations).filter((n) => n.team === us && n.status === "open").length;
+  const inSeason = state.date >= KEY.regularSeasonStart;
+  send(state, "staff", `${teamStaff(us).GM?.name ?? "General Manager"}, general manager`, "Notes from the weekly meeting",
+    (inSeason ? `Record: ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}. Points for ${rec.pf}, against ${rec.pa}. ` : "") +
+    `Cap space: ${money(cap.space)}. ` +
+    (m ? `Next up: ${gameTypeLabel(next!)} ${m.home === us ? "against" : "at"} ${teamLabel(m.home === us ? m.away : m.home)} on ${weekday(next!.date)}, ${shortDate(next!.date)}. ` : "") +
+    `${hurt ? `${hurt} player${hurt === 1 ? " is" : "s are"} on the injury report.` : "Nobody is on the injury report."} ` +
+    (talks ? `We have ${talks} contract talk${talks === 1 ? "" : "s"} open. ` : "") +
+    (state.date < KEY.tradeDeadline ? `Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : "The trade deadline has passed."));
 }
 
 function weeklyReport(state: GameState): void {
