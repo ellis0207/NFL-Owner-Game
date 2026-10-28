@@ -714,7 +714,7 @@ export function advanceToNextEvent(state: GameState): void {
 /** Advances until the user's next game has been played, or a stop day. */
 export function simToNextGame(state: GameState): void {
   const start = state.date;
-  if (isSeasonOver(state)) return advanceToNextEvent(state);
+  if (isSeasonOver(state) || isSummer(state)) return advanceToNextEvent(state);
   for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
     const hadGame = agenda(state).some((a) => a.kind === "game");
     const isStop = state.date !== start && state.date === KEY.rosterCutdown;

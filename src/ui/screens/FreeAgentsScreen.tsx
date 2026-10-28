@@ -178,7 +178,7 @@ function Waivers({ game, changed }: { game: GameState; changed: () => void }) {
     <div className="stack tight">
       <p className="muted">
         Players with fewer than four accrued seasons go on waivers when they're released{game.date >= RULES.keyDates.veteranWaiversBegin && !isOffseason(game.date) ? ", and since the trade deadline every released player does" : ""}.
-        Claims are due at 4 PM ET the next business day and go to the team highest in the waiver order, which follows the 2026 draft order until {shortDate(RULES.keyDates.waiverOrderByStandings)}, then the standings.
+        Claims are due at 4 PM ET the next business day and go to the team highest in the waiver order, which follows the {RULES.season} draft order until {shortDate(RULES.keyDates.waiverOrderByStandings)}, then the standings.
         A claiming team takes over the rest of the contract; the bonus money stays with the team that cut him.
       </p>
       <PosSelect pos={pos} setPos={setPos} />

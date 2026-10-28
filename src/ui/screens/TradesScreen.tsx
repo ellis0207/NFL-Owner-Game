@@ -2,7 +2,7 @@ import { useState } from "react";
 import { teamPlayerIds } from "../../engine/cap";
 import { dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear } from "../../engine/contracts";
 import { ageOn, shortDate } from "../../engine/dates";
-import { PLAYER_BY_ID, TEAMS, TEAM_BY_ID } from "../../engine/league";
+import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAMS, TEAM_BY_ID } from "../../engine/league";
 import { gradeShort } from "../../engine/reports";
 import { POSITION_ORDER } from "../../engine/roster";
 import {
@@ -369,7 +369,7 @@ function Picks({ game }: { game: GameState }) {
           </tbody>
         </table>
       </div>
-      <span className="muted">Before the game starts, three 2027 first-rounders had already moved: Green Bay's to Dallas (Micah Parsons), Indianapolis's and Dallas's to the Jets (Sauce Gardner, Quinnen Williams). Compensatory picks aren't modeled yet.</span>
+      {RULES.season === BASE_SEASON && <span className="muted">Before the game starts, three 2027 first-rounders had already moved: Green Bay's to Dallas (Micah Parsons), Indianapolis's and Dallas's to the Jets (Sauce Gardner, Quinnen Williams).</span>}
     </div>
   );
 }

@@ -215,7 +215,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
 
         <section className="stack">
           <h3>Career stats</h3>
-          {seasons.length === 0 && <p className="muted">{p.yearsExp === 0 ? "Rookie: no NFL stats yet." : "No regular-season stats in 2023-25."}</p>}
+          {seasons.length === 0 && <p className="muted">{p.yearsExp === 0 ? "Rookie: no NFL stats yet." : "No regular-season stats on record."}</p>}
           {seasons.length > 0 && (
             <div className="table-wrap">
               <table>
@@ -237,7 +237,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </table>
             </div>
           )}
-          <span className="muted">Real NFL regular-season stats. Snap share is of the team's snaps across the season.</span>
+          <span className="muted">Real NFL regular-season stats through 2025, then the seasons simulated in this save. Snap share is of the team's snaps across the season.</span>
         </section>
 
         {mine && state.status !== "ps" && state.status !== "ir" && (

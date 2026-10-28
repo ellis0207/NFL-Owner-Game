@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { collegeGames, collegeRecords, mediaRank, prospectLine, prospectTotals, rankOf, recordLabel } from "../engine/college";
+import { COLLEGE_SEASON, collegeGames, collegeRecords, mediaRank, prospectLine, prospectTotals, rankOf, recordLabel } from "../engine/college";
 import { COLLEGE_TEAM, conferenceName, DEFENSE_NAMES, distanceTo, OFFENSE_NAMES, schoolName } from "../engine/collegeData";
 import { shortDate } from "../engine/dates";
 import { draftClass } from "../engine/prospects";
@@ -47,7 +47,7 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
           {prospects.length > 0 && (
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Prospect</th><th>Pos</th><th>Class</th><th className="num">Media</th><th>2026</th><th>Our file</th><th>Our grade</th></tr></thead>
+                <thead><tr><th>Prospect</th><th>Pos</th><th>Class</th><th className="num">Media</th><th>{COLLEGE_SEASON}</th><th>Our file</th><th>Our grade</th></tr></thead>
                 <tbody>
                   {prospects.map((p) => (
                     <tr key={p.id}>

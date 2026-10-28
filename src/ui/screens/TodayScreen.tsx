@@ -1,9 +1,10 @@
 import { addDays, shortDate } from "../../engine/dates";
-import { GAMES_BY_DATE, SCHEDULE, teamLabel } from "../../engine/league";
+import { GAMES_BY_DATE, RULES, SCHEDULE, teamLabel } from "../../engine/league";
 import { injuryStatus } from "../../engine/injuries";
 import { PLAYER_BY_ID } from "../../engine/league";
 import { teamPlayerIds } from "../../engine/cap";
-import { agenda, eventOutcome, isGameOver, isSeasonOver, upcomingKeyDates, type AgendaItem } from "../../engine/season";
+import { agenda, eventOutcome, isGameOver, isSeasonOver, isSummer, upcomingKeyDates, veteranReportDate, type AgendaItem } from "../../engine/season";
+import { superBowlName } from "../../engine/calendar";
 import { publicPulse } from "../../engine/negotiation";
 import { useUi } from "../ui";
 import { matchup } from "../../engine/standings";
@@ -40,6 +41,8 @@ export function TodayScreen({ game, go, busy, play }: Props) {
   const played = (GAMES_BY_DATE[yesterday] ?? []).filter((g) => game.results[g.id]);
   const todays = (GAMES_BY_DATE[game.date] ?? []).filter((g) => matchup(game, g));
   const unread = game.inbox.filter((i) => !i.read).slice(0, 3);
+  const summer = isSummer(game);
+  const lastSeason = summer ? game.history?.seasons.at(-1) : undefined;
   const next = SCHEDULE.find((g) => g.date >= game.date && !game.results[g.id] && (() => {
     const m = matchup(game, g);
     return m && (m.home === game.userTeam || m.away === game.userTeam);
@@ -49,16 +52,23 @@ export function TodayScreen({ game, go, busy, play }: Props) {
     <>
       {isSeasonOver(game) && game.champion && (
         <section className="panel champion">
-          <span className="label">Super Bowl LXI champion</span>
+          <span className="label">{superBowlName(RULES.season)} champion</span>
           <span className="big">{teamLabel(game.champion)}</span>
           <p className="muted">
-            {isGameOver(game)
-              ? "The draft is done and the rookies are in. This is as far as the game goes for now; your save keeps everything until the next update."
-              : "The 2026 season is complete. The offseason runs through the draft: re-sign or tag our own free agents, chase other teams' players once free agency opens, then run the draft at the end of April."}
+            {`The ${RULES.season} season is complete. The offseason runs through the draft: re-sign or tag our own free agents, chase other teams' players once free agency opens, then run the draft at the end of April.`}
           </p>
         </section>
       )}
-      {isSeasonOver(game) && !isGameOver(game) && (
+      {lastSeason?.champion && (
+        <section className="panel champion">
+          <span className="label">Defending champion · {superBowlName(lastSeason.season)}</span>
+          <span className="big">{teamLabel(lastSeason.champion)}</span>
+          <p className="muted">
+            {`The league has moved on to the ${RULES.season} season. The rookies are in, the offseason program runs through June, and camp opens ${shortDate(veteranReportDate(game.userTeam))}.`}
+          </p>
+        </section>
+      )}
+      {(isSeasonOver(game) || summer) && (
         <section className="panel stack tight">
           <h2>Coming up</h2>
           {upcomingKeyDates(game).map((d) => (

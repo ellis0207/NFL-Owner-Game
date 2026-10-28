@@ -7,6 +7,7 @@ import { DEPTHS, onScoutList, scoutPlayer, scoutReport, unscoutPlayer } from "..
 import type { GameState, ScoutDepth } from "../engine/types";
 import { mockSpot, selectionOf } from "../engine/draft";
 import { teamLabel } from "../engine/league";
+import { COLLEGE_SEASON } from "../engine/college";
 import { height } from "./format";
 import { useUi } from "./ui";
 
@@ -100,7 +101,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
         </section>
 
         <section className="stack tight">
-          <h3>2026 season</h3>
+          <h3>{COLLEGE_SEASON} season</h3>
           {totals.g === 0 ? <p className="muted">Hasn't played yet this season.</p> : (
             <div className="table-wrap">
               <table>

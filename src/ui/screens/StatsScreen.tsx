@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { PLAYER_BY_ID, TEAM_BY_ID } from "../../engine/league";
-import { seasonTotals, teamTotals, type StatKey, type StatLine } from "../../engine/stats";
+import { useMemo, useState } from "react";
+import { PLAYER_BY_ID, RULES, TEAM_BY_ID, teamLabel } from "../../engine/league";
+import { seasonTotals, teamTotals, type SeasonLine, type StatKey, type StatLine } from "../../engine/stats";
 import type { GameState, GameType } from "../../engine/types";
 import { useUi } from "../ui";
 
@@ -39,18 +39,34 @@ export function StatsScreen({ game }: { game: GameState }) {
   const started = (t: GameType) => Object.keys(seasonTotals(game, t)).length > 0;
   const [phase, setPhase] = useState<GameType>(started("POST") ? "POST" : started("REG") ? "REG" : "PRE");
   const [view, setView] = useState<View>("leaders");
-  const totals = seasonTotals(game, phase);
+  // A past season from this save's record books, or null for this one.
+  const [year, setYear] = useState<number | null>(null);
+  const past = game.history?.seasons ?? [];
+  const archived = useMemo(() => (year === null ? null : pastTotals(game, year)), [game, year]);
+  const totals = archived ?? seasonTotals(game, phase);
   const entries = Object.entries(totals);
 
   return (
     <section className="stack">
-      <h2>Stats</h2>
+      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Stats</h2>
+        {past.length > 0 && (
+          <label className="muted">Season{" "}
+            <select value={year ?? ""} onChange={(e) => { const y = e.target.value ? Number(e.target.value) : null; setYear(y); if (y !== null && view === "league") setView("leaders"); }}>
+              <option value="">{RULES.season} (this season)</option>
+              {[...past].reverse().map((r) => <option key={r.season} value={r.season}>{r.season} regular season</option>)}
+            </select>
+          </label>
+        )}
+      </div>
       <div className="btn-row" style={{ justifyContent: "space-between" }}>
-        <div className="tabs" role="group" aria-label="Part of the season">
-          {PHASES.map(([k, label]) => <button key={k} aria-pressed={phase === k} onClick={() => setPhase(k)}>{label}</button>)}
-        </div>
+        {year === null ? (
+          <div className="tabs" role="group" aria-label="Part of the season">
+            {PHASES.map(([k, label]) => <button key={k} aria-pressed={phase === k} onClick={() => setPhase(k)}>{label}</button>)}
+          </div>
+        ) : <span className="muted">Regular-season totals from {year}.</span>}
         <div className="tabs" role="group" aria-label="View">
-          {([["leaders", "League leaders"], ["team", TEAM_BY_ID[game.userTeam].name], ["league", "Team stats"]] as [View, string][]).map(([k, label]) => (
+          {([["leaders", "League leaders"], ["team", TEAM_BY_ID[game.userTeam].name], ...(year === null ? [["league", "Team stats"]] : [])] as [View, string][]).map(([k, label]) => (
             <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>
           ))}
         </div>
@@ -102,9 +118,55 @@ export function StatsScreen({ game }: { game: GameState }) {
         </div>
       )}
 
-      {entries.length > 0 && view === "league" && <TeamTable game={game} phase={phase} />}
+      {entries.length > 0 && view === "league" && year === null && <TeamTable game={game} phase={phase} />}
+      {past.length > 0 && <RecordBook game={game} />}
       <p className="muted">Stats count every snap the game has simulated in this save. Tap a player for their game log.</p>
     </section>
+  );
+}
+
+/** A past season's regular-season lines, from the record books. */
+function pastTotals(game: GameState, year: number): Record<string, SeasonLine> {
+  const out: Record<string, SeasonLine> = {};
+  for (const [id, rows] of Object.entries(game.history?.stats ?? {})) {
+    const row = rows.find((r) => r.season === year);
+    if (!row || !PLAYER_BY_ID[id]) continue;
+    const line: StatLine = {};
+    for (const [k, val] of Object.entries(row)) if (typeof val === "number" && k !== "season") (line as Record<string, number>)[k] = val;
+    const snaps = game.history?.snaps[id]?.[String(year)];
+    if (snaps) Object.assign(line, { offSnaps: snaps.offense, defSnaps: snaps.defense, stSnaps: snaps.st });
+    out[id] = { team: row.team, line };
+  }
+  return out;
+}
+
+/** Every season this save has played: champions and how we did. */
+function RecordBook({ game }: { game: GameState }) {
+  const us = game.userTeam;
+  const label: Record<string, string> = { CHAMP: "Won the Super Bowl", SB: "Lost the Super Bowl", CONF: "Lost the conference title game", DIV: "Lost in the divisional round", WC: "Lost on Wild Card weekend" };
+  return (
+    <div className="stack tight">
+      <h3>Record book</h3>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Season</th><th>Champion</th><th>Runner-up</th><th className="num">Our record</th><th>Our finish</th></tr></thead>
+          <tbody>
+            {[...(game.history?.seasons ?? [])].reverse().map((r) => {
+              const [w, l, t] = r.records[us];
+              return (
+                <tr key={r.season}>
+                  <td>{r.season}</td>
+                  <td className="name">{r.champion ? teamLabel(r.champion) : "—"}</td>
+                  <td>{r.runnerUp ? teamLabel(r.runnerUp) : "—"}</td>
+                  <td className="num">{w}-{l}{t ? `-${t}` : ""}</td>
+                  <td className="muted">{label[r.playoffs[us]] ?? `${["", "1st", "2nd", "3rd", "4th"][r.place[us]]} in the division`}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 

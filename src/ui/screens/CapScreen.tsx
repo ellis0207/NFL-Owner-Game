@@ -1,6 +1,6 @@
 import { capHit, capSummary, deadMoney, practiceSquadCapHit, teamPlayerIds } from "../../engine/cap";
 import { leagueYear, salaryCap } from "../../engine/contracts";
-import { PLAYER_BY_ID } from "../../engine/league";
+import { BASE_SEASON, PLAYER_BY_ID } from "../../engine/league";
 import { isOffseason, NEXT } from "../../engine/offseason";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
@@ -9,7 +9,7 @@ export function CapScreen({ game }: { game: GameState }) {
   const team = game.userTeam;
   // After the Super Bowl the owner plans for next season's cap.
   const year = isOffseason(game.date) ? NEXT : leagueYear(game.date);
-  const set = !!game.league?.caps[year] || year === 2026;
+  const set = !!game.league?.caps[year] || year === BASE_SEASON;
   const cap = capSummary(game, team, year);
   const ids = teamPlayerIds(game, team);
   const top = [...ids].filter((id) => game.players[id].status !== "ps").sort((a, b) => capHit(b, year, game) - capHit(a, year, game)).slice(0, 15);
