@@ -2,6 +2,7 @@
 // JSON, base64-encoded so they fit in text stores.
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, ensureDraft } from "../engine/draft";
+import { ensureBusiness } from "../engine/business";
 import { PLAYERS } from "../engine/league";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
@@ -70,6 +71,8 @@ export function migrate(state: GameState): GameState {
   ensureCollege(state);
   // The draft calendar (mocks, declarations, combine, order, comp picks), and this save's draftees.
   ensureDraft(state);
+  // Saves from before the business side open their books today.
+  ensureBusiness(state);
   return state;
 }
 

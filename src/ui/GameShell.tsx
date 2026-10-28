@@ -18,6 +18,7 @@ import { ScoutingScreen } from "./screens/ScoutingScreen";
 import { ProspectPanel } from "./ProspectPanel";
 import { SchoolPanel } from "./SchoolPanel";
 import { CapScreen } from "./screens/CapScreen";
+import { BusinessScreen } from "./screens/BusinessScreen";
 import { ContractsScreen } from "./screens/ContractsScreen";
 import { InboxScreen } from "./screens/InboxScreen";
 import { MediaScreen } from "./screens/MediaScreen";
@@ -34,7 +35,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -90,6 +91,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const unread = game.inbox.filter((i) => !i.read).length;
   const pressAsks = openQuestions(game).length;
   const tradeOffers = game.trades?.offers.filter((o) => o.status === "open").length ?? 0;
+  const bookings = game.business?.events.filter((e) => e.status === "offered").length ?? 0;
   const over = isGameOver(game);
   const offseason = isSeasonOver(game);
   const left = pendingEvents(game).length;
@@ -120,6 +122,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               {s === "Inbox" && unread > 0 && <span className="badge">{unread}</span>}
               {s === "Media" && pressAsks > 0 && <span className="badge">{pressAsks}</span>}
               {s === "Trades" && tradeOffers > 0 && <span className="badge">{tradeOffers}</span>}
+              {s === "Business" && bookings > 0 && <span className="badge">{bookings}</span>}
               {s === "Draft" && onTheClock(game) && <span className="badge">On the clock</span>}
             </button>
           ))}
@@ -170,6 +173,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Free agents" && <FreeAgentsScreen game={game} changed={changed} />}
           {screen === "Trades" && <TradesScreen key={tradeStart?.player ?? "trades"} game={game} changed={changed} start={tradeStart} />}
           {screen === "Cap" && <CapScreen game={game} />}
+          {screen === "Business" && <BusinessScreen game={game} changed={changed} />}
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>

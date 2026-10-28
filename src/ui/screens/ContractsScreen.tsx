@@ -2,7 +2,8 @@ import { useState } from "react";
 import { capHit, capSummary, teamPlayerIds } from "../../engine/cap";
 import { dealOf, dealYearsLeft, leagueYear, projectedCap } from "../../engine/contracts";
 import { ageOn, shortDate } from "../../engine/dates";
-import { cashNextYear, cashPaid, REVENUE_ESTIMATE } from "../../engine/finance";
+import { cashNextYear, cashPaid } from "../../engine/finance";
+import { cashBalance } from "../../engine/business";
 import { regrade } from "../../engine/grades";
 import { PLAYER_BY_ID, PLAYERS, RULES, TEAM_BY_ID, TEAMS } from "../../engine/league";
 import { franchiseTag, rfaTender, TAG_GROUP, transitionTag, type TagGroup } from "../../engine/market";
@@ -132,9 +133,9 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
         <dl className="kv">
           <dt>Paid to players in {year}</dt><dd>{money(cashPaid(game, us, year))}</dd>
           <dt>Owed in {year + 1} under current deals</dt><dd>{money(cashNextYear(game, us))}</dd>
-          <dt>Estimated team revenue</dt><dd>{money(REVENUE_ESTIMATE[us])} a year</dd>
+          <dt>Cash in the bank</dt><dd>{money(cashBalance(game))}</dd>
         </dl>
-        <span className="muted">Cash is not the cap: signing bonuses are paid when the deal is signed even though the cap spreads them over up to five years. Revenue is a public estimate until the business side is built.</span>
+        <span className="muted">Cash is not the cap: signing bonuses are paid when the deal is signed even though the cap spreads them over up to five years. The full books are on the Business page.</span>
       </div>
     </section>
   );

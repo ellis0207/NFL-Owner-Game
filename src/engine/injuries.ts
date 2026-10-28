@@ -54,12 +54,18 @@ function pick(rng: Rng, list: InjuryType[]): InjuryType {
   return list[list.length - 1];
 }
 
+/** The owner's medical and training budget (see business.ts): only our team's changes from league average. */
+function medical(state: GameState, team: string): { risk: number; days: number } {
+  const lvl = team === state.userTeam ? state.business?.budget.medical ?? 1 : 1;
+  return { risk: [1.05, 1, 0.97, 0.95][lvl], days: [1.07, 1, 0.96, 0.92][lvl] };
+}
+
 /** How likely a player is to get hurt relative to an average player with an average training staff. */
 export function injuryRisk(state: GameState, id: string, team: string): number {
   const durability = HIDDEN_RATINGS[id]?.durability ?? 70;
   const prevention = staffEffects(team).injuryPrevention;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
-  return (1.65 - durability / 100) * (1.3 - prevention / 220) * (age >= 31 ? 1.15 : 1);
+  return (1.65 - durability / 100) * (1.3 - prevention / 220) * (age >= 31 ? 1.15 : 1) * medical(state, team).risk;
 }
 
 /** Creates an injury for a player. Returns the injury and the days out. */
@@ -68,7 +74,7 @@ export function injure(state: GameState, id: string, team: string, rng: Rng, pra
   const recovery = staffEffects(team).injuryRecovery;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
   const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.4);
-  const days = Math.max(1, Math.round(base * (1.22 - recovery / 300) * (age >= 30 ? 1.1 : 1)));
+  const days = Math.max(1, Math.round(base * (1.22 - recovery / 300) * (age >= 30 ? 1.1 : 1) * medical(state, team).days));
   const returnDate = addDays(state.date, days);
   const injury: Injury = {
     type: t.type, date: state.date, returnDate,

@@ -424,7 +424,7 @@ export interface BoxScore {
   injuries: { player: string; team: string; type: string }[];
 }
 
-export type InboxKind = "staff" | "league" | "game" | "media" | "transaction" | "system";
+export type InboxKind = "staff" | "league" | "game" | "media" | "transaction" | "system" | "business";
 
 export interface InboxItem {
   id: string;
@@ -441,6 +441,8 @@ export interface InboxItem {
 export interface Settings {
   /** "real": the cap is enforced like the NFL does. "off": no cap at all. */
   capRules: "real" | "off";
+  /** "real": the team can run short of cash and the owner has to cover it. "relaxed": the owner's pockets are bottomless. */
+  finances?: "real" | "relaxed";
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
@@ -825,6 +827,94 @@ export interface TeamFinance {
   paid: Record<number, number>;
 }
 
+export type Dept = "marketing" | "gameday" | "community" | "medical" | "facilities";
+export type ConcessionTier = "value" | "standard" | "premium";
+
+/** Where a ledger line goes on the profit and loss statement. */
+export type LedgerCat =
+  | "national" | "tickets" | "premium" | "concessions" | "parking" | "merch" | "sponsorship" | "naming" | "events"
+  | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
+  | "players" | "staff" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouting"
+  | "stadium" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution";
+
+export interface LedgerEntry {
+  date: string;
+  /** League year the money belongs to. */
+  year: number;
+  cat: LedgerCat;
+  /** Positive is money in. */
+  amount: number;
+  note?: string;
+}
+
+/** One of our home games at the gate. */
+export interface GateRecord {
+  game: string;
+  date: string;
+  opp: string;
+  type: "PRE" | "REG" | "POST";
+  capacity: number;
+  /** Tickets sold: season tickets, single games and premium seats. */
+  sold: number;
+  seasonHolders: number;
+  singleSeats: number;
+  singleSold: number;
+  /** Average single-game price. */
+  price: number;
+  /** Single-game demand at that price over the seats we had: above 1 means the resale market is hot. */
+  heat: number;
+  revenue: number;
+}
+
+export type EventKind = "concert" | "college" | "soccer" | "motorsports" | "hockey" | "combat" | "highschool" | "private" | "bowl" | "tenant";
+
+export interface StadiumEvent {
+  id: string;
+  date: string;
+  kind: EventKind;
+  name: string;
+  /** Who brought it in: an offer to us, the landlord or co-owner, or the stadium's standing calendar. */
+  by: "offer" | "landlord" | "partner" | "fixed" | "tenant";
+  status: "offered" | "booked" | "declined" | "expired" | "refused" | "held";
+  /** The promoter's estimate of the stadium's net, before our share. */
+  low: number;
+  high: number;
+  /** Last day to answer an offer. */
+  expires?: string;
+  promoter?: string;
+  /** What came of it: the stadium's net and our share. */
+  net?: number;
+  ours?: number;
+  note?: string;
+}
+
+export interface BusinessState {
+  /** Cash in the bank when the owner took over. */
+  opening: number;
+  ledger: LedgerEntry[];
+  /** Single-game ticket price and game-day pricing, as multiples of the market price. */
+  prices: { single: number; concessions: ConcessionTier; parking: number };
+  /** Season-ticket and premium price changes for next season, set in the offseason. */
+  next?: { season: number; premium: number; announced?: string };
+  /** Season-ticket holders this season, and next season's renewals once they're in. */
+  holders: number;
+  renewal?: { rate: number; holders: number; date: string };
+  budget: Record<Dept, number>;
+  gates: GateRecord[];
+  events: StadiumEvent[];
+  /** The league's visiting-team gate pool, not yet paid out. */
+  pool: number;
+  /** Months whose monthly items are posted, "2026-08". */
+  months: string[];
+  /** What the ledger has already picked up from other systems. */
+  seen: { paid: Record<number, number>; scouting: number; fines: number };
+  sellouts: number;
+  /** Something the press will ask the owner about. */
+  ask?: { kind: "tickets" | "attendance"; date: string; context: string };
+  /** The owner's price changes, newest first. */
+  priceLog: { date: string; text: string }[];
+}
+
 export interface GameState {
   version: 3;
   id: string;
@@ -886,6 +976,8 @@ export interface GameState {
   draft?: DraftState;
   /** Media coverage, press questions and how the press feels about the owner. */
   media?: MediaState;
+  /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
+  business?: BusinessState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

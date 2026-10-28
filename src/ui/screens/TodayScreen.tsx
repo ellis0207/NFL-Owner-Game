@@ -17,6 +17,8 @@ import { CollegeScore } from "./CollegeScreen";
 import { openQuestions } from "../../engine/press";
 import { MEDIA_BY_ID } from "../../engine/outlets";
 import { StoryCard } from "./MediaScreen";
+import { business, cashBalance, gateForecast } from "../../engine/business";
+import { fanMood } from "./BusinessScreen";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -151,6 +153,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
+      <BusinessToday game={game} go={go} />
       <MediaToday game={game} go={go} />
       {unread.length > 0 && (
         <section className="panel stack">
@@ -248,6 +251,40 @@ function CollegeToday({ game, go }: { game: GameState; go: (s: Screen) => void }
           <div className="scores">{shown.slice(0, 8).map((g) => <CollegeScore key={g.id} game={game} g={g} />)}</div>
         </>
       )}
+    </section>
+  );
+}
+
+/** Cash, the next home gate and booking requests. */
+function BusinessToday({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  const b = business(game);
+  const us = game.userTeam;
+  const offers = b.events.filter((e) => e.status === "offered");
+  const today = b.events.filter((e) => e.date === game.date && e.status === "booked");
+  const next = SCHEDULE.find((g) => g.home === us && !g.neutral && (g.type === "PRE" || g.type === "REG") && g.date >= game.date && !game.results[g.id]);
+  const f = next && next.date <= addDays(game.date, 7) ? gateForecast(game, next) : null;
+  return (
+    <section className="panel stack tight">
+      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2>Business</h2>
+        <button className="btn small" onClick={() => go("Business")}>Open business</button>
+      </div>
+      <span className="muted">Cash: {money(cashBalance(game))}. {fanMood(game.pressure.fans)}</span>
+      {today.map((e) => <div key={e.id}><span className="good">At the stadium today</span> {e.name}</div>)}
+      {f && next && (
+        <div>
+          <span className="label">Next home game</span>{" "}
+          {shortDate(next.date)} vs {teamLabel(next.home === us ? next.away! : next.home!)}: about {Math.min(100, Math.round((f.sold / f.capacity) * 100))}% sold
+          {f.heat >= 1.15 ? ", and resale prices are above face value." : f.heat < 0.95 ? ", with seats still available." : "."}
+        </div>
+      )}
+      {offers.map((e) => (
+        <div key={e.id}>
+          <span className="warn">Booking request</span>{" "}
+          <button className="link" onClick={() => go("Business")}>{e.name}</button>
+          <span className="muted"> · {shortDate(e.date)}, answer by {shortDate(e.expires!)}</span>
+        </div>
+      ))}
     </section>
   );
 }
