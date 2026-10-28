@@ -9,7 +9,7 @@ import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } f
 import {
   dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, writeDeal, writeExtension, type Terms,
 } from "./contracts";
-import { addDays, ageOn, daysBetween } from "./dates";
+import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
@@ -73,7 +73,7 @@ export function talksFor(state: GameState, team: string, id: string): Eligibilit
     if (!fa || fa.status !== "open") return { ok: false, kind: "free-agent", reason: fa?.status === "agreed" ? `Agreed to terms with the ${teamLabel(fa.agreed!.team)}.` : "Not headed to free agency." };
     return { ok: true, kind: "free-agent" };
   }
-  if (isPendingFreeAgent(state, id)) return { ok: false, kind: "free-agent", reason: `Under contract with the ${teamLabel(ps!.team!)} until the league year ends. Other teams can talk from ${k.negotiatingWindowOpens}.` };
+  if (isPendingFreeAgent(state, id)) return { ok: false, kind: "free-agent", reason: `Under contract with the ${teamLabel(ps!.team!)} until the league year ends. Other teams can talk from ${shortDate(k.negotiatingWindowOpens)}.` };
   return { ok: false, kind: "free-agent", reason: "Under contract with another team." };
 }
 

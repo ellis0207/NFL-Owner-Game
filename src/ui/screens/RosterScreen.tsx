@@ -3,11 +3,12 @@ import { capHit, contractYearsLeft, teamPlayerIds } from "../../engine/cap";
 import { ageOn, shortDate } from "../../engine/dates";
 import { isHurt } from "../../engine/injuries";
 import { PLAYER_BY_ID, RULES, SEASON } from "../../engine/league";
+import { faClass, isOffseason, isPendingFreeAgent, NEXT, off } from "../../engine/offseason";
 import { gradeShort } from "../../engine/reports";
 import { depthChart, POSITION_ORDER, proposeFinal53 } from "../../engine/roster";
 import { outLabel } from "../../engine/season";
 import type { GameState, Position } from "../../engine/types";
-import { lastSeasonLine, money, POSITION_NAMES } from "../format";
+import { money, POSITION_NAMES, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
 
 type Filter = "all" | "active" | "ps" | "ir";
@@ -93,7 +94,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
           <thead>
             <tr>
               <th className="num">#</th><th>Player</th><th>Depth</th><th>Coach's view</th><th className="num">Age</th><th className="num">Exp</th>
-              <th className="num">2026 cap</th><th className="num">Yrs</th><th>2025 season</th><th>{beforeCutdown ? "Cutdown" : "Status"}</th>
+              <th className="num">{capYear(game)} cap</th><th className="num">Yrs</th><th>{isOffseason(game.date) ? SEASON : SEASON - 1} season</th><th>{beforeCutdown ? "Cutdown" : "Status"}</th>
             </tr>
           </thead>
           <tbody>
@@ -109,6 +110,11 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
   );
 }
 
+/** The cap year that matters: next season once this one is over. */
+function capYear(game: GameState): number {
+  return isOffseason(game.date) ? NEXT : SEASON;
+}
+
 function PositionGroup(props: {
   pos: Position; ids: string[]; game: GameState; depthIndex: Record<string, number>;
   plan: Set<string> | null; onToggle: (id: string) => void; onOpen: (id: string) => void;
@@ -122,6 +128,9 @@ function PositionGroup(props: {
         const status = game.players[id].status;
         const holdout = game.players[id].holdout;
         const keep = plan?.has(id);
+        const year = capYear(game);
+        const tag = isOffseason(game.date) ? off(game).tags[id] : undefined;
+        const expiring = !tag && isPendingFreeAgent(game, id) ? faClass(id) : null;
         const injured = isHurt(game, id);
         return (
           <tr key={id} className="clickable" onClick={() => onOpen(id)}>
@@ -131,9 +140,9 @@ function PositionGroup(props: {
             <td className="muted">{gradeShort(game, id)}</td>
             <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
             <td className="num">{p.yearsExp === 0 ? "R" : p.yearsExp}</td>
-            <td className="num">{status === "ps" ? "PS" : money(capHit(id, SEASON, game))}</td>
-            <td className="num">{status === "ps" ? "" : contractYearsLeft(id, SEASON, game)}</td>
-            <td className="muted">{lastSeasonLine(p)}</td>
+            <td className="num">{status === "ps" ? "PS" : money(capHit(id, year, game))}</td>
+            <td className="num">{status === "ps" ? "" : contractYearsLeft(id, year, game)}</td>
+            <td className="muted">{recentSeasonLine(game, id)}</td>
             <td onClick={(e) => e.stopPropagation()}>
               {plan && status === "ir" ? <span className="pill ir">IR</span> : plan ? (
                 <button className={`pill ${keep ? "keep" : "cut"}`} style={{ background: "transparent" }} onClick={() => onToggle(id)}
@@ -141,8 +150,8 @@ function PositionGroup(props: {
                   {keep ? "Keep" : "Cut"}
                 </button>
               ) : (
-                <span className={`pill ${holdout ? "cut" : status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
-                  {holdout ? (holdout.kind === "holdout" ? "Holding out" : "Holding in") : status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
+                <span className={`pill ${holdout || expiring ? "cut" : tag ? "keep" : status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
+                  {tag ? (tag.kind === "franchise" ? "Franchise tag" : "Transition tag") : expiring ? `Expiring (${expiring})` : holdout ? (holdout.kind === "holdout" ? "Holding out" : "Holding in") : status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
                 </span>
               )}
             </td>

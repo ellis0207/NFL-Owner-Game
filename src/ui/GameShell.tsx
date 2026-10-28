@@ -3,7 +3,7 @@ import { capSummary } from "../engine/cap";
 import { longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, isSeasonOver, simToNextGame } from "../engine/season";
+import { advanceDay, advanceToNextEvent, isGameOver, isSeasonOver, simToNextGame } from "../engine/season";
 import { standings } from "../engine/standings";
 import type { GameState } from "../engine/types";
 import { BoxScore } from "./BoxScore";
@@ -29,7 +29,11 @@ export type Screen = (typeof SCREENS)[number];
 export function phaseLabel(state: GameState): string {
   const d = state.date;
   const k = RULES.keyDates;
-  if (isSeasonOver(state)) return "Season complete";
+  if (isGameOver(state)) return "Draft day";
+  if (d >= k.newLeagueYear) return `Free agency · ${d.slice(0, 4)} league year`;
+  if (d >= k.negotiatingWindowOpens) return "Negotiating window";
+  if (d >= k.franchiseTagWindowOpens && d <= k.franchiseTagDeadline) return "Offseason · tag window";
+  if (isSeasonOver(state)) return "Offseason";
   if (d > k.regularSeasonEnd) return "Playoffs";
   if (d >= k.regularSeasonStart) {
     const next = SCHEDULE.find((g) => g.type === "REG" && g.date >= d);
@@ -60,11 +64,14 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const openTalks = useCallback((id: string) => { setPlayer(null); setTalks(id); }, []);
   const ui = useMemo(() => ({ openBox, openPlayer, openTalks }), [openBox, openPlayer, openTalks]);
   const team = TEAM_BY_ID[game.userTeam];
-  const cap = capSummary(game, game.userTeam);
+  // After the Super Bowl the cap that matters is next year's.
+  const capYear = isSeasonOver(game) ? RULES.season + 1 : undefined;
+  const cap = capSummary(game, game.userTeam, capYear);
   const rec = standings(game)[game.userTeam];
   const counts = rosterCount(game, game.userTeam);
   const unread = game.inbox.filter((i) => !i.read).length;
-  const over = isSeasonOver(game);
+  const over = isGameOver(game);
+  const offseason = isSeasonOver(game);
 
   function step(fn: (s: GameState) => void) {
     setBusy(true);
@@ -101,10 +108,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <span className="phase">{phaseLabel(game)}</span>
           </div>
           <div className="figures">
-            <div className="figure"><span className="label">Record</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
+            <div className="figure"><span className="label">{isSeasonOver(game) ? `${RULES.season} record` : "Record"}</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
             <div className="figure"><span className="label">Roster</span><strong>{counts.roster}{counts.ps ? ` + ${counts.ps} PS` : ""}{counts.ir ? ` · ${counts.ir} IR` : ""}</strong></div>
             <div className="figure">
-              <span className="label">Cap space</span>
+              <span className="label">{capYear ? `${capYear} cap space` : "Cap space"}</span>
               <strong className={cap.space < 0 && game.settings.capRules === "real" ? "bad" : undefined}>
                 {game.settings.capRules === "off" ? "No cap" : money(cap.space)}
               </strong>
@@ -112,13 +119,15 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
           <div className="btn-row">
             <button className="btn primary" disabled={busy || over} onClick={() => step(advanceDay)}>Next day</button>
-            <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>
+            {offseason
+              ? <button className="btn" disabled={busy || over} onClick={() => step(advanceToNextEvent)}>Advance to next event</button>
+              : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>}
           </div>
         </header>
         <main className="content">
           {screen === "Today" && <TodayScreen game={game} go={setScreen} />}
           {screen === "Stats" && <StatsScreen game={game} />}
-          {screen === "Contracts" && <ContractsScreen game={game} />}
+          {screen === "Contracts" && <ContractsScreen game={game} changed={changed} />}
           {screen === "Staff" && <StaffScreen game={game} />}
           {screen === "Inbox" && <InboxScreen game={game} changed={changed} />}
           {screen === "Schedule" && <ScheduleScreen game={game} />}

@@ -6,7 +6,8 @@ import { injuryStatus } from "../engine/injuries";
 import { GAME_BY_ID, PLAYER_BY_ID, SCHEDULE, SEASON, TEAM_BY_ID } from "../engine/league";
 import { playerReport } from "../engine/reports";
 import { releasePlayer } from "../engine/roster";
-import { extensionEligibility } from "../engine/negotiation";
+import { talksFor } from "../engine/negotiation";
+import { isOffseason, restructure, restructurePreview } from "../engine/offseason";
 import { gameTypeLabel, outLabel } from "../engine/season";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
@@ -27,6 +28,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   const [confirming, setConfirming] = useState(false);
   const ui = useUi();
   const cost = releaseCost(id, game);
+  const year = leagueYear(game.date);
   const seasons = [...new Set(p.stats.map((s) => s.season))].sort((a, b) => b - a);
   const mine = state.team === game.userTeam;
   const deal = dealOf(game, id);
@@ -157,11 +159,35 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </span>
             </>
           ) : <p className="muted">No contract: free agent.</p>}
-          {mine && deal && (() => {
+          {(mine && deal || isOffseason(game.date) && (state.status === "fa" || talksFor(game, game.userTeam, id).ok)) && (() => {
             const talking = game.negotiations[id]?.status === "open";
-            const elig = extensionEligibility(game, id);
+            const elig = talksFor(game, game.userTeam, id);
             if (!talking && !elig.ok) return <span className="muted">{elig.reason}</span>;
             return <div><button className="btn" onClick={() => ui.openTalks(id)}>{talking ? "Go to contract talks" : "Contract talks"}</button></div>;
+          })()}
+          {mine && restructurePreview(game, id) && (() => {
+            const r = restructurePreview(game, id)!;
+            return (
+              <div className="confirm">
+                <strong>Restructure</strong>
+                <span>
+                  Turn {money(r.amount)} of this year's salary into a signing bonus spread over the deal's remaining years.
+                  It saves {money(r.savings)} of {year} cap space now and pushes that money onto later caps. The player gets the cash now.
+                </span>
+                <div className="btn-row">
+                  <button className="btn" onClick={() => {
+                    const saved = restructure(game, id);
+                    game.inbox.unshift({
+                      id: `${game.date}-rs-${id}`, date: game.date, kind: "transaction", from: "General Manager",
+                      title: `${p.name} restructured`,
+                      body: `We converted ${money(r.amount)} of ${p.name}'s salary into a bonus. That clears ${money(saved)} of ${year} cap space and adds it to the later years of the deal.`,
+                      read: true,
+                    });
+                    changed();
+                  }}>Restructure</button>
+                </div>
+              </div>
+            );
           })()}
         </section>
 
@@ -200,8 +226,8 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               <div className="confirm">
                 <strong>Release {p.name}?</strong>
                 <span>
-                  Dead money: {money(cost.deadThisYear)} on the {SEASON} cap{cost.deadNextYear ? ` and ${money(cost.deadNextYear)} on ${SEASON + 1}` : ""}.
-                  {" "}{cost.savingsThisYear >= 0 ? `Saves ${money(cost.savingsThisYear)}` : `Costs ${money(-cost.savingsThisYear)} more`} in {SEASON} cap space. This can't be undone.
+                  Dead money: {money(cost.deadThisYear)} on the {year} cap{cost.deadNextYear ? ` and ${money(cost.deadNextYear)} on ${year + 1}` : ""}.
+                  {" "}{cost.savingsThisYear >= 0 ? `Saves ${money(cost.savingsThisYear)}` : `Costs ${money(-cost.savingsThisYear)} more`} in {year} cap space. This can't be undone.
                 </span>
                 <div className="btn-row">
                   <button className="btn danger" onClick={release}>Release</button>

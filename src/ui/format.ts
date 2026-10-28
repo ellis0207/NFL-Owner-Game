@@ -1,5 +1,7 @@
-import type { StatLine } from "../engine/stats";
-import type { PlayerData, Position, SeasonStats } from "../engine/types";
+import { PLAYER_BY_ID } from "../engine/league";
+import { isOffseason } from "../engine/offseason";
+import { seasonTotals, type StatLine } from "../engine/stats";
+import type { GameState, PlayerData, Position, SeasonStats } from "../engine/types";
 
 export { money } from "../engine/season";
 
@@ -110,4 +112,13 @@ export function gameLine(pos: Position, l: StatLine): string {
     return snaps ? `${snaps} snaps` : v("stSnaps") ? `${v("stSnaps")} special teams snaps` : "Did not play";
   }
   return parts.join(" · ");
+}
+
+/** The most recent season's line: the simulated 2026 season once it's over, otherwise 2025's real stats. */
+export function recentSeasonLine(game: GameState, id: string): string {
+  const p = PLAYER_BY_ID[id];
+  if (!isOffseason(game.date)) return lastSeasonLine(p);
+  const line = seasonTotals(game, "REG")[id]?.line;
+  if (!line) return "Did not play in 2026";
+  return statLine(p.position, line as unknown as SeasonStats);
 }

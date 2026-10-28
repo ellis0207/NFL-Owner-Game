@@ -98,7 +98,7 @@ export interface AgendaItem {
   gameId?: string;
 }
 
-const KEY_DATE_LABELS: Record<string, string> = {
+export const KEY_DATE_LABELS: Record<string, string> = {
   hallOfFameGame: "Hall of Fame Game in Canton",
   rosterCutdown: "Roster cutdown: every team must be at 53 by 4 PM ET",
   cutdownWaiversExpire: "Waiver claims on cut players are awarded",
@@ -212,6 +212,15 @@ export function gameTypeLabel(g: ScheduledGame): string {
 }
 
 // ---- Advancing ----
+
+/** League dates still to come, soonest first. */
+export function upcomingKeyDates(state: GameState, limit = 4): { date: string; label: string }[] {
+  return Object.entries(KEY_DATE_LABELS)
+    .filter(([key]) => KEY[key] && KEY[key] > state.date)
+    .map(([key, label]) => ({ date: KEY[key], label }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, limit);
+}
 
 export function isSeasonOver(state: GameState): boolean {
   return state.date >= SEASON_OVER_DATE;
