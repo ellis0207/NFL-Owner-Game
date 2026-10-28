@@ -4,15 +4,47 @@ import { gaussian, rngFor } from "./rng";
 import { DEFENSE, OFFENSE } from "./schemes";
 import type { DefenseScheme, GameState, OffenseScheme, Position, StaffHidden, StaffPerson, StaffRole } from "./types";
 
-const BY_TEAM: Record<string, Partial<Record<StaffRole, StaffPerson>>> = {};
-for (const p of STAFF.people) (BY_TEAM[p.team] ??= {})[p.role] = p;
+let BY_TEAM: Record<string, Partial<Record<StaffRole, StaffPerson>>> = {};
+const DATA_SCHEMES = structuredClone(STAFF.teamSchemes);
+let SCHEMES: Record<string, { offense: OffenseScheme; defense: DefenseScheme }> = DATA_SCHEMES;
+/** How far along each team is with a new scheme (1 when it's second nature). */
+let INSTALL: Record<string, { offense: number; defense: number }> = {};
+
+function index(people: StaffPerson[]): void {
+  BY_TEAM = {};
+  for (const p of people) if (p.team) (BY_TEAM[p.team] ??= {})[p.role] = p;
+}
+index(STAFF.people);
+
+/**
+ * Points the staff lookups at a save's people and schemes (coaches.ts keeps
+ * them in the save). Clears everything cached from the old staff.
+ */
+export function bindStaffTables(people: StaffPerson[], schemes: typeof SCHEMES, install: typeof INSTALL): void {
+  index(people);
+  SCHEMES = schemes;
+  INSTALL = install;
+  clearStaffCaches();
+}
+
+/** After a hire, a firing or a scheme change. */
+export function clearStaffCaches(): void {
+  for (const k of Object.keys(effectsCache)) delete effectsCache[k];
+  fitCache.clear();
+}
 
 export function teamStaff(team: string): Partial<Record<StaffRole, StaffPerson>> {
   return BY_TEAM[team] ?? {};
 }
 
 export function teamSchemes(team: string): { offense: OffenseScheme; defense: DefenseScheme } {
-  return STAFF.teamSchemes[team];
+  return SCHEMES[team] ?? DATA_SCHEMES[team];
+}
+
+/** A new scheme takes a camp and part of a season to learn: until then the play calling runs below its level. */
+function installDrag(team: string, side: "offense" | "defense"): number {
+  const v = INSTALL[team]?.[side] ?? 1;
+  return (1 - Math.max(0, Math.min(1, v))) * 9;
 }
 
 /** The person calling plays for one side of the ball. */
@@ -55,8 +87,8 @@ export function staffEffects(team: string): StaffEffects {
   const s = teamStaff(team);
   const hcDev = attr(s.HC, "development");
   const e: StaffEffects = {
-    offCalling: attr(playCaller(team, "offense"), "playCalling"),
-    defCalling: attr(playCaller(team, "defense"), "playCalling"),
+    offCalling: attr(playCaller(team, "offense"), "playCalling") - installDrag(team, "offense"),
+    defCalling: attr(playCaller(team, "defense"), "playCalling") - installDrag(team, "defense"),
     gameManagement: attr(s.HC, "gameManagement"),
     leadership: attr(s.HC, "leadership"),
     specialTeams: attr(s.STC, "specialTeams"),

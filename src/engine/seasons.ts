@@ -4,6 +4,8 @@
 // goes into the record books, players get a year older (better or worse),
 // the unsigned drift away, and the next season's schedule comes out of last
 // season's standings.
+import { newStaffSeason } from "./carousel";
+import { ageStaff, bindStaff } from "./coaches";
 import { newBusinessSeason } from "./business";
 import { buildSchedule, keyDatesFor, superBowlName } from "./calendar";
 import { capSummary, invalidateRosters } from "./cap";
@@ -197,6 +199,7 @@ export function startNewSeason(state: GameState): void {
   creditSeasons(state);
   const retired = retireUnsigned(state);
   progressPlayers(state, next);
+  ageStaff(state, next);
   archiveDraft(state);
   const firstRound = state.offseason?.draftOrder ?? TEAMS.map((t) => t.id);
   const knew = state.college?.scouting.know ?? {};
@@ -224,6 +227,8 @@ export function startNewSeason(state: GameState): void {
   state.waiverOrder = firstRound;
   state.season = next;
   applySeason(state);
+  newStaffSeason(state);
+  bindStaff(state);
   invalidateRosters(state);
   invalidateMarket(state);
 

@@ -20,6 +20,8 @@ import { MEDIA_BY_ID } from "../../engine/outlets";
 import { StoryCard } from "./MediaScreen";
 import { business, cashBalance, gateForecast } from "../../engine/business";
 import { fanMood } from "./BusinessScreen";
+import { openSearches, proposals } from "../../engine/carousel";
+import { ROLE_NAME, staff } from "../../engine/coaches";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -163,6 +165,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
+      <StaffToday game={game} go={go} />
       <BusinessToday game={game} go={go} />
       <MediaToday game={game} go={go} />
       {unread.length > 0 && (
@@ -293,6 +296,37 @@ function BusinessToday({ game, go }: { game: GameState; go: (s: Screen) => void 
           <span className="warn">Booking request</span>{" "}
           <button className="link" onClick={() => go("Business")}>{e.name}</button>
           <span className="muted"> · {shortDate(e.date)}, answer by {shortDate(e.expires!)}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function StaffToday({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  const searches = openSearches(game, game.userTeam);
+  const props = proposals(game);
+  if (!searches.length && !props.length) return null;
+  const people = staff(game).people;
+  return (
+    <section className="panel stack tight">
+      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2>Staff</h2>
+        <button className="btn small" onClick={() => go("Staff")}>Open staff</button>
+      </div>
+      {searches.map((s) => (
+        <div key={s.role}>
+          <span className="warn">Open job</span> {ROLE_NAME[s.role]}
+          <span className="muted">
+            {" "}· {s.agreed ? `agreed with ${people[s.agreed.id]?.name ?? "a candidate"}` : `${Object.keys(s.interviews).length} interviewed`}
+            {s.interim ? `, ${people[s.interim]?.name ?? "an interim"} filling in` : ""}
+          </span>
+        </div>
+      ))}
+      {props.map((p) => (
+        <div key={p.id}>
+          <span className="warn">Needs your approval</span>{" "}
+          <button className="link" onClick={() => go("Staff")}>{people[p.candidate]?.name}</button>
+          <span className="muted"> as {ROLE_NAME[p.role]}</span>
         </div>
       ))}
     </section>
