@@ -100,6 +100,134 @@ export interface StaffPerson {
   generated?: boolean;
 }
 
+/** What kind of job a person does: coaches can rise to head coach, executives run front offices. */
+export type StaffTrack = "coach" | "st" | "exec" | "trainer" | "scout";
+
+/** One season of a person's career, as the public sees it. */
+export interface CoachSeason {
+  season: number;
+  team: string;
+  role: StaffRole;
+  w: number;
+  l: number;
+  t: number;
+  /** Coordinators: where the unit ranked in points (1 best). */
+  rank?: number;
+  /** Playoff games won; -1 when the team missed the playoffs. */
+  playoffs: number;
+}
+
+/**
+ * A coach or executive the game tracks: on an NFL staff, an NFL assistant,
+ * at a college, or out of work. The hidden numbers are engine only.
+ */
+export interface Coach {
+  id: string;
+  name: string;
+  birthYear: number;
+  birthYearEstimated?: boolean;
+  track: StaffTrack;
+  side: "offense" | "defense" | null;
+  scheme: OffenseScheme | DefenseScheme | null;
+  background: string | null;
+  /** The NFL staff job this person holds, if any. */
+  team: string | null;
+  role: StaffRole | null;
+  /** Any other job: an NFL assistant job, a college job, or a front-office job under the GM. */
+  job?: { kind: "assistant" | "college" | "front"; title: string; team: string };
+  retired?: number;
+  hiredYear: number;
+  callsPlays: ("offense" | "defense")[];
+  /** The last season the contract covers, and the salary per year. */
+  contract?: { through: number; salary: number };
+  /** The head coach or GM this person worked under longest: a coaching tree. */
+  mentor?: string;
+  agent?: string;
+  generated?: boolean;
+  /** Engine only. */
+  hidden: StaffHidden;
+  /** Engine only: how much the person still grows (or slips) each year. */
+  growth: number;
+  record: CoachSeason[];
+  /** The season this person was last fired, if ever. */
+  fired?: number;
+  /** An interim head coach's regular job, to go back to. */
+  interimFrom?: StaffRole;
+}
+
+/** What the owner learns in an interview: impressions, not numbers. */
+export interface InterviewReport {
+  date: string;
+  /** Short impressions, good and bad. */
+  notes: string[];
+  /** The coordinators a head coach candidate would bring, or the staff a GM would keep. */
+  plan: string[];
+  /** How the candidate came across overall, 1 (poorly) to 5 (excellent). */
+  impression: number;
+  rounds: number;
+}
+
+export interface StaffOffer {
+  team: string;
+  role: StaffRole;
+  id: string;
+  years: number;
+  salary: number;
+  date: string;
+}
+
+/** A team looking to fill a job. */
+export interface StaffSearch {
+  team: string;
+  role: StaffRole;
+  opened: string;
+  /** Who held the job last, and why it opened. */
+  previous?: string;
+  reason: "fired" | "left" | "retired" | "promoted" | "expired";
+  /** Interviews held or scheduled, by candidate. */
+  interviews: Record<string, { date: string; report?: InterviewReport; declined?: boolean }>;
+  /** The pick, once agreed: official when the candidate's team is done playing. */
+  agreed?: { id: string; date: string };
+  /** Someone filling in until the job is filled. */
+  interim?: string;
+  /** The agreed contract. */
+  terms?: { years: number; salary: number };
+  /** The owner handed the search to the GM (or a search firm). */
+  delegated?: boolean;
+}
+
+/** A head coach (or GM) asking the owner to approve a hire for his staff. */
+export interface StaffProposal {
+  id: string;
+  team: string;
+  role: StaffRole;
+  candidate: string;
+  by: string;
+  date: string;
+  reason: string;
+  status: "open" | "approved" | "rejected" | "withdrawn";
+  /** The coordinator the hire would replace. */
+  replaces?: string;
+}
+
+export interface StaffState {
+  people: Record<string, Coach>;
+  schemes: Record<string, { offense: OffenseScheme; defense: DefenseScheme }>;
+  /** How far along each team is in learning a new scheme, 0-1 (1 once it's second nature). */
+  install: Record<string, { offense: number; defense: number }>;
+  /** Fired staff still being paid, by the team that fired them. */
+  owed: { id: string; team: string; salary: number; through: number }[];
+  searches: StaffSearch[];
+  offers: StaffOffer[];
+  proposals: StaffProposal[];
+  /** What each team was expected to win at kickoff (0-1), for judging the season. */
+  expect: Record<string, number>;
+  /** Hires, firings and retirements, newest first. */
+  log: { date: string; team: string; text: string }[];
+  /** The season each team's year ended, once its staff decisions are made. */
+  ended?: Record<string, number>;
+}
+
 export interface StaffData {
   people: StaffPerson[];
   teamSchemes: Record<string, { offense: OffenseScheme; defense: DefenseScheme }>;
@@ -841,7 +969,7 @@ export type ConcessionTier = "value" | "standard" | "premium";
 export type LedgerCat =
   | "national" | "tickets" | "premium" | "concessions" | "parking" | "merch" | "sponsorship" | "naming" | "events"
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
-  | "players" | "staff" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouting"
+  | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouting"
   | "stadium" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution";
 
 export interface LedgerEntry {
@@ -1052,6 +1180,8 @@ export interface GameState {
   draft?: DraftState;
   /** Media coverage, press questions and how the press feels about the owner. */
   media?: MediaState;
+  /** Everyone who coaches or runs a front office, and the hiring carousel. */
+  staff?: StaffState;
   /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
   business?: BusinessState;
   inbox: InboxItem[];

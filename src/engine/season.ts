@@ -19,6 +19,8 @@ import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, s
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
 import { business, businessDaily, businessGame } from "./business";
+import { carouselDaily } from "./carousel";
+import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
@@ -82,6 +84,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     history: { seasons: [], drafts: [], stats: {}, snaps: {}, retired: {} },
   };
   applySeason(state);
+  ensureStaff(state);
   state.college = newCollege(state);
   business(state);
   const team = TEAM_BY_ID[userTeam];
@@ -433,6 +436,7 @@ export function advanceDay(state: GameState): void {
   if (date === KEY.rosterCutdown) runCutdown(state);
   if (!offseason) rosterUpkeep(state);
   offseasonDaily(state);
+  carouselDaily(state);
   contractsDaily(state);
   faDaily(state);
   tradesDaily(state);

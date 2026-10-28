@@ -5,6 +5,7 @@ import { clearDraftees, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
 import { PLAYERS } from "../engine/league";
 import { applySeason, patchPlayers } from "../engine/seasons";
+import { ensureStaff } from "../engine/coaches";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
 export const SAVE_FORMAT = "nfl-owner-sim-save";
@@ -66,6 +67,8 @@ export function migrate(state: GameState): GameState {
   clearDraftees();
   // The save's season: its dates, schedule, caps and draft classes.
   applySeason(state);
+  // Everyone on a staff or looking for a job (saves from before the carousel start from the data).
+  ensureStaff(state);
   // Saves from before the free agent pool: the unsigned players join the league as free agents.
   for (const p of PLAYERS) {
     if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };

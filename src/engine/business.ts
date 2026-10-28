@@ -26,6 +26,7 @@ import { rngFor, type Rng } from "./rng";
 import { controlOf, DRAW, MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadiums";
 import { standings, winPct } from "./standings";
 import { teamStaff } from "./staff";
+import { BUDGETED_TOP_STAFF, payroll } from "./coaches";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
 const KEY = RULES.keyDates;
@@ -113,6 +114,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   gateShare: { label: "Gate receipts sent to the league pool", side: "out" },
   players: { label: "Player salaries and bonuses (cash)", side: "out" },
   staff: { label: "Coaches, scouts and front office", side: "out" },
+  staffOwed: { label: "Fired staff still being paid", side: "out" },
   businessOps: { label: "Business operations staff", side: "out" },
   marketing: { label: DEPTS.marketing.label, side: "out" },
   gameday: { label: DEPTS.gameday.label, side: "out" },
@@ -790,7 +792,11 @@ function monthItems(state: GameState, note?: string): void {
   post(state, "national", m(nationalRevenue(year)), note ?? "Monthly distribution from the league");
   post(state, "sponsorship", m(sponsorship(us) * grow * [0.97, 1, 1.02, 1.03][b.budget.marketing]), note);
   if (s.naming && s.namingShare) post(state, "naming", m(s.naming * s.namingShare), note ?? `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
-  post(state, "staff", -m(FOOTBALL_STAFF * grow), note);
+  // The base budget covers the coaching staff at going rates; the top jobs and anyone fired but still paid are on top of it.
+  const pay = payroll(state, us);
+  const top = state.staff ? pay.staff - BUDGETED_TOP_STAFF * grow : 0;
+  post(state, "staff", -m(FOOTBALL_STAFF * grow + top), note);
+  if (pay.owed) post(state, "staffOwed", -m(pay.owed), note ?? "Fired staff still under contract");
   post(state, "businessOps", -m(businessOps(us) * grow), note);
   for (const d of ["marketing", "community", "medical", "facilities"] as Dept[]) post(state, d, -m(DEPTS[d].cost[b.budget[d]]), note ?? BUDGET_LEVELS[b.budget[d]]);
   post(state, "benefits", -m(BENEFITS * grow), note);
