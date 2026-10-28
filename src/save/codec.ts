@@ -1,6 +1,7 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
 import { ensureCollege } from "../engine/college";
+import { clearDraftees, ensureDraft } from "../engine/draft";
 import { PLAYERS } from "../engine/league";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
@@ -59,12 +60,16 @@ export function migrate(state: GameState): GameState {
     state.pressure ??= { fans: 50, media: 50 };
     state.version = 3;
   }
+  // Another save's draftees leave the player list before this save's come back.
+  clearDraftees();
   // Saves from before the free agent pool: the unsigned players join the league as free agents.
   for (const p of PLAYERS) {
     if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
   }
   // Saves from before the college universe get the season played up to today.
   ensureCollege(state);
+  // The draft calendar (mocks, declarations, combine, order, comp picks), and this save's draftees.
+  ensureDraft(state);
   return state;
 }
 

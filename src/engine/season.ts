@@ -23,11 +23,12 @@ import { money, news, send } from "./inbox";
 import { tradesDaily } from "./trades";
 import { collegeDaily, newCollege } from "./college";
 import { scoutingDaily } from "./scouting";
+import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
-/** The game runs to draft day until the draft is built. */
-export const GAME_OVER_DATE = KEY.draftStart;
+/** The game runs through the draft for now. */
+export const GAME_OVER_DATE = DRAFT_OVER;
 
 /** A team's first regular-season game. */
 export function openingGame(team: string): ScheduledGame {
@@ -42,6 +43,7 @@ export function veteranReportDate(team: string): string {
 }
 
 export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31): GameState {
+  clearDraftees();
   const players: GameState["players"] = {};
   for (const p of PLAYERS) {
     players[p.id] = p.team ? { team: p.team, status: "camp" } : { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
@@ -69,6 +71,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     playoffTeams: {},
     inbox: [],
     news: [],
+    draft: { made: [], mocks: [], daysDone: [], nextMock: FIRST_MOCK },
   };
   state.college = newCollege(state);
   const team = TEAM_BY_ID[userTeam];
@@ -108,12 +111,12 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
 export interface AgendaItem {
   /** Stable within a day: "game", "practice", "meeting:weekly", "league:tradeDeadline"... */
   id: string;
-  kind: "game" | "practice" | "meeting" | "off" | "league" | "travel";
+  kind: "game" | "practice" | "meeting" | "off" | "league" | "travel" | "draft";
   title: string;
   detail?: string;
   gameId?: string;
   /** Something the owner plays out today, rather than something that happens when the day ends. */
-  action?: "game" | "practice" | "meeting" | "review";
+  action?: "game" | "practice" | "meeting" | "review" | "draft";
 }
 
 export const KEY_DATE_LABELS: Record<string, string> = {
@@ -163,7 +166,15 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
   const items: AgendaItem[] = [];
   const team = state.userTeam;
   for (const [key, label] of Object.entries(KEY_DATE_LABELS)) {
-    if (KEY[key] === date) items.push({ id: `league:${key}`, kind: "league", title: label });
+    if (KEY[key] === date && key !== "draftStart") items.push({ id: `league:${key}`, kind: "league", title: label });
+  }
+  const draftDay = draftDayOf(date);
+  if (draftDay) {
+    items.push({
+      id: "draft", kind: "draft", action: "draft", title: `The ${RULES.season + 1} NFL Draft, ${dayLabel(draftDay)}`,
+      detail: "No clock: the draft moves when you move it. Skipped picks of ours are made by the GM.",
+    });
+    return items;
   }
   const mine = (GAMES_BY_DATE[date] ?? []).find((g) => {
     const m = matchup(state, g);
@@ -308,11 +319,12 @@ function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
 export function pendingEvents(state: GameState): AgendaItem[] {
   if (isGameOver(state)) return [];
   const done = state.day?.date === state.date ? state.day.done : {};
-  return agenda(state).filter((a) => a.action && !(a.id in done));
+  return agenda(state).filter((a) => a.action && !(a.action === "draft" ? dayDone(state) : a.id in done));
 }
 
 /** What came of an event the owner already handled today, if they did. */
 export function eventOutcome(state: GameState, id: string): string | undefined {
+  if (id === "draft" && dayDone(state)) return (state.day?.date === state.date ? state.day.done.draft : undefined) ?? "Day complete.";
   return state.day?.date === state.date ? state.day.done[id] : undefined;
 }
 
@@ -324,6 +336,11 @@ export function playEvent(state: GameState, id: string, byOwner = true): string 
   const item = agenda(state).find((a) => a.id === id);
   if (!item?.action || isGameOver(state)) return undefined;
   startDay(state);
+  if (item.action === "draft") {
+    // The owner runs the draft from the draft room; when the day ends, the GM finishes it.
+    if (!byOwner) advanceToEndOfDay(state);
+    return state.day!.done.draft;
+  }
   const done = state.day!.done;
   if (id in done) return done[id];
   let outcome = "";
@@ -378,6 +395,7 @@ export function advanceDay(state: GameState): void {
   contractsDaily(state);
   faDaily(state);
   tradesDaily(state);
+  draftDaily(state);
   collegeDaily(state);
   scoutingDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
@@ -607,10 +625,16 @@ function weeklyReport(state: GameState): void {
 }
 
 /** Offseason days worth stopping on. */
-const OFFSEASON_STOPS = [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear, addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), KEY.draftStart];
+const OFFSEASON_STOPS = [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear, addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), ...DRAFT_DAYS];
+
+/** A draft day the owner hasn't finished: the clock waits for the owner (or "Sim rest of day"). */
+export function draftWaiting(state: GameState): boolean {
+  return !!draftDayOf(state.date) && !dayDone(state) && !isGameOver(state);
+}
 
 /** In the offseason: advance to the next key date, at most a week. */
 export function advanceToNextEvent(state: GameState): void {
+  if (draftWaiting(state)) return;
   const start = state.date;
   for (let i = 0; i < 7 && !isGameOver(state); i++) {
     advanceDay(state);

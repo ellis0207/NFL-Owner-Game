@@ -6,7 +6,9 @@ import { RULES, TEAMS } from "../src/engine/league";
 import { marketPrice } from "../src/engine/market";
 import { talksFor } from "../src/engine/negotiation";
 import { applyTag, canTag, faClass, isPendingFreeAgent, NEXT, pendingFreeAgents, tagCost } from "../src/engine/offseason";
-import { advanceDay, isGameOver, isSeasonOver, newGame } from "../src/engine/season";
+import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, newGame } from "../src/engine/season";
+import { advanceToOurPick, currentSlot, makePick, staffRecommendations } from "../src/engine/draft";
+import { rosterCount } from "../src/engine/roster";
 import { compress, decompress } from "../src/save/codec";
 import type { GameState, OfferTerms } from "../src/engine/types";
 
@@ -113,15 +115,63 @@ describe("the offseason", () => {
     expect(await run()).toBe(await run());
   }, 60_000);
 
-  it("stops at draft day", async () => {
+  it("reaches draft day with the order, comp picks and mocks set", async () => {
     const state = await clone();
     until(state, K.draftStart);
-    expect(isGameOver(state)).toBe(true);
-    const date = state.date;
-    advanceDay(state);
-    expect(state.date).toBe(date);
+    expect(isGameOver(state)).toBe(false);
+    const d = state.draft!;
+    expect(d.order!.length).toBe(256);
+    expect(d.comp!.length).toBe(32);
+    expect(d.mocks.length).toBeGreaterThanOrEqual(10);
+    expect(d.mocks[0].rounds).toBe(4);
+    expect(d.mocks[d.mocks.length - 1].rounds).toBe(1);
+    // Comp picks come at the end of their round.
+    const r3 = d.order!.filter((id) => id.startsWith("2027-3-"));
+    expect(r3.slice(-4).every((id) => id.includes("-c"))).toBe(true);
+    // The clock waits on draft day: advancing skips nothing until the owner moves the draft.
+    expect(draftWaiting(state)).toBe(true);
+    advanceToNextEvent(state);
+    expect(state.date).toBe(K.draftStart);
     // Most top free agents have found teams by the draft (a few overpriced backup quarterbacks wait).
     const top = Object.values(market(state)).filter((f) => f.base >= 15_000_000);
     expect(top.filter((f) => f.status !== "open").length / Math.max(1, top.length)).toBeGreaterThan(0.7);
   }, 60_000);
+
+  it("runs the draft at the owner's pace and stops after it", async () => {
+    const state = await clone();
+    until(state, K.draftStart);
+    const d = state.draft!;
+    // Our staff weighs in when we're on the clock, and the owner can pick.
+    advanceToOurPick(state);
+    const slot = currentSlot(state)!;
+    expect(slot.team).toBe(TEAM);
+    const recs = staffRecommendations(state);
+    expect(recs.map((r) => r.role)).toEqual(["GM", "HC", "OC", "DC"]);
+    expect(makePick(state, recs[1].player, "owner")).toBeNull();
+    const rookie = recs[1].player;
+    expect(state.players[rookie].team).toBe(TEAM);
+    expect(dealOf(state, rookie)!.kind).toBe("rookie");
+    expect(dealOf(state, rookie)!.years.length).toBe(4);
+    // Day 1 ends with grades; the GM takes over if the owner sims the rest of the day.
+    advanceDay(state);
+    expect(d.daysDone).toEqual([1]);
+    expect(d.made.length).toBe(32);
+    expect(d.made.every((m) => m.grade)).toBe(true);
+    // A skipped pick of ours is the GM's.
+    advanceDay(state);
+    advanceDay(state);
+    expect(d.made.length).toBe(256);
+    expect(d.made.filter((m) => m.team === TEAM && m.overall > slot.overall).every((m) => m.by === "gm")).toBe(true);
+    expect(isGameOver(state)).toBe(true);
+    // Undrafted free agents signed; nobody is over 90.
+    expect(Object.keys(d.udfa ?? {}).length).toBeGreaterThan(100);
+    for (const t of TEAMS) expect(rosterCount(state, t.id).roster).toBeLessThanOrEqual(90);
+    // Draftees survive a save and load.
+    const back = await decompress(await compress(state));
+    expect(back.players[rookie].team).toBe(TEAM);
+    expect(capHit(rookie, NEXT, back)).toBeGreaterThan(0);
+    const date = state.date;
+    advanceDay(state);
+    expect(state.date).toBe(date);
+  }, 120_000);
 });

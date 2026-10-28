@@ -7,14 +7,14 @@ import type { GameState } from "../../engine/types";
 import { useUi } from "../ui";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const KIND_LABEL = { game: "Game", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
+const KIND_LABEL = { game: "Game", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 /** The calendar runs from the start of camp to draft day. */
 const FIRST_MONTH = "2026-07";
 const LAST_MONTH = GAME_OVER_DATE.slice(0, 7);
 
 /** Worth a spot on the month grid and the coming-up list: not routine practices or the offseason's daily grind. */
 function notable(a: AgendaItem): boolean {
-  if (a.kind === "game" || a.kind === "league") return true;
+  if (a.kind === "game" || a.kind === "league" || a.kind === "draft") return true;
   if (a.kind === "meeting") return a.id !== "meeting:offseason";
   return a.title === "Bye week";
 }

@@ -15,9 +15,9 @@ import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
 import { CollegeScore } from "./CollegeScreen";
 
-const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
+const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
-  game: "Simulate game", practice: "Run practice", meeting: "Hold meeting", review: "Review the 53",
+  game: "Simulate game", practice: "Run practice", meeting: "Hold meeting", review: "Review the 53", draft: "Go to the draft room",
 };
 
 interface Props {
@@ -48,8 +48,8 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           <span className="big">{teamLabel(game.champion)}</span>
           <p className="muted">
             {isGameOver(game)
-              ? "Draft day. This is as far as the game goes for now: the draft is coming in a later update, and your save keeps everything until then."
-              : "The 2026 season is complete. The offseason runs through draft day: re-sign or tag our own free agents, then chase other teams' players once free agency opens."}
+              ? "The draft is done and the rookies are in. This is as far as the game goes for now; your save keeps everything until the next update."
+              : "The 2026 season is complete. The offseason runs through the draft: re-sign or tag our own free agents, chase other teams' players once free agency opens, then run the draft at the end of April."}
           </p>
         </section>
       )}
@@ -80,8 +80,8 @@ export function TodayScreen({ game, go, busy, play }: Props) {
                   {!a.action && a.kind === "league" && <div className="muted">Happens when the day ends.</div>}
                 </div>
                 {a.action && !done && (
-                  <button className={`btn small${a.action === "game" ? " primary" : ""}`} disabled={busy || isGameOver(game)}
-                    onClick={() => { play(a.id); if (a.action === "review") go("Roster"); }}>
+                  <button className={`btn small${a.action === "game" || a.action === "draft" ? " primary" : ""}`} disabled={busy || isGameOver(game)}
+                    onClick={() => { if (a.action === "draft") return go("Draft"); play(a.id); if (a.action === "review") go("Roster"); }}>
                     {ACTION_LABEL[a.action]}
                   </button>
                 )}

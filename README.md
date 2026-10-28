@@ -12,8 +12,8 @@ decides how accurate those reports are.
 ## Status
 
 Playable: pick a team, run camp and the cut to 53, play the full 2026
-season day by day through Super Bowl LXI, then run the 2027 offseason up to
-draft day. Saves autosave in the browser,
+season day by day through Super Bowl LXI, then run the 2027 offseason and the
+2027 draft. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
 
 Every game is simulated play by play, with box scores and per-game stats for
@@ -46,7 +46,7 @@ until the negotiating window, restructure or cut to make room, and then all
 role, city and loyalty, and bidding wars and "last looks" decide close calls.
 Deals agreed in the window are signed when the league year opens, and the Top
 51 rule applies until the next opener. Offer sheets on restricted players are
-rare, as in the real league. The game stops on draft day.
+rare, as in the real league.
 
 Free agency runs all year. The pool starts with the real 2026 free agents
 (about 500 veterans and young players who were on no camp roster, minus
@@ -106,7 +106,27 @@ strengths and concerns, size and speed, scheme fit, makeup and medical as the
 file fills in, with the accuracy of the college scouting director. Other teams
 scout the class too.
 
-Next up: the draft itself, then the business side.
+The 2027 draft runs at the owner's pace, with no clock: advance one pick,
+jump to our next pick, or run to the end of the day, and the GM makes any of
+our picks the owner skips. Day 1 is the first round, Day 2 rounds two and
+three, Day 3 rounds four through seven. The order comes from the final
+standings (strength of schedule breaks ties, and tied teams rotate each
+round), with the 32 compensatory picks NFL.com projected from the real 2026
+free agency at the end of rounds 3-7. On the clock, the GM, head coach and
+both coordinators each recommend a player, through their own eyes: how well
+they evaluate, what side of the ball they coach, scheme fit and need, built on
+what our scouts learned. Teams behind us call to trade up, we can ask any team
+its price to move up, and CPU teams trade picks among themselves. Every front
+office drafts from its own board. After each day the GM letter-grades every
+pick against our board. Before the draft, underclassmen declare by mid-January
+(some go back to school), the combine publishes heights, weights and workouts
+in early March, and three outlets publish mock drafts every two to four weeks
+from September: the first round only at first, four rounds by draft week.
+Undrafted free agents sign as soon as the draft ends, and teams trim to 90.
+Rookies sign rookie-scale deals at their slot. The game stops the day after
+the draft. Check a draft with `npx vite-node tests/draft-report.ts [seed]`.
+
+Next up: the business side.
 
 ## Playing locally
 
@@ -123,7 +143,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
-  agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`.
+  agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
@@ -185,7 +205,9 @@ rosters on the same scale, without changing anyone else's rating.
   projection (about $327M) until the league sets it in the game, within about
   1% of that.
 - The offseason doesn't model retirements, Pro Bowl tiers for fifth-year
-  options, compensatory picks, or offer sheets from the owner's own team yet.
+  options, or offer sheets from the owner's own team yet. The 2027
+  compensatory picks are NFL.com's projection, hand-entered in
+  `src/engine/draft.ts`; draft classes are generated per save.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
   real league averages (`npx vite-node tests/calibrate.ts 4`).
