@@ -2,6 +2,7 @@
 // talent and its own biases, so the same deal can be an A in one place and a C
 // in another. Grades are what the public thinks, not the truth.
 import { leagueYear } from "./contracts";
+import { daysBetween } from "./dates";
 import { marketPrice } from "./market";
 import { PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
@@ -49,7 +50,10 @@ function take(ratio: number, s: Pick<Signing, "apy" | "years" | "guaranteed">, n
 /** Grades a deal from each outlet's point of view, using only public information. */
 export function gradeDeal(state: GameState, s: Pick<Signing, "player" | "team" | "date" | "years" | "apy" | "guaranteed" | "total">, startYear: number, reSigned: boolean) {
   const p = PLAYER_BY_ID[s.player];
-  const fair = marketPrice(state, s.player, startYear).apy;
+  // A free agent still unsigned weeks in has told everyone what the market thinks.
+  const fa = state.fa?.[s.player];
+  const waited = fa && fa.status === "open" ? Math.max(0, daysBetween(fa.since, s.date) - 2) : 0;
+  const fair = marketPrice(state, s.player, startYear).apy * Math.max(0.8, 1 - 0.005 * waited);
   const gShare = s.total ? s.guaranteed / s.total : 0;
   return OUTLETS.map((o) => {
     const rng = rngFor(state.seed, `grade:${o.name}:${s.player}:${s.date}`);

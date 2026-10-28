@@ -15,10 +15,14 @@ import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, s
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
 import { contractsDaily, startHoldouts } from "./negotiation";
+import { faDaily } from "./freeagency";
+import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
+/** The game runs to draft day until the draft is built. */
+export const GAME_OVER_DATE = KEY.draftStart;
 
 /** A team's first regular-season game. */
 export function openingGame(team: string): ScheduledGame {
@@ -111,6 +115,13 @@ const KEY_DATE_LABELS: Record<string, string> = {
   divisionalRound: "Divisional Round begins",
   conferenceChampionships: "Conference Championship Sunday",
   superBowl: "Super Bowl LXI at SoFi Stadium",
+  franchiseTagWindowOpens: "Teams can use franchise and transition tags",
+  scoutingCombineStart: "The scouting combine opens in Indianapolis",
+  franchiseTagDeadline: "Tag deadline, 4 PM ET",
+  negotiatingWindowOpens: "Negotiating window: teams can talk to other teams' free agents",
+  newLeagueYear: "New league year, 4 PM ET: free agency opens, expiring deals end, tender deadline",
+  annualLeagueMeeting: "Annual league meeting",
+  draftStart: "The 2027 NFL Draft",
 };
 
 function nextTeamGame(team: string, date: string, state: GameState): ScheduledGame | undefined {
@@ -151,7 +162,11 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
     });
     return items;
   }
-  if (date >= SEASON_OVER_DATE) return items;
+  if (date === CAP_SET_DATE) items.push({ kind: "league", title: "The league announces the 2027 salary cap" });
+  if (date >= SEASON_OVER_DATE) {
+    if (!items.length) items.push(offseasonItem(date));
+    return items;
+  }
 
   const wd = weekday(date);
   const next = nextTeamGame(team, date, state);
@@ -182,6 +197,14 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
   return items;
 }
 
+function offseasonItem(date: string): AgendaItem {
+  if (date < KEY.franchiseTagWindowOpens) return { kind: "meeting", title: "Season review", detail: "Exit interviews and end-of-season evaluations." };
+  if (date < KEY.scoutingCombineStart) return { kind: "meeting", title: "Free agency planning", detail: "The GM and cap staff work through our expiring contracts." };
+  if (date < KEY.negotiatingWindowOpens) return { kind: "meeting", title: "Combine and free agency prep", detail: "Scouts are in Indianapolis; the front office works on re-signings." };
+  if (date < addDays(KEY.newLeagueYear, 7)) return { kind: "meeting", title: "Free agency", detail: "The front office is on the phones with agents all day." };
+  return { kind: "meeting", title: "Offseason work", detail: "Free agency continues while the scouts finish the draft board." };
+}
+
 export function gameTypeLabel(g: ScheduledGame): string {
   if (g.type === "PRE") return g.week === 0 ? "Hall of Fame Game" : `Preseason Week ${g.week}`;
   if (g.type === "REG") return `Week ${g.week}`;
@@ -194,9 +217,14 @@ export function isSeasonOver(state: GameState): boolean {
   return state.date >= SEASON_OVER_DATE;
 }
 
+/** The end of what the game can play for now: draft day. */
+export function isGameOver(state: GameState): boolean {
+  return state.date >= GAME_OVER_DATE;
+}
+
 /** Plays out the current day and moves the clock to the next morning. */
 export function advanceDay(state: GameState): void {
-  if (isSeasonOver(state)) return;
+  if (isGameOver(state)) return;
   const date = state.date;
   healInjuries(state);
 
@@ -212,11 +240,14 @@ export function advanceDay(state: GameState): void {
     reportGame(state, g, result, box);
   }
 
-  practiceInjuries(state, playedToday);
+  const offseason = isOffseason(date);
+  if (!offseason) practiceInjuries(state, playedToday);
   if (date === KEY.rosterCutdown) runCutdown(state);
-  rosterUpkeep(state);
+  if (!offseason) rosterUpkeep(state);
+  offseasonDaily(state);
   contractsDaily(state);
-  if (weekday(date) === "Tuesday") {
+  faDaily(state);
+  if (weekday(date) === "Tuesday" && !offseason) {
     weeklyDevelopment(state, playedLastWeek(state));
     if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2)) payWeek(state);
   }
@@ -240,7 +271,7 @@ export function advanceDay(state: GameState): void {
       send(state, "league", "League Office", `${teamLabel(state.champion)} win Super Bowl LXI`,
         state.champion === state.userTeam
           ? "You're a Super Bowl champion. The parade route is being planned."
-          : "The 2026 season is complete. The offseason arrives in a later update.");
+          : "The 2026 season is complete. The offseason starts tomorrow.");
     }
   }
   if (date === addDays(KEY.rosterCutdown, -3)) {
@@ -410,9 +441,22 @@ function weeklyReport(state: GameState): void {
     `Cap space: ${money(cap.space)}. Trade deadline: ${shortDate(KEY.tradeDeadline)}.`);
 }
 
+/** Offseason days worth stopping on. */
+const OFFSEASON_STOPS = [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear, addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), KEY.draftStart];
+
+/** In the offseason: advance to the next key date, at most a week. */
+export function advanceToNextEvent(state: GameState): void {
+  const start = state.date;
+  for (let i = 0; i < 7 && !isGameOver(state); i++) {
+    advanceDay(state);
+    if (OFFSEASON_STOPS.includes(state.date) && state.date !== start) return;
+  }
+}
+
 /** Advances until the user's next game has been played, or a stop day. */
 export function simToNextGame(state: GameState): void {
   const start = state.date;
+  if (isSeasonOver(state)) return advanceToNextEvent(state);
   for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
     const hadGame = agenda(state).some((a) => a.kind === "game");
     const isStop = state.date !== start && state.date === KEY.rosterCutdown;

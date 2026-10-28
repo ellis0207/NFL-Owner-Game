@@ -5,7 +5,7 @@
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
-import { capSummary, teamPlayerIds } from "./cap";
+import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
 import {
   dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, writeDeal, writeExtension, type Terms,
 } from "./contracts";
@@ -19,6 +19,8 @@ import { gaussian, rngFor } from "./rng";
 import { schemeFit, staffEffects, teamStaff } from "./staff";
 import { standings } from "./standings";
 import { depthChart } from "./roster";
+import { bestRival, committed, market, signFreeAgent, teamPull } from "./freeagency";
+import { isOffseason, isPendingFreeAgent, NEXT } from "./offseason";
 import type { GameState, Mandate, Position, Negotiation, NegotiationKind, OfferTerms, Signing } from "./types";
 
 // ---- Who can be extended ----
@@ -36,25 +38,56 @@ export function extensionEligibility(state: GameState, id: string): Eligibility 
   const deal = dealOf(state, id);
   if (!deal) return { ok: false, reason: "Not under contract." };
   const year = leagueYear(state.date);
-  if ((deal.kind === "franchise" || deal.kind === "transition") && state.date > RULES.keyDates.franchiseTagExtensionDeadline) {
+  // Tagged players can sign long-term until July 15 of the tag year, then not again until the season ends.
+  const tagYear = lastYear(deal) ?? year;
+  if ((deal.kind === "franchise" || deal.kind === "transition") && state.date > `${tagYear}-07-15` && state.date <= RULES.keyDates.regularSeasonEnd) {
     return { ok: false, reason: "Tagged players can't sign a long-term deal after July 15 until the season ends." };
   }
+  if (isPendingFreeAgent(state, id) && state.date >= RULES.keyDates.newLeagueYear) return { ok: false, reason: "The contract has expired." };
   const left = dealYearsLeft(deal, year);
   if (left > 2) return { ok: false, reason: `Under contract through ${lastYear(deal)}. Too early to extend.` };
   if (deal.kind === "rookie" && p.yearsExp < 3) return { ok: false, reason: "Drafted players can't extend until after their third season." };
   return { ok: true };
 }
 
+/**
+ * Whether a team can talk contract with a player now, and what kind of talks
+ * they'd be: its own players get extension (or re-signing) talks; free agents
+ * are open to everyone after the season; another team's expiring players only
+ * once the negotiating window opens. Anything else would be tampering.
+ */
+export function talksFor(state: GameState, team: string, id: string): Eligibility & { kind: NegotiationKind } {
+  const ps = state.players[id];
+  const k = RULES.keyDates;
+  if (ps?.team === team && ps.status !== "fa") return { ...extensionEligibility(state, id), kind: "extension" };
+  if (!isOffseason(state.date)) {
+    return { ok: false, kind: "free-agent", reason: ps?.status === "fa" ? "During the season the GM signs free agents as roster moves. Free agency opens after the Super Bowl." : "Under contract with another team." };
+  }
+  if (ps?.status === "fa") {
+    const fa = market(state)[id];
+    if (fa?.status === "agreed") return { ok: false, kind: "free-agent", reason: `Agreed to terms with the ${teamLabel(fa.agreed!.team)}.` };
+    return { ok: true, kind: "free-agent" };
+  }
+  if (isPendingFreeAgent(state, id) && state.date >= k.negotiatingWindowOpens) {
+    const fa = market(state)[id];
+    if (!fa || fa.status !== "open") return { ok: false, kind: "free-agent", reason: fa?.status === "agreed" ? `Agreed to terms with the ${teamLabel(fa.agreed!.team)}.` : "Not headed to free agency." };
+    return { ok: true, kind: "free-agent" };
+  }
+  if (isPendingFreeAgent(state, id)) return { ok: false, kind: "free-agent", reason: `Under contract with the ${teamLabel(ps!.team!)} until the league year ends. Other teams can talk from ${k.negotiatingWindowOpens}.` };
+  return { ok: false, kind: "free-agent", reason: "Under contract with another team." };
+}
+
 /** The first league year a new deal would cover. */
 export function startYearFor(state: GameState, id: string, kind: NegotiationKind): number {
-  if (kind === "free-agent") return leagueYear(state.date);
+  // After the Super Bowl, free agents sign for next season.
+  if (kind === "free-agent") return isOffseason(state.date) ? NEXT : leagueYear(state.date);
   const last = lastYear(dealOf(state, id));
   return Math.max(leagueYear(state.date), (last ?? leagueYear(state.date)) + 1);
 }
 
 // ---- The agent's position ----
 
-function teamQuality(state: GameState, team: string): number {
+export function teamQuality(state: GameState, team: string): number {
   const row = standings(state)[team];
   const g = row ? row.w + row.l + row.t : 0;
   return row ? (row.w + 0.5 * row.t + 2) / (g + 4) : 0.5;
@@ -67,7 +100,8 @@ function stance(state: GameState, team: string, id: string, startYear: number): 
   const agent = agentFor(id);
   const ah = agentHidden(agent.id);
   const pr = priorities(id);
-  const same = state.players[id]?.team === team;
+  const ps = state.players[id];
+  const same = ps?.team === team || (ps?.status === "fa" && ps.lastTeam === team);
   const trust = trustOf(state, agent.id, team);
   const fit = Math.max(-1, Math.min(1, schemeFit(state, id, team) / 4));
   const m = morale(state, id);
@@ -96,7 +130,7 @@ function stance(state: GameState, team: string, id: string, startYear: number): 
 }
 
 /** What an offer is worth to the player, as an APY-equivalent: money, guarantees, length and structure. */
-export function offerValue(neg: Negotiation, t: OfferTerms): number {
+export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "askYears">, t: OfferTerms): number {
   const ah = agentHidden(agentFor(neg.player).id);
   const years = Math.max(1, t.years);
   const apy = t.total / years;
@@ -136,6 +170,13 @@ export function openTalks(state: GameState, team: string, id: string, kind: Nego
     patience: 3 + Math.round(ah.patience * 5),
     base: s.base,
   };
+  // A free agent who has sat on the market has already come down.
+  const fa = kind === "free-agent" ? market(state)[id] : undefined;
+  if (fa) {
+    neg.marketScale = fa.floor / fa.floor0;
+    neg.floor *= neg.marketScale;
+    neg.ask = Math.max(neg.floor * 1.03, neg.ask * neg.marketScale);
+  }
   // The agent opens with their number.
   neg.rounds.push({ date: state.date, from: "agent", terms: agentTerms(ah, neg.ask, neg.askYears, neg.askGuarantee), note: openingLine(neg) });
   state.negotiations[id] = neg;
@@ -191,12 +232,24 @@ export function checkOffer(state: GameState, neg: Negotiation, t: OfferTerms): O
   if (t.guaranteed < t.signingBonus) return { ok: false, reason: "The signing bonus is always guaranteed, so guarantees must be at least that much.", capChange: 0, cashNow: 0 };
   if (t.voidYears < 0 || t.voidYears > 4) return { ok: false, reason: "Up to four void years.", capChange: 0, cashNow: 0 };
   const deal = draftDeal(state, neg, t);
-  const year = leagueYear(state.date);
-  const capChange = dealCapHit(deal, year) - dealCapHit(dealOf(state, neg.player), year);
-  if (state.settings.capRules === "real" && capChange > capSummary(state, neg.team).space) {
-    return { ok: false, reason: `Not enough cap space: this adds ${money(capChange)} to this year's cap.`, capChange, cashNow: t.signingBonus };
+  // A free agent, or one of ours re-signed after the season, counts against next year's cap.
+  const year = capYearFor(state, neg);
+  const current = neg.kind === "free-agent" ? null : dealOf(state, neg.player);
+  const capChange = dealCapHit(deal, year) - dealCapHit(current, year);
+  const space = capSummary(state, neg.team, year).space - (neg.kind === "free-agent" ? committed(state, neg.team) : 0);
+  if (state.settings.capRules === "real" && capChange > 0 && capChange > space) {
+    return { ok: false, reason: `Not enough cap space: this adds ${money(capChange)} to the ${year} cap and we have ${money(Math.max(0, space))}.`, capChange, cashNow: t.signingBonus };
   }
   return { ok: true, capChange, cashNow: t.signingBonus };
+}
+
+function reSigning(state: GameState, neg: Negotiation): boolean {
+  return neg.kind === "extension" && isOffseason(state.date) && isPendingFreeAgent(state, neg.player);
+}
+
+/** The league year whose cap an offer is checked against. */
+export function capYearFor(state: GameState, neg: Negotiation): number {
+  return neg.kind === "free-agent" || reSigning(state, neg) ? NEXT : leagueYear(state.date);
 }
 
 /** The contract these terms would produce. */
@@ -204,8 +257,15 @@ export function draftDeal(state: GameState, neg: Negotiation, t: OfferTerms) {
   const p = PLAYER_BY_ID[neg.player];
   const terms: Terms = { ...t };
   const current = dealOf(state, neg.player);
+  // Re-signing an expiring player after the season: a new deal from next year, the bonus spread from then.
+  if (reSigning(state, neg) && current) {
+    const deal = writeDeal(terms, { team: neg.team, date: state.date, kind: "extension", firstYear: NEXT, yearsExp: yearsExpIn(neg.player, NEXT) });
+    deal.years = [...current.years.filter((y) => y.year < NEXT && !y.void).map((y) => ({ ...y })), ...deal.years];
+    return deal;
+  }
   if (neg.kind === "extension" && current) return writeExtension(current, terms, state.date, p.yearsExp);
-  return writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: startYearFor(state, neg.player, neg.kind), yearsExp: p.yearsExp });
+  const first = startYearFor(state, neg.player, neg.kind);
+  return writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: first, yearsExp: yearsExpIn(neg.player, first) });
 }
 
 /** Sends an offer. The agent answers in a day or a few. */
@@ -236,8 +296,12 @@ const CONCEDE: Record<string, number> = { steady: 0.45, relationship: 0.5, hardb
 
 /** How close a deadline is, in days (Week 1 for extensions in camp, the end of the season otherwise). */
 function daysToDeadline(state: GameState, neg: Negotiation): number {
-  const d = state.date < RULES.keyDates.regularSeasonStart ? RULES.keyDates.regularSeasonStart : RULES.keyDates.regularSeasonEnd;
-  return neg.kind === "extension" ? daysBetween(state.date, d) : 30;
+  const k = RULES.keyDates;
+  // In the offseason the deadline for our own free agents is the day other teams can call.
+  const d = state.date < k.regularSeasonStart ? k.regularSeasonStart
+    : isOffseason(state.date) ? k.negotiatingWindowOpens
+    : k.regularSeasonEnd;
+  return neg.kind === "extension" ? Math.max(0, daysBetween(state.date, d)) : 30;
 }
 
 function respond(state: GameState, neg: Negotiation): void {
@@ -260,12 +324,42 @@ function respond(state: GameState, neg: Negotiation): void {
     neg.base = fresh.base;
   }
 
+  // On the open market, prices fall for players still waiting.
+  const fa = neg.kind === "free-agent" ? market(state)[id] : undefined;
+  if (fa) {
+    const scale = fa.floor / fa.floor0;
+    const prev = neg.marketScale ?? 1;
+    if (scale < prev) {
+      neg.floor *= scale / prev;
+      neg.ask *= scale / prev;
+    }
+    neg.marketScale = scale;
+  }
+
   const v = offerValue(neg, t);
   const prior = bestTeamValue(neg, true);
   const deadline = daysToDeadline(state, neg);
   const urgent = deadline <= 10;
 
-  if (v >= neg.ask * 0.985 || (v >= neg.floor && (neg.ask - v) / neg.ask < 0.025)) {
+  // Another team's offer is the real floor: the player compares what each is worth to them.
+  const rival = fa ? bestRival(state, id, neg.team) : null;
+  const rivalEq = rival ? rival.u / (1 + teamPull(state, id, neg.team, fa!.from)) : 0;
+  if (rival && rivalEq > v && rivalEq >= neg.floor * 0.97) {
+    neg.ask = Math.max(neg.ask, rivalEq * 1.02);
+    neg.patience -= 1;
+    const reported = rival.offer.apy * (1 + Math.abs(gaussian(rng)) * (agent.style === "leaker" ? 0.08 : 0.03));
+    const counter = agentTerms(ah, neg.ask, neg.askYears, neg.askGuarantee);
+    neg.rounds.push({ date: state.date, from: "agent", terms: counter,
+      note: `${agent.name} says ${name} has a better offer from another team, around ${money(reported)} a year, and we'd have to beat it.` });
+    if (neg.team === state.userTeam) {
+      if (neg.handler === "owner") send(state, "transaction", `${agent.name}, agent`, `${name}: another team is ahead`, `${neg.rounds[neg.rounds.length - 1].note} Details are on the Contracts page.`);
+      else note(neg, state.date, `${gmName(state)}: another team is ahead, at about ${money(reported)} a year.`);
+    }
+    if (fa?.lastLook) delete fa.lastLook;
+    return;
+  }
+
+  if (v >= neg.ask * 0.985 || (v >= neg.floor && (neg.ask - v) / neg.ask < 0.025) || (fa?.lastLook && v >= neg.floor && v >= rivalEq)) {
     agree(state, neg, t);
     return;
   }
@@ -379,6 +473,25 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
     neg.rounds.push({ date: state.date, from: "agent", terms: t, note: "They'll sign these terms as soon as we can fit them." });
     return;
   }
+  if (neg.kind === "free-agent") {
+    neg.status = "agreed";
+    neg.rounds.push({ date: state.date, from: "agent", terms: t, note: "Agreed." });
+    signFreeAgent(state, id, neg.team, t);
+    invalidateMarket(state);
+    if (neg.team === state.userTeam) {
+      state.pressure.fans = Math.min(100, state.pressure.fans + (p.position === "QB" ? 4 : 2));
+      const s = state.signings.find((x) => x.player === id && x.team === neg.team)!;
+      send(state, "transaction", neg.handler === "gm" ? gmName(state) : `${agentFor(id).name}, agent`, `${p.name} agrees to terms`,
+        `Done: ${t.years} years, ${money(s.total)} total, ${money(s.guaranteed)} guaranteed. ` +
+        (state.date < RULES.keyDates.newLeagueYear ? `The deal is signed when the league year opens on ${RULES.keyDates.newLeagueYear}. ` : `${money(t.signingBonus)} signing bonus paid now. `) +
+        `Early grades: ${s.grades.map((g) => `${g.outlet}: ${g.grade}`).join(" · ")}.`);
+    }
+    return;
+  }
+  // Signed after the season: this year's extra cap hit comes out of what rolls over.
+  if (capYearFor(state, neg) === leagueYear(state.date)) adjustRollover(state, neg.team, -check.capChange);
+  // Void years on the old deal still accelerate when it would have voided.
+  if (reSigning(state, neg)) addDeadMoney(state, neg.team, NEXT, dealOf(state, id)?.years.filter((y) => y.void && y.year >= NEXT).reduce((a, y) => a + y.proration, 0) ?? 0);
   const deal = draftDeal(state, neg, t);
   const start = startYearFor(state, id, neg.kind);
   // Graded against the market as it stood before this deal.
@@ -503,14 +616,16 @@ export function delegate(state: GameState, id: string, mandate: Mandate | null):
 
 // ---- Each day ----
 
-const STARTERS: Partial<Record<Position, number>> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1, LS: 1 };
+export const STARTERS: Partial<Record<Position, number>> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1, LS: 1 };
 
 /** CPU front offices look at extending their own players. */
 function cpuExtensions(state: GameState): void {
   const rng = rngFor(state.seed, `cpu-ext:${state.date}`);
   const year = leagueYear(state.date);
-  // Teams do most extensions in camp and early in the season.
-  const busy = state.date < addDays(RULES.keyDates.regularSeasonStart, 14) ? 0.05 : state.date < RULES.keyDates.tradeDeadline ? 0.018 : 0.008;
+  // Teams do most extensions in camp and early in the season, and re-sign their own free agents before the market opens.
+  const offseason = isOffseason(state.date);
+  if (offseason && state.date >= RULES.keyDates.negotiatingWindowOpens) return;
+  const busy = offseason ? 0.35 : state.date < addDays(RULES.keyDates.regularSeasonStart, 14) ? 0.05 : state.date < RULES.keyDates.tradeDeadline ? 0.018 : 0.008;
   for (const t of TEAMS) {
     if (t.id === state.userTeam || rng() > busy) continue;
     const candidates = Object.keys(state.players).filter((id) => {
@@ -523,9 +638,10 @@ function cpuExtensions(state: GameState): void {
     if (!candidates.length) continue;
     // Teams extend the players they start, not their backups.
     const chart = depthChart(state, t.id);
-    const starters = new Set(Object.entries(chart).flatMap(([pos, ids]) => ids.slice(0, STARTERS[pos as Position] ?? 1)));
+    const starters = new Set(Object.entries(chart).flatMap(([pos, ids]) => ids.slice(0, (STARTERS[pos as Position] ?? 1) + (offseason ? 1 : 0))));
     const start = year + 1;
-    const scored = candidates.filter((id) => starters.has(id)).map((id) => ({ id, v: teamValue(state, t.id, id, start) })).filter((x) => x.v >= 3_000_000).sort((a, b) => b.v - a.v);
+    const scored = candidates.filter((id) => starters.has(id)).map((id) => ({ id, v: teamValue(state, t.id, id, start) }))
+      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000)).sort((a, b) => b.v - a.v);
     const pick = scored[0];
     if (!pick) continue;
     const ask = marketPrice(state, pick.id, start).apy;
@@ -590,8 +706,15 @@ export function contractsDaily(state: GameState): void {
   for (const neg of Object.values(state.negotiations)) {
     if (neg.status !== "open") continue;
     if (state.players[neg.player]?.team !== neg.team && neg.kind === "extension") {
-      neg.status = "ended";
-      continue;
+      // An expiring deal ran out mid-talks: the player is a free agent, and the talks go on as free agency.
+      const ps = state.players[neg.player];
+      if (ps?.status === "fa" && ps.lastTeam === neg.team && market(state)[neg.player]?.status === "open") {
+        neg.kind = "free-agent";
+        note(neg, state.date, "The contract expired. We can keep talking, but now every team can.");
+      } else {
+        neg.status = "ended";
+        continue;
+      }
     }
     if (neg.pending && neg.replyOn && neg.replyOn <= state.date) respond(state, neg);
     else if (!neg.pending && neg.handler === "gm" && neg.status === "open") {
@@ -601,7 +724,7 @@ export function contractsDaily(state: GameState): void {
   }
   publicMood(state);
   if (state.date === RULES.keyDates.regularSeasonStart) resolveHoldouts(state);
-  if (state.date < RULES.keyDates.regularSeasonEnd) cpuExtensions(state);
+  if (state.date < RULES.keyDates.regularSeasonEnd || isOffseason(state.date)) cpuExtensions(state);
 }
 
 /** Fans and media drift back toward neutral, but a starter missing time keeps the heat on. */
