@@ -369,6 +369,9 @@ const TAGS: Partial<Record<keyof StaffHidden, [string, string]>> = {
   recovery: ["Gets injured players back quickly", "Slow return-to-play timelines"],
 };
 
+/** The tags that count against someone. */
+export const CONCERN_TAGS = new Set(Object.values(TAGS).map((t) => t![1]));
+
 export function knownFor(state: GameState, c: Coach, looks = 0, viewer = "public"): string[] {
   const sd = looks >= 2 ? 2.5 : looks === 1 ? 4.5 : 7;
   const rows = KEYS[c.track].map((k) => {

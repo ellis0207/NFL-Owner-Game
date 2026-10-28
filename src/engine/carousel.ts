@@ -9,7 +9,7 @@
 // Head coaching interviews can't be blocked; a lateral move to another
 // coordinator job can, while the coach is under contract.
 import {
-  canHold, COACH_ROLES, coachAge, install, knownFor, newHireFromWithin, quality, recordTeamSeason, reputation, retire, retiresNow,
+  canHold, COACH_ROLES, CONCERN_TAGS, coachAge, install, knownFor, newHireFromWithin, quality, recordTeamSeason, reputation, retire, retiresNow,
   ROLE_NAME, salaryFor, staff, vacate,
 } from "./coaches";
 import { COLLEGE_TEAM } from "./collegeData";
@@ -135,6 +135,11 @@ export function candidates(state: GameState, team: string, role: StaffRole): str
       if (role === "HC") return c.role === "OC" || c.role === "DC" || c.role === "STC" || (c.job?.kind === "college" && c.job.title === "head coach") || (!c.team && !c.job) || reputation(state, c) >= 66;
       if (role === "GM") return c.role === "PRO" || c.role === "COL" || c.job?.kind === "front" || (!c.team && !c.job);
       return true;
+    })
+    .filter((c) => {
+      // Drop anyone who is off the market for this cycle; keep those only blocked until the season ends.
+      const a = available(state, team, c.id, role);
+      return a.ok || /season|playoffs/.test(a.why ?? "");
     })
     .sort((a, b) => reputation(state, b) - reputation(state, a))
     .map((c) => c.id);
@@ -282,6 +287,7 @@ export function makeOffer(state: GameState, role: StaffRole, id: string, years: 
   if (!search) return { ok: false, text: "There's no open search for that job." };
   const a = available(state, team, id, role);
   if (!a.ok) return { ok: false, text: a.why! };
+  if (search.interviews[id]?.declined) return { ok: false, text: `${person(state, id).name} isn't interested in the job.` };
   if ((role === "HC" || role === "GM") && !search.interviews[id]?.report) return { ok: false, text: "Interview the candidate first." };
   const s = staff(state);
   s.offers = s.offers.filter((o) => !(o.team === team && o.role === role));
@@ -327,6 +333,9 @@ function decideOffers(state: GameState): void {
     const accepted = best.v > stay && available(state, best.o.team, id, best.o.role).ok;
     for (const { o } of scored) {
       if (accepted && o === best.o) continue;
+      // A no is a no for this search.
+      const search = openSearches(state, o.team).find((x) => x.role === o.role);
+      if (search) search.interviews[id] = { ...(search.interviews[id] ?? { date: state.date }), declined: true };
       if (o.team === state.userTeam) {
         send(state, "staff", gmName(state), `${c.name} turns us down`,
           accepted ? `${c.name} took the ${teamLabel(best.o.team)} ${ROLE_NAME[best.o.role]} job instead.` : `${c.name} decided to stay put.`);
@@ -508,7 +517,7 @@ function propose(state: GameState, role: StaffRole, replaces?: string): void {
   const by = SUPPORT.includes(role) ? holder(state, team, "GM") : holder(state, team, "HC");
   const reasons: string[] = [];
   if (c.mentor && by && (c.mentor === by.id || by.mentor === c.id)) reasons.push("we've worked together and I trust this coach");
-  const tags = knownFor(state, c, 1, `boss:${team}`);
+  const tags = knownFor(state, c, 1, `boss:${team}`).filter((t) => !CONCERN_TAGS.has(t));
   if (tags[0]) reasons.push(tags[0].toLowerCase());
   if (c.scheme && by?.scheme === c.scheme) reasons.push("fits what we want to do schematically");
   if (!reasons.length) reasons.push("the best fit available");
@@ -840,7 +849,7 @@ function cpuSearches(state: GameState): void {
       }
     }
     // An offer once they've seen enough, sooner if a rival is closing in.
-    const seen = Object.entries(search.interviews).filter(([, iv]) => iv.report).map(([id]) => id)
+    const seen = Object.entries(search.interviews).filter(([, iv]) => iv.report && !iv.declined).map(([id]) => id)
       .filter((id) => available(state, search.team, id, search.role).ok);
     const rival = s.offers.some((o) => o.role === search.role && seen.includes(o.id));
     if (seen.length && (days >= 12 || held >= 6 || (rival && days >= 5) || state.date >= addDays(OFFSEASON_GUESS(), 10))) {
@@ -873,7 +882,8 @@ function lastCall(state: GameState): void {
     if (staff(state).offers.some((o) => o.team === search.team && o.role === search.role)) continue;
     if (search.team === state.userTeam && TOP.includes(search.role)) {
       send(state, "staff", gmName(state), `We still need a ${ROLE_NAME[search.role]}`,
-        `The league has mostly filled its jobs. If you'd like, I can run the search from here (Staff page), or you can keep interviewing.`);
+        `The league has mostly filled its jobs. If you'd like, I can run the search from here (Staff page), or you can keep interviewing. ` +
+        `If the job is still open when the new league year starts, I'll fill it so we're ready for free agency.`);
       continue;
     }
     const id = bossPick(state, search.team, search.role, new Set()) ?? newHireFromWithin(state, search.team, search.role).id;
@@ -884,6 +894,18 @@ function lastCall(state: GameState): void {
 }
 
 /** The owner hands a search to the GM (or, for a GM search, to the team president's search firm). */
+/** A top job we leave open into the new league year gets filled by the GM (or a search firm, for the GM job). */
+function forceUserSearches(state: GameState): void {
+  if (state.date !== KEY.newLeagueYear) return;
+  for (const search of openSearches(state, state.userTeam)) {
+    if (!TOP.includes(search.role) || search.delegated) continue;
+    search.delegated = true;
+    send(state, "staff", gmName(state), `Filling the ${ROLE_NAME[search.role]} job`,
+      `The new league year is here and we still don't have a ${ROLE_NAME[search.role]}. ` +
+      (search.role === "GM" ? "A search firm is bringing us the best available candidate." : "I'm hiring the best available candidate now."));
+  }
+}
+
 export function delegateSearch(state: GameState, role: StaffRole): { ok: boolean; text: string } {
   const search = openSearches(state, state.userTeam).find((x) => x.role === role);
   if (!search) return { ok: false, text: "There's no open search for that job." };
@@ -969,6 +991,7 @@ export function carouselDaily(state: GameState): void {
   pendingHires(state);
   userProposals(state);
   lastCall(state);
+  forceUserSearches(state);
 }
 
 /** At the rollover: last season's searches and proposals are cleared out. */

@@ -168,7 +168,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Draft" && <DraftScreen game={game} changed={changed} />}
           {screen === "Stats" && <StatsScreen game={game} />}
           {screen === "Contracts" && <ContractsScreen game={game} changed={changed} />}
-          {screen === "Staff" && <StaffScreen game={game} />}
+          {screen === "Staff" && <StaffScreen game={game} changed={changed} />}
           {screen === "Inbox" && <InboxScreen game={game} changed={changed} />}
           {screen === "Media" && <MediaScreen game={game} changed={changed} />}
           {screen === "Schedule" && <ScheduleScreen game={game} />}
