@@ -5,8 +5,8 @@
 // every player on the 53 counts in full and practice squad players count at
 // their weekly pay. Dead money from released players counts throughout.
 // Unused cap space rolls over into the next league year.
-import { dealCapHit, dealOf, dealYearsLeft, leagueYear, releaseCharges, salaryCap, writeMinimumDeal } from "./contracts";
-import { PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
+import { dealCapHit, dealOf, dealYearsLeft, leagueYear, practiceWeekly, releaseCharges, salaryCap, writeMinimumDeal } from "./contracts";
+import { BASE_SEASON, PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
 import type { GameState } from "./types";
 
 export { minimumSalary } from "./contracts";
@@ -27,8 +27,8 @@ export function signMinimumDeal(state: GameState, playerId: string, team: string
 }
 
 /**
- * Accrued seasons on a date: the seasons before 2026, plus 2026 once its
- * regular season is over. Four or more makes a vested veteran.
+ * Accrued seasons on a date: the seasons before this one, plus this one once
+ * its regular season is over. Four or more makes a vested veteran.
  */
 export function accruedSeasons(playerId: string, date: string): number {
   const year = leagueYear(date);
@@ -46,7 +46,7 @@ export function isRegularSeasonOrLater(date: string): boolean {
 }
 
 export function practiceSquadCapHit(): number {
-  return RULES.practiceSquadWeekly.standard * REGULAR_SEASON_WEEKS;
+  return practiceWeekly(0) * REGULAR_SEASON_WEEKS;
 }
 
 /** A practice squad player's cap charge: the weekly pay left on the practice deal. */
@@ -80,7 +80,7 @@ export function teamPlayerIds(state: GameState, team: string): string[] {
 }
 
 export function deadMoney(state: GameState, team: string, year = leagueYear(state.date)): number {
-  const base = year === SEASON ? TEAM_BY_ID[team].cap2026.deadMoney : 0;
+  const base = year === BASE_SEASON ? TEAM_BY_ID[team].cap2026.deadMoney : 0;
   return base + (state.deadMoney[team]?.[String(year)] ?? 0);
 }
 
@@ -91,7 +91,7 @@ export function rollover(state: GameState | undefined, team: string, year: numbe
 
 /** A team's adjusted cap: the league cap plus rollover (2026 is the real adjusted figure). */
 export function capLimit(team: string, year = SEASON, state?: GameState): number {
-  if (year === SEASON) return TEAM_BY_ID[team].cap2026.adjustedCap;
+  if (year === BASE_SEASON) return TEAM_BY_ID[team].cap2026.adjustedCap;
   return salaryCap(state, year) + rollover(state, team, year);
 }
 

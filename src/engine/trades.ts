@@ -29,23 +29,27 @@ import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
 import { gradeLean } from "./outlets";
 import { money, news, send } from "./inbox";
-import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
+import { HIDDEN_RATINGS, onSeasonChange, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { ageFactor, marketView, productionBump, shareFor } from "./market";
 import { STARTERS } from "./negotiation";
 import { isOffseason, NEXT, off, OFFSEASON_START } from "./offseason";
 import { gaussian, rngFor } from "./rng";
 import { depthChart, logMove, releasePlayer, rosterLimit, rosterStatusNow, signReplacement, weakestOnRoster } from "./roster";
-import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
+import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside } from "./staff";
 import { standings } from "./standings";
 import type { GameState, Position, TradeAsset, TradeDeal, TradeOffer, TradeRecord, TradeState } from "./types";
 
 const KEY = RULES.keyDates;
 /** Picks in the next three drafts can be traded. */
 // (From the league data, not offseason.ts: this module is in an import cycle with it.)
-export const PICK_YEARS = [RULES.season + 1, RULES.season + 2, RULES.season + 3];
+export let PICK_YEARS: number[] = [];
 export const ROUNDS = 7;
 /** The next draft: picks in it are valued at their projected slot, later ones less. */
-const DRAFT_YEAR = RULES.season + 1;
+let DRAFT_YEAR = 0;
+onSeasonChange(() => {
+  PICK_YEARS = [RULES.season + 1, RULES.season + 2, RULES.season + 3];
+  DRAFT_YEAR = RULES.season + 1;
+});
 
 /**
  * Picks traded before the game starts (2027 first-rounders): Green Bay's to
@@ -269,7 +273,7 @@ function computeView(state: GameState, eye: Eye, team: string, id: string): numb
 function growthFor(state: GameState, eye: Eye, team: string, id: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r || PLAYER_BY_ID[id].yearsExp > 3) return 0;
-  const gap = Math.max(0, r.potential - r.overall);
+  const gap = upside(state, id);
   if (eye === "truth") return gap;
   const skill = eye === "gm" ? staffEffects(team).gmEval : 80;
   const z = gaussian(rngFor(state.seed, `potential:${eye}:${team}:${id}`));

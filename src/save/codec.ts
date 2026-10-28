@@ -4,6 +4,7 @@ import { ensureCollege } from "../engine/college";
 import { clearDraftees, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
 import { PLAYERS } from "../engine/league";
+import { applySeason, patchPlayers } from "../engine/seasons";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
 export const SAVE_FORMAT = "nfl-owner-sim-save";
@@ -63,6 +64,8 @@ export function migrate(state: GameState): GameState {
   }
   // Another save's draftees leave the player list before this save's come back.
   clearDraftees();
+  // The save's season: its dates, schedule, caps and draft classes.
+  applySeason(state);
   // Saves from before the free agent pool: the unsigned players join the league as free agents.
   for (const p of PLAYERS) {
     if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
@@ -71,6 +74,8 @@ export function migrate(state: GameState): GameState {
   ensureCollege(state);
   // The draft calendar (mocks, declarations, combine, order, comp picks), and this save's draftees.
   ensureDraft(state);
+  // Credited seasons and career stats, for the draftees too.
+  patchPlayers(state);
   // Saves from before the business side open their books today.
   ensureBusiness(state);
   return state;

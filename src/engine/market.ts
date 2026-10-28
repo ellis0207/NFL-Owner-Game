@@ -6,7 +6,7 @@
 // uses hidden ability and each team's scheme, read through that team's staff.
 import { dealOf, leagueYear, originalDeal, salaryCap } from "./contracts";
 import { ageOn } from "./dates";
-import { HIDDEN_RATINGS, PLAYER_BY_ID, PLAYERS, RULES } from "./league";
+import { BASE_SEASON, HIDDEN_RATINGS, PLAYER_BY_ID, PLAYERS, RULES } from "./league";
 import { ability, perceivedAbility, schemeFit, staffEffects } from "./staff";
 import { seasonTotals } from "./stats";
 import type { Deal, GameState, Position } from "./types";
@@ -44,10 +44,10 @@ const RFA_TENDERS: Record<number, { first: number; second: number; original: num
   2027: { first: 8_735_000, second: 6_261_000, original: 3_822_000 },
 };
 
+/** Later years' amounts follow the cap from the 2027 projection. */
 function capScale(state: GameState | undefined, year: number): number {
-  if (year === 2026) return 1;
-  const known = year === 2027 ? PROJECTED_CAP_2027 : salaryCap(undefined, year);
-  return salaryCap(state, year) / known;
+  if (year <= BASE_SEASON) return 1;
+  return salaryCap(state, year) / PROJECTED_CAP_2027;
 }
 
 function tagRow(year: number): Record<TagGroup, [number, number]> {
@@ -71,7 +71,7 @@ export type TenderLevel = "first" | "second" | "original";
 
 export function rfaTender(state: GameState | undefined, level: TenderLevel, year: number, priorSalary = 0): number {
   const row = RFA_TENDERS[year] ?? RFA_TENDERS[2027];
-  const scale = year <= 2027 ? capScale(state, year) : salaryCap(state, year) / PROJECTED_CAP_2027;
+  const scale = capScale(state, year);
   return Math.round(Math.max(row[level] * scale, priorSalary * 1.1) / 1000) * 1000;
 }
 
@@ -183,7 +183,7 @@ export function invalidateMarket(state: GameState): void {
 /** The cap in the league year a contract was signed. */
 function capAtSigning(state: GameState, deal: Deal): number {
   const y = Number(deal.signed.slice(0, 4));
-  return y < RULES.season ? capAt(y) : salaryCap(state, leagueYear(deal.signed));
+  return y < BASE_SEASON ? capAt(y) : salaryCap(state, leagueYear(deal.signed));
 }
 
 /**

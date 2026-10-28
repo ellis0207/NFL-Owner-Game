@@ -10,8 +10,8 @@
 import { COLLEGE_TEAM, distanceTo, schoolName } from "./collegeData";
 import { addDays, weekday } from "./dates";
 import { send, money } from "./inbox";
-import { TEAM_BY_ID } from "./league";
-import { CLASS_SIZE, draftClass, type Prospect } from "./prospects";
+import { onSeasonChange, RULES, TEAM_BY_ID } from "./league";
+import { draftClass, type Prospect } from "./prospects";
 import { TRAIT_WORDS } from "./reports";
 import { gaussian, rngFor } from "./rng";
 import { DEFENSE, DEFENSE_LABEL, OFFENSE, OFFENSE_LABEL } from "./schemes";
@@ -21,7 +21,10 @@ import type { GameState, ScoutAssignment, ScoutDepth, ScoutFilter, ScoutingState
 export const SCOUTING_BUDGET = 2_400_000;
 export const MAX_ASSIGNMENTS = 6;
 /** Scouting runs from camp to the draft. */
-export const SCOUTING_ENDS = "2027-04-28";
+export let SCOUTING_ENDS = "";
+onSeasonChange(() => {
+  SCOUTING_ENDS = addDays(RULES.keyDates.draftStart, -1);
+});
 
 export const DEPTHS: Record<ScoutDepth, { label: string; detail: string; base: number; perPlayer: number; travel: number; points: number; ceiling: number }> = {
   film: { label: "Film study", detail: "Tape from the office. Cheap, no travel, but film only tells you so much.", base: 1500, perPlayer: 200, travel: 0, points: 45, ceiling: 40 },
@@ -29,8 +32,10 @@ export const DEPTHS: Record<ScoutDepth, { label: string; detail: string; base: n
   deep: { label: "Deep dive", detail: "The director and an area scout: interviews, trainers, background checks.", base: 7500, perPlayer: 2500, travel: 2, points: 165, ceiling: 100 },
 };
 
-export function newScouting(): ScoutingState {
-  return { budget: SCOUTING_BUDGET, spent: 0, plan: [], know: {}, weeks: [], cpu: {} };
+/** A season's college scouting: the budget grows with costs, about 4% a year. */
+export function newScouting(season = RULES.season): ScoutingState {
+  const budget = Math.round(SCOUTING_BUDGET * Math.pow(1.04, Math.max(0, season - 2026)) / 10_000) * 10_000;
+  return { budget, spent: 0, plan: [], know: {}, weeks: [], cpu: {} };
 }
 
 function sc(state: GameState): ScoutingState {
@@ -234,11 +239,11 @@ function cpuScouting(state: GameState): void {
   order.forEach((id, i) => { rank[id] = i; });
   for (const team of Object.keys(TEAM_BY_ID)) {
     if (team === state.userTeam) continue;
-    const arr = (s.cpu[team] ??= new Array(CLASS_SIZE).fill(0));
+    const arr = (s.cpu[team] ??= new Array(dc.prospects.length).fill(0));
     const eff = efficiency(team);
     dc.prospects.forEach((p, i) => {
       const w = 1 / (1 + rank[p.id] / 60) + (distanceTo(team, p.school) < 500 ? 0.25 : 0);
-      const k = arr[i];
+      const k = arr[i] ?? 0;
       arr[i] = Math.min(88, Math.round(k + 7 * eff * w * (1 - k / 95)));
     });
   }

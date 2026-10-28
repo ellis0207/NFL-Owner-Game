@@ -878,7 +878,7 @@ function collegeCoverage(state: GameState): void {
     });
   }
   // Stock report on Wednesdays from October to the draft.
-  if (weekday(date) === "Wednesday" && date >= "2026-10-01" && date < KEY.draftStart) {
+  if (weekday(date) === "Wednesday" && date >= `${RULES.season}-10-01` && date < KEY.draftStart) {
     const snap = m.hypeSnap;
     const now = c.hype;
     if (snap) {
@@ -1135,7 +1135,7 @@ function teamQuestions(state: GameState, team: string): void {
 
 function evergreen(state: GameState): void {
   const date = state.date;
-  const day = daysBetween("2026-07-01", date);
+  const day = Math.abs(daysBetween(`${RULES.season}-07-01`, date));
   const wd = weekday(date);
   const us = state.userTeam;
   const others = TEAMS.map((t) => t.id).filter((t) => t !== us);
@@ -1144,11 +1144,11 @@ function evergreen(state: GameState): void {
     campNotebook(state, others[day % others.length]);
   }
   if (date > KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && wd === "Friday") injuryRoundup(state);
-  if (date >= "2026-09-10" && date <= "2026-12-10") {
+  if (date >= `${RULES.season}-09-10` && date <= `${RULES.season}-12-10`) {
     if (wd === "Thursday") heismanWatch(state);
     if (wd === "Friday") collegePreview(state);
   }
-  if (date >= "2026-12-01" && date < KEY.draftStart && state.college) prospectProfile(state, daysBetween("2026-12-01", date));
+  if (date >= `${RULES.season}-12-01` && date < KEY.draftStart && state.college) prospectProfile(state, daysBetween(`${RULES.season}-12-01`, date));
   if (date > KEY.regularSeasonEnd && date < KEY.draftStart) {
     const done = TEAMS.map((t) => t.id).filter((t) => !stillPlaying(state, t));
     if (done.length) teamQuestions(state, done[day % done.length]);

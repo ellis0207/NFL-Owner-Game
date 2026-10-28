@@ -274,11 +274,22 @@ function install(state: GameState, id: string, team: string, deal = dealOf(state
   delete state.players[id].elevations;
   if (state.psPlans) delete state.psPlans[id];
   if (fa) fa.status = "signed";
+  countDeparture(state, id, team, deal.apy);
   endOtherTalks(state, id, team);
   payCash(state, team, deal.signingBonus, deal.years[0]?.year ?? NEXT);
   invalidateRosters(state);
   const p = PLAYER_BY_ID[id];
   logMove(state, team, id, future ? "future" : "signed", `signed ${p.position} ${p.name}${future ? " to a reserve/future deal" : ""}`);
+}
+
+/** An unrestricted free agent signing elsewhere in the spring counts toward next year's compensatory picks. */
+function countDeparture(state: GameState, id: string, team: string, apy: number): void {
+  const league = state.league;
+  const from = league?.expiring?.[id];
+  if (!league || !from || !league.cfaYear) return;
+  delete league.expiring![id];
+  if (from === team) return;
+  ((league.cfa ??= {})[league.cfaYear] ??= []).push({ player: id, from, to: team, apy });
 }
 
 /** At 4 PM on the first day of the league year, the window's agreements become contracts. */

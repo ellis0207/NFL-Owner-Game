@@ -1,4 +1,4 @@
-// The 2027 NFL draft: the order (with compensatory picks), mock drafts during
+// The NFL draft each spring: the order (with compensatory picks), mock drafts during
 // the season, underclassmen declaring, the combine, the three days of the
 // draft itself, draft-day trades, and the undrafted free agent rush after it.
 //
@@ -15,11 +15,11 @@
 import { invalidateRosters } from "./cap";
 import { mediaBoard, mediaRank } from "./college";
 import { schoolName } from "./collegeData";
-import { minimumSalary, rookieScale } from "./contracts";
+import { minimumSalary, rookieScale, salaryCap as salaryCapFor } from "./contracts";
 import { addDays } from "./dates";
 import { letter, OUTLETS } from "./grades";
 import { news, send } from "./inbox";
-import { HIDDEN_RATINGS, HIDDEN_STAFF, PLAYER_BY_ID, PLAYERS, RULES, TEAMS, teamLabel } from "./league";
+import { HIDDEN_RATINGS, HIDDEN_STAFF, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, TEAMS, teamLabel } from "./league";
 import { marketView } from "./market";
 import { STARTERS } from "./negotiation";
 import { draftStanding, draftOrder, off, OFFSEASON_START } from "./offseason";
@@ -35,19 +35,30 @@ import {
 import type { Deal, DraftSelection, DraftState, GameState, MockDraft, PlayerData, Position, StaffPerson, TradeDeal } from "./types";
 
 const KEY = RULES.keyDates;
-export const DRAFT_YEAR = RULES.season + 1;
+export let DRAFT_YEAR = 0;
 /** Day 1 is the first round, Day 2 rounds two and three, Day 3 rounds four through seven. */
-export const DRAFT_DAYS = [KEY.draftStart, addDays(KEY.draftStart, 1), addDays(KEY.draftStart, 2)];
+export let DRAFT_DAYS: string[] = [];
 export const DAY_ROUNDS = [[1], [2, 3], [4, 5, 6, 7]];
-/** The day after the draft: the end of what the game plays for now. */
-export const DRAFT_OVER = addDays(KEY.draftStart, 3);
+/** The day after the draft: the league moves on to the next season. */
+export let DRAFT_OVER = "";
 /** Underclassmen have until mid-January to declare. */
-export const DECLARE_DEADLINE = "2027-01-15";
+export let DECLARE_DEADLINE = "";
 /** The league announces compensatory picks in early March. */
-export const COMP_DATE = "2027-03-05";
-export const COMBINE_DATE = KEY.scoutingCombineStart;
-export const FIRST_MOCK = "2026-09-08";
-const LAST_MOCK = addDays(KEY.draftStart, -1);
+export let COMP_DATE = "";
+export let COMBINE_DATE = "";
+/** The first mock of the season comes out the day before opening night. */
+export let FIRST_MOCK = "";
+let LAST_MOCK = "";
+onSeasonChange(() => {
+  DRAFT_YEAR = RULES.season + 1;
+  DRAFT_DAYS = [KEY.draftStart, addDays(KEY.draftStart, 1), addDays(KEY.draftStart, 2)];
+  DRAFT_OVER = addDays(KEY.draftStart, 3);
+  DECLARE_DEADLINE = `${DRAFT_YEAR}-01-15`;
+  COMP_DATE = addDays(KEY.newLeagueYear, -6);
+  COMBINE_DATE = KEY.scoutingCombineStart;
+  FIRST_MOCK = addDays(KEY.regularSeasonStart, -1);
+  LAST_MOCK = addDays(KEY.draftStart, -1);
+});
 const ROSTER_MAX = RULES.rosterLimits.offseason;
 
 /**
@@ -121,13 +132,14 @@ export function projectedOrder(state: GameState, rounds = 7): string[] {
 function awardCompPicks(state: GameState, quiet = false): void {
   const d = draftState(state);
   const count: Record<string, number> = {};
-  d.comp = COMP_2027.map(([team, round, player, to]) => {
+  const list = DRAFT_YEAR === 2027 ? COMP_2027 : compFormula(state);
+  d.comp = list.map(([team, round, player, to]) => {
     const n = (count[`${team}-${round}`] = (count[`${team}-${round}`] ?? 0) + 1);
     return { pick: `${DRAFT_YEAR}-${round}-${team}-c${n}`, player, to };
   });
   d.order = buildOrder(state);
   if (quiet) return;
-  news(state, `The league awards 32 compensatory picks for the ${DRAFT_YEAR} draft`);
+  news(state, `The league awards ${d.comp.length} compensatory picks for the ${DRAFT_YEAR} draft`);
   const lines = [3, 4, 5, 6, 7].map((r) => `Round ${r}: ${d.comp!.filter((c) => parsePick(c.pick).round === r)
     .map((c) => `${parsePick(c.pick).from} (No. ${pickOverall(state, c.pick)}, for ${c.player})`).join(", ")}`);
   const ours = d.comp.filter((c) => parsePick(c.pick).from === state.userTeam);
@@ -135,6 +147,43 @@ function awardCompPicks(state: GameState, quiet = false): void {
     "Compensatory picks go to teams that lost more or better unrestricted free agents than they signed last March. " +
     `They come at the end of rounds 3 through 7 and can be traded.\n\n${lines.join("\n")}\n\n` +
     (ours.length ? `We get ${ours.length}: ${ours.map((c) => `No. ${pickOverall(state, c.pick)} for ${c.player}`).join(", ")}.` : "We didn't qualify for any."));
+}
+
+/**
+ * The compensatory formula, simplified the way the league runs it: every
+ * unrestricted free agent whose contract ran out and who signed elsewhere in
+ * the spring is valued by his new contract's APY against the cap; each one a
+ * team signs cancels one it lost of the same or the next lower value; what's
+ * left becomes picks in rounds 3-7. At most four a team and 32 in all.
+ */
+function compFormula(state: GameState): [team: string, round: number, lost: string, signedWith: string][] {
+  const moves = state.league?.cfa?.[DRAFT_YEAR] ?? [];
+  const cap = salaryCapFor(state, DRAFT_YEAR - 1);
+  const roundOf = (apy: number) => {
+    const share = apy / cap;
+    return share >= 0.08 ? 3 : share >= 0.045 ? 4 : share >= 0.025 ? 5 : share >= 0.012 ? 6 : share >= 0.006 ? 7 : 0;
+  };
+  const lost: Record<string, { player: string; to: string; apy: number; round: number }[]> = {};
+  const gained: Record<string, number[]> = {};
+  for (const m of moves) {
+    const round = roundOf(m.apy);
+    if (!round) continue;
+    (lost[m.from] ??= []).push({ player: m.player, to: m.to, apy: m.apy, round });
+    (gained[m.to] ??= []).push(round);
+  }
+  const out: { team: string; round: number; player: string; to: string; apy: number }[] = [];
+  for (const [team, ls] of Object.entries(lost)) {
+    const left = [...ls].sort((a, b) => b.apy - a.apy);
+    for (const g of (gained[team] ?? []).sort((a, b) => a - b)) {
+      // A signing cancels a loss of the same round, or else the best one below it.
+      let i = left.findIndex((l) => l.round === g);
+      if (i < 0) i = left.findIndex((l) => l.round > g);
+      if (i >= 0) left.splice(i, 1);
+    }
+    for (const l of left.slice(0, 4)) out.push({ team, round: l.round, player: PLAYER_BY_ID[l.player]?.name ?? l.player, to: l.to, apy: l.apy });
+  }
+  out.sort((a, b) => b.apy - a.apy);
+  return out.slice(0, 32).sort((a, b) => a.round - b.round || b.apy - a.apy).map((c) => [c.team, c.round, c.player, c.to]);
 }
 
 // ---- Who can be drafted ----
@@ -364,19 +413,21 @@ export function clearDraftees(): void {
   registered.clear();
 }
 
-function register(state: GameState, id: string, team: string, pick: { round: number; overall: number } | null): void {
+function register(state: GameState, id: string, team: string, pick: { round: number; overall: number } | null, year = DRAFT_YEAR, hw?: [number, number]): void {
   if (registered.has(id) && PLAYER_BY_ID[id]) return;
-  const dc = draftClass(state.seed);
+  const dc = draftClass(state.seed, year);
   const p = dc.byId[id];
   const h = dc.hidden[id];
+  if (!p || !h) return;
   const [first, ...rest] = p.name.split(" ");
+  const combine = year === DRAFT_YEAR ? state.draft?.combine?.[id] : undefined;
   const data: PlayerData = {
     id, name: p.name, firstName: first, lastName: rest.join(" "), team: null, position: p.position, depthChartPosition: p.position,
-    jersey: null, birthDate: p.birthDate, heightIn: state.draft?.combine?.[id]?.heightIn ?? p.heightIn, weightLb: state.draft?.combine?.[id]?.weightLb ?? p.weightLb,
-    college: schoolName(p.school), yearsExp: 0, rookieYear: DRAFT_YEAR,
+    jersey: null, birthDate: p.birthDate, heightIn: hw?.[0] ?? combine?.heightIn ?? p.heightIn, weightLb: hw?.[1] ?? combine?.weightLb ?? p.weightLb,
+    college: schoolName(p.school), yearsExp: 0, rookieYear: year,
     draft: { team: pick ? team : null, round: pick?.round ?? null, overall: pick?.overall ?? null },
     contract: {
-      source: "estimated-minimum", signedYear: DRAFT_YEAR, years: pick ? 4 : 3, totalValue: null, apy: null, guaranteed: null, apyCapPct: null,
+      source: "estimated-minimum", signedYear: year, years: pick ? 4 : 3, totalValue: null, apy: null, guaranteed: null, apyCapPct: null,
       type: pick ? "Drafted" : "UDFA", otcTeam: team, seasons: [],
     },
     ids: { pfr: null, espn: null, sleeper: null }, headshotUrl: null, stats: [], snaps: {},
@@ -387,9 +438,13 @@ function register(state: GameState, id: string, team: string, pick: { round: num
   registered.add(id);
 }
 
-/** Puts this save's draftees back in the league's player list (after loading a save). */
+/** Puts this save's draftees back in the league's player list (after loading a save): past drafts, then this one. */
 export function restoreDraftees(state: GameState): void {
   clearDraftees();
+  for (const a of state.history?.drafts ?? []) {
+    for (const [id, team, round, overall, h, w] of a.picks) register(state, id, team, { round, overall }, a.year, [h, w]);
+    for (const [id, team] of a.udfa) register(state, id, team, null, a.year);
+  }
   const d = state.draft;
   if (!d) return;
   for (const m of d.made) register(state, m.player, m.team, { round: parsePick(m.pick).round, overall: m.overall });
@@ -789,16 +844,16 @@ const ANALYSTS: Record<string, string> = {
 export function mockRounds(date: string): number {
   if (date < DECLARE_DEADLINE) return 1;
   if (date < COMBINE_DATE) return 2;
-  if (date < "2027-04-01") return 3;
+  if (date < `${DRAFT_YEAR}-04-01`) return 3;
   return 4;
 }
 
 /** Days to the next mock: about a month early in the season, every two weeks by spring. */
 function mockGap(state: GameState, date: string): number {
   const r = rngFor(state.seed, `mockgap:${date}`)();
-  if (date < "2026-11-01") return 28;
-  if (date < "2027-01-01") return 21 + Math.round(r * 7);
-  if (date < "2027-03-01") return 14 + Math.round(r * 7);
+  if (date < `${DRAFT_YEAR - 1}-11-01`) return 28;
+  if (date < `${DRAFT_YEAR}-01-01`) return 21 + Math.round(r * 7);
+  if (date < `${DRAFT_YEAR}-03-01`) return 14 + Math.round(r * 7);
   return 14;
 }
 
@@ -861,7 +916,7 @@ function declarations(state: GameState, quiet = false): void {
   const returned: string[] = [];
   let declared = 0;
   for (const p of draftClass(state.seed).prospects) {
-    if (!["JR", "RS JR", "RS SO"].includes(p.classYear)) continue;
+    if (!["JR", "RS JR", "RS SO"].includes(p.classYear) || p.back) continue;
     const rank = mediaRank(state, p.id);
     const stay = rank <= 50 ? 0.02 : rank <= 120 ? 0.12 : rank <= 250 ? 0.35 : 0.6;
     if (rngFor(state.seed, `declare:${p.id}`)() < stay) returned.push(p.id);
@@ -908,7 +963,7 @@ function combine(state: GameState, quiet = false): void {
   const s = state.college!.scouting;
   for (const id of invited) {
     s.know[id] = Math.min(100, (s.know[id] ?? 0) + 4);
-    for (const arr of Object.values(s.cpu)) arr[dc.index[id]] = Math.min(92, arr[dc.index[id]] + 4);
+    for (const arr of Object.values(s.cpu)) arr[dc.index[id]] = Math.min(92, (arr[dc.index[id]] ?? 0) + 4);
   }
   if (quiet) return;
   const fastest = Object.entries(results).filter(([, r]) => r.forty).sort((a, b) => a[1].forty! - b[1].forty!).slice(0, 5);

@@ -8,7 +8,8 @@ import { addOneYear, dealCapHit, dealOf, lastYear, leagueYear, minimumSalary, pr
 import { addDays, ageOn, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { money, news, send } from "./inbox";
-import { PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
+import { onSeasonChange, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
+import { careersDaily, planRetirements } from "./careers";
 import { fifthYearOption, franchiseTag, invalidateMarket, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { releasePlayer } from "./roster";
@@ -19,14 +20,24 @@ import type { Deal, GameState, OffseasonState } from "./types";
 
 const KEY = RULES.keyDates;
 /** The league year the offseason builds toward. */
-export const NEXT = RULES.season + 1;
-export const OFFSEASON_START = addDays(KEY.superBowl, 1);
+export let NEXT = 0;
+export let OFFSEASON_START = "";
 /** The league announces the cap in late February. */
-export const CAP_SET_DATE = addDays(KEY.franchiseTagWindowOpens, 9);
+export let CAP_SET_DATE = "";
 /** Teams send their tenders in the days before the league year opens. */
-export const CPU_TENDER_DATE = addDays(KEY.newLeagueYear, -3);
+export let CPU_TENDER_DATE = "";
 /** CPU teams make most fifth-year option calls just before the draft (the deadline is in early May). */
-export const CPU_OPTION_DATE = addDays(KEY.draftStart, -2);
+export let CPU_OPTION_DATE = "";
+/** First-round picks whose fifth-year option comes up this spring. */
+let OPTION_CLASS = 0;
+onSeasonChange(() => {
+  NEXT = RULES.season + 1;
+  OFFSEASON_START = addDays(KEY.superBowl, 1);
+  CAP_SET_DATE = addDays(KEY.franchiseTagWindowOpens, 9);
+  CPU_TENDER_DATE = addDays(KEY.newLeagueYear, -3);
+  CPU_OPTION_DATE = addDays(KEY.draftStart, -2);
+  OPTION_CLASS = NEXT - 3;
+});
 
 export function isOffseason(date: string): boolean {
   return date >= OFFSEASON_START;
@@ -162,8 +173,6 @@ export interface OptionInfo {
   tier: "playingTime" | "basic";
   year: number;
 }
-
-const OPTION_CLASS = NEXT - 3;
 
 /** A first-round pick's playing time: 75% of snaps in two of the first three seasons earns the higher option tier. */
 function playingTimeTier(state: GameState, id: string): boolean {
@@ -497,18 +506,39 @@ export function ordinal(n: number): string {
   return `${n}${s}`;
 }
 
+/**
+ * The cap follows league revenue: the projection is close for 2027, and later
+ * years swing more with the business. New national media deals (the current
+ * ones can be reopened after the 2029 season) push 2030 up.
+ */
 function setCap(state: GameState): void {
-  const rng = rngFor(state.seed, "cap2027");
-  const cap = Math.round((projectedCap(NEXT) * (1 + gaussian(rng) * 0.012)) / 100_000) * 100_000;
+  const rng = rngFor(state.seed, `cap${NEXT}`);
+  const sd = NEXT === 2027 ? 0.012 : 0.02;
+  const media = NEXT === 2030 ? 0.03 + rng() * 0.05 : 0;
+  const cap = Math.round((projectedCap(NEXT) * (1 + media + Math.max(-0.05, Math.min(0.05, gaussian(rng) * sd)))) / 100_000) * 100_000;
   const league = (state.league ??= { caps: {} });
   league.caps[NEXT] = cap;
   invalidateMarket(state);
   const diff = cap - projectedCap(NEXT);
+  if (media) news(state, "The league's new national media deals kick in: rights fees jump, and so does the cap");
   news(state, `The league sets the ${NEXT} salary cap at ${money(cap)}, ${money(Math.abs(diff))} ${diff >= 0 ? "above" : "below"} projections`);
   const space = capSummary(state, state.userTeam, NEXT);
   send(state, "league", "League Office", `${NEXT} salary cap: ${money(cap)}`,
     `The ${NEXT} cap is ${money(cap)} per team. With rollover our adjusted cap is ${money(space.limit)}; ` +
     `we have ${money(space.space)} of room under the Top 51 rule before the draft class and any re-signings.`);
+}
+
+/**
+ * The unrestricted free agents about to hit the market, with the team each
+ * would leave: the ones who sign elsewhere this spring count toward next
+ * year's compensatory picks.
+ */
+function recordExpiring(state: GameState): void {
+  const league = (state.league ??= { caps: {} });
+  const out: Record<string, string> = {};
+  for (const t of TEAMS) for (const id of pendingFreeAgents(state, t.id)) if (faClass(id) === "UFA") out[id] = t.id;
+  league.expiring = out;
+  league.cfaYear = NEXT + 1;
 }
 
 /** Expiring deals end, void years accelerate, and the new league year begins. */
@@ -574,7 +604,12 @@ function reminders(state: GameState): void {
 export function offseasonDaily(state: GameState): void {
   const d = state.date;
   if (d < OFFSEASON_START) return;
-  if (d === OFFSEASON_START) startOffseason(state);
+  if (d === OFFSEASON_START) {
+    startOffseason(state);
+    planRetirements(state);
+  }
+  careersDaily(state);
+  if (d === KEY.negotiatingWindowOpens) recordExpiring(state);
   if (d === CAP_SET_DATE) setCap(state);
   if (d === KEY.newLeagueYear) newLeagueYear(state);
   reminders(state);

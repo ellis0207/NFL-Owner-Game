@@ -26,7 +26,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     const coach = side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial;
     const age = ageOn(player.birthDate, state.date) ?? 26;
     const dev = p.dev ?? 0;
-    const room = r.potential - (r.overall + dev);
+    const room = r.potential + (p.pot ?? 0) - (r.overall + dev);
     let change = 0;
     if (room > 0 && !p.holdout) change += room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1);
     if (age >= 30) change -= 0.025 * (age - 29);

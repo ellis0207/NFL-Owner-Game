@@ -4,7 +4,8 @@
 // Original contracts come from the data (OverTheCap year-by-year lines) and are
 // converted on first use; contracts signed in the game are stored in the save.
 import { addDays, daysBetween } from "./dates";
-import { PLAYER_BY_ID, RULES } from "./league";
+import { keyDatesFor, newLeagueYearDate } from "./calendar";
+import { BASE_SEASON, KNOWN_CAPS, PLAYER_BY_ID, RULES } from "./league";
 import type { Deal, DealKind, DealYear, GameState, PlayerData } from "./types";
 
 export const REG_WEEKS = 18;
@@ -17,11 +18,7 @@ export const VSB_MAX_BONUS = 167_500;
 
 /** First day of a league year: the date in the data, else the second Wednesday of March. */
 export function leagueYearStart(year: number): string {
-  const known = RULES.keyDates.newLeagueYear;
-  if (known && Number(known.slice(0, 4)) === year) return known;
-  const d = new Date(Date.UTC(year, 2, 1, 12));
-  const firstWed = 1 + ((3 - d.getUTCDay() + 7) % 7);
-  return `${year}-03-${String(firstWed + 7).padStart(2, "0")}`;
+  return newLeagueYearDate(year);
 }
 
 /** The league year a date belongs to (the 2026 league year runs to March 2027). */
@@ -38,11 +35,10 @@ export function isPostJune1(date: string): boolean {
 
 /** Regular-season paychecks already paid in a date's league year. */
 export function weeksPaid(date: string): number {
-  const y = leagueYear(date);
-  if (y !== RULES.season) return date.slice(5) >= "09-08" || date.slice(5) < "03-01" ? REG_WEEKS : 0;
-  if (date <= RULES.keyDates.regularSeasonStart) return 0;
-  if (date > RULES.keyDates.regularSeasonEnd) return REG_WEEKS;
-  return Math.min(REG_WEEKS, Math.floor(daysBetween(RULES.keyDates.regularSeasonStart, date) / 7) + 1);
+  const kd = keyDatesFor(leagueYear(date));
+  if (date <= kd.regularSeasonStart) return 0;
+  if (date > kd.regularSeasonEnd) return REG_WEEKS;
+  return Math.min(REG_WEEKS, Math.floor(daysBetween(kd.regularSeasonStart, date) / 7) + 1);
 }
 
 // ---- Salary cap and minimums by year ----
@@ -52,17 +48,38 @@ export function salaryCap(state: GameState | undefined, year: number): number {
   return state?.league?.caps[year] ?? projectedCap(year);
 }
 
-/** Public projection: roughly the growth the league and union forecast. */
+/**
+ * Public projection: from the last cap the league announced, growing about as
+ * the league and union forecast (8.5% into 2027, about 7% a year after that).
+ */
 export function projectedCap(year: number): number {
-  return Math.round(RULES.salaryCap * Math.pow(1.085, year - RULES.season) / 100_000) * 100_000;
+  let base = RULES.salaryCap;
+  let from = BASE_SEASON;
+  for (const [y, cap] of Object.entries(KNOWN_CAPS)) {
+    const yy = Number(y);
+    if (yy > from && yy <= year) {
+      from = yy;
+      base = cap;
+    }
+  }
+  let cap = base;
+  for (let y = from + 1; y <= year; y++) cap *= y === BASE_SEASON + 1 ? 1.085 : 1.07;
+  return Math.round(cap / 100_000) * 100_000;
 }
 
+/**
+ * League minimums by credited seasons: the CBA's tables for 2026 and 2027,
+ * its $45,000 yearly steps through 2030, and growth of about 5% a year once
+ * the current deal's schedule runs out (its terms carry forward).
+ */
 export function minimumSalary(yearsExp: number, year = RULES.season): number {
-  const table = year === RULES.season ? RULES.minimumSalary : RULES.minimumSalaryNextYear;
+  const table = year <= BASE_SEASON ? RULES.minimumSalary : RULES.minimumSalaryNextYear;
   const steps = Object.keys(table).map(Number).sort((a, b) => a - b);
   const step = steps.filter((s) => s <= yearsExp).pop() ?? 0;
-  const extra = Math.max(0, year - RULES.season - 1) * 45_000;
-  return table[String(step)] + extra;
+  const capped = Math.min(year, 2030);
+  const base = table[String(step)] + Math.max(0, capped - BASE_SEASON - 1) * 45_000;
+  if (year <= 2030) return base;
+  return Math.round(base * Math.pow(1.05, year - 2030) / 5_000) * 5_000;
 }
 
 // ---- Reading a contract ----
@@ -81,11 +98,11 @@ const dataDeals = new Map<string, Deal>();
  * original years, so for those the year-by-year shape decides.
  */
 function lastRealYear(c: PlayerData["contract"]): number {
-  const stated = (c.signedYear ?? RULES.season) + (c.years ?? c.seasons.length) - 1;
+  const stated = (c.signedYear ?? BASE_SEASON) + (c.years ?? c.seasons.length) - 1;
   // A tag followed by a long-term deal keeps the tag's type and length in the data: read its seasons instead.
   const retagged = (c.type === "Franchise" || c.type === "Transition") && c.seasons.length > 1;
   const flexible = c.type === "Extension" || c.type === "Other" || c.type === "Drafted" || retagged;
-  let last = c.seasons[0]?.year ?? RULES.season;
+  let last = c.seasons[0]?.year ?? BASE_SEASON;
   for (const s of c.seasons) {
     const counts = s.capHit > 0 && s.capHit >= s.baseSalary;
     if (counts && (s.year <= stated || flexible || s.guaranteedSalary > 0)) last = s.year;
@@ -117,7 +134,7 @@ export function originalDeal(id: string): Deal {
   const prorated = years.reduce((sum, y) => sum + y.proration, 0);
   d = {
     team: p.team ?? "",
-    signed: `${c.signedYear ?? RULES.season}-03-15`,
+    signed: `${c.signedYear ?? BASE_SEASON}-03-15`,
     kind: (c.type === "Franchise" || c.type === "Transition") && c.seasons.length > 1 ? "extension" : KIND_FROM_DATA[c.type ?? ""] ?? "veteran",
     signingBonus: prorated,
     total: c.totalValue ?? 0,
@@ -340,15 +357,16 @@ export function writeMinimumDeal(team: string, date: string, yearsExp: number, o
 }
 
 /** Practice squad pay: weekly, by accrued seasons (veterans are paid more). */
-export function practiceWeekly(accrued: number): number {
+export function practiceWeekly(accrued: number, year = RULES.season): number {
   const w = RULES.practiceSquadWeekly;
-  return accrued >= 3 ? w.veteranMin : w.standard;
+  const grow = Math.pow(1.05, Math.max(0, year - BASE_SEASON));
+  return Math.round((accrued >= 3 ? w.veteranMin : w.standard) * grow / 50) * 50;
 }
 
 /** A practice squad contract for the rest of the league year, paid by the week. */
 export function writePracticeDeal(team: string, date: string, accrued: number): Deal {
   const year = leagueYear(date);
-  const base = practiceWeekly(accrued) * REG_WEEKS;
+  const base = practiceWeekly(accrued, year) * REG_WEEKS;
   const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
   return {
     team, signed: date, kind: "practice", signingBonus: 0, total: base, apy: base, guaranteedAtSigning: 0,

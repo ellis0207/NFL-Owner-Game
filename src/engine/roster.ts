@@ -11,7 +11,7 @@ import { isHurt } from "./injuries";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, SEASON, TEAMS, teamLabel } from "./league";
 import { isOffseason } from "./offseason";
 import { rngFor } from "./rng";
-import { coachView, perceivedAbility, staffEffects, teamStaff } from "./staff";
+import { coachView, perceivedAbility, staffEffects, teamStaff, upside } from "./staff";
 import type { GameState, Position, Transaction } from "./types";
 import { onWaivers, placeOnWaivers, subjectToWaivers } from "./waivers";
 
@@ -28,12 +28,11 @@ const MAX_ON_53: Partial<Record<Position, number>> = { QB: 3, FB: 1, K: 1, P: 1,
 
 /** What the front office thinks a player is worth keeping: GM and coaches' view, upside, and money already committed. */
 export function keepValue(state: GameState, team: string, id: string): number {
-  const r = HIDDEN_RATINGS[id];
   const p = PLAYER_BY_ID[id];
   const view = 0.5 * perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + 0.5 * coachView(state, team, id);
-  const upside = p.yearsExp <= 2 ? 0.35 * (r.potential - r.overall) : 0;
+  const up = p.yearsExp <= 2 ? 0.35 * upside(state, id) : 0;
   const committed = Math.min(6, releaseCost(id, state).deadThisYear / 1_000_000); // sunk cost keeps players around
-  return view + upside + committed;
+  return view + up + committed;
 }
 
 /** Players counting against the roster limit (90 in camp, 53 after cutdown). */
@@ -124,7 +123,7 @@ export function releasePlayer(state: GameState, id: string, opts: { psIntent?: b
   // After the season the player's hit is already in the rollover; only the extra acceleration costs more.
   adjustRollover(state, team, cost.savingsThisYear);
   state.contracts[id] = null;
-  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, morale: p.morale, lastTeam: team };
+  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, pot: p.pot, exp: p.exp, morale: p.morale, lastTeam: team };
   if (state.termPay) delete state.termPay[id];
   if (state.psProtect?.[team]) state.psProtect[team] = state.psProtect[team].filter((x) => x !== id);
   const pd = PLAYER_BY_ID[id];
@@ -216,9 +215,8 @@ export function canPoach(state: GameState, team: string, id: string): { ok: bool
 
 /** How a front office ranks a practice squad candidate: development upside counts for more than today. */
 function psValue(state: GameState, team: string, id: string): number {
-  const r = HIDDEN_RATINGS[id];
   const young = accruedSeasons(id, state.date) <= 2;
-  return perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + (young ? 0.5 * (r.potential - r.overall) : -2);
+  return perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + (young ? 0.5 * upside(state, id) : -2);
 }
 
 /**
@@ -351,9 +349,8 @@ export function applyTerminationPay(state: GameState): void {
 
 /** A front office's read of a player it might add: its GM's eye, plus upside for young players. */
 export function claimView(state: GameState, team: string, id: string): number {
-  const r = HIDDEN_RATINGS[id];
-  const upside = PLAYER_BY_ID[id].yearsExp <= 2 ? 0.35 * (r.potential - r.overall) : 0;
-  return perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + upside;
+  const up = PLAYER_BY_ID[id].yearsExp <= 2 ? 0.35 * upside(state, id) : 0;
+  return perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + up;
 }
 
 /**
@@ -391,7 +388,7 @@ export function applyCutdown(state: GameState, team: string, keepIds: string[]):
   // The cuts the team hopes to bring back on the practice squad once they clear waivers.
   const candidates = cut
     .filter((id) => capHit(id, SEASON, state) < 2_000_000 && !isHurt(state, id))
-    .sort((a, b) => HIDDEN_RATINGS[b].potential - HIDDEN_RATINGS[a].potential);
+    .sort((a, b) => HIDDEN_RATINGS[b].potential + (state.players[b].pot ?? 0) - HIDDEN_RATINGS[a].potential - (state.players[a].pot ?? 0));
   const ps: string[] = [];
   let veterans = 0;
   for (const id of candidates) {

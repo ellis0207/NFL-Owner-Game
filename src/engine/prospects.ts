@@ -1,13 +1,15 @@
-// NFL draft prospects in the 2026 college season: generated for each save from
-// its seed, so every game has its own draft class. Only the prospects are
-// modeled as players; everyone else on a college roster stays in the box score
-// totals we never show.
+// NFL draft prospects, one class a year: generated for each save from its seed
+// and the draft year, so every game has its own classes. Underclassmen who go
+// back to school join the next year's class a year older. Only the prospects
+// are modeled as players; everyone else on a college roster stays in the box
+// score totals we never show.
 //
 // The hidden half of a prospect (true NFL ability, traits, character, medical
 // history) is engine only, like HIDDEN_RATINGS. The owner learns about it
 // through scouting (engine/scouting.ts).
 import { COLLEGE_TEAMS } from "./collegeData";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
+import { RULES } from "./league";
 import { gaussian, makeRng, type Rng } from "./rng";
 import type { CollegeTeam, Position } from "./types";
 
@@ -28,6 +30,8 @@ export interface Prospect {
   hometown: string;
   /** On the depth chart as a starter (backups play less). */
   starter: boolean;
+  /** Came back to school after a year ago's draft deadline: he's out of eligibility now. */
+  back?: boolean;
 }
 
 /** Engine only. */
@@ -99,15 +103,16 @@ const SIZE: Record<Position, [number, number, number, number, number]> = {
   S: [72, 1.3, 205, 8, 4.53], K: [72, 2, 195, 12, 5.0], P: [74, 1.8, 210, 12, 5.0], LS: [74, 1.3, 240, 9, 5.1],
 };
 
+/** Medical flags, for a class drafted in year Y ("{2}" is two seasons before the draft, "{1}" the last one before this). */
 const MEDICAL = [
-  "Torn ACL in 2024; fully recovered but the knee will get a long look",
+  "Torn ACL in {3}; fully recovered but the knee will get a long look",
   "Two shoulder surgeries",
-  "Missed most of 2025 with a broken foot",
-  "Back issue that flared up in 2025",
+  "Missed most of {2} with a broken foot",
+  "Back issue that flared up in {2}",
   "Recurring hamstring strains",
-  "High ankle sprain that lingered in 2025",
+  "High ankle sprain that lingered in {2}",
   "Concussion history",
-  "Wrist surgery after the 2025 season",
+  "Wrist surgery after the {2} season",
 ];
 
 const HOMETOWN_STATES = ["TX", "FL", "GA", "CA", "AL", "LA", "OH", "PA", "NC", "SC", "MS", "TN", "VA", "MD", "NJ", "MI", "IL", "AZ", "WA", "OK", "KY", "MO", "IN", "NY", "UT", "HI"];
@@ -141,23 +146,66 @@ function interp(points: [number, number][], x: number): number {
   return points[points.length - 1][1];
 }
 
-const cache = new Map<number, DraftClass>();
+const cache = new Map<string, DraftClass>();
+/** Underclassmen from each class who went back to school, by seed and draft year (set by the save). */
+const carries = new Map<string, string[]>();
 
-export function draftClass(seed: number): DraftClass {
-  const hit = cache.get(seed);
+export function setCarry(seed: number, year: number, ids: string[]): void {
+  const key = `${seed}:${year}`;
+  const before = carries.get(key);
+  if (before && before.length === ids.length && before.every((x, i) => x === ids[i])) return;
+  carries.set(key, [...ids]);
+  // The next class picks them up.
+  cache.delete(`${seed}:${year + 1}`);
+}
+
+/** The class for a draft year (the coming draft by default). */
+export function draftClass(seed: number, year = RULES.season + 1): DraftClass {
+  const key = `${seed}:${year}`;
+  const hit = cache.get(key);
   if (hit) return hit;
-  const dc = generate(seed);
-  if (cache.size > 4) cache.clear();
-  cache.set(seed, dc);
+  const dc = generate(seed, year);
+  const back = carries.get(`${seed}:${year - 1}`);
+  if (back?.length) addReturners(dc, draftClass(seed, year - 1), back, seed, year);
+  if (cache.size > 8) cache.clear();
+  cache.set(key, dc);
   return dc;
+}
+
+/** Underclassmen back for another season: a year older and a little better, out of eligibility after it. */
+function addReturners(dc: DraftClass, prev: DraftClass, ids: string[], seed: number, year: number): void {
+  const rng = makeRng(seed ^ (year * 131));
+  const next: Record<ClassYear, ClassYear> = { JR: "SR", "RS JR": "RS SR", "RS SO": "RS JR", SR: "SR", "RS SR": "RS SR" };
+  for (const id of ids) {
+    const p = prev.byId[id];
+    const h0 = prev.hidden[id];
+    if (!p || !h0 || dc.byId[id]) continue;
+    const gain = Math.max(0, (h0.potential - h0.overall) * (0.3 + rng() * 0.3) + gaussian(rng) * 1.5);
+    const overall = Math.round(clamp(h0.overall + gain, 38, 94));
+    const potential = Math.max(overall, Math.round(h0.potential + gaussian(rng) * 1.5));
+    const traits: Record<string, number> = {};
+    for (const [k, v] of Object.entries(h0.traits)) traits[k] = Math.round(clamp(v + (overall - h0.overall), 25, 99));
+    const weightLb = h0.weightLb + Math.round(gaussian(rng) * 4 + 2);
+    const h: ProspectHidden = { ...h0, overall, potential, traits, weightLb, college: h0.college + (overall - h0.overall) * 0.75 + 1, value: 0.65 * overall + 0.35 * potential };
+    const q: Prospect = { ...p, classYear: next[p.classYear], weightLb: p.weightLb + (weightLb - h0.weightLb), back: true, starter: true };
+    dc.prospects.push(q);
+    dc.byId[id] = q;
+    dc.hidden[id] = h;
+    dc.index[id] = dc.prospects.length - 1;
+    (dc.bySchool[q.school] ??= []).push(id);
+  }
+  const values = dc.prospects.map((p) => dc.hidden[p.id].value).sort((a, b) => b - a);
+  dc.roundCuts = [32, 64, 100, 138, 176, 216, 257].map((r) => values[r - 1]);
 }
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
 }
 
-function generate(seed: number): DraftClass {
-  const rng = makeRng(seed ^ 0x2027);
+function generate(seed: number, year: number): DraftClass {
+  // 2027 keeps the generator the first saves were built with.
+  const rng = makeRng(year === 2027 ? seed ^ 0x2027 : seed ^ (0x2027 + (year - 2027) * 0x9e3779));
+  const tag = year === 2027 ? "cp" : `cp${year % 100}`;
   const teams = COLLEGE_TEAMS;
   const used = new Set<string>();
   const prospects: Prospect[] = [];
@@ -183,10 +231,10 @@ function generate(seed: number): DraftClass {
       if (!used.has(name)) break;
     }
     used.add(name);
-    const id = `cp-${rank.toString(36)}-${Math.floor(rng() * 1e6).toString(36)}`;
+    const id = `${tag}-${rank.toString(36)}-${Math.floor(rng() * 1e6).toString(36)}`;
     const classYear = weighted<ClassYear>(rng, [["SR", 0.3], ["RS SR", 0.22], ["JR", 0.3], ["RS JR", 0.13], ["RS SO", 0.05]]);
     const ageAtDraft = { SR: 22.3, "RS SR": 23.2, JR: 21.3, "RS JR": 22.2, "RS SO": 21.2 }[classYear] + gaussian(rng) * 0.45;
-    const birth = new Date(Date.UTC(2027, 3, 29) - ageAtDraft * 365.25 * 86_400_000).toISOString().slice(0, 10);
+    const birth = new Date(Date.UTC(year, 3, 29) - ageAtDraft * 365.25 * 86_400_000).toISOString().slice(0, 10);
 
     const overall = Math.round(clamp(interp(OVERALL_BY_RANK, rank) + gaussian(rng) * 2.5, 38, 92));
     const young = classYear === "JR" || classYear === "RS SO" ? 2.5 : classYear === "RS JR" ? 1 : 0;
@@ -206,7 +254,7 @@ function generate(seed: number): DraftClass {
     const listedHeight = heightIn + (rng() < 0.35 ? 1 : rng() < 0.08 ? -1 : 0);
     const listedWeight = weightLb + Math.round(gaussian(rng) * 6 + 3);
 
-    const age = 2026 - Number(birth.slice(0, 4));
+    const age = year - 1 - Number(birth.slice(0, 4));
     const college = overall * 0.75 + potential * 0.1 + gaussian(rng) * 5.5 + (age >= 23 ? 2 : 0) + 8;
     hidden[id] = {
       overall, potential,
@@ -215,7 +263,7 @@ function generate(seed: number): DraftClass {
       character: Math.round(clamp(72 + gaussian(rng) * 14, 15, 99)),
       workEthic: Math.round(clamp(72 + gaussian(rng) * 13, 20, 99)),
       footballIq: Math.round(clamp((traits.decisions ?? overall) * 0.5 + 36 + gaussian(rng) * 9, 25, 99)),
-      medical: rng() < 0.12 ? pick(rng, MEDICAL) : null,
+      medical: rng() < 0.12 ? pick(rng, MEDICAL).replace("{3}", String(year - 3)).replace("{2}", String(year - 2)) : null,
       college,
       heightIn, weightLb, forty: trueForty,
       value: 0.65 * overall + 0.35 * potential,

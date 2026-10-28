@@ -1,24 +1,45 @@
-// The 2026 college football season: every FBS game is played on its Saturday,
+// The college football season: every FBS game is played on its Saturday,
 // with polls, standings, conference title games, bowls and the 12-team
 // playoff. Teams are simulated at the score level only; the NFL prospects are
 // the only players, and each gets a stat line for every game he plays.
 import { addDays, weekday } from "./dates";
-import { BOWLS, CFP, COLLEGE_DATES, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS, CONFERENCES, schoolName } from "./collegeData";
+import { BOWLS, CFP, cfbDate, COLLEGE_DATES, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS, CONFERENCES, schoolName } from "./collegeData";
+import { onSeasonChange, RULES } from "./league";
 import { news } from "./inbox";
 import { draftClass, type Prospect } from "./prospects";
 import { gaussian, rngFor, type Rng } from "./rng";
 import type { CollegeConference, CollegeGame, CollegePoll, CollegeState, GameState, Position } from "./types";
 import { newScouting } from "./scouting";
 
-export const COLLEGE_SEASON = 2026;
-export const AP_PRESEASON = "2026-08-11";
-const CFP_RANKING_DAYS = ["2026-11-03", "2026-11-10", "2026-11-17", "2026-11-24", "2026-12-01"];
-const CCG_DATE = COLLEGE_DATES.championships;
-const SELECTION = CFP.selection;
-const QF_DAY = "2026-12-20";
-const SF_DAY = "2027-01-02";
-const FINAL_DAY = "2027-01-16";
-const FINAL_POLL = "2027-01-26";
+export let COLLEGE_SEASON = 2026;
+export let AP_PRESEASON = "";
+let CFP_RANKING_DAYS: string[] = [];
+let CCG_DATE = "";
+let SELECTION = "";
+let QF_DAY = "";
+let SF_DAY = "";
+let FINAL_DAY = "";
+/** The final AP poll, after the title game: the college season is over. */
+export let FINAL_POLL = "";
+let FIRST_POLL_SUNDAY = "";
+let SEASON_START = "";
+let INJURY_RETURN = "";
+let BY_ID: Record<string, CollegeGame> = {};
+onSeasonChange(() => {
+  COLLEGE_SEASON = RULES.season;
+  AP_PRESEASON = cfbDate("2026-08-11");
+  CFP_RANKING_DAYS = ["2026-11-03", "2026-11-10", "2026-11-17", "2026-11-24", "2026-12-01"].map(cfbDate);
+  CCG_DATE = COLLEGE_DATES.championships;
+  SELECTION = CFP.selection;
+  QF_DAY = cfbDate("2026-12-20");
+  SF_DAY = cfbDate("2027-01-02");
+  FINAL_DAY = cfbDate("2027-01-16");
+  FINAL_POLL = cfbDate("2027-01-26");
+  FIRST_POLL_SUNDAY = cfbDate("2026-09-06");
+  SEASON_START = cfbDate("2026-07-01");
+  INJURY_RETURN = cfbDate("2027-03-01");
+  BY_ID = Object.fromEntries(COLLEGE_SCHEDULE.map((g) => [g.id, g]));
+});
 
 // ---- Stats ----
 
@@ -69,6 +90,11 @@ export interface CollegeLogRow {
 
 // ---- Setup ----
 
+/** Random draws for a game or a ranking are their own each season (2026 keeps its original keys). */
+function seasonKey(key: string): string {
+  return COLLEGE_SEASON === 2026 ? key : `${COLLEGE_SEASON}:${key}`;
+}
+
 function prospectsOf(state: GameState) {
   return draftClass(state.seed);
 }
@@ -77,7 +103,7 @@ function prospectsOf(state: GameState) {
 export function newCollege(state: GameState): CollegeState {
   const dc = prospectsOf(state);
   const rating: Record<string, number> = {};
-  for (const t of COLLEGE_TEAMS) rating[t.id] = Math.round((t.strength + gaussian(rngFor(state.seed, `cfb-view:${t.id}`)) * 3) * 10) / 10;
+  for (const t of COLLEGE_TEAMS) rating[t.id] = Math.round((t.strength + gaussian(rngFor(state.seed, seasonKey(`cfb-view:${t.id}`))) * 3) * 10) / 10;
   const hype: Record<string, number> = {};
   for (const p of dc.prospects) {
     const h = dc.hidden[p.id];
@@ -95,7 +121,7 @@ export function ensureCollege(state: GameState): void {
   if (state.college) return;
   state.college = newCollege(state);
   // Replays the season up to today, as it would have gone.
-  let d = "2026-07-01";
+  let d = SEASON_START;
   const realDate = state.date;
   while (d < realDate) {
     state.date = d;
@@ -108,14 +134,13 @@ export function ensureCollege(state: GameState): void {
 /** True strength of a team this season (engine only). */
 export function teamStrength(state: GameState, team: string): number {
   const base = COLLEGE_TEAM[team].strength;
-  return base + gaussian(rngFor(state.seed, `cfb-strength:${team}`)) * 4;
+  const season = state.college?.season ?? COLLEGE_SEASON;
+  return base + gaussian(rngFor(state.seed, season === 2026 ? `cfb-strength:${team}` : `cfb-strength:${season}:${team}`)) * 4;
 }
 
 export function collegeGames(state: GameState): CollegeGame[] {
   return state.college ? COLLEGE_SCHEDULE.concat(state.college.post) : COLLEGE_SCHEDULE;
 }
-
-const BY_ID: Record<string, CollegeGame> = Object.fromEntries(COLLEGE_SCHEDULE.map((g) => [g.id, g]));
 
 export function collegeGame(state: GameState, id: string): CollegeGame | undefined {
   return BY_ID[id] ?? state.college?.post.find((g) => g.id === id);
@@ -262,7 +287,7 @@ export function collegeDaily(state: GameState, opts: { quiet?: boolean } = {}): 
   }
   for (const g of gamesOn(state, date)) if (!c.results[g.id]) playGame(state, g, opts.quiet);
   const wd = weekday(date);
-  if (wd === "Sunday" && date >= "2026-09-06" && date <= SELECTION) {
+  if (wd === "Sunday" && date >= FIRST_POLL_SUNDAY && date <= SELECTION) {
     const lastWeek = COLLEGE_SCHEDULE.filter((g) => g.date < date && g.date >= addDays(date, -7) && g.week <= 14)[0];
     if (lastWeek) releasePoll(state, "ap", date === SELECTION ? "Final regular season" : `Week ${Math.min(15, lastWeek.week + 1)}`);
   }
@@ -321,7 +346,7 @@ interface Side {
 
 function playGame(state: GameState, g: CollegeGame, quiet = false): void {
   const c = state.college!;
-  const rng = rngFor(state.seed, `cfb:${g.id}`);
+  const rng = rngFor(state.seed, seasonKey(`cfb:${g.id}`));
   const sA = teamStrength(state, g.away);
   const sH = teamStrength(state, g.home);
   const hfa = g.site ? 0 : 1.6;
@@ -517,7 +542,7 @@ function prospectLines(state: GameState, rng: Rng, g: CollegeGame, us: Side, the
       const weeks = 1 + Math.floor(-Math.log(Math.max(1e-6, rng())) * 2.2);
       c.injuries[id] = {
         type: pickInjury(rng, seasonEnding), date: g.date, seasonEnding,
-        returnDate: seasonEnding ? "2027-03-01" : addDays(g.date, 7 * weeks - 1),
+        returnDate: seasonEnding ? INJURY_RETURN : addDays(g.date, 7 * weeks - 1),
       };
     }
   }
@@ -615,7 +640,7 @@ function selectionDay(state: GameState, quiet = false): void {
   const bowls = [...BOWLS].reverse();
   const count = Math.min(bowls.length, Math.floor(eligible.length / 2));
   const pool = eligible.slice(0, count * 2);
-  const rng = rngFor(state.seed, "cfb-bowls");
+  const rng = rngFor(state.seed, seasonKey("cfb-bowls"));
   for (let i = 0; i < count; i++) {
     const a = pool.shift()!;
     // Avoid conference rematches when the next few teams allow it.
@@ -812,7 +837,7 @@ export function awardScore(state: GameState, id: string, award: AwardDef): numbe
     default: stats = 0;
   }
   const teamWeight = award.id === "heisman" || award.id === "maxwell" ? 1.6 : 0.7;
-  return stats + team * teamWeight + hype * (state.date < "2026-09-01" ? 3 : 1);
+  return stats + team * teamWeight + hype * (state.date < COLLEGE_DATES.week0 ? 3 : 1);
 }
 
 /** Preseason watch list: the most talked-about candidates at the positions, before a snap. */
@@ -870,7 +895,7 @@ export function collegePhase(state: GameState): string {
     const next = COLLEGE_SCHEDULE.find((g) => g.date >= d && g.week <= 14);
     return next ? `College: Week ${next.week}` : "College: regular season";
   }
-  if (d < "2027-01-26") return "College: bowl season and playoff";
+  if (d < FINAL_POLL) return "College: bowl season and playoff";
   return "College: draft season";
 }
 
