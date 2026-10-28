@@ -6,6 +6,7 @@ import { injuryStatus } from "../engine/injuries";
 import { GAME_BY_ID, PLAYER_BY_ID, SCHEDULE, SEASON, TEAM_BY_ID } from "../engine/league";
 import { playerReport } from "../engine/reports";
 import { releasePlayer } from "../engine/roster";
+import { extensionEligibility } from "../engine/negotiation";
 import { gameTypeLabel, outLabel } from "../engine/season";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
@@ -156,6 +157,12 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </span>
             </>
           ) : <p className="muted">No contract: free agent.</p>}
+          {mine && deal && (() => {
+            const talking = game.negotiations[id]?.status === "open";
+            const elig = extensionEligibility(game, id);
+            if (!talking && !elig.ok) return <span className="muted">{elig.reason}</span>;
+            return <div><button className="btn" onClick={() => ui.openTalks(id)}>{talking ? "Go to contract talks" : "Contract talks"}</button></div>;
+          })()}
         </section>
 
         <section className="stack">

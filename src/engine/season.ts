@@ -12,7 +12,10 @@ import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
 import { playCaller, teamSchemes, teamStaff } from "./staff";
 
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
-import type { BoxScore, GameResult, GameState, InboxItem, Position, ScheduledGame, Settings } from "./types";
+import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
+import { payWeek } from "./finance";
+import { contractsDaily, startHoldouts } from "./negotiation";
+import { money, news, send } from "./inbox";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
@@ -47,11 +50,17 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     results: {},
     box: {},
     contracts: {},
+    negotiations: {},
+    trust: {},
+    signings: [],
+    finance: {},
+    pressure: { fans: 50, media: 50 },
     playoffTeams: {},
     inbox: [],
     news: [],
   };
   const team = TEAM_BY_ID[userTeam];
+  startHoldouts(state);
   const cap = capSummary(state, userTeam);
   const { roster } = rosterCount(state, userTeam);
   const opener = openingGame(userTeam);
@@ -74,23 +83,6 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     ` (${off.name} calls the plays); on defense, ${DEFENSE_LABEL[schemes.defense].toLowerCase()} (${def.name} calls it). ` +
     "Players who fit what we do will get every chance to win jobs. You'll hear from me after every game, and my read on any player is on their page.");
   return state;
-}
-
-export function money(n: number): string {
-  const sign = n < 0 ? "-" : "";
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}$${Math.round(abs / 1_000)}K`;
-  return `${sign}$${abs}`;
-}
-
-function send(state: GameState, kind: InboxItem["kind"], from: string, title: string, body: string, gameId?: string): void {
-  state.inbox.unshift({ id: `${state.date}-${state.inbox.length}`, date: state.date, kind, from, title, body, read: false, gameId });
-}
-
-function news(state: GameState, text: string): void {
-  state.news.unshift({ date: state.date, text });
-  if (state.news.length > 300) state.news.length = 300;
 }
 
 // ---- What happens on a given day ----
@@ -223,7 +215,11 @@ export function advanceDay(state: GameState): void {
   practiceInjuries(state, playedToday);
   if (date === KEY.rosterCutdown) runCutdown(state);
   rosterUpkeep(state);
-  if (weekday(date) === "Tuesday") weeklyDevelopment(state, playedLastWeek(state));
+  contractsDaily(state);
+  if (weekday(date) === "Tuesday") {
+    weeklyDevelopment(state, playedLastWeek(state));
+    if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2)) payWeek(state);
+  }
   if (date === KEY.regularSeasonEnd) {
     fillWildCard(state);
     const seeds = state.seeds!;
@@ -425,3 +421,5 @@ export function simToNextGame(state: GameState): void {
     if (hadGame) return;
   }
 }
+
+export { money } from "./inbox";

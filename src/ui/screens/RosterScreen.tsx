@@ -120,6 +120,7 @@ function PositionGroup(props: {
       {ids.map((id) => {
         const p = PLAYER_BY_ID[id];
         const status = game.players[id].status;
+        const holdout = game.players[id].holdout;
         const keep = plan?.has(id);
         const injured = isHurt(game, id);
         return (
@@ -140,8 +141,8 @@ function PositionGroup(props: {
                   {keep ? "Keep" : "Cut"}
                 </button>
               ) : (
-                <span className={`pill ${status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
-                  {status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
+                <span className={`pill ${holdout ? "cut" : status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
+                  {holdout ? (holdout.kind === "holdout" ? "Holding out" : "Holding in") : status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
                 </span>
               )}
             </td>

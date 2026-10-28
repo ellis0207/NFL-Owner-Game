@@ -28,7 +28,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     const dev = p.dev ?? 0;
     const room = r.potential - (r.overall + dev);
     let change = 0;
-    if (room > 0) change += room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1);
+    if (room > 0 && !p.holdout) change += room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1);
     if (age >= 30) change -= 0.025 * (age - 29);
     change += gaussian(rng) * 0.07;
     p.dev = Math.round((dev + change) * 100) / 100;

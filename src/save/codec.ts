@@ -49,6 +49,12 @@ export function migrate(state: GameState): GameState {
       };
     }
     state.contracts = deals;
+    // Contract talks, agents' trust, the league transaction log and team cash are new too.
+    state.negotiations ??= {};
+    state.trust ??= {};
+    state.signings ??= [];
+    state.finance ??= {};
+    state.pressure ??= { fans: 50, media: 50 };
     state.version = 3;
   }
   return state;

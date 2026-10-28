@@ -177,6 +177,10 @@ export interface PlayerState {
   dev?: number;
   /** Date placed on injured reserve (eligible to return after four games). */
   irDate?: string;
+  /** 0-100, how the player feels about the team; absent means content (70). Never shown as a number. */
+  morale?: number;
+  /** Staying away from camp, or showing up and not practicing, until a new deal is done. */
+  holdout?: { kind: "holdout" | "holdin"; since: string };
 }
 
 export type DealKind =
@@ -298,6 +302,98 @@ export interface Settings {
   capRules: "real" | "off";
 }
 
+export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
+
+export interface Agent {
+  id: string;
+  name: string;
+  agency: string;
+  style: AgentStyle;
+  /** Years certified, for the agent's profile. */
+  since: number;
+}
+
+/** The terms of an offer or counter (see engine/contracts.ts Terms). */
+export interface OfferTerms {
+  years: number;
+  total: number;
+  signingBonus: number;
+  guaranteed: number;
+  injuryGuaranteed: number;
+  voidYears: number;
+  shape: "flat" | "rising" | "front";
+}
+
+export interface NegotiationRound {
+  date: string;
+  from: "team" | "agent";
+  terms: OfferTerms;
+  /** What was said with it, in words. */
+  note: string;
+}
+
+export type NegotiationKind = "extension" | "free-agent";
+
+export interface Mandate {
+  /** sign: get it done; value: only at a fair price; walk: let the player test the market. */
+  goal: "sign" | "value" | "walk";
+  maxApy?: number;
+  maxGuaranteed?: number;
+  maxYears?: number;
+}
+
+export interface Negotiation {
+  player: string;
+  team: string;
+  kind: NegotiationKind;
+  opened: string;
+  status: "open" | "agreed" | "ended";
+  /** Who is at the table for the team. */
+  handler: "owner" | "gm";
+  mandate?: Mandate;
+  rounds: NegotiationRound[];
+  /** The team's latest offer, waiting on an answer due on replyOn. */
+  pending?: OfferTerms;
+  replyOn?: string;
+  /** The agent won't take calls until this date (after a lowball or a breakdown). */
+  coolingUntil?: string;
+  /** The GM's running notes, newest first. */
+  notes: { date: string; text: string }[];
+  // Hidden: never shown to the owner.
+  /** The market price when the numbers below were set; they move with it. */
+  base: number;
+  /** Lowest APY-equivalent the player will take from this team right now. */
+  floor: number;
+  /** What the agent is asking now (APY), and wants in years and guarantee share. */
+  ask: number;
+  askYears: number;
+  askGuarantee: number;
+  /** Rounds of patience left before the agent ends talks. */
+  patience: number;
+}
+
+/** A contract signed anywhere in the league during the game, for the transaction log and grades. */
+export interface Signing {
+  id: string;
+  player: string;
+  team: string;
+  date: string;
+  kind: NegotiationKind | "tag" | "tender" | "minimum";
+  years: number;
+  total: number;
+  apy: number;
+  guaranteed: number;
+  /** Media grades at signing, by outlet. */
+  grades: { outlet: string; grade: string; take: string }[];
+  /** True value to the team at signing, kept for grading the deal later (engine only). */
+  valueAtSigning: number;
+}
+
+export interface TeamFinance {
+  /** Cash paid to players, by league year. */
+  paid: Record<number, number>;
+}
+
 export interface GameState {
   version: 3;
   id: string;
@@ -317,6 +413,14 @@ export interface GameState {
   box: Record<string, BoxScore>;
   /** Contracts signed in this save, by player (null: released, no contract). Overrides the original contract. */
   contracts: Record<string, Deal | null>;
+  /** Contract talks by player id: open ones and the history of finished ones. */
+  negotiations: Record<string, Negotiation>;
+  /** Each agent's trust in each front office, -100 to 100; absent means neutral. Hidden. */
+  trust: Record<string, Record<string, number>>;
+  signings: Signing[];
+  finance: Record<string, TeamFinance>;
+  /** Fan and media mood toward the owner's team, 0-100 (50 neutral). */
+  pressure: { fans: number; media: number };
   /** Teams filled into postseason slots as the bracket is decided. */
   playoffTeams: Record<string, { away: string; home: string }>;
   /** Seeds 1-7 per conference, set the day after the regular season ends. */

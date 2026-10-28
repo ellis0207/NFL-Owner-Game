@@ -145,6 +145,20 @@ def rate_players(players: list, stats: dict, snaps: dict) -> dict:
         # Usage is already a 0-1 share. Ranking it would turn tiny differences
         # between full-time starters (a QB rested in a blowout) into big ones.
         pct["usage"] = dict(signals["usage"])
+        # Players on rookie deals have no market signal. Leaving it out would
+        # rank every full-time starter on a rookie deal above veterans with the
+        # same usage, so they get the typical market standing of veterans who
+        # play as much as they do.
+        bins: dict[int, list] = {}
+        for pid, m in pct["market"].items():
+            if pid in pct["usage"]:
+                bins.setdefault(min(4, int(pct["usage"][pid] * 5)), []).append(m)
+        for p in group:
+            pid = p["id"]
+            if pid not in pct["market"] and pid in pct["usage"] and p["yearsExp"] > 0:
+                peers = bins.get(min(4, int(pct["usage"][pid] * 5)))
+                if peers:
+                    pct["market"][pid] = float(np.median(peers))
 
         blended = {}
         for p in group:
