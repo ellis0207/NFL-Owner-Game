@@ -619,7 +619,12 @@ function gmMove(state: GameState, neg: Negotiation): void {
   const sbShare = Math.min(gShare, 0.2 + 0.25 * (fx.capManagement - 50) / 50);
   const signingBonus = Math.round((Math.max(0, sbShare) * total) / 50_000) * 50_000;
   const terms: OfferTerms = { years, total, signingBonus, guaranteed: Math.max(guaranteed, signingBonus), injuryGuaranteed: 0, voidYears: 0, shape: "rising" };
-  const check = sendOffer(state, id, terms);
+  let check = sendOffer(state, id, terms);
+  // Capped-out teams put the guarantees in base salary so this year's hit doesn't grow.
+  if (!check.ok && neg.kind === "extension" && terms.signingBonus > 0 && /cap/i.test(check.reason ?? "")) {
+    terms.signingBonus = 0;
+    check = sendOffer(state, id, terms);
+  }
   if (!check.ok) {
     endTalks(state, id, `I couldn't make an offer work: ${check.reason}`);
     return;
@@ -646,6 +651,16 @@ export function delegate(state: GameState, id: string, mandate: Mandate | null):
 export const STARTERS: Partial<Record<Position, number>> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1, LS: 1 };
 
 /** CPU front offices look at extending their own players. */
+/** Void-year money on a team's deals that end this league year: it lands on next year's cap unless the deals are extended. */
+function voidExposure(state: GameState, team: string, year: number): number {
+  let total = 0;
+  for (const id of teamPlayerIds(state, team)) {
+    const deal = dealOf(state, id);
+    if (deal && lastYear(deal) === year) total += deal.years.filter((y) => y.void).reduce((s, y) => s + y.proration, 0);
+  }
+  return total;
+}
+
 function cpuExtensions(state: GameState): void {
   const rng = rngFor(state.seed, `cpu-ext:${state.date}`);
   const year = leagueYear(state.date);
@@ -656,7 +671,10 @@ function cpuExtensions(state: GameState): void {
   const camp = addDays(RULES.keyDates.regularSeasonStart, -50);
   const busy = offseason ? 0.35 : state.date < camp ? 0.012 : state.date < addDays(RULES.keyDates.regularSeasonStart, 14) ? 0.05 : state.date < RULES.keyDates.tradeDeadline ? 0.018 : 0.008;
   for (const t of TEAMS) {
-    if (t.id === state.userTeam || rng() > busy) continue;
+    if (t.id === state.userTeam) continue;
+    // A team with void money about to hit gets to work on it.
+    const exposed = state.settings.capRules === "real" && voidExposure(state, t.id, year) >= 15_000_000;
+    if (rng() > (exposed ? Math.max(busy, offseason ? 0.35 : 0.08) : busy)) continue;
     const candidates = Object.keys(state.players).filter((id) => {
       const ps = state.players[id];
       if (ps.team !== t.id || ps.status === "fa" || ps.status === "ps" || state.negotiations[id]?.status === "open") return false;
@@ -664,6 +682,8 @@ function cpuExtensions(state: GameState): void {
       const deal = dealOf(state, id);
       return !!deal && dealYearsLeft(deal, year) === 1 && extensionEligibility(state, id).ok;
     });
+    // Void years about to accelerate: an extension keeps that money spread out instead of landing at once.
+    const voids = (id: string) => dealOf(state, id)!.years.filter((y) => y.void).reduce((s, y) => s + y.proration, 0);
     if (!candidates.length) continue;
     // Teams extend the players they start, not their backups.
     const chart = depthChart(state, t.id);
@@ -671,12 +691,14 @@ function cpuExtensions(state: GameState): void {
     const start = year + 1;
     // Front offices keep an eye on next year's cap: an extension has to fit, with some help from restructures.
     const room = state.settings.capRules === "real" ? capSummary(state, t.id, start).space + 0.04 * salaryCap(state, start) : Infinity;
-    const scored = candidates.filter((id) => starters.has(id)).map((id) => ({ id, v: teamValue(state, t.id, id, start) }))
-      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000) * capScale(state, start) && x.v * 0.8 <= room).sort((a, b) => b.v - a.v);
+    const scored = candidates.filter((id) => starters.has(id) || voids(id) >= 5_000_000).map((id) => ({ id, v: teamValue(state, t.id, id, start), voids: voids(id) }))
+      // Big void money always gets the call: letting it land at once is worse than any extension.
+      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000) * capScale(state, start) && (x.v * 0.8 <= room + x.voids || x.voids >= 10_000_000))
+      .sort((a, b) => b.voids - a.voids || b.v - a.v);
     const pick = scored[0];
     if (!pick) continue;
     const ask = marketPrice(state, pick.id, start).apy;
-    const goal: Mandate["goal"] = pick.v >= ask * 0.9 ? "sign" : "value";
+    const goal: Mandate["goal"] = pick.v >= ask * 0.9 || pick.voids >= 10_000_000 ? "sign" : "value";
     openTalks(state, t.id, pick.id, "extension", "gm", { goal });
   }
 }
@@ -714,7 +736,12 @@ export function startHoldouts(state: GameState): void {
       send(state, "staff", gmName(state), `${p.name} ${ps.holdout.kind === "holdout" ? "is holding out" : "is holding in"}`,
         `${p.name} ${word} until there's a new deal. ${agentFor(id).name} has sent over their number; talks are open on the Contracts page.` +
         (ps.holdout.kind === "holdout" ? " Under the CBA we fine a veteran $50K for every day of camp missed." : ""));
-    } else openTalks(state, ps.team, id, "extension", "gm", { goal: "sign" });
+    } else {
+      // A front office with no room next year lets him sit rather than break its cap.
+      const v = teamValue(state, ps.team, id, year + left);
+      if (state.settings.capRules === "real" && capSummary(state, ps.team, year + 1).space + 0.04 * salaryCap(state, year + 1) < v * 0.8) continue;
+      openTalks(state, ps.team, id, "extension", "gm", { goal: "sign" });
+    }
   }
 }
 

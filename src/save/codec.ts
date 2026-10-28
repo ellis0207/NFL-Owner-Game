@@ -3,7 +3,7 @@
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
-import { PLAYERS } from "../engine/league";
+import { PLAYERS, RULES } from "../engine/league";
 import { applySeason, patchPlayers } from "../engine/seasons";
 import { ensureStaff } from "../engine/coaches";
 import type { Deal, GameState, SignedContract } from "../engine/types";
@@ -69,6 +69,10 @@ export function migrate(state: GameState): GameState {
   applySeason(state);
   // Everyone on a staff or looking for a job (saves from before the carousel start from the data).
   ensureStaff(state);
+  // In-season moves used to leak into next year's rollover; rollover only exists from the Super Bowl on.
+  if (state.date <= RULES.keyDates.superBowl) {
+    for (const r of Object.values(state.league?.rollover ?? {})) delete r[RULES.season + 1];
+  }
   // Saves from before the free agent pool: the unsigned players join the league as free agents.
   for (const p of PLAYERS) {
     if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };

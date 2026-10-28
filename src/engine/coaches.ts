@@ -269,7 +269,11 @@ export function initStaff(state: GameState): StaffState {
 
 /** The save's staff, created the first time (new games and saves from before the carousel). */
 export function ensureStaff(state: GameState): void {
-  state.staff ??= initStaff(state);
+  if (!state.staff) {
+    // Start from the real staffs, not whatever save was loaded before.
+    bindStaff({ ...state, staff: undefined });
+    state.staff = initStaff(state);
+  }
   bindStaff(state);
 }
 
@@ -277,6 +281,7 @@ export function ensureStaff(state: GameState): void {
 
 const DATA_HIDDEN = structuredClone(HIDDEN_STAFF);
 const DATA_PEOPLE = [...STAFF.people];
+const DATA_TEAM_SCHEMES = structuredClone(STAFF.teamSchemes);
 const COLLEGE_COACH = Object.fromEntries(COLLEGE_TEAMS.map((t) => [t.id, t.coach]));
 
 /** A person in the shape the rest of the engine reads. */
@@ -297,6 +302,9 @@ export function bindStaff(state: GameState): void {
     Object.assign(HIDDEN_STAFF, DATA_HIDDEN);
     STAFF.people = [...DATA_PEOPLE];
     for (const p of STAFF.people) STAFF_BY_ID[p.id] = p;
+    STAFF.teamSchemes = structuredClone(DATA_TEAM_SCHEMES);
+    for (const t of COLLEGE_TEAMS) COLLEGE_TEAM[t.id].coach = COLLEGE_COACH[t.id];
+    bindStaffTables(STAFF.people, STAFF.teamSchemes, {});
     return;
   }
   const employed = Object.values(s.people).filter((c) => c.team && c.role);

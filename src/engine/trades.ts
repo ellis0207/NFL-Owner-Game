@@ -61,6 +61,11 @@ const PRE_TRADED: Record<string, string> = { "2027-1-GB": "DAL", "2027-1-IND": "
 /** Players whose contracts have a no-trade clause: they have to agree to any deal. */
 const NO_TRADE_CLAUSE = new Set(["00-0033077" /* Dak Prescott */, "00-0033537" /* Deshaun Watson */]);
 
+/** Players in a trade agreed but not yet processed: their teams leave them be. */
+export function inAgreedTrade(state: GameState, id: string): boolean {
+  return (state.trades?.log ?? []).some((r) => r.status === "agreed" && r.send.some((side) => side.some((a) => a.kind === "player" && a.id === id)));
+}
+
 export function trades(state: GameState): TradeState {
   return (state.trades ??= { picks: { ...PRE_TRADED }, log: [], offers: [], block: [], requests: {}, talks: {} });
 }
@@ -490,7 +495,11 @@ export function capAfter(state: GameState, deal: TradeDeal, side: 0 | 1): CapChe
   const hitOf = (id: string) => (state.players[id].status === "ps" ? psCapHit(state, id, year) : capHit(id, year, state));
   const before = teamPlayerIds(state, team).map(hitOf);
   const after = teamPlayerIds(state, team).filter((id) => !out.has(id)).map(hitOf);
-  for (const id of inc) after.push(dealCapHit(tradedDeal(dealOf(state, id)!, team, date), year));
+  // A player released since the deal was agreed has no contract to bring (checkTrade flags him).
+  for (const id of inc) {
+    const d = dealOf(state, id);
+    if (d) after.push(dealCapHit(tradedDeal(d, team, date), year));
+  }
   const sum = (hits: number[]) => (top51 ? [...hits].sort((a, b) => b - a).slice(0, 51) : hits).reduce((a, b) => a + b, 0);
   const limit = capLimit(team, year, state);
   const deadNow = deadMoney(state, team, year);

@@ -9,6 +9,7 @@ import { releasePlayer } from "../engine/roster";
 import { claimDueLabel, onWaivers } from "../engine/waivers";
 import { talksFor } from "../engine/negotiation";
 import { isOffseason, restructure, restructurePreview } from "../engine/offseason";
+import { acceptCounter, askPayCut, canJune1, june1Left, june1Preview, payCutInfo, releaseJune1 } from "../engine/capmoves";
 import { gameTypeLabel, outLabel } from "../engine/season";
 import { canTradePlayer, hasNoTradeClause, trades } from "../engine/trades";
 import { matchup } from "../engine/standings";
@@ -28,7 +29,9 @@ const CONTRACT_SOURCE = {
 export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
   const p = PLAYER_BY_ID[id];
   const state = game.players[id];
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<false | "now" | "june1">(false);
+  const [cutTo, setCutTo] = useState<number | null>(null);
+  const [cutReply, setCutReply] = useState<string | null>(null);
   const ui = useUi();
   const cost = releaseCost(id, game);
   const year = leagueYear(game.date);
@@ -50,6 +53,20 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  function releaseLater() {
+    const r = releaseJune1(game, id);
+    if (!r) return;
+    game.inbox.unshift({
+      id: `${game.date}-rel-${id}`, date: game.date, kind: "transaction", from: "General Manager",
+      title: `${p.name} released (post-June 1)`,
+      body: `We released ${p.name} with a post-June 1 designation. His full ${money(r.held + r.dead)} cap charge stays on the ${r.year} books until June 2; ` +
+        `then ${money(r.dead)} stays as dead money, ${money(r.held)} comes off, and ${money(r.deadNext)} moves to ${r.year + 1}.`,
+      read: true,
+    });
+    changed();
+    onClose();
+  }
 
   function release() {
     const where = releasePlayer(game, id);
@@ -194,6 +211,31 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </div>
             );
           })()}
+          {mine && (() => {
+            const pc = payCutInfo(game, game.userTeam, id);
+            if (!pc.ok) return null;
+            const ask = game.league?.payCuts?.[id];
+            const countered = ask && ask.team === game.userTeam && ask.year === pc.year && ask.answer === "countered" ? ask.counter : undefined;
+            const value = cutTo ?? Math.round((pc.least + (pc.base - pc.least) * 0.5) / 50_000) * 50_000;
+            return (
+              <div className="confirm">
+                <strong>Ask for a pay cut</strong>
+                <span>
+                  {p.name}'s {pc.year} base salary is {money(pc.base)}{pc.guaranteed ? `, ${money(pc.guaranteed)} of it guaranteed` : ""}.
+                  {" "}He'll compare the number with what he thinks the market would pay him. Asking costs some goodwill whatever the answer.
+                </span>
+                <label className="field">New {pc.year} base salary ($M)
+                  <input type="number" step={0.05} min={pc.least / 1e6} max={pc.base / 1e6} value={value / 1e6} onChange={(e) => setCutTo(Math.round(Number(e.target.value) * 1e6))} />
+                </label>
+                <div className="btn-row">
+                  <button className="btn" onClick={() => { setCutReply(askPayCut(game, game.userTeam, id, value).text); changed(); }}>Ask</button>
+                  {countered && <button className="btn primary" onClick={() => { setCutReply(acceptCounter(game, game.userTeam, id).text); changed(); }}>Agree to {money(countered)}</button>}
+                </div>
+                {cutReply && <span>{cutReply}</span>}
+              </div>
+            );
+          })()}
+          {mine && cutReply && !payCutInfo(game, game.userTeam, id).ok && <span>{cutReply}</span>}
         </section>
 
         {state.team && state.status !== "ps" && (
@@ -243,8 +285,30 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
         {mine && state.status !== "ps" && state.status !== "ir" && (
           <section className="stack">
             <h3>Release</h3>
-            {!confirming && <div><button className="btn danger" onClick={() => setConfirming(true)}>Release {p.name}</button></div>}
-            {confirming && (
+            {!confirming && (
+              <div className="btn-row">
+                <button className="btn danger" onClick={() => setConfirming("now")}>Release {p.name}</button>
+                {canJune1(game, game.userTeam, id).ok && <button className="btn" onClick={() => setConfirming("june1")}>Release with a post-June 1 designation ({june1Left(game, game.userTeam)} left)</button>}
+              </div>
+            )}
+            {confirming === "june1" && (() => {
+              const pv = june1Preview(game, id);
+              return (
+                <div className="confirm">
+                  <strong>Release {p.name} as a post-June 1 cut?</strong>
+                  <span>
+                    He leaves now, but his full {money(pv.now)} cap charge stays on the {year} books until June 2. After that {money(pv.dead)} stays as {year} dead money
+                    {pv.deadNext ? ` and ${money(pv.deadNext)} moves to ${year + 1}` : ""}, saving {money(Math.max(0, pv.savingsAfter))} for the rest of {year}.
+                    A normal release would put {money(cost.deadThisYear)} on {year} right away. Teams get two of these a year. This can't be undone.
+                  </span>
+                  <div className="btn-row">
+                    <button className="btn danger" onClick={releaseLater}>Release after June 1</button>
+                    <button className="btn" onClick={() => setConfirming(false)}>Cancel</button>
+                  </div>
+                </div>
+              );
+            })()}
+            {confirming === "now" && (
               <div className="confirm">
                 <strong>Release {p.name}?</strong>
                 <span>

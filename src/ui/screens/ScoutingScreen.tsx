@@ -13,9 +13,11 @@ import { teamStaff } from "../../engine/staff";
 import type { CollegeConference, CollegeDefense, CollegeOffense, GameState, Position, Region, ScoutDepth, ScoutFilter } from "../../engine/types";
 import { height, money } from "../format";
 import { useUi } from "../ui";
+import { CREWS, crewCost, proDays, sendCrew, upcomingProDays } from "../../engine/prodays";
+import type { ProDayCrew } from "../../engine/types";
 
-type Tab = "plan" | "board" | "reports";
-const TABS: [Tab, string][] = [["plan", "Scouting plan"], ["board", "Prospects"], ["reports", "Weekly reports"]];
+type Tab = "plan" | "board" | "prodays" | "reports";
+const TABS: [Tab, string][] = [["plan", "Scouting plan"], ["board", "Prospects"], ["prodays", "Pro days"], ["reports", "Weekly reports"]];
 
 export function ScoutingScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [tab, setTab] = useState<Tab>("plan");
@@ -36,6 +38,7 @@ export function ScoutingScreen({ game, changed }: { game: GameState; changed: ()
       </div>
       {tab === "plan" && <Plan game={game} changed={changed} />}
       {tab === "board" && <Board game={game} changed={changed} />}
+      {tab === "prodays" && <ProDays game={game} changed={changed} />}
       {tab === "reports" && <Reports game={game} />}
     </section>
   );
@@ -280,6 +283,55 @@ function Reports({ game }: { game: GameState }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function ProDays({ game, changed }: { game: GameState; changed: () => void }) {
+  const ui = useUi();
+  const [msg, setMsg] = useState<string | null>(null);
+  const days = proDays(game);
+  const first = Object.values(days).sort()[0];
+  const upcoming = upcomingProDays(game, 60);
+  const crews = game.draft?.proDayCrews ?? {};
+  const dc = draftClass(game.seed);
+  const before = !first || game.date < first;
+  return (
+    <div className="stack">
+      <p className="muted">
+        After the combine every school works out its own prospects. Players the combine passed over get measured for the first time, and invitees make up drills they skipped.
+        Every team has a scout at every pro day; sending more of our people teaches us more about that school's players, at the cost of travel from the scouting budget.
+        {before && first ? ` Pro days start ${shortDate(first)}.` : ""}
+      </p>
+      {msg && <div className="notice">{msg}</div>}
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>School</th><th>Top prospects</th><th>Who we send</th></tr></thead>
+          <tbody>
+            {upcoming.map((u) => (
+              <tr key={u.school}>
+                <td>{shortDate(u.date)}</td>
+                <td>{schoolName(u.school)}</td>
+                <td>
+                  {u.prospects.slice(0, 3).map((id, i) => (
+                    <span key={id}>{i ? ", " : ""}<button className="link" onClick={() => ui.openProspect(id)}>{dc.byId[id].position} {dc.byId[id].name}</button></span>
+                  ))}
+                  {u.prospects.length > 3 ? <span className="muted"> and {u.prospects.length - 3} more</span> : null}
+                </td>
+                <td>
+                  <select value={crews[u.school] ?? ""} aria-label={`Who goes to ${schoolName(u.school)}`}
+                    onChange={(e) => { setMsg(sendCrew(game, u.school, (e.target.value || null) as ProDayCrew | null).text); changed(); }}>
+                    <option value="">Just the regular scout</option>
+                    {(Object.keys(CREWS) as ProDayCrew[]).map((c) => <option key={c} value={c}>{CREWS[c].label} ({money(crewCost(game, u.school, c))})</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+            {!upcoming.length && <tr><td colSpan={4} className="muted">{game.date > (Object.values(days).sort().at(-1) ?? "") ? "Pro day season is over." : "No pro days with ranked prospects in the next two months."}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <span className="muted">{(Object.keys(CREWS) as ProDayCrew[]).map((c) => `${CREWS[c].label}: ${CREWS[c].detail}`).join(" ")}</span>
     </div>
   );
 }

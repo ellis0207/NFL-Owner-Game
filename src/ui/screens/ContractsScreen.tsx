@@ -9,7 +9,7 @@ import { PLAYER_BY_ID, PLAYERS, RULES, TEAM_BY_ID, TEAMS } from "../../engine/le
 import { franchiseTag, rfaTender, TAG_GROUP, transitionTag, type TagGroup } from "../../engine/market";
 import { extensionEligibility, startYearFor } from "../../engine/negotiation";
 import { applyTag, applyTender, canTag, canTender, decideOption, faClass, isOffseason, NEXT, off, optionInfo, pendingFreeAgents, tagCost, TENDER_LABEL, tenderCost, type FaClass, type TenderChoice } from "../../engine/offseason";
-import { committed, compLabel, resolveSheet } from "../../engine/freeagency";
+import { canVisit, committed, compLabel, resolveSheet, scheduleVisit } from "../../engine/freeagency";
 import { termsLine } from "../NegotiationPanel";
 import { teamValue } from "../../engine/market";
 import type { GameState, Position } from "../../engine/types";
@@ -28,8 +28,8 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
   const ui = useUi();
   const us = game.userTeam;
   const year = leagueYear(game.date);
-  // Our free agents and the market only exist after the Super Bowl.
-  const tabs = TABS.filter(([k]) => offseason || (k !== "expiring" && k !== "fa"));
+  // Our own free agents' decisions only exist after the Super Bowl; the board of upcoming free agents is up all year.
+  const tabs = TABS.filter(([k]) => offseason || k !== "expiring").map(([k, label]): [Tab, string] => [k, k === "fa" && !offseason ? "Upcoming free agents" : label]);
   const talks = Object.values(game.negotiations).filter((n) => n.team === us)
     .sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1) || b.opened.localeCompare(a.opened));
 
@@ -70,7 +70,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
 
       {tab === "extensions" && <Extensions game={game} />}
       {tab === "expiring" && offseason && <OurFreeAgents game={game} changed={changed} />}
-      {tab === "fa" && offseason && <FreeAgencyBoard game={game} />}
+      {tab === "fa" && <FreeAgencyBoard game={game} changed={changed} />}
 
       {tab === "league" && (
         <div className="table-wrap">
@@ -389,65 +389,98 @@ function faStatus(game: GameState, id: string): string {
   return "Available";
 }
 
-function FreeAgencyBoard({ game }: { game: GameState }) {
+function FreeAgencyBoard({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
+  const [note, setNote] = useState<string | null>(null);
   const us = game.userTeam;
   const [pos, setPos] = useState<Position | "all">("all");
   const [show, setShow] = useState<"available" | "all">("available");
-  const open = game.date >= RULES.keyDates.negotiatingWindowOpens;
-  // Before the window, the public list of players headed for free agency.
+  const [whose, setWhose] = useState<"league" | "ours" | "others">("league");
+  const [kind, setKind] = useState<FaClass | "all">("UFA");
+  const offseason = isOffseason(game.date);
+  const open = offseason && game.date >= RULES.keyDates.negotiatingWindowOpens;
+  // Before the window, the public list of players headed for free agency: next spring's class during the season.
   const ids = open
     ? Object.values(game.fa ?? {}).filter((f) => show === "all" || f.status === "open").map((f) => f.player)
-    : TEAMS.flatMap((t) => pendingFreeAgents(game, t.id).filter((id) => faClass(id) === "UFA"));
-  const rows = ids
-    .filter((id) => pos === "all" || PLAYER_BY_ID[id].position === pos)
+    : TEAMS.flatMap((t) => pendingFreeAgents(game, t.id)).filter((id) => kind === "all" || faClass(id) === kind);
+  const from = (id: string) => game.fa?.[id]?.from ?? game.players[id]?.team ?? game.players[id]?.lastTeam ?? "";
+  // The GM's board: every name ranked by what our GM thinks the player is worth to us.
+  const ranked = ids
     .map((id) => ({ id, value: teamValue(game, us, id, NEXT) }))
     .sort((a, b) => b.value - a.value)
+    .map((r, i) => ({ ...r, rank: i + 1 }));
+  const rows = ranked
+    .filter((r) => pos === "all" || PLAYER_BY_ID[r.id].position === pos)
+    .filter((r) => whose === "league" || (whose === "ours") === (from(r.id) === us))
     .slice(0, 150);
   const space = capSummary(game, us, NEXT).space - committed(game, us);
+  const deadline = game.date < RULES.keyDates.franchiseTagDeadline ? ` Tags are due ${shortDate(RULES.keyDates.franchiseTagDeadline)}.` : "";
   return (
     <div className="stack tight">
       <p className="muted">
         {open
           ? `Free agency is open${game.date < RULES.keyDates.newLeagueYear ? ` (negotiating window: agreements are signed on ${shortDate(RULES.keyDates.newLeagueYear)})` : ""}. We have ${money(space)} of ${NEXT} cap space after deals we've agreed to.`
-          : `Players with expiring deals around the league. Their teams have them to themselves until ${shortDate(RULES.keyDates.negotiatingWindowOpens)}; some will re-sign or be tagged before then.`}
+          : offseason
+            ? `Players with expiring deals around the league. Their teams have them to themselves until ${shortDate(RULES.keyDates.negotiatingWindowOpens)}; some will re-sign or be tagged before then.${deadline}`
+            : `Next spring's free agent class: players whose deals run out after the ${RULES.season} season. Their teams can extend them any time before then, and talking to another team's player is tampering.`}
       </p>
       <div className="btn-row">
-        <select value={pos} onChange={(e) => setPos(e.target.value as Position | "all")}>
+        <select value={whose} onChange={(e) => setWhose(e.target.value as typeof whose)} aria-label="Whose players">
+          <option value="league">Whole league</option><option value="ours">Ours</option><option value="others">Other teams'</option>
+        </select>
+        <select value={pos} onChange={(e) => setPos(e.target.value as Position | "all")} aria-label="Position">
           <option value="all">All positions</option>
           {(Object.keys(TAG_GROUP) as Position[]).map((x) => <option key={x}>{x}</option>)}
         </select>
+        {!open && (
+          <select value={kind} onChange={(e) => setKind(e.target.value as FaClass | "all")} aria-label="Kind of free agent">
+            <option value="UFA">Unrestricted</option><option value="RFA">Restricted</option><option value="ERFA">Exclusive rights</option><option value="all">All kinds</option>
+          </select>
+        )}
         {open && (
-          <select value={show} onChange={(e) => setShow(e.target.value as "available" | "all")}>
+          <select value={show} onChange={(e) => setShow(e.target.value as "available" | "all")} aria-label="Signed or not">
             <option value="available">Still available</option><option value="all">Everyone, signed too</option>
           </select>
         )}
       </div>
+      {note && <div className="notice">{note}</div>}
+      {open && game.date >= RULES.keyDates.newLeagueYear && <span className="muted">Bring a free agent in for a visit: the doctors get a look at him, the coaches meet him, and he tells us what matters to him. A good visit helps our offer, and he won't sign anywhere until it's done.</span>}
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Player</th><th>Pos</th><th className="num">Age</th><th>Last team</th><th>{RULES.season} season</th><th className="num">GM's value</th><th>Status</th></tr></thead>
+          <thead><tr><th className="num">GM rank</th><th>Player</th><th>Pos</th><th className="num">Age</th><th>Team</th><th>{RULES.season} season</th><th className="num">GM's value</th><th>Status</th>{open && <th>Visit</th>}</tr></thead>
           <tbody>
-            {rows.map(({ id, value }) => {
-              const f = game.fa?.[id];
+            {rows.map(({ id, value, rank }) => {
               const ps = game.players[id];
               const talking = game.negotiations[id]?.team === us && game.negotiations[id].status === "open";
+              const mine = from(id) === us;
               return (
-                <tr key={id} className="clickable" onClick={() => ui.openTalks(id)}>
+                <tr key={id} className="clickable" onClick={() => (open || mine ? ui.openTalks(id) : ui.openPlayer(id))}>
+                  <td className="num">{rank}</td>
                   <td className="name">{PLAYER_BY_ID[id].name}</td>
                   <td>{PLAYER_BY_ID[id].position}</td>
                   <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
-                  <td>{f?.from ?? ps?.team ?? ps?.lastTeam ?? ""}</td>
+                  <td>{from(id)}</td>
                   <td className="muted">{recentSeasonLine(game, id)}</td>
                   <td className="num">{money(Math.round(value / 250_000) * 250_000)}</td>
-                  <td>{talking ? "In talks with us" : open ? faStatus(game, id) : "Under contract"}</td>
+                  <td>{talking ? "In talks with us" : open ? faStatus(game, id) : ps?.team ? (faClass(id) === "UFA" ? "Under contract" : `Under contract (${faClass(id)})`) : "Free agent"}</td>
+                  {open && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const v = game.fa?.[id]?.visits?.find((x) => x.team === us);
+                        if (v) return <span className="muted">{v.done ? "Visited" : `Set for ${shortDate(v.date)}`}</span>;
+                        const c = canVisit(game, us, id);
+                        return c.ok ? <button className="btn small" onClick={() => { setNote(scheduleVisit(game, us, id).text); changed(); }}>Bring in</button> : null;
+                      })()}
+                    </td>
+                  )}
                 </tr>
               );
             })}
-            {rows.length === 0 && <tr><td colSpan={7} className="muted">Nobody here.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={9} className="muted">Nobody here.</td></tr>}
           </tbody>
         </table>
       </div>
-      <span className="muted">Top 150 by your GM's value. Offers other teams make aren't public: you hear about them from agents and the press.</span>
+      <span className="muted">Top 150 by your GM's value, which is only as good as your GM's eye. Offers other teams make aren't public: you hear about them from agents and the press.</span>
     </div>
   );
 }
