@@ -126,6 +126,29 @@ Undrafted free agents sign as soon as the draft ends, and teams trim to 90.
 Rookies sign rookie-scale deals at their slot. The game stops the day after
 the draft. Check a draft with `npx vite-node tests/draft-report.ts [seed]`.
 
+Five made-up media companies cover the league every day: The Gridiron Ledger
+(the paper of record and the weekly power rankings), Sideline Report (breaking
+news, injuries and previews), Cap Space Daily (contracts, grades and free
+agency), The Blitz (sports-talk hot takes and the hot seat) and the Saturday
+Sentinel (college football and the draft). They write up every game with
+quotes, report injuries, signings, releases and trades, chase trade and free
+agent rumors (some true, some not), run interviews, stat trends, previews and
+playoff pictures, cover the college season and grade every team's draft. Agents
+who leak contract talks leak to them. The Media page has the feed, filters and
+each outlet's staff.
+
+When something happens to the team, a reporter asks the owner for comment: a
+loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
+release, the deadline, the coach's job, the draft, another team's star. Each
+question has four to six answers, and what an answer does is never shown. It
+can move players' morale, the head coach's faith in the owner, agents' trust
+and leverage, fans and the press, how each outlet covers (and grades) the team,
+other teams' boards on draft prospects, and it can bring a league fine.
+Promises are remembered: call a player untouchable and trade him, or call the
+team a Super Bowl team and miss the playoffs, and the press brings it up.
+Unanswered questions become "declined to comment." Check a save's coverage with
+`npx vite-node tests/media-report.ts [seed]`.
+
 Next up: the business side.
 
 ## Playing locally
@@ -144,6 +167,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
+  The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

@@ -27,6 +27,7 @@ import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, 
 import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
+import { gradeLean } from "./outlets";
 import { money, news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { ageFactor, marketView, productionBump, shareFor } from "./market";
@@ -810,7 +811,7 @@ function gradeTrade(state: GameState, deal: TradeDeal, id: string): TradeRecord[
     const scale = Math.max(30, bal.outValue, bal.inValue);
     out[team] = OUTLETS.map((o) => {
       const rng = rngFor(state.seed, `trade-grade:${o.name}:${id}:${team}`);
-      const r = 1 + (bal.gain / scale) * 0.6 + gaussian(rng) * o.noise * 1.5;
+      const r = 1 + (bal.gain / scale) * 0.6 + gaussian(rng) * o.noise * 1.5 + gradeLean(state, o.name, team);
       const g = letter(r);
       const takes = r >= 1.15 ? "A clear win." : r >= 1.02 ? "Good business." : r >= 0.9 ? "Fair enough for both sides." : r >= 0.79 ? "They paid a steep price." : "Hard to see what they were thinking.";
       return { outlet: o.name, grade: g, take: takes };

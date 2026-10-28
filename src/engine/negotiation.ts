@@ -12,8 +12,9 @@ import {
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
+import { leakStory, ownerLeverage } from "./outlets";
 import { money, news, send } from "./inbox";
-import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
+import { PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { invalidateMarket, marketPrice, teamValue } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { schemeFit, staffEffects, teamStaff } from "./staff";
@@ -130,6 +131,8 @@ function stance(state: GameState, team: string, id: string, startYear: number): 
   // Security matters to a player coming off an injury.
   if (state.players[id]?.injury?.seasonEnding) reservation -= 0.06;
   reservation = Math.max(0.7, Math.min(1.08, reservation));
+  // The owner told the press this player would be paid: his agent heard it too.
+  reservation += ownerLeverage(state, id, team);
   const ask = price.apy * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power);
   return {
     base: price.apy,
@@ -460,6 +463,10 @@ function maybeLeak(state: GameState, neg: Negotiation, t: OfferTerms, v: number)
     ? `Report: the ${team} offered ${p.name} about ${money(reported)} a year, well short of what the player's camp wants`
     : `Report: ${p.name} and the ${team} are talking; the latest offer is said to be around ${money(reported)} a year`;
   news(state, text);
+  leakStory(state, {
+    player: neg.player, name: p.name, position: p.position, team: neg.team, teamName: TEAM_BY_ID[neg.team].name,
+    apy: money(reported), lowball, agent: agent.name,
+  });
   if (neg.team === state.userTeam) {
     state.pressure.media = Math.max(0, state.pressure.media - (lowball ? 4 : 1));
     if (lowball) state.pressure.fans = Math.max(0, state.pressure.fans - (p.position === "QB" ? 4 : 2));
