@@ -1,11 +1,18 @@
 // The game clock: starting a new game and moving the league forward one day.
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
-import { GAMES_BY_DATE, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
-import { applyCutdown, proposeFinal53, rosterCount, trimPlan } from "./roster";
+import { GAMES_BY_DATE, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
+import { weeklyDevelopment } from "./development";
+import { healInjuries, injure, injuryRisk } from "./injuries";
+import { applyCutdown, depthChart, fillEmergencies, manageInjuredReserve, proposeFinal53, rosterCount, trimPlan, type RosterMove } from "./roster";
+import { rngFor } from "./rng";
 import { simulateGame } from "./sim";
+import { stat } from "./stats";
+import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
+import { playCaller, teamSchemes, teamStaff } from "./staff";
+
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
-import type { GameState, InboxItem, ScheduledGame, Settings } from "./types";
+import type { BoxScore, GameResult, GameState, InboxItem, Position, ScheduledGame, Settings } from "./types";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
@@ -27,7 +34,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   for (const p of PLAYERS) players[p.id] = { team: p.team, status: "camp" };
   const date = veteranReportDate(userTeam);
   const state: GameState = {
-    version: 1,
+    version: 2,
     id: `${userTeam}-${seed.toString(36)}`,
     createdAt: new Date().toISOString(),
     ownerName,
@@ -38,6 +45,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     players,
     deadMoney: {},
     results: {},
+    box: {},
+    contracts: {},
     playoffTeams: {},
     inbox: [],
     news: [],
@@ -47,15 +56,23 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   const { roster } = rosterCount(state, userTeam);
   const opener = openingGame(userTeam);
   const oppId = opener.home === userTeam ? opener.away! : opener.home!;
-  send(state, "staff", "General Manager", `Welcome to ${team.city}`,
+  const staff = teamStaff(userTeam);
+  const gm = staff.GM ? `${staff.GM.name}, general manager` : "General Manager";
+  const hc = staff.HC ? `${staff.HC.name}, head coach` : "Head Coach";
+  send(state, "staff", gm, `Welcome to ${team.city}`,
     `Veterans report to training camp today. We have ${roster} players in camp and have to be at 53 by ` +
     `${shortDate(KEY.rosterCutdown)}. Under the Top 51 rule we're using ${money(cap.used)} of our ` +
     `${money(cap.limit)} adjusted cap, which leaves ${money(cap.space)} in space. ` +
     `Our opener is ${opener.home === userTeam ? "at home against" : "on the road at"} ${teamLabel(oppId)} on ` +
     `${weekday(opener.date)}, ${shortDate(opener.date)}. I'll bring you a cut plan before the deadline.`);
-  send(state, "staff", "Head Coach",
+  const schemes = teamSchemes(userTeam);
+  const off = playCaller(userTeam, "offense");
+  const def = playCaller(userTeam, "defense");
+  send(state, "staff", hc,
     "Camp starts today",
-    "We'll practice most days and take a day off every so often to keep the legs fresh. You'll hear from me after every game.");
+    `We'll practice most days and take a day off every so often to keep the legs fresh. On offense we run ${OFFENSE_LABEL[schemes.offense].toLowerCase()}` +
+    ` (${off.name} calls the plays); on defense, ${DEFENSE_LABEL[schemes.defense].toLowerCase()} (${def.name} calls it). ` +
+    "Players who fit what we do will get every chance to win jobs. You'll hear from me after every game, and my read on any player is on their page.");
   return state;
 }
 
@@ -67,8 +84,8 @@ export function money(n: number): string {
   return `${sign}$${abs}`;
 }
 
-function send(state: GameState, kind: InboxItem["kind"], from: string, title: string, body: string): void {
-  state.inbox.unshift({ id: `${state.date}-${state.inbox.length}`, date: state.date, kind, from, title, body, read: false });
+function send(state: GameState, kind: InboxItem["kind"], from: string, title: string, body: string, gameId?: string): void {
+  state.inbox.unshift({ id: `${state.date}-${state.inbox.length}`, date: state.date, kind, from, title, body, read: false, gameId });
 }
 
 function news(state: GameState, text: string): void {
@@ -189,17 +206,24 @@ export function isSeasonOver(state: GameState): boolean {
 export function advanceDay(state: GameState): void {
   if (isSeasonOver(state)) return;
   const date = state.date;
+  healInjuries(state);
 
+  const playedToday = new Set<string>();
   for (const g of GAMES_BY_DATE[date] ?? []) {
     if (state.results[g.id]) continue;
     const m = matchup(state, g);
     if (!m) continue;
-    const result = simulateGame(state, g, m.away, m.home);
+    const { result, box } = simulateGame(state, g, m.away, m.home);
     state.results[g.id] = result;
-    reportGame(state, g, result);
+    state.box[g.id] = box;
+    playedToday.add(m.away).add(m.home);
+    reportGame(state, g, result, box);
   }
 
+  practiceInjuries(state, playedToday);
   if (date === KEY.rosterCutdown) runCutdown(state);
+  rosterUpkeep(state);
+  if (weekday(date) === "Tuesday") weeklyDevelopment(state, playedLastWeek(state));
   if (date === KEY.regularSeasonEnd) {
     fillWildCard(state);
     const seeds = state.seeds!;
@@ -224,7 +248,7 @@ export function advanceDay(state: GameState): void {
     }
   }
   if (date === addDays(KEY.rosterCutdown, -3)) {
-    send(state, "staff", "General Manager", "Proposed 53-man roster",
+    send(state, "staff", `${teamStaff(state.userTeam).GM?.name ?? "General Manager"}, general manager`, "Proposed 53-man roster",
       "My cut plan is on the Roster page under Cutdown. Look it over and swap anyone you feel strongly about. " +
       `If you change nothing, I'll submit it on ${shortDate(KEY.rosterCutdown)}.`);
   }
@@ -236,12 +260,12 @@ export function advanceDay(state: GameState): void {
 function runCutdown(state: GameState): void {
   for (const team of Object.keys(TEAM_BY_ID)) {
     const keep = team === state.userTeam && state.cutPlan?.length
-      ? trimPlan(state.cutPlan.filter((id) => state.players[id]?.team === team))
+      ? trimPlan(state, team, state.cutPlan.filter((id) => state.players[id]?.team === team && ["camp", "active"].includes(state.players[id].status)))
       : proposeFinal53(state, team);
     const { cut, ps } = applyCutdown(state, team, keep);
     if (team === state.userTeam) {
       const cap = capSummary(state, team);
-      send(state, "transaction", "General Manager", "We're at 53",
+      send(state, "transaction", `${teamStaff(team).GM?.name ?? "General Manager"}, general manager`, "We're at 53",
         `We released ${cut.length + ps.length} players and brought ${ps.length} of them back on the practice squad. ` +
         `Cap space is now ${money(cap.space)}. The full roster is on the Roster page.`);
     }
@@ -250,15 +274,28 @@ function runCutdown(state: GameState): void {
   news(state, "All 32 teams trimmed their rosters to 53.");
 }
 
-function reportGame(state: GameState, g: ScheduledGame, r: { away: string; home: string; awayScore: number; homeScore: number; overtime: boolean }): void {
+function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxScore): void {
   const winnerHome = r.homeScore > r.awayScore;
   const tie = r.homeScore === r.awayScore;
   const line = tie
     ? `${r.away} and ${r.home} tie ${r.awayScore}-${r.homeScore}`
     : `${winnerHome ? r.home : r.away} ${Math.max(r.homeScore, r.awayScore)}, ${winnerHome ? r.away : r.home} ${Math.min(r.homeScore, r.awayScore)}${r.overtime ? " (OT)" : ""}`;
   news(state, `${gameTypeLabel(g)}: ${line}`);
+  // League injury news for starters.
+  for (const inj of box.injuries) {
+    if (inj.team === state.userTeam) continue;
+    const pos = PLAYER_BY_ID[inj.player].position;
+    const chart = depthChart(state, inj.team, addDays(state.date, -1));
+    if (chart[pos].slice(0, STARTERS[pos] ?? 1).includes(inj.player) && state.players[inj.player].injury?.date === state.date) {
+      const out = state.players[inj.player].injury!;
+      if (daysBetween(state.date, out.returnDate) >= 7) {
+        news(state, `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, out.returnDate, out.seasonEnding)}`);
+      }
+    }
+  }
   const us = state.userTeam;
   if (r.away !== us && r.home !== us) return;
+  const side = r.home === us ? "home" : "away";
   const ours = r.home === us ? r.homeScore : r.awayScore;
   const theirs = r.home === us ? r.awayScore : r.homeScore;
   const opp = r.home === us ? r.away : r.home;
@@ -266,16 +303,113 @@ function reportGame(state: GameState, g: ScheduledGame, r: { away: string; home:
   const rec = standings(state)[us];
   const record = g.type === "REG" ? ` We're ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}.` : "";
   const tone = g.type === "PRE"
-    ? "Most of the starters sat after the first quarter, so the tape is mostly about the depth chart."
-    : ours > theirs ? "Good week of work showed up on Sunday." : "We'll get it fixed on the practice field.";
-  send(state, "game", "Head Coach", `${verdict} ${ours}-${theirs} against ${TEAM_BY_ID[opp].name}${r.overtime ? " in overtime" : ""}`,
-    `${gameTypeLabel(g)}. ${tone}${record}`);
+    ? "Most of the starters sat, so the tape is mostly about the depth chart."
+    : ours > theirs ? "Good week of work showed up on game day." : "We'll get it fixed on the practice field.";
+  const hurt = box.injuries.filter((i) => i.team === us).map((i) => {
+    const inj = state.players[i.player].injury;
+    return `${PLAYER_BY_ID[i.player].name} (${i.type.toLowerCase()}${inj && inj.date === state.date ? `, ${outLabel(state.date, inj.returnDate, inj.seasonEnding)}` : ", returned"})`;
+  });
+  const hc = teamStaff(us).HC?.name ?? "Head Coach";
+  send(state, "game", `${hc}, head coach`, `${verdict} ${ours}-${theirs} against ${TEAM_BY_ID[opp].name}${r.overtime ? " in overtime" : ""}`,
+    `${gameTypeLabel(g)}. ${tone}${record}\n\n${standouts(box, side)}` +
+    (hurt.length ? `\n\nInjuries: ${hurt.join("; ")}.` : ""),
+    g.id);
+}
+
+const STARTERS: Partial<Record<Position, number>> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1 };
+
+/** "out about 3 weeks", "out for the season" */
+export function outLabel(from: string, returnDate: string, seasonEnding: boolean): string {
+  if (seasonEnding) return "out for the season";
+  const days = daysBetween(from, returnDate);
+  if (days <= 3) return "day to day";
+  const weeks = Math.round(days / 7);
+  return weeks <= 1 ? "out about a week" : `out about ${weeks} weeks`;
+}
+
+/** A coach's quick summary of who stood out for one team. */
+function standouts(box: BoxScore, side: "away" | "home"): string {
+  const lines = Object.entries(box.players[side]);
+  const best = (key: Parameters<typeof stat>[1]) => lines.reduce<[string, number[]] | null>((a, b) => (stat(b[1], key) > (a ? stat(a[1], key) : 0) ? b : a), null);
+  const out: string[] = [];
+  const qb = best("att");
+  if (qb) out.push(`${PLAYER_BY_ID[qb[0]].name} went ${stat(qb[1], "cmp")} of ${stat(qb[1], "att")} for ${stat(qb[1], "passYds")} yards, ${stat(qb[1], "passTd")} TD and ${stat(qb[1], "int")} INT.`);
+  const rb = best("rushYds");
+  if (rb && stat(rb[1], "rushYds") >= 40) out.push(`${PLAYER_BY_ID[rb[0]].name} ran for ${stat(rb[1], "rushYds")} yards on ${stat(rb[1], "car")} carries.`);
+  const wr = best("recYds");
+  if (wr && stat(wr[1], "recYds") >= 40) out.push(`${PLAYER_BY_ID[wr[0]].name} caught ${stat(wr[1], "rec")} for ${stat(wr[1], "recYds")} yards.`);
+  const sacker = best("sacks");
+  if (sacker && stat(sacker[1], "sacks") >= 1) out.push(`${PLAYER_BY_ID[sacker[0]].name} had ${stat(sacker[1], "sacks")} sack${stat(sacker[1], "sacks") === 1 ? "" : "s"}.`);
+  const picker = best("defInt");
+  if (picker && stat(picker[1], "defInt") >= 1) out.push(`${PLAYER_BY_ID[picker[0]].name} picked one off.`);
+  return out.join(" ");
+}
+
+/** Days a team practices: not game day or the day after, with a day off every so often in camp. */
+function practices(state: GameState, team: string, playedToday: Set<string>): boolean {
+  if (playedToday.has(team)) return false;
+  const date = state.date;
+  if (date < veteranReportDate(team)) return false;
+  const prev = addDays(date, -1);
+  if ((GAMES_BY_DATE[prev] ?? []).some((g) => { const m = matchup(state, g); return m && (m.away === team || m.home === team); })) return false;
+  if (date < KEY.regularSeasonStart) return daysBetween(veteranReportDate(team), date) % 6 !== 5;
+  return ["Wednesday", "Thursday", "Friday"].includes(weekday(date));
+}
+
+function practiceInjuries(state: GameState, playedToday: Set<string>): void {
+  const camp = state.date < KEY.regularSeasonStart;
+  for (const team of Object.keys(TEAM_BY_ID)) {
+    if (!practices(state, team, playedToday)) continue;
+    const rng = rngFor(state.seed, `practice:${state.date}:${team}`);
+    if (rng() > (camp ? 0.09 : 0.03)) continue;
+    const ids = Object.keys(state.players).filter((id) => {
+      const p = state.players[id];
+      return p.team === team && (p.status === "camp" || p.status === "active") && !p.injury;
+    });
+    if (!ids.length) continue;
+    const id = ids[Math.floor(rng() * ids.length)];
+    if (rng() > Math.min(1, 0.7 * injuryRisk(state, id, team))) continue;
+    const { injury } = injure(state, id, team, rng, true);
+    if (team === state.userTeam) {
+      const trn = teamStaff(team).TRN?.name ?? "Head athletic trainer";
+      send(state, "staff", `${trn}, head athletic trainer`, `${PLAYER_BY_ID[id].name} hurt in practice`,
+        `${PLAYER_BY_ID[id].name} (${PLAYER_BY_ID[id].position}) came up with a ${injury.type.toLowerCase()} in practice today. ` +
+        `We expect ${PLAYER_BY_ID[id].name.split(" ").slice(-1)[0]} to be ${outLabel(state.date, injury.returnDate, injury.seasonEnding)}.`);
+    }
+  }
+}
+
+/** Daily roster upkeep for every team: injured reserve, returns, and emergency signings. */
+function rosterUpkeep(state: GameState): void {
+  for (const team of Object.keys(TEAM_BY_ID)) {
+    const moves: RosterMove[] = [...manageInjuredReserve(state, team), ...fillEmergencies(state, team)];
+    if (!moves.length) continue;
+    if (team === state.userTeam) {
+      const gm = teamStaff(team).GM?.name ?? "General Manager";
+      send(state, "transaction", `${gm}, general manager`, moves.length === 1 ? "Roster move" : "Roster moves",
+        `We ${moves.map((m) => m.text).join("; ")}.`);
+    }
+  }
+}
+
+function playedLastWeek(state: GameState): Set<string> {
+  const out = new Set<string>();
+  for (let i = 1; i <= 7; i++) {
+    for (const g of GAMES_BY_DATE[addDays(state.date, -i)] ?? []) {
+      const box = state.box[g.id];
+      if (!box) continue;
+      for (const side of ["away", "home"] as const) {
+        for (const [id, v] of Object.entries(box.players[side])) if (stat(v, "offSnaps") + stat(v, "defSnaps") >= 10) out.add(id);
+      }
+    }
+  }
+  return out;
 }
 
 function weeklyReport(state: GameState): void {
   const cap = capSummary(state, state.userTeam);
   const rec = standings(state)[state.userTeam];
-  send(state, "staff", "General Manager", "Weekly front office report",
+  send(state, "staff", `${teamStaff(state.userTeam).GM?.name ?? "General Manager"}, general manager`, "Weekly front office report",
     `Record: ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}. Points for ${rec.pf}, against ${rec.pa}. ` +
     `Cap space: ${money(cap.space)}. Trade deadline: ${shortDate(KEY.tradeDeadline)}.`);
 }

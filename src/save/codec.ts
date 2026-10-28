@@ -24,8 +24,19 @@ export function parseSaveFile(text: string): GameState {
   }
   const file = parsed as Partial<SaveFile>;
   if (file?.format !== SAVE_FORMAT || !file.state) throw new Error("That file isn't an NFL Owner Simulator save.");
-  if (file.version !== 1 || file.state.version !== 1) throw new Error("That save comes from a newer version of the game.");
-  return file.state;
+  if (file.version !== 1 || (file.state.version as number) > 2) throw new Error("That save comes from a newer version of the game.");
+  return migrate(file.state);
+}
+
+/** Brings a save from an older version of the game up to date. */
+export function migrate(state: GameState): GameState {
+  if ((state.version as number) === 1) {
+    // Version 1 saves predate box scores, injuries and signed contracts.
+    state.box ??= {};
+    state.contracts ??= {};
+    state.version = 2;
+  }
+  return state;
 }
 
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {

@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { releaseCost } from "../engine/cap";
-import { ageOn, longDate } from "../engine/dates";
-import { PLAYER_BY_ID, SEASON, TEAM_BY_ID } from "../engine/league";
+import { releaseCost, signedContract } from "../engine/cap";
+import { ageOn, longDate, shortDate } from "../engine/dates";
+import { injuryStatus } from "../engine/injuries";
+import { GAME_BY_ID, PLAYER_BY_ID, SCHEDULE, SEASON, TEAM_BY_ID } from "../engine/league";
+import { playerReport } from "../engine/reports";
 import { releasePlayer } from "../engine/roster";
+import { gameTypeLabel, outLabel } from "../engine/season";
+import { matchup } from "../engine/standings";
+import { gameLog, seasonTotals, unpack } from "../engine/stats";
 import type { GameState } from "../engine/types";
-import { draftLine, height, mergeSeason, money, statLine } from "./format";
+import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./format";
+import { useUi } from "./ui";
 
 const CONTRACT_SOURCE = {
   overthecap: "Year-by-year figures from OverTheCap.",
@@ -16,9 +22,19 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   const p = PLAYER_BY_ID[id];
   const state = game.players[id];
   const [confirming, setConfirming] = useState(false);
-  const cost = releaseCost(id);
+  const ui = useUi();
+  const cost = releaseCost(id, SEASON, game);
   const seasons = [...new Set(p.stats.map((s) => s.season))].sort((a, b) => b - a);
   const mine = state.team === game.userTeam;
+  const signed = signedContract(game, id);
+  const report = playerReport(game, id);
+  const log = gameLog(game, id);
+  const phases = (["PRE", "REG", "POST"] as const).map((t) => [t, seasonTotals(game, t)[id]] as const).filter(([, s]) => s);
+  const nextGame = state.team ? SCHEDULE.find((g) => g.date >= game.date && !game.results[g.id] && (() => {
+    const m = matchup(game, g);
+    return m && (m.away === state.team || m.home === state.team);
+  })()) : undefined;
+  const status = nextGame ? injuryStatus(game, id, nextGame.date) : null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -47,7 +63,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
         <header>
           <div>
             <h2>{p.name}</h2>
-            <span className="muted">{p.position} · {state.team ? `${TEAM_BY_ID[state.team].city} ${TEAM_BY_ID[state.team].name}` : "Free agent"}{state.status === "ps" ? " (practice squad)" : ""}</span>
+            <span className="muted">{p.position} · {state.team ? `${TEAM_BY_ID[state.team].city} ${TEAM_BY_ID[state.team].name}` : "Free agent"}{state.status === "ps" ? " (practice squad)" : state.status === "ir" ? " (injured reserve)" : ""}</span>
           </div>
           {p.jersey != null && <span className="jersey" style={{ marginLeft: "auto" }}>{p.jersey}</span>}
         </header>
@@ -59,8 +75,79 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
           <dt>Experience</dt><dd>{p.yearsExp === 0 ? "Rookie" : `${p.yearsExp} seasons`}</dd>
         </dl>
 
+        {state.injury && state.injury.returnDate > game.date && (
+          <div className="notice error">
+            <strong>{state.injury.type}</strong> ({shortDate(state.injury.date)}): {outLabel(game.date, state.injury.returnDate, state.injury.seasonEnding)}
+            {status && nextGame ? `. ${status} for ${shortDate(nextGame.date)}.` : "."}
+          </div>
+        )}
+
+        <section className="report">
+          <span className="label">{report.authorRole}'s report · {report.author}</span>
+          <strong>{report.grade}</strong>
+          {(report.strengths.length > 0 || report.concerns.length > 0) && (
+            <ul>
+              {report.strengths.map((t) => <li key={t}>{t}</li>)}
+              {report.concerns.map((t) => <li key={t} className="muted">{t}</li>)}
+            </ul>
+          )}
+          {report.summary && <span>{report.summary}</span>}
+          {report.fit && <span className="muted">{report.fit}</span>}
+        </section>
+
+        {phases.length > 0 && (
+          <section className="stack">
+            <h3>{SEASON} season</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th></th><th className="num">G</th><th>Line</th><th className="num">Snaps</th></tr></thead>
+                <tbody>
+                  {phases.map(([t, s]) => (
+                    <tr key={t}>
+                      <td>{t === "PRE" ? "Preseason" : t === "REG" ? "Regular season" : "Playoffs"}</td>
+                      <td className="num">{s!.line.g ?? 0}</td>
+                      <td>{gameLine(p.position, s!.line)}</td>
+                      <td className="num">{(s!.line.offSnaps ?? 0) + (s!.line.defSnaps ?? 0)}{s!.line.stSnaps ? ` + ${s!.line.stSnaps} ST` : ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {log.length > 0 && (
+          <section className="stack">
+            <h3>Game log</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Game</th><th>Opp</th><th className="num">Result</th><th>Line</th></tr></thead>
+                <tbody>
+                  {log.map((row) => {
+                    const r = game.results[row.gameId];
+                    const ours = row.home ? r.homeScore : r.awayScore;
+                    const theirs = row.home ? r.awayScore : r.homeScore;
+                    const g = GAME_BY_ID[row.gameId];
+                    return (
+                      <tr key={row.gameId} className="clickable" onClick={() => ui.openBox(row.gameId)}>
+                        <td>{g.type === "REG" ? `Wk ${g.week}` : gameTypeLabel(g)} <span className="muted">{shortDate(g.date)}</span></td>
+                        <td>{row.home ? "vs" : "@"} {row.opp}</td>
+                        <td className={`num ${ours > theirs ? "good" : ours < theirs ? "bad" : ""}`}>{ours > theirs ? "W" : ours < theirs ? "L" : "T"} {ours}-{theirs}</td>
+                        <td>{gameLine(p.position, unpack(row.values))}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         <section className="stack">
           <h3>Contract</h3>
+          {signed && (
+            <p>Signed {shortDate(signed.date)}: one-year minimum deal, {money(signed.seasons[0].capHit)} cap hit for the rest of {SEASON} (prorated), nothing guaranteed.</p>
+          )}
           <div className="table-wrap">
             <table>
               <thead><tr><th>Year</th><th className="num">Base</th><th className="num">Bonus (prorated)</th><th className="num">Other</th><th className="num">Guaranteed</th><th className="num">Cap hit</th></tr></thead>
@@ -108,10 +195,10 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </table>
             </div>
           )}
-          <span className="muted">Snap share is of the team's snaps across the season. 2026 game stats arrive with the next update.</span>
+          <span className="muted">Real NFL regular-season stats. Snap share is of the team's snaps across the season.</span>
         </section>
 
-        {mine && state.status !== "ps" && (
+        {mine && state.status !== "ps" && state.status !== "ir" && (
           <section className="stack">
             <h3>Release</h3>
             {!confirming && <div><button className="btn danger" onClick={() => setConfirming(true)}>Release {p.name}</button></div>}

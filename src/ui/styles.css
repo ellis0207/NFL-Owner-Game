@@ -205,3 +205,33 @@ td.name { font-weight: 600; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) {
   .btn, .team-pick, .side nav button { transition: background-color 120ms, border-color 120ms, filter 120ms; }
 }
+
+/* ---- Box scores, stats, staff ---- */
+.drawer.wide { width: min(100%, 760px); }
+.stack.tight { gap: 0.4rem; align-content: start; }
+.box-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.75rem; }
+.box-head > div { display: grid; }
+.box-head > div:last-child { text-align: right; }
+.box-head strong { font-family: var(--font-display); font-size: 1.5rem; text-transform: uppercase; line-height: 1; }
+.box-head .pts { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; line-height: 1; color: var(--muted); }
+.box-head .win .pts { color: var(--ink); }
+.plays { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.plays li { display: grid; grid-template-columns: 5.5rem 1fr auto; gap: 0.6rem; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 0.35rem; }
+.score.clickable { cursor: pointer; text-align: left; color: inherit; }
+.score.clickable:hover { border-color: var(--muted); }
+.link { all: unset; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link:focus-visible { outline: 2px solid var(--team); outline-offset: 2px; }
+.cards { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.85rem; display: grid; gap: 0.35rem; align-content: start; }
+.card .role { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.card .who { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; line-height: 1.1; }
+.report { border-left: 3px solid var(--team-2); background: var(--panel); padding: 0.75rem 0.9rem; border-radius: 0 var(--radius) var(--radius) 0; display: grid; gap: 0.4rem; }
+.report ul { margin: 0; padding-left: 1.1rem; }
+.pill.inj { color: var(--bad); border-color: currentColor; }
+.pill.ir { color: var(--bad); border-color: currentColor; background: color-mix(in srgb, var(--bad) 8%, transparent); }
+@media (max-width: 760px) {
+  .plays li { grid-template-columns: 4.6rem 1fr; }
+  .plays li > :last-child { grid-column: 2; }
+  .box-head strong { font-size: 1.15rem; }
+  .box-head .pts { font-size: 2rem; }
+}

@@ -18,6 +18,8 @@ from schedule import build_schedule, home_stadiums
 from team_cap_2026 import team_cap
 from sources import HISTORY_SEASONS, load_all
 from stats import pass_rush_rates, season_snaps, season_stats
+from traits import build_traits
+from staff_2026 import DEFENSE_SCHEMES, OFFENSE_SCHEMES, TEAM_SCHEMES, build_staff
 
 OUT = Path(__file__).resolve().parent.parent / "data" / f"league-{SEASON}"
 
@@ -58,6 +60,7 @@ def main(refresh: bool) -> None:
         p["stats"] = stats.get(p["id"], [])
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
     ratings = rate_players(players, stats, snaps)
+    traits = build_traits(players, ratings, data["stats"], data["combine"])
     stadiums = home_stadiums(data["games"])
     schedule = build_schedule(data["games"], stadiums)
 
@@ -71,8 +74,14 @@ def main(refresh: bool) -> None:
     write("teams.json", teams)
     write("players.json", players)
     # Kept in its own file so UI code never reads true ratings by accident.
-    write("hidden-ratings.json", {pid: {k: v for k, v in r.items() if k != "signals"} for pid, r in ratings.items()})
+    write("hidden-ratings.json", {
+        pid: {**{k: v for k, v in r.items() if k != "signals"}, "traits": traits[pid]} for pid, r in ratings.items()
+    })
     write("schedule.json", schedule)
+    staff, staff_hidden = build_staff(SEASON)
+    write("staff.json", {"people": staff, "teamSchemes": TEAM_SCHEMES,
+                         "schemeNames": {"offense": OFFENSE_SCHEMES, "defense": DEFENSE_SCHEMES}})
+    write("hidden-staff.json", staff_hidden)
     write("rules.json", RULES_2026)
     write("meta.json", {
         "season": SEASON, "startPhase": "preseason",

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
 import type { GameState } from "../../engine/types";
+import { useUi } from "../ui";
 
 export function InboxScreen({ game, changed }: { game: GameState; changed: () => void }) {
+  const ui = useUi();
   const [open, setOpen] = useState<string | null>(game.inbox[0]?.id ?? null);
   function toggle(id: string) {
     const item = game.inbox.find((i) => i.id === id)!;
@@ -30,6 +32,7 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
               <span className="muted">{m.from}</span>
             </button>
             {open === m.id && <p className="body">{m.body}</p>}
+            {open === m.id && m.gameId && game.results[m.gameId] && <div><button className="btn small" onClick={() => ui.openBox(m.gameId!)}>Box score</button></div>}
           </article>
         ))}
       </div>

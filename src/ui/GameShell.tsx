@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { capSummary } from "../engine/cap";
 import { longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
@@ -6,17 +6,22 @@ import { rosterCount } from "../engine/roster";
 import { advanceDay, isSeasonOver, simToNextGame } from "../engine/season";
 import { standings } from "../engine/standings";
 import type { GameState } from "../engine/types";
+import { BoxScore } from "./BoxScore";
 import { money } from "./format";
+import { PlayerPanel } from "./PlayerPanel";
 import { CapScreen } from "./screens/CapScreen";
 import { InboxScreen } from "./screens/InboxScreen";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { RosterScreen } from "./screens/RosterScreen";
 import { SaveScreen } from "./screens/SaveScreen";
 import { ScheduleScreen } from "./screens/ScheduleScreen";
+import { StaffScreen } from "./screens/StaffScreen";
 import { StandingsScreen } from "./screens/StandingsScreen";
+import { StatsScreen } from "./screens/StatsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
+import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Inbox", "Schedule", "Standings", "Roster", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Inbox", "Schedule", "Standings", "Roster", "Stats", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -45,6 +50,11 @@ interface Props {
 export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [screen, setScreen] = useState<Screen>("Today");
   const [busy, setBusy] = useState(false);
+  const [box, setBox] = useState<string | null>(null);
+  const [player, setPlayer] = useState<string | null>(null);
+  const openBox = useCallback((id: string) => { setPlayer(null); setBox(id); }, []);
+  const openPlayer = useCallback((id: string) => setPlayer(id), []);
+  const ui = useMemo(() => ({ openBox, openPlayer }), [openBox, openPlayer]);
   const team = TEAM_BY_ID[game.userTeam];
   const cap = capSummary(game, game.userTeam);
   const rec = standings(game)[game.userTeam];
@@ -63,6 +73,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   }
 
   return (
+    <UiContext.Provider value={ui}>
     <div className="shell">
       <aside className="side">
         <div>
@@ -87,7 +98,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
           <div className="figures">
             <div className="figure"><span className="label">Record</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
-            <div className="figure"><span className="label">Roster</span><strong>{counts.roster}{counts.ps ? ` + ${counts.ps} PS` : ""}</strong></div>
+            <div className="figure"><span className="label">Roster</span><strong>{counts.roster}{counts.ps ? ` + ${counts.ps} PS` : ""}{counts.ir ? ` · ${counts.ir} IR` : ""}</strong></div>
             <div className="figure">
               <span className="label">Cap space</span>
               <strong className={cap.space < 0 && game.settings.capRules === "real" ? "bad" : undefined}>
@@ -102,6 +113,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         </header>
         <main className="content">
           {screen === "Today" && <TodayScreen game={game} go={setScreen} />}
+          {screen === "Stats" && <StatsScreen game={game} />}
+          {screen === "Staff" && <StaffScreen game={game} />}
           {screen === "Inbox" && <InboxScreen game={game} changed={changed} />}
           {screen === "Schedule" && <ScheduleScreen game={game} />}
           {screen === "Standings" && <StandingsScreen game={game} />}
@@ -111,6 +124,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>
       </div>
+      {box && <BoxScore game={game} id={box} onClose={() => setBox(null)} />}
+      {player && <PlayerPanel game={game} id={player} onClose={() => setPlayer(null)} changed={changed} />}
     </div>
+    </UiContext.Provider>
   );
 }

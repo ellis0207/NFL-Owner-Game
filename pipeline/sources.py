@@ -29,6 +29,8 @@ def load_all(refresh: bool = False) -> dict:
         "games": pd.read_csv(_fetch("schedules/games.csv", refresh), low_memory=False),
         # Master player table: fills ids and draft rounds the weekly roster leaves blank.
         "players": pd.read_csv(_fetch("players/players.csv", refresh), low_memory=False),
+        # Athletic testing, used for hidden traits (speed, strength, agility).
+        "combine": pd.read_csv(_fetch("combine/combine.csv", refresh), low_memory=False),
         "stats": {},
         "snaps": {},
     }

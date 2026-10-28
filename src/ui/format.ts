@@ -1,3 +1,4 @@
+import type { StatLine } from "../engine/stats";
 import type { PlayerData, Position, SeasonStats } from "../engine/types";
 
 export { money } from "../engine/season";
@@ -82,4 +83,31 @@ export function onColor(hex: string): string {
   const v = parseInt(hex.slice(1), 16);
   const lum = (0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255)) / 255;
   return lum > 0.6 ? "#10161d" : "#ffffff";
+}
+
+/** One game's or one season's line from the simulated 2026 stats. */
+export function gameLine(pos: Position, l: StatLine): string {
+  const v = (k: keyof StatLine) => l[k] ?? 0;
+  const parts: string[] = [];
+  if (v("att")) parts.push(`${v("cmp")}/${v("att")}, ${fmt(v("passYds"))} yds, ${v("passTd")} TD, ${v("int")} INT`);
+  if (v("car") && (pos !== "QB" || v("rushYds") >= 10 || v("rushTd"))) parts.push(`${v("car")} car, ${v("rushYds")} yds${v("rushTd") ? `, ${v("rushTd")} TD` : ""}`);
+  if (v("tgt")) parts.push(`${v("rec")}/${v("tgt")} rec, ${v("recYds")} yds${v("recTd") ? `, ${v("recTd")} TD` : ""}`);
+  const tkl = v("tklSolo") + v("tklAst");
+  if (v("defSnaps") && (tkl || v("sacks") || v("defInt") || v("pd"))) {
+    const d = [`${tkl} tkl`];
+    if (v("sacks")) d.push(`${v("sacks")} sk`);
+    if (v("tfl")) d.push(`${v("tfl")} TFL`);
+    if (v("defInt")) d.push(`${v("defInt")} INT`);
+    if (v("pd")) d.push(`${v("pd")} PD`);
+    if (v("ff")) d.push(`${v("ff")} FF`);
+    parts.push(d.join(", "));
+  }
+  if (v("fga") || v("xpa")) parts.push(`FG ${v("fgm")}/${v("fga")}${v("fgLong") ? ` (long ${v("fgLong")})` : ""}, XP ${v("xpm")}/${v("xpa")}`);
+  if (v("punts")) parts.push(`${v("punts")} punts, ${(v("puntYds") / v("punts")).toFixed(1)} avg`);
+  if (v("kr") || v("pr")) parts.push(`${v("kr") ? `${v("kr")} KR ${v("krYds")} yds` : ""}${v("kr") && v("pr") ? ", " : ""}${v("pr") ? `${v("pr")} PR ${v("prYds")} yds` : ""}`);
+  if (!parts.length) {
+    const snaps = v("offSnaps") + v("defSnaps");
+    return snaps ? `${snaps} snaps` : v("stSnaps") ? `${v("stSnaps")} special teams snaps` : "Did not play";
+  }
+  return parts.join(" · ");
 }
