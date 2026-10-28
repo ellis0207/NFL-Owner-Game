@@ -21,7 +21,7 @@ import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
-import { invalidateMarket, marketPrice, marketView, teamValue } from "./market";
+import { capScale, invalidateMarket, marketPrice, marketView, teamValue } from "./market";
 import { offerValue, STARTERS, teamQuality } from "./negotiation";
 import { faClass, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
@@ -550,40 +550,46 @@ function offerTerms(state: GameState, fa: FreeAgent, apy: number, rng: () => num
 
 function cpuBids(state: GameState, day: number): void {
   const m = market(state);
-  const open = Object.values(m).filter((fa) => fa.status === "open" && fa.base >= 1_500_000 && !(fa.lastLook && fa.lastLook.until >= state.date));
+  const open = Object.values(m).filter((fa) => fa.status === "open" && fa.base >= minNext(fa.player) * 1.4 && !(fa.lastLook && fa.lastLook.until >= state.date));
   if (!open.length) return;
   const perTeam = day <= 1 ? 3 : day <= 6 ? 2 : 1;
   const active = day <= 6 ? 1 : Math.max(0.25, 0.6 - day * 0.01);
+  // Amounts in later years follow the cap.
+  const least = 1_500_000 * capScale(state, NEXT);
   for (const t of TEAMS) {
     const team = t.id;
     if (team === state.userTeam) continue;
     const rng = rngFor(state.seed, `fa-bid:${team}:${state.date}`);
     if (rng() > active) continue;
     // Offers already out count against the budget.
-    let budget = plannedSpace(state, team) - committed(state, team) - 3_000_000;
+    let budget = plannedSpace(state, team) - committed(state, team) - 2 * least;
     for (const fa of open) for (const o of fa.offers) if (o.team === team) budget -= o.hit;
-    if (budget < 1_500_000) continue;
+    if (budget < least) continue;
     const need = needs(state, team);
     const eye = staffEffects(team).gmEval;
-    const aggr = Math.min(1, Math.max(0, budget / 60_000_000)) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5;
+    const aggr = Math.min(1, Math.max(0, budget / (40 * least))) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5;
     const scored = open.map((fa) => {
       const pos = PLAYER_BY_ID[fa.player].position;
       const n = need[pos];
       if (!n) return null;
+      // Only players the budget can reach (a rising deal's first year runs under its average).
+      if (fa.floor * 0.7 > budget && !fa.offers.some((o) => o.team === team)) return null;
       const view = perceivedAbility(state, fa.player, `gm:${team}`, eye);
       const upgrade = view - n.starterView;
       // A clear upgrade on a starter is always worth a call; depth only when the room is thin.
       if (upgrade <= 1 && n.have >= n.depth) return null;
       const weight = n.have < n.starters ? 1.6 : upgrade > 1 ? 1 + Math.min(0.8, upgrade / 12) : n.have < n.depth ? 0.45 : 0.15;
-      return { fa, weight };
-    }).filter((x): x is { fa: FreeAgent; weight: number } => !!x)
-      .sort((a, b) => b.fa.base * b.weight - a.fa.base * a.weight)
+      // Nobody chases a player whose price is past what they think he's worth.
+      const v = teamValue(state, team, fa.player, NEXT);
+      if (v * 1.15 < fa.floor) return null;
+      return { fa, weight, v };
+    }).filter((x): x is { fa: FreeAgent; weight: number; v: number } => !!x)
+      .sort((a, b) => b.v * b.weight - a.v * a.weight)
       .slice(0, 8);
     let made = 0;
-    for (const { fa, weight } of scored) {
-      if (made >= perTeam || budget < 1_500_000) break;
+    for (const { fa, weight, v } of scored) {
+      if (made >= perTeam || budget < least) break;
       if (weight < 0.4 && rng() > 0.25) continue;
-      const v = teamValue(state, team, fa.player, NEXT);
       // The first days of free agency run hot: teams stretch to land their targets.
       const max = v * (0.95 + 0.2 * aggr + (day <= 3 ? 0.06 : 0)) * (weight >= 1 ? 1 : 0.9);
       const mine = fa.offers.find((o) => o.team === team);
@@ -681,13 +687,15 @@ function fillRosters(state: GameState): void {
   if (state.date < start) return;
   const progress = Math.min(1, daysBetween(start, state.date) / Math.max(1, daysBetween(start, KEY.draftStart)));
   const target = Math.round(58 + 16 * progress);
-  const pool = Object.values(market(state)).filter((fa) => fa.status === "open" && fa.ask <= Math.max(minNext(fa.player) * 1.35, 1_500_000));
+  const pool = Object.values(market(state)).filter((fa) => fa.status === "open" && fa.ask <= Math.max(minNext(fa.player) * 1.35, 1_500_000 * capScale(state, NEXT)));
   if (!pool.length) return;
   for (const t of TEAMS) {
     const team = t.id;
     const user = team === state.userTeam;
     const count = teamPlayerIds(state, team).length;
     if (count >= target) continue;
+    // A team still getting under the cap doesn't add bodies it would have to cut.
+    if (!user && state.settings.capRules === "real" && capSummary(state, team).space < 0) continue;
     const signed: string[] = [];
     const need = needs(state, team);
     const eye = staffEffects(team).gmEval;

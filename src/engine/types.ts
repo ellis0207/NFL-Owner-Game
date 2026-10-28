@@ -368,6 +368,8 @@ export interface Deal {
   years: DealYear[];
   /** First-round rookie deals: the team may pick up a fifth year. */
   fifthYearOption?: { year: number; amount: number; exercised?: boolean; declined?: boolean };
+  /** The league year the deal was last restructured. */
+  restructured?: number;
 }
 
 /** @deprecated version 2 saves stored this shape; migrated to Deal. */

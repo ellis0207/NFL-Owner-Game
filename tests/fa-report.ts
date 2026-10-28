@@ -3,7 +3,7 @@
 import { teamPlayerIds } from "../src/engine/cap";
 import { PLAYER_BY_ID, RULES, TEAMS } from "../src/engine/league";
 import { rosterCount } from "../src/engine/roster";
-import { advanceDay, isGameOver, newGame } from "../src/engine/season";
+import { advanceDay, newGame } from "../src/engine/season";
 
 const seed = Number(process.argv[2] ?? 7);
 const stop = process.argv[3] ?? RULES.keyDates.draftStart;
@@ -12,7 +12,7 @@ const state = newGame("DET", "Report", { capRules: "real" }, seed);
 const checkpoints = [RULES.keyDates.rosterCutdown, RULES.keyDates.cutdownWaiversExpire, "2026-09-02", "2026-10-15", "2026-12-01", RULES.keyDates.regularSeasonEnd, "2027-02-20", "2027-03-20", stop];
 const fa = () => Object.values(state.players).filter((p) => p.status === "fa").length;
 console.log(`start ${state.date}: ${fa()} free agents`);
-while (!isGameOver(state) && state.date < stop) {
+while ((state.season ?? 2026) === 2026 && state.date < stop) {
   advanceDay(state);
   if (checkpoints.includes(state.date)) {
     const tx = state.transactions ?? [];

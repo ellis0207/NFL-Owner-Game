@@ -91,14 +91,14 @@ export function progressPlayers(state: GameState, season: number): void {
     const room = Math.max(0, ceiling - now);
     if (room > 0 && age <= 29) {
       const stage = age <= 24 ? 1 : age <= 26 ? 0.85 : 0.55;
-      change += room * (0.22 + 0.14 * rng()) * stage * coach * field;
+      change += room * (0.28 + 0.14 * rng()) * stage * coach * field;
     }
     // A late bloomer now and then.
     if (age >= 26 && age <= 31 && rng() < 0.02) change += 1.5 + rng() * 2;
     // Decline past the position's age, speeding up each year; some age better than others.
     if (age > line) {
       const d = age - line;
-      change -= (0.8 + 0.7 * d + 0.12 * d * d) * (0.55 + 0.9 * rng());
+      change -= (0.5 + 0.6 * d + 0.1 * d * d) * (0.55 + 0.9 * rng());
     } else if (age >= line - 1) {
       change -= rng() * 0.7;
     }
@@ -130,6 +130,9 @@ function retireChance(state: GameState, id: string, date: string): number {
   if (!p.team || p.status === "fa") chance *= 1.5;
   else if (last === null || last <= RULES.season) chance *= 1.3;
   else if ((deal?.apy ?? 0) > 10_000_000) chance *= 0.7;
+  // Few walk away from bonus money they'd have to give back.
+  const owed = deal?.years.filter((y) => y.year > RULES.season).reduce((sum, y) => sum + y.proration, 0) ?? 0;
+  if (owed > 0.015 * RULES.salaryCap) chance *= 0.35;
   if (p.injury?.seasonEnding) chance *= 1.4;
   // Now and then a young player walks away.
   return Math.min(0.95, chance + 0.003);
@@ -183,7 +186,7 @@ export function retireUnsigned(state: GameState): number {
     const age = ageOn(data.birthDate, state.date) ?? 27;
     const since = state.fa?.[id]?.since;
     const idle = !since || since < kickoff;
-    let chance = 0.12 + 0.07 * Math.max(0, age - 25) + (idle ? 0.35 : 0) + (current(state, id) < 50 ? 0.15 : 0);
+    let chance = 0.25 + 0.08 * Math.max(0, age - 25) + (idle ? 0.45 : 0) + (current(state, id) < 55 ? 0.2 : 0);
     if (current(state, id) >= 68) chance *= 0.5;
     if (age >= DECLINE_AGE[data.position] + 2) chance += 0.2;
     if (rngFor(state.seed, `retire-fa:${RULES.season}:${id}`)() < Math.min(0.97, chance)) {

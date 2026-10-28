@@ -389,6 +389,8 @@ export function tradeBalance(state: GameState, eye: Eye, deal: TradeDeal, side: 
     const own = eye !== "gm" ? 1 : a.kind === "player" && trades(state).requests[a.id] ? 0.85 : 1.05;
     outValue += v > 0 ? v * own : v;
   }
+  // Bonus money already paid stays behind: front offices weigh the dead money a trade pushes onto next year.
+  if (without.size) outValue += (0.5 * capAfter(state, deal, side).deadNext) / DOLLARS_PER_POINT;
   let inValue = 0;
   for (const a of inc) inValue += assetValue(state, eye, team, a, { without, date });
   return { gain: inValue - outValue, inValue, outValue };

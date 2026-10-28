@@ -2,7 +2,7 @@
 // random answer, and prints what the media covered: stories by kind and
 // outlet, a sample day, the questions asked, fines and the hidden effects.
 // Run: npx vite-node tests/media-report.ts [seed]
-import { advanceDay, isGameOver, newGame } from "../src/engine/season";
+import { advanceDay, newGame } from "../src/engine/season";
 import { answerQuestion, openQuestions } from "../src/engine/press";
 import { mediaState } from "../src/engine/outlets";
 import { compress } from "../src/save/codec";
@@ -15,7 +15,8 @@ const all: Story[] = [];
 const seen = new Set<string>();
 let days = 0;
 let i = 0;
-while (!isGameOver(state)) {
+// One season: through the draft, until the league moves on.
+while ((state.season ?? 2026) === 2026) {
   for (const q of openQuestions(state)) if (i++ % 4 !== 3) answerQuestion(state, q.id, (i * 7) % q.options.length);
   advanceDay(state);
   days++;

@@ -45,7 +45,7 @@ const RFA_TENDERS: Record<number, { first: number; second: number; original: num
 };
 
 /** Later years' amounts follow the cap from the 2027 projection. */
-function capScale(state: GameState | undefined, year: number): number {
+export function capScale(state: GameState | undefined, year: number): number {
   if (year <= BASE_SEASON) return 1;
   return salaryCap(state, year) / PROJECTED_CAP_2027;
 }

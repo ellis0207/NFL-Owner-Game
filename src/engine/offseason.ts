@@ -12,7 +12,7 @@ import { onSeasonChange, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from 
 import { careersDaily, planRetirements } from "./careers";
 import { fifthYearOption, franchiseTag, invalidateMarket, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
 import { gaussian, rngFor } from "./rng";
-import { releasePlayer } from "./roster";
+import { releasePlayer, rosterCount } from "./roster";
 import { teamStaff } from "./staff";
 import { seasonTotals } from "./stats";
 import { standings, winPct } from "./standings";
@@ -329,7 +329,7 @@ export function restructure(state: GameState, id: string, voidYears = 0): number
   const r = restructurePreview(state, id, voidYears);
   const team = state.players[id]?.team;
   if (!r || !team) return 0;
-  state.contracts[id] = r.deal;
+  state.contracts[id] = { ...r.deal, restructured: leagueYear(state.date) };
   payCash(state, team, r.amount);
   return r.savings;
 }
@@ -397,20 +397,26 @@ function cpuOptions(state: GameState): void {
  */
 function cpuCapWork(state: GameState): void {
   const window = state.date >= addDays(KEY.franchiseTagWindowOpens, 3) && state.date <= addDays(KEY.newLeagueYear, 3);
-  if (!window) return;
+  // Past the window, a team still over the cap has to get under it.
+  if (!window) {
+    if (state.date > KEY.newLeagueYear) complyAll(state);
+    return;
+  }
   for (const team of cpuTeams(state)) {
     const rng = rngFor(state.seed, `capwork:${team}:${state.date}`);
     const deadline = state.date === addDays(KEY.newLeagueYear, -1) || state.date === KEY.newLeagueYear;
     if (rng() > 0.3 && !deadline) continue;
-    const target = 6_000_000 + rng() * 10_000_000;
+    // Room to work in free agency, as front offices clear it in February and March.
+    const target = 10_000_000 + rng() * 20_000_000;
     let space = plannedSpace(state, team);
     if (space >= target) continue;
     // Restructures first once the league year opens: they only push money out.
     if (state.date >= KEY.newLeagueYear) {
-      const big = teamPlayerIds(state, team).map((id) => ({ id, hit: capHit(id, NEXT, state) })).sort((a, b) => b.hit - a.hit).slice(0, 8);
-      for (const b of big) {
+      for (const b of restructureCandidates(state, team)) {
         if (space >= target) break;
-        space += restructure(state, b.id, rng() < 0.3 ? 2 : 0);
+        // Void years only stretch a deal with years left; near its end they just pile money onto the day it voids.
+        const yearsLeft = (lastYear(dealOf(state, b.id)!) ?? 0) - leagueYear(state.date);
+        space += restructure(state, b.id, b.age <= 28 && yearsLeft >= 2 && rng() < 0.3 ? 2 : 0);
       }
     }
     if (space >= target) continue;
@@ -423,7 +429,7 @@ function cpuCapWork(state: GameState): void {
         const saved = state.date < KEY.newLeagueYear ? hit - Math.max(0, cost.deadThisYear - capHit(id, RULES.season, state)) - cost.deadNextYear : cost.savingsThisYear;
         return { id, hit, saved, v: teamValue(state, team, id, NEXT), age: ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26 };
       })
-      .filter((x) => x.hit >= 3_000_000 && x.saved >= 2_500_000 && x.v < x.saved * (mustComply ? 0.9 : 0.55) && x.age >= 26)
+      .filter((x) => x.hit >= 3_000_000 && x.saved >= 2_500_000 && x.v < x.saved * (mustComply ? 0.9 : space < 0 ? 0.75 : 0.55) && x.age >= 26)
       .sort((a, b) => a.v / a.saved - b.v / b.saved);
     for (const c of cands.slice(0, mustComply ? 6 : 2)) {
       if (space >= target && !(mustComply && capSummary(state, team, NEXT).space < 0)) break;
@@ -431,6 +437,49 @@ function cpuCapWork(state: GameState): void {
       space += c.saved;
       news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name}${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
     }
+  }
+}
+
+/**
+ * Who a front office restructures: its biggest cap hits, but not the older
+ * players (the money comes due when they're done) and not the same deal two
+ * years running, so bonus money doesn't snowball.
+ */
+function restructureCandidates(state: GameState, team: string, squeeze = false): { id: string; age: number }[] {
+  const year = leagueYear(state.date);
+  // In a real squeeze a team goes back to the same deals and to its older veterans.
+  return teamPlayerIds(state, team)
+    .map((id) => ({ id, hit: capHit(id, NEXT, state), age: ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26, deal: dealOf(state, id) }))
+    .filter((x) => squeeze ? x.age <= 32 && (x.deal?.restructured ?? 0) < year : x.age <= 30 && (x.deal?.restructured ?? 0) < year - 1)
+    .sort((a, b) => b.hit - a.hit)
+    .slice(0, squeeze ? 10 : 6);
+}
+
+function complyAll(state: GameState): void {
+  if (state.settings.capRules !== "real") return;
+  for (const team of cpuTeams(state)) comply(state, team);
+}
+
+/** Over the cap once the league year is open: restructure, then release the least value per dollar saved until compliant. */
+function comply(state: GameState, team: string): void {
+  if (capSummary(state, team).space >= 0) return;
+  for (const squeeze of [false, true]) {
+    for (const b of restructureCandidates(state, team, squeeze)) {
+      if (capSummary(state, team).space >= 0) return;
+      restructure(state, b.id);
+    }
+  }
+  const year = leagueYear(state.date);
+  // Deep in the red, a team cuts real money rather than a roster's worth of minimum deals.
+  const short = -capSummary(state, team).space;
+  const cands = teamPlayerIds(state, team)
+    .map((id) => ({ id, saved: releaseCost(id, state).savingsThisYear, v: teamValue(state, team, id, year) }))
+    .filter((x) => x.saved >= Math.max(1_000_000, Math.min(short, 12_000_000) / 3))
+    .sort((a, b) => a.v / a.saved - b.v / b.saved);
+  for (const c of cands.slice(0, 4)) {
+    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= 60) return;
+    const dead = releaseOffseason(state, c.id);
+    news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
   }
 }
 
@@ -603,6 +652,8 @@ function reminders(state: GameState): void {
 /** Everything the offseason does on a given day, for every team. */
 export function offseasonDaily(state: GameState): void {
   const d = state.date;
+  // The summer and camp: teams stay under the cap they carried out of the spring.
+  if (d < KEY.regularSeasonStart) return complyAll(state);
   if (d < OFFSEASON_START) return;
   if (d === OFFSEASON_START) {
     startOffseason(state);
