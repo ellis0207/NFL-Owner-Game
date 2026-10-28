@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { releaseCost, signedContract } from "../engine/cap";
+import { releaseCost } from "../engine/cap";
+import { dealOf, leagueYear } from "../engine/contracts";
 import { ageOn, longDate, shortDate } from "../engine/dates";
 import { injuryStatus } from "../engine/injuries";
 import { GAME_BY_ID, PLAYER_BY_ID, SCHEDULE, SEASON, TEAM_BY_ID } from "../engine/league";
@@ -9,6 +10,7 @@ import { gameTypeLabel, outLabel } from "../engine/season";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
 import type { GameState } from "../engine/types";
+import { ContractTable, dealSummary } from "./ContractTable";
 import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./format";
 import { useUi } from "./ui";
 
@@ -23,10 +25,11 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   const state = game.players[id];
   const [confirming, setConfirming] = useState(false);
   const ui = useUi();
-  const cost = releaseCost(id, SEASON, game);
+  const cost = releaseCost(id, game);
   const seasons = [...new Set(p.stats.map((s) => s.season))].sort((a, b) => b - a);
   const mine = state.team === game.userTeam;
-  const signed = signedContract(game, id);
+  const deal = dealOf(game, id);
+  const original = !(id in game.contracts);
   const report = playerReport(game, id);
   const log = gameLog(game, id);
   const phases = (["PRE", "REG", "POST"] as const).map((t) => [t, seasonTotals(game, t)[id]] as const).filter(([, s]) => s);
@@ -145,30 +148,14 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
 
         <section className="stack">
           <h3>Contract</h3>
-          {signed && (
-            <p>Signed {shortDate(signed.date)}: one-year minimum deal, {money(signed.seasons[0].capHit)} cap hit for the rest of {SEASON} (prorated), nothing guaranteed.</p>
-          )}
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Year</th><th className="num">Base</th><th className="num">Bonus (prorated)</th><th className="num">Other</th><th className="num">Guaranteed</th><th className="num">Cap hit</th></tr></thead>
-              <tbody>
-                {p.contract.seasons.map((s) => (
-                  <tr key={s.year}>
-                    <td>{s.year}</td>
-                    <td className="num">{money(s.baseSalary)}</td>
-                    <td className="num">{money(s.proratedBonus)}</td>
-                    <td className="num">{money(s.rosterBonus + s.workoutBonus + s.optionBonus + s.otherBonus)}</td>
-                    <td className="num">{money(s.guaranteedSalary)}</td>
-                    <td className="num"><strong>{s.capHit ? money(s.capHit) : "Void year"}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <span className="muted">
-            {p.contract.signedYear ? `Signed ${p.contract.signedYear}` : ""}{p.contract.type ? ` · ${p.contract.type}` : ""}
-            {p.contract.apy ? ` · ${money(p.contract.apy)} per year` : ""}. {CONTRACT_SOURCE[p.contract.source]}
-          </span>
+          {deal ? (
+            <>
+              <ContractTable deal={deal} from={original ? undefined : leagueYear(game.date)} />
+              <span className="muted">
+                {dealSummary(deal)}.{original ? ` ${CONTRACT_SOURCE[p.contract.source]}` : ` Signed ${shortDate(deal.signed)}.`}
+              </span>
+            </>
+          ) : <p className="muted">No contract: free agent.</p>}
         </section>
 
         <section className="stack">

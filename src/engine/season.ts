@@ -34,7 +34,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   for (const p of PLAYERS) players[p.id] = { team: p.team, status: "camp" };
   const date = veteranReportDate(userTeam);
   const state: GameState = {
-    version: 2,
+    version: 3,
     id: `${userTeam}-${seed.toString(36)}`,
     createdAt: new Date().toISOString(),
     ownerName,

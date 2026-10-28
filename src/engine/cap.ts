@@ -4,53 +4,25 @@
 // cap hits count, the "Top 51" rule. From opening night every player on the
 // 53 counts in full and practice squad players count at their weekly pay.
 // Dead money from released players counts throughout.
+import { dealCapHit, dealOf, dealYearsLeft, leagueYear, releaseCharges, writeMinimumDeal } from "./contracts";
 import { PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
-import type { ContractSeason, GameState, SignedContract } from "./types";
+import type { GameState } from "./types";
+
+export { minimumSalary } from "./contracts";
 
 const REGULAR_SEASON_WEEKS = 18;
 
-export function contractSeason(playerId: string, year: number): ContractSeason | undefined {
-  return PLAYER_BY_ID[playerId]?.contract.seasons.find((s) => s.year === year);
-}
-
-/** A contract signed in this save (a call-up or free agent), if the player is still on that team. */
-export function signedContract(state: GameState | undefined, playerId: string): SignedContract | undefined {
-  const c = state?.contracts[playerId];
-  return c && state!.players[playerId]?.team === c.team ? c : undefined;
-}
-
 export function capHit(playerId: string, year = SEASON, state?: GameState): number {
-  const signed = signedContract(state, playerId);
-  if (signed) return signed.seasons.find((s) => s.year === year)?.capHit ?? 0;
-  return contractSeason(playerId, year)?.capHit ?? 0;
+  return dealCapHit(dealOf(state, playerId), year);
 }
 
 export function contractYearsLeft(playerId: string, year = SEASON, state?: GameState): number {
-  const signed = signedContract(state, playerId);
-  if (signed) return signed.seasons.filter((s) => s.year >= year).length;
-  return PLAYER_BY_ID[playerId]?.contract.seasons.filter((s) => s.year >= year).length ?? 0;
+  return dealYearsLeft(dealOf(state, playerId), year);
 }
 
-/** League minimum for a player's experience level. */
-export function minimumSalary(yearsExp: number): number {
-  const steps = Object.keys(RULES.minimumSalary).map(Number).sort((a, b) => a - b);
-  const step = steps.filter((s) => s <= yearsExp).pop() ?? 0;
-  return RULES.minimumSalary[String(step)];
-}
-
-/**
- * A one-year minimum deal signed mid-season: the cap hit is prorated over the
- * regular-season weeks left, and nothing is guaranteed.
- */
+/** A one-year minimum deal; signed mid-season, only the weeks left count. */
 export function signMinimumDeal(state: GameState, playerId: string, team: string): void {
-  const weeksLeft = isRegularSeasonOrLater(state.date)
-    ? Math.max(1, Math.ceil((Date.parse(RULES.keyDates.regularSeasonEnd) - Date.parse(state.date)) / (7 * 86_400_000)))
-    : REGULAR_SEASON_WEEKS;
-  const full = minimumSalary(PLAYER_BY_ID[playerId].yearsExp);
-  state.contracts[playerId] = {
-    team, date: state.date,
-    seasons: [{ year: SEASON, capHit: Math.round((full * Math.min(weeksLeft, REGULAR_SEASON_WEEKS)) / REGULAR_SEASON_WEEKS), guaranteed: 0 }],
-  };
+  state.contracts[playerId] = writeMinimumDeal(team, state.date, PLAYER_BY_ID[playerId].yearsExp);
 }
 
 export function isRegularSeasonOrLater(date: string): boolean {
@@ -122,32 +94,27 @@ export function capSummary(state: GameState, team: string): CapSummary {
 }
 
 export interface ReleaseCost {
-  /** Dead money charged to this season. */
+  /** Dead money charged to this league year (salary already paid included). */
   deadThisYear: number;
-  /** Dead money pushed to next season (bonus proration and guarantees beyond this year). */
+  /** Dead money pushed to next league year. */
   deadNextYear: number;
-  /** Cap space this season gained by the release (can be negative). */
+  /** Cap space this league year gained by the release (can be negative). */
   savingsThisYear: number;
+  /** Guaranteed cash still owed to the player. */
+  cashOwed: number;
 }
 
-/**
- * Releasing a player after June 1, as every move in this game is: this
- * season keeps its own bonus proration and guaranteed pay as dead money, and
- * everything owed beyond this season lands on next season's cap.
- */
-export function releaseCost(playerId: string, year = SEASON, state?: GameState): ReleaseCost {
-  const signed = signedContract(state, playerId);
-  if (signed) {
-    const cur = signed.seasons.find((s) => s.year === year);
-    const later = signed.seasons.filter((s) => s.year > year).reduce((sum, s) => sum + s.guaranteed, 0);
-    return { deadThisYear: cur?.guaranteed ?? 0, deadNextYear: later, savingsThisYear: (cur?.capHit ?? 0) - (cur?.guaranteed ?? 0) };
-  }
-  const seasons = PLAYER_BY_ID[playerId]?.contract.seasons ?? [];
-  const current = seasons.find((s) => s.year === year);
-  const future = seasons.filter((s) => s.year > year);
-  const deadThisYear = current ? current.proratedBonus + current.guaranteedSalary : 0;
-  const deadNextYear = future.reduce((sum, s) => sum + s.proratedBonus + s.guaranteedSalary, 0);
-  return { deadThisYear, deadNextYear, savingsThisYear: (current?.capHit ?? 0) - deadThisYear };
+/** What releasing a player today would cost, under the June 1 rules for today's date. */
+export function releaseCost(playerId: string, state?: GameState, opts: { june1?: boolean; date?: string } = {}): ReleaseCost {
+  const date = opts.date ?? state?.date ?? RULES.keyDates.regularSeasonStart;
+  const injured = !!state?.players[playerId]?.injury;
+  const c = releaseCharges(dealOf(state, playerId), date, { june1: opts.june1, injured });
+  return { deadThisYear: c.thisYear, deadNextYear: c.nextYear, savingsThisYear: c.savings, cashOwed: c.cashOwed };
+}
+
+/** The league year a release made today is charged to. */
+export function chargeYear(state: GameState): number {
+  return leagueYear(state.date);
 }
 
 export function addDeadMoney(state: GameState, team: string, year: number, amount: number): void {

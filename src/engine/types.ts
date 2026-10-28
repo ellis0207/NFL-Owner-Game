@@ -146,6 +146,7 @@ export interface Rules {
   season: number;
   salaryCap: number;
   minimumSalary: Record<string, number>;
+  minimumSalaryNextYear: Record<string, number>;
   practiceSquadWeekly: { standard: number; veteranMin: number; veteranMax: number };
   rosterLimits: { offseason: number; regularSeason: number; practiceSquad: number; gameDayActive: number };
   veteranReportDaysBeforeOpener: number;
@@ -178,7 +179,48 @@ export interface PlayerState {
   irDate?: string;
 }
 
-/** A contract signed during the game (practice squad call-ups, free agents). */
+export type DealKind =
+  | "rookie" | "veteran" | "extension" | "franchise" | "transition" | "rfa" | "erfa" | "minimum" | "practice";
+
+/** One league year of a contract, the way the cap sees it. */
+export interface DealYear {
+  year: number;
+  /** Paragraph 5 base salary, paid weekly over the 18 regular-season weeks. */
+  base: number;
+  /** Signing and option bonus spread onto this year. */
+  proration: number;
+  /** Roster, workout and other bonuses counted this year (not prorated). */
+  bonus: number;
+  /** Fully guaranteed salary and bonus this year. */
+  guaranteed: number;
+  /** Salary guaranteed only for injury until it vests. */
+  injuryGuaranteed: number;
+  /** Day the injury guarantee becomes fully guaranteed. */
+  vests?: string;
+  /** A dummy year that exists only to spread the bonus; it voids before it is played. */
+  void?: boolean;
+  /** Regular-season weeks of base salary owed, when signed mid-season (default all 18). */
+  weeks?: number;
+}
+
+/** A player contract. Original contracts come from the data; the game writes new ones. */
+export interface Deal {
+  team: string;
+  /** Signing date (the data only has the year for original contracts: yyyy-03-15). */
+  signed: string;
+  kind: DealKind;
+  signingBonus: number;
+  /** Headline numbers as reported: new money over the real (non-void) years. */
+  total: number;
+  apy: number;
+  /** Fully guaranteed at signing, signing bonus included. */
+  guaranteedAtSigning: number;
+  years: DealYear[];
+  /** First-round rookie deals: the team may pick up a fifth year. */
+  fifthYearOption?: { year: number; amount: number; exercised?: boolean; declined?: boolean };
+}
+
+/** @deprecated version 2 saves stored this shape; migrated to Deal. */
 export interface SignedContract {
   team: string;
   date: string;
@@ -257,7 +299,7 @@ export interface Settings {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   id: string;
   createdAt: string;
   ownerName: string;
@@ -266,13 +308,15 @@ export interface GameState {
   date: string;
   seed: number;
   players: Record<string, PlayerState>;
+  /** League-wide numbers that change as the game goes: the cap once each league year's is set. */
+  league?: { caps: Record<number, number> };
   /** Dead money a team carries, by team then season. */
   deadMoney: Record<string, Record<string, number>>;
   results: Record<string, GameResult>;
   /** Box scores by game id. */
   box: Record<string, BoxScore>;
-  /** Contracts signed in this save, by player. Overrides the player's original contract. */
-  contracts: Record<string, SignedContract>;
+  /** Contracts signed in this save, by player (null: released, no contract). Overrides the original contract. */
+  contracts: Record<string, Deal | null>;
   /** Teams filled into postseason slots as the bracket is decided. */
   playoffTeams: Record<string, { away: string; home: string }>;
   /** Seeds 1-7 per conference, set the day after the regular season ends. */
