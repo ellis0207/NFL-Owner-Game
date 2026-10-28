@@ -1,6 +1,6 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
-import type { GameState } from "../engine/types";
+import type { Deal, GameState, SignedContract } from "../engine/types";
 
 export const SAVE_FORMAT = "nfl-owner-sim-save";
 
@@ -24,7 +24,7 @@ export function parseSaveFile(text: string): GameState {
   }
   const file = parsed as Partial<SaveFile>;
   if (file?.format !== SAVE_FORMAT || !file.state) throw new Error("That file isn't an NFL Owner Simulator save.");
-  if (file.version !== 1 || (file.state.version as number) > 2) throw new Error("That save comes from a newer version of the game.");
+  if (file.version !== 1 || (file.state.version as number) > 3) throw new Error("That save comes from a newer version of the game.");
   return migrate(file.state);
 }
 
@@ -34,7 +34,28 @@ export function migrate(state: GameState): GameState {
     // Version 1 saves predate box scores, injuries and signed contracts.
     state.box ??= {};
     state.contracts ??= {};
-    state.version = 2;
+    (state as { version: number }).version = 2;
+  }
+  if ((state.version as number) === 2) {
+    // Version 2 stored only cap hits for signed contracts; they become full contracts.
+    const old = state.contracts as unknown as Record<string, SignedContract>;
+    const deals: Record<string, Deal | null> = {};
+    for (const [id, c] of Object.entries(old)) {
+      const total = c.seasons.reduce((s, y) => s + y.capHit, 0);
+      deals[id] = {
+        team: c.team, signed: c.date, kind: "minimum", signingBonus: 0, total, apy: total,
+        guaranteedAtSigning: c.seasons.reduce((s, y) => s + y.guaranteed, 0),
+        years: c.seasons.map((y) => ({ year: y.year, base: y.capHit, proration: 0, bonus: 0, guaranteed: y.guaranteed, injuryGuaranteed: 0 })),
+      };
+    }
+    state.contracts = deals;
+    // Contract talks, agents' trust, the league transaction log and team cash are new too.
+    state.negotiations ??= {};
+    state.trust ??= {};
+    state.signings ??= [];
+    state.finance ??= {};
+    state.pressure ??= { fans: 50, media: 50 };
+    state.version = 3;
   }
   return state;
 }

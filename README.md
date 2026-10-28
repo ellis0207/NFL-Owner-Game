@@ -23,8 +23,21 @@ schemes changes how that player performs (in the engine, not on screen). Play ca
 trainers and scouts all change results: injuries and recovery time, player
 development, and how accurate the written staff reports are.
 
-Next up: the business side, then the offseason (aging, retirements, the
-coaching carousel, free agency, trades and the draft).
+Contracts work like the real league. Deals are year by year with prorated
+signing bonuses (five-year limit), void years, full and injury guarantees, and
+dead money that accelerates on release, split across two years after June 1.
+Every player has a made-up agent with a negotiating style and a client list,
+and hidden priorities (money, winning, role, city, scheme, playing time, ego,
+loyalty) that set a walk-away price you never see. Offers move morale and the
+agent's trust; lowballs sting, and some agents leak to the press. You can
+negotiate yourself or hand talks to the GM with a mandate and follow along.
+CPU teams extend their own players by the same rules, starters hold out or
+hold in at camp, and three made-up outlets grade every deal. The market is
+built from live contracts, so a record deal resets its position and nudges
+neighboring positions. Cash is tracked apart from the cap.
+
+Next up: the 2027 offseason through draft day (tags, tenders, options, the new
+league year and free agency for all 32 teams), then the business side.
 
 ## Playing locally
 
@@ -38,7 +51,8 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 ## Code layout
 
 - `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim, standings and playoffs.
-  `HIDDEN_RATINGS` is only read here.
+  `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
+  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
@@ -78,6 +92,8 @@ camps run 87-99 players instead of exactly 90.
   (`pipeline/team_cap_2026.py`), taken in October 2026.
 - About a third of contracts have no year-by-year line in the data; their cap
   hit is estimated as the deal's APY.
+- Agents, agencies and media outlets are made up. The 2027 cap is OverTheCap's
+  projection (about $327M) until the offseason sets it.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
   real league averages (`npx vite-node tests/calibrate.ts 4`).

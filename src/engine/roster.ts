@@ -2,7 +2,7 @@
 // reserve and replacement signings. Every team's decisions are made by its
 // own staff from what they believe about players (true ability blurred by
 // how good their evaluators are); the owner only sees the outcome.
-import { addDeadMoney, capHit, invalidateRosters, releaseCost, signMinimumDeal, teamPlayerIds } from "./cap";
+import { addDeadMoney, capHit, invalidateRosters, releaseCost, signMinimumDeal, teamPlayerIds, chargeYear } from "./cap";
 import { addDays } from "./dates";
 import { isHurt } from "./injuries";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, SEASON } from "./league";
@@ -26,7 +26,7 @@ export function keepValue(state: GameState, team: string, id: string): number {
   const p = PLAYER_BY_ID[id];
   const view = 0.5 * perceivedAbility(state, id, `gm:${team}`, staffEffects(team).gmEval) + 0.5 * coachView(state, team, id);
   const upside = p.yearsExp <= 2 ? 0.35 * (r.potential - r.overall) : 0;
-  const committed = Math.min(6, releaseCost(id, SEASON, state).deadThisYear / 1_000_000); // sunk cost keeps players around
+  const committed = Math.min(6, releaseCost(id, state).deadThisYear / 1_000_000); // sunk cost keeps players around
   return view + upside + committed;
 }
 
@@ -81,10 +81,11 @@ export function trimPlan(state: GameState, team: string, plan: string[]): string
 export function releasePlayer(state: GameState, id: string): void {
   const p = state.players[id];
   if (!p?.team) return;
-  const cost = releaseCost(id, SEASON, state);
-  addDeadMoney(state, p.team, SEASON, cost.deadThisYear);
-  addDeadMoney(state, p.team, SEASON + 1, cost.deadNextYear);
-  delete state.contracts[id];
+  const cost = releaseCost(id, state);
+  const year = chargeYear(state);
+  addDeadMoney(state, p.team, year, cost.deadThisYear);
+  addDeadMoney(state, p.team, year + 1, cost.deadNextYear);
+  state.contracts[id] = null;
   state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev };
 }
 
@@ -127,13 +128,19 @@ export function applyCutdown(state: GameState, team: string, keepIds: string[]):
  * The coaches' depth chart: healthy players by position, best first in the
  * staff's eyes (true ability blurred by their evaluation skill, plus scheme fit).
  */
+/** Holdouts miss everything; hold-ins sit out the preseason. */
+export function isHoldingOut(state: GameState, id: string, date = state.date): boolean {
+  const h = state.players[id]?.holdout;
+  return !!h && (h.kind === "holdout" || date < RULES.keyDates.regularSeasonStart);
+}
+
 export function depthChart(state: GameState, team: string, date = state.date): Record<Position, string[]> {
   const chart = Object.fromEntries(POSITION_ORDER.map((p) => [p, [] as string[]])) as Record<Position, string[]>;
   const view: Record<string, number> = {};
   for (const id of teamPlayerIds(state, team)) {
     const status = state.players[id].status;
     if (status !== "active" && status !== "camp") continue;
-    if (isHurt(state, id, date)) continue;
+    if (isHurt(state, id, date) || isHoldingOut(state, id, date)) continue;
     chart[PLAYER_BY_ID[id].position].push(id);
     view[id] = coachView(state, team, id);
   }

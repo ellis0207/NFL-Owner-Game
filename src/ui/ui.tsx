@@ -4,9 +4,10 @@ import { createContext, useContext } from "react";
 export interface UiActions {
   openBox: (gameId: string) => void;
   openPlayer: (playerId: string) => void;
+  openTalks: (playerId: string) => void;
 }
 
-export const UiContext = createContext<UiActions>({ openBox: () => {}, openPlayer: () => {} });
+export const UiContext = createContext<UiActions>({ openBox: () => {}, openPlayer: () => {}, openTalks: () => {} });
 
 export function useUi(): UiActions {
   return useContext(UiContext);

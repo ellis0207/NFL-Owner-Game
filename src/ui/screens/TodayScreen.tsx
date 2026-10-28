@@ -4,6 +4,7 @@ import { injuryStatus } from "../../engine/injuries";
 import { PLAYER_BY_ID } from "../../engine/league";
 import { teamPlayerIds } from "../../engine/cap";
 import { agenda, isSeasonOver } from "../../engine/season";
+import { publicPulse } from "../../engine/negotiation";
 import { useUi } from "../ui";
 import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
@@ -68,6 +69,35 @@ export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => 
                 <span className="muted">{PLAYER_BY_ID[id].position} · {game.players[id].injury!.type}</span>
               </div>
             ))}
+          </section>
+        );
+      })()}
+      {(() => {
+        const ours = Object.values(game.negotiations).filter((n) => n.team === game.userTeam && n.status === "open");
+        const waiting = ours.filter((n) => n.handler === "owner" && !n.pending);
+        const holdouts = teamPlayerIds(game, game.userTeam).filter((id) => game.players[id].holdout);
+        const pulse = publicPulse(game);
+        return (
+          <section className="panel stack tight">
+            <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+              <h2>Contracts</h2>
+              <button className="btn small" onClick={() => go("Contracts")}>Open contracts</button>
+            </div>
+            {waiting.map((n) => (
+              <div key={n.player}>
+                <span className="warn">Our move</span>{" "}
+                <button className="link" onClick={() => ui.openTalks(n.player)}>{PLAYER_BY_ID[n.player].name}</button>
+                <span className="muted"> · the agent answered on {shortDate(n.rounds[n.rounds.length - 1].date)}</span>
+              </div>
+            ))}
+            {ours.length > waiting.length && <span className="muted">{ours.length - waiting.length} other talks waiting on the other side or handled by the GM.</span>}
+            {holdouts.map((id) => (
+              <div key={id}>
+                <span className="bad">{game.players[id].holdout!.kind === "holdout" ? "Holding out" : "Holding in"}</span>{" "}
+                <button className="link" onClick={() => ui.openTalks(id)}>{PLAYER_BY_ID[id].name}</button>
+              </div>
+            ))}
+            <span className="muted">{pulse.fans} {pulse.media}</span>
           </section>
         );
       })()}

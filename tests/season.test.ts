@@ -34,8 +34,8 @@ describe("releases", () => {
   it("keeps this year's bonus proration and guarantees as dead money", () => {
     const rodgers = PLAYER_BY_ID["00-0023459"];
     const cost = releaseCost(rodgers.id);
-    expect(cost.deadThisYear).toBe(22_000_000); // fully guaranteed base salary
-    expect(cost.savingsThisYear).toBe(500_000);
+    expect(cost.deadThisYear).toBe(22_500_000); // fully guaranteed base salary plus the roster bonus already paid
+    expect(cost.savingsThisYear).toBe(0);
   });
 });
 
@@ -143,7 +143,7 @@ describe("saves", () => {
     const state = seasons0();
     const back = await decompress(await compress(state));
     expect(back.box).toEqual(state.box);
-    expect(back.version).toBe(2);
+    expect(back.version).toBe(3);
   });
 
   it("upgrade a version 1 save", () => {
@@ -151,7 +151,7 @@ describe("saves", () => {
     delete (old as Partial<GameState>).box;
     delete (old as Partial<GameState>).contracts;
     const up = migrate(old);
-    expect(up.version).toBe(2);
+    expect(up.version).toBe(3);
     expect(up.box).toEqual({});
   });
 });

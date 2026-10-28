@@ -64,14 +64,14 @@ Regular-season games by day: Sunday 228, Thursday 19, Monday 17, Friday 4, Wedne
 
 Highest rated at each position, for a gut check. Owners never see these numbers.
 
-- **QB** (117): Patrick Mahomes (KC) 99, Josh Allen (BUF) 94, Jordan Love (GB) 94, Joe Burrow (CIN) 93, Dak Prescott (DAL) 92, Brock Purdy (SF) 92
-- **RB** (195): Christian McCaffrey (SF) 98, Bijan Robinson (ATL) 98, De'Von Achane (MIA) 97, Jonathan Taylor (IND) 96, Derrick Henry (BAL) 95, Saquon Barkley (PHI) 95
+- **QB** (117): Patrick Mahomes (KC) 99, Josh Allen (BUF) 94, Jordan Love (GB) 94, Dak Prescott (DAL) 93, Joe Burrow (CIN) 93, Brock Purdy (SF) 92
+- **RB** (195): Christian McCaffrey (SF) 98, Bijan Robinson (ATL) 98, De'Von Achane (MIA) 97, Jonathan Taylor (IND) 96, Saquon Barkley (PHI) 95, Jahmyr Gibbs (DET) 95
 - **WR** (377): DK Metcalf (PIT) 98, Justin Jefferson (MIN) 97, Ja'Marr Chase (CIN) 96, CeeDee Lamb (DAL) 95, Nico Collins (HOU) 95, Jaylen Waddle (DEN) 95
-- **TE** (207): George Kittle (SF) 97, Brock Bowers (LV) 96, Kyle Pitts (ATL) 95, Sam LaPorta (DET) 95, Travis Kelce (KC) 94, Trey McBride (ARI) 94
-- **OT** (219): Penei Sewell (DET) 97, Darnell Wright (CHI) 97, Armand Membou (NYJ) 96, Trent Williams (SF) 95, Ikem Ekwonu (CAR) 95, Will Campbell (NE) 95
+- **TE** (207): Brock Bowers (LV) 97, George Kittle (SF) 96, Sam LaPorta (DET) 96, Kyle Pitts (ATL) 95, Travis Kelce (KC) 94, Trey McBride (ARI) 94
+- **OT** (219): Darnell Wright (CHI) 98, Trent Williams (SF) 97, Penei Sewell (DET) 97, Laremy Tunsil (WAS) 95, Armand Membou (NYJ) 95, Rashawn Slater (LAC) 94
 - **EDGE** (282): Micah Parsons (GB) 99, Zach Allen (DEN) 97, Myles Garrett (LA) 96, Maxx Crosby (LV) 96, Aidan Hutchinson (DET) 96, Will Anderson Jr. (HOU) 96
 - **IDL** (262): Nnamdi Madubuike (BAL) 97, Leonard Williams (SEA) 95, Chris Jones (KC) 95, Jalen Carter (PHI) 95, Aaron Donald (LA) 94, DeForest Buckner (IND) 94
-- **LB** (296): Carson Schwesinger (CLE) 97, Zack Baun (PHI) 96, Jack Campbell (DET) 96, Fred Warner (SF) 95, Nick Bolton (KC) 95, Roquan Smith (BAL) 94
+- **LB** (296): Jack Campbell (DET) 97, Carson Schwesinger (CLE) 97, Zack Baun (PHI) 96, Fred Warner (SF) 95, Nick Bolton (KC) 95, Roquan Smith (BAL) 94
 - **CB** (330): Kamari Lassiter (HOU) 98, Marlon Humphrey (BAL) 97, Paulson Adebo (NYG) 97, Jaycee Horn (CAR) 96, Trent McDuffie (LA) 96, Alontae Taylor (TEN) 95
 - **S** (242): Brian Branch (DET) 98, Jessie Bates (ATL) 97, Amani Hooker (TEN) 96, Xavier McKinney (GB) 96, Kerby Joseph (DET) 96, Derwin James (LAC) 95
 - **K** (40): Brandon Aubrey (DAL) 97, Chris Boswell (PIT) 93, Will Reichard (MIN) 92, Nick Folk (ATL) 89, Ka'imi Fairbairn (HOU) 88, Cam Little (JAX) 87

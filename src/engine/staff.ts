@@ -39,6 +39,9 @@ export interface StaffEffects {
   /** How well the coaches judge their own players (depth charts, reports). */
   coachEval: number;
   gmEval: number;
+  /** The GM at the table: how cheaply deals get done, and how well they read agents. */
+  gmNegotiation: number;
+  capManagement: number;
   proScouting: number;
   injuryPrevention: number;
   injuryRecovery: number;
@@ -61,6 +64,8 @@ export function staffEffects(team: string): StaffEffects {
     devSpecial: 0.3 * hcDev + 0.7 * attr(s.STC, "development"),
     coachEval: 0.5 * attr(s.HC, "evaluation") + 0.25 * attr(s.OC ?? s.HC, "evaluation") + 0.25 * attr(s.DC ?? s.HC, "evaluation"),
     gmEval: attr(s.GM, "evaluation"),
+    gmNegotiation: attr(s.GM, "negotiation"),
+    capManagement: attr(s.GM, "capManagement"),
     proScouting: attr(s.PRO, "evaluation"),
     injuryPrevention: attr(s.TRN, "prevention"),
     injuryRecovery: attr(s.TRN, "recovery"),
@@ -70,14 +75,20 @@ export function staffEffects(team: string): StaffEffects {
 
 // ---- Player ability as the engine sees it ----
 
+/** An unhappy player plays below their level. */
+function moraleDrag(state: GameState, id: string): number {
+  const m = state.players[id]?.morale;
+  return m === undefined || m >= 50 ? 0 : (50 - m) * 0.06;
+}
+
 export function ability(state: GameState, id: string): number {
-  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0);
+  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id);
 }
 
 export function trait(state: GameState, id: string, name: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r) return 45;
-  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0);
+  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id);
 }
 
 /** How well a player's traits match what a scheme asks for at the position, in rating points around zero. */

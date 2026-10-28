@@ -89,7 +89,7 @@ button { cursor: pointer; }
 .team-pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .chip { display: inline-grid; place-items: center; width: 2.4rem; height: 1.6rem; border-radius: 4px; font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; flex: none; }
 .field { display: grid; gap: 0.3rem; }
-.field input[type="text"] { border: 1px solid var(--rule); background: var(--panel); border-radius: var(--radius); padding: 0.5rem 0.65rem; }
+.field input[type="text"], .field input[type="number"], .field select { border: 1px solid var(--rule); background: var(--panel); border-radius: var(--radius); padding: 0.5rem 0.65rem; }
 .toggle { display: flex; gap: 0.5rem; align-items: flex-start; }
 .toggle input { margin-top: 0.25rem; }
 
@@ -235,3 +235,6 @@ td.name { font-weight: 600; white-space: nowrap; }
   .box-head strong { font-size: 1.15rem; }
   .box-head .pts { font-size: 2rem; }
 }
+
+.offer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem; }
+.offer-grid .field input, .offer-grid .field select { width: 100%; min-width: 0; }

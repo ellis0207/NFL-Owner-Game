@@ -9,7 +9,9 @@ import type { GameState } from "../engine/types";
 import { BoxScore } from "./BoxScore";
 import { money } from "./format";
 import { PlayerPanel } from "./PlayerPanel";
+import { NegotiationPanel } from "./NegotiationPanel";
 import { CapScreen } from "./screens/CapScreen";
+import { ContractsScreen } from "./screens/ContractsScreen";
 import { InboxScreen } from "./screens/InboxScreen";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { RosterScreen } from "./screens/RosterScreen";
@@ -21,7 +23,7 @@ import { StatsScreen } from "./screens/StatsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Inbox", "Schedule", "Standings", "Roster", "Stats", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Inbox", "Schedule", "Standings", "Roster", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -53,8 +55,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [box, setBox] = useState<string | null>(null);
   const [player, setPlayer] = useState<string | null>(null);
   const openBox = useCallback((id: string) => { setPlayer(null); setBox(id); }, []);
-  const openPlayer = useCallback((id: string) => setPlayer(id), []);
-  const ui = useMemo(() => ({ openBox, openPlayer }), [openBox, openPlayer]);
+  const [talks, setTalks] = useState<string | null>(null);
+  const openPlayer = useCallback((id: string) => { setTalks(null); setPlayer(id); }, []);
+  const openTalks = useCallback((id: string) => { setPlayer(null); setTalks(id); }, []);
+  const ui = useMemo(() => ({ openBox, openPlayer, openTalks }), [openBox, openPlayer, openTalks]);
   const team = TEAM_BY_ID[game.userTeam];
   const cap = capSummary(game, game.userTeam);
   const rec = standings(game)[game.userTeam];
@@ -114,6 +118,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         <main className="content">
           {screen === "Today" && <TodayScreen game={game} go={setScreen} />}
           {screen === "Stats" && <StatsScreen game={game} />}
+          {screen === "Contracts" && <ContractsScreen game={game} />}
           {screen === "Staff" && <StaffScreen game={game} />}
           {screen === "Inbox" && <InboxScreen game={game} changed={changed} />}
           {screen === "Schedule" && <ScheduleScreen game={game} />}
@@ -126,6 +131,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
       </div>
       {box && <BoxScore game={game} id={box} onClose={() => setBox(null)} />}
       {player && <PlayerPanel game={game} id={player} onClose={() => setPlayer(null)} changed={changed} />}
+      {talks && <NegotiationPanel game={game} id={talks} onClose={() => setTalks(null)} changed={changed} />}
     </div>
     </UiContext.Provider>
   );
