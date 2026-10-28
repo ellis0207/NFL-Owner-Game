@@ -18,7 +18,7 @@ export interface PlayerReport {
   fit?: string;
 }
 
-const TRAIT_WORDS: Record<string, [string, string]> = {
+export const TRAIT_WORDS: Record<string, [string, string]> = {
   speed: ["Plays fast; real long speed", "Lacks top-end speed"],
   strength: ["Strong at the point of attack", "Can get overpowered"],
   agility: ["Changes direction easily", "Stiff when asked to change direction"],

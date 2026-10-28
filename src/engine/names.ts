@@ -1,0 +1,41 @@
+// Name pools for generated college prospects.
+
+export const FIRST_NAMES = [
+  "Aaron", "Adrian", "Aidan", "AJ", "Alex", "Amari", "Andre", "Anthony", "Antonio", "Armand", "Austin", "Avery",
+  "Bailey", "Beau", "Ben", "Blake", "Bo", "Brady", "Brandon", "Braylon", "Brendan", "Brock", "Bryce", "Byron",
+  "Caleb", "Cam", "Carson", "Carter", "Cedric", "Chase", "Chris", "Christian", "Cole", "Colton", "Connor", "Cooper",
+  "Corey", "Curtis", "Dallas", "Damon", "Dante", "Darius", "Darnell", "David", "Davion", "Dawson", "Deion", "DeMarcus",
+  "Demetrius", "Derrick", "Devin", "Devontae", "Dillon", "Dominic", "Donovan", "Drew", "Dylan", "Elijah", "Eli", "Emmanuel",
+  "Eric", "Ethan", "Evan", "Garrett", "Gavin", "Grant", "Greg", "Hunter", "Isaac", "Isaiah", "Jabari", "Jace",
+  "Jackson", "Jacob", "Jalen", "Jamal", "Jamari", "James", "Jaquan", "Jared", "Jarvis", "Jason", "Javon", "Jaxon",
+  "Jayden", "Jaylen", "Jeremiah", "Jermaine", "Jerome", "Jesse", "Joel", "John", "Jonah", "Jordan", "Josh", "Josiah",
+  "Julian", "Justin", "Kade", "Kaden", "Kaleb", "Kamari", "Keith", "Kendall", "Kendrick", "Kenny", "Keon", "Kevin",
+  "Khalil", "Kobe", "Kyle", "Kyler", "Lamar", "Landon", "Lance", "Logan", "Lucas", "Luke", "Malachi", "Malik",
+  "Marcus", "Mario", "Mason", "Matt", "Max", "Micah", "Michael", "Miles", "Nate", "Nathan", "Nick", "Noah",
+  "Omar", "Owen", "Parker", "Quentin", "Quincy", "Rashad", "Reggie", "Ricky", "Riley", "Ryan", "Sam", "Samuel",
+  "Sean", "Shane", "Shawn", "Silas", "Solomon", "Spencer", "Stephon", "Terrance", "Terrell", "Thomas", "Tre", "Trent",
+  "Trevor", "Tristan", "Ty", "Tyler", "Tyree", "Tyrone", "Vernon", "Wesley", "Will", "Xavier", "Zach", "Zion",
+];
+
+export const LAST_NAMES = [
+  "Adams", "Alexander", "Allen", "Anderson", "Armstrong", "Atkins", "Bailey", "Baker", "Banks", "Barnes", "Bell", "Bennett",
+  "Bishop", "Black", "Blackwell", "Boyd", "Bradley", "Brooks", "Brown", "Bryant", "Burke", "Burns", "Butler", "Caldwell",
+  "Campbell", "Carroll", "Carter", "Chambers", "Chandler", "Clark", "Cole", "Coleman", "Collins", "Cook", "Cooper", "Cox",
+  "Crawford", "Cross", "Cunningham", "Daniels", "Davidson", "Davis", "Dawson", "Dean", "Dixon", "Douglas", "Dunn", "Edwards",
+  "Ellis", "Evans", "Ferguson", "Fields", "Fisher", "Fleming", "Fletcher", "Ford", "Foster", "Fowler", "Franklin", "Freeman",
+  "Fuller", "Gaines", "Gardner", "Garrett", "Gibson", "Gilbert", "Glover", "Goodwin", "Gordon", "Graham", "Grant", "Graves",
+  "Gray", "Green", "Griffin", "Hall", "Hamilton", "Hampton", "Hardy", "Harper", "Harris", "Hart", "Hawkins", "Hayes",
+  "Henderson", "Henry", "Hicks", "Hill", "Holland", "Holloway", "Holmes", "Hopkins", "Howard", "Hudson", "Hughes", "Hunt",
+  "Hunter", "Jackson", "James", "Jefferson", "Jenkins", "Johnson", "Jones", "Jordan", "Kelly", "Kennedy", "King", "Knight",
+  "Lambert", "Lane", "Lawrence", "Lawson", "Lewis", "Little", "Lockett", "Long", "Lyons", "Mack", "Marshall", "Martin",
+  "Mason", "Matthews", "Maxwell", "McCoy", "McDonald", "McKinney", "Miller", "Mitchell", "Montgomery", "Moore", "Morgan", "Morris",
+  "Moss", "Murphy", "Murray", "Nelson", "Newton", "Nichols", "Norman", "Norris", "Oliver", "Owens", "Palmer", "Parker",
+  "Patterson", "Payne", "Perkins", "Perry", "Peterson", "Phillips", "Pierce", "Porter", "Powell", "Price", "Ramsey", "Reed",
+  "Reese", "Reid", "Reynolds", "Rhodes", "Richardson", "Riley", "Roberts", "Robinson", "Rogers", "Ross", "Russell", "Sanders",
+  "Scott", "Sharp", "Shaw", "Simmons", "Simpson", "Sims", "Smith", "Spencer", "Stanley", "Stephens", "Stewart", "Stone",
+  "Sullivan", "Summers", "Tate", "Taylor", "Thomas", "Thompson", "Tucker", "Turner", "Wade", "Walker", "Wallace", "Walton",
+  "Ward", "Warren", "Washington", "Watkins", "Watson", "Weaver", "Webb", "Wells", "West", "Wheeler", "White", "Whitfield",
+  "Wilkins", "Williams", "Willis", "Wilson", "Winston", "Wood", "Woods", "Wright", "Young", "Adeyemi", "Okafor", "Nwosu",
+  "Tuiasosopo", "Fifita", "Mafi", "Tupou", "Sewell", "Kalani", "Ruiz", "Moreno", "Castillo", "Navarro", "Kowalski", "Novak",
+  "Schmidt", "Brennan", "Gallagher", "Sorensen", "Lindqvist", "Ferreira", "Okonkwo", "Diallo", "Mensah", "Asante", "Pritchett", "Holt",
+];

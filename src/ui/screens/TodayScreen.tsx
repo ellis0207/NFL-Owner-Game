@@ -10,6 +10,10 @@ import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
 import type { Screen } from "../GameShell";
 import { Score } from "../Score";
+import { gamesOn, latestPoll } from "../../engine/college";
+import { budgetLeft, weeklyCost } from "../../engine/scouting";
+import { money } from "../format";
+import { CollegeScore } from "./CollegeScreen";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -167,6 +171,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           <div className="scores">{played.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
         </section>
       )}
+      <CollegeToday game={game} go={go} />
       {game.news.length > 0 && (
         <section className="panel stack">
           <h2>Around the league</h2>
@@ -174,5 +179,42 @@ export function TodayScreen({ game, go, busy, play }: Props) {
         </section>
       )}
     </>
+  );
+}
+
+/** Saturday's top college games and the scouting budget, at a glance. */
+function CollegeToday({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  if (!game.college) return null;
+  const poll = latestPoll(game, "ap");
+  const ranked = (ids: string[]) => !!poll && ids.some((t) => poll.ranks.slice(0, 25).includes(t));
+  let shown = gamesOn(game, game.date).filter((g) => ranked([g.away, g.home]) || g.kind);
+  let label = "College games today";
+  if (!shown.length) {
+    for (let i = 1; i <= 6 && !shown.length; i++) {
+      shown = gamesOn(game, addDays(game.date, -i)).filter((g) => game.college!.results[g.id] && (ranked([g.away, g.home]) || g.kind));
+      label = "Latest college scores";
+    }
+  }
+  const s = game.college.scouting;
+  return (
+    <section className="panel stack tight">
+      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2>College football</h2>
+        <div className="btn-row">
+          <button className="btn small" onClick={() => go("College")}>Open college</button>
+          <button className="btn small" onClick={() => go("Scouting")}>Open scouting</button>
+        </div>
+      </div>
+      <span className="muted">
+        {s.plan.length ? `${s.plan.length} scouting assignment${s.plan.length === 1 ? "" : "s"} this week (${money(weeklyCost(game))}); ` : "No scouting assignments this week; "}
+        {money(budgetLeft(game))} of the scouting budget left.
+      </span>
+      {shown.length > 0 && (
+        <>
+          <strong>{label}</strong>
+          <div className="scores">{shown.slice(0, 8).map((g) => <CollegeScore key={g.id} game={game} g={g} />)}</div>
+        </>
+      )}
+    </section>
   );
 }

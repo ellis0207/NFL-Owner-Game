@@ -43,6 +43,7 @@ export interface StaffEffects {
   gmNegotiation: number;
   capManagement: number;
   proScouting: number;
+  collegeScouting: number;
   injuryPrevention: number;
   injuryRecovery: number;
 }
@@ -67,6 +68,7 @@ export function staffEffects(team: string): StaffEffects {
     gmNegotiation: attr(s.GM, "negotiation"),
     capManagement: attr(s.GM, "capManagement"),
     proScouting: attr(s.PRO, "evaluation"),
+    collegeScouting: attr(s.COL, "evaluation"),
     injuryPrevention: attr(s.TRN, "prevention"),
     injuryRecovery: attr(s.TRN, "recovery"),
   };
