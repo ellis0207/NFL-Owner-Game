@@ -10,6 +10,7 @@ import { claimDueLabel, onWaivers } from "../engine/waivers";
 import { talksFor } from "../engine/negotiation";
 import { isOffseason, restructure, restructurePreview } from "../engine/offseason";
 import { gameTypeLabel, outLabel } from "../engine/season";
+import { canTradePlayer, hasNoTradeClause, trades } from "../engine/trades";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
 import type { GameState } from "../engine/types";
@@ -194,6 +195,23 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
             );
           })()}
         </section>
+
+        {state.team && state.status !== "ps" && (
+          <section className="stack">
+            <h3>Trade</h3>
+            {(() => {
+              const ok = canTradePlayer(game, id, mine ? undefined : game.userTeam);
+              if (!ok.ok) return <span className="muted">{ok.reason}</span>;
+              return (
+                <div className="btn-row">
+                  <button className="btn" onClick={() => ui.openTrade(id)}>{mine ? "Shop him in a trade" : "Trade for him"}</button>
+                  {hasNoTradeClause(id) && <span className="muted">No-trade clause: he has to agree to any deal.</span>}
+                  {trades(game).requests[id] && <span className="bad">Has asked for a trade.</span>}
+                </div>
+              );
+            })()}
+          </section>
+        )}
 
         <section className="stack">
           <h3>Career stats</h3>

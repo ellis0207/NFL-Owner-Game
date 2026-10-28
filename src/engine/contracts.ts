@@ -384,6 +384,53 @@ export function claimedDeal(deal: Deal | null, team: string, date: string, years
   };
 }
 
+// ---- Trades ----
+
+/**
+ * What a team keeps on its cap when it trades a player away. Salary already
+ * paid this league year has counted; the signing bonus proration doesn't
+ * travel: this year's share stays, and later years' (void years included)
+ * accelerate onto this year, or onto next year for a trade after June 1.
+ * Guarantees go with the contract, so none of them become dead money.
+ */
+export function tradeCharges(deal: Deal | null, date: string): { thisYear: number; nextYear: number } {
+  if (!deal) return { thisYear: 0, nextYear: 0 };
+  const year = leagueYear(date);
+  const cur = dealYear(deal, year);
+  let paid = 0;
+  if (cur && !cur.void) {
+    const weeks = cur.weeks ?? REG_WEEKS;
+    const paidWeeks = Math.max(0, Math.min(weeks, weeksPaid(date) - (REG_WEEKS - weeks)));
+    paid = (cur.base * paidWeeks) / REG_WEEKS + (date >= leagueYearStart(year) ? cur.bonus : 0);
+  }
+  const later = deal.years.filter((y) => y.year > year).reduce((s, y) => s + y.proration, 0);
+  const split = isPostJune1(date);
+  return {
+    thisYear: Math.round(paid + (cur?.proration ?? 0) + (split ? 0 : later)),
+    nextYear: Math.round(split ? later : 0),
+  };
+}
+
+/**
+ * The contract a team takes on in a trade: the rest of the salary and its
+ * guarantees, no bonus proration, and only the weeks left this season. The
+ * headline numbers stay those of the original deal.
+ */
+export function tradedDeal(deal: Deal, team: string, date: string): Deal {
+  const year = leagueYear(date);
+  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  const years = deal.years.filter((y) => y.year >= year && !y.void).map((y) => {
+    const next: DealYear = { ...y, proration: 0 };
+    if (y.year === year) {
+      if (date >= leagueYearStart(year)) next.bonus = Math.min(0, y.bonus);
+      next.weeks = Math.min(y.weeks ?? REG_WEEKS, weeks);
+      if (next.weeks >= REG_WEEKS) delete next.weeks;
+    }
+    return next;
+  });
+  return { ...deal, team, years, ...(deal.fifthYearOption ? { fifthYearOption: { ...deal.fifthYearOption } } : {}) };
+}
+
 /** A one-year tender or tag: the whole amount is base salary. Tags are fully guaranteed once signed. */
 export function writeOneYear(team: string, date: string, kind: DealKind, amount: number): Deal {
   const year = date >= leagueYearStart(Number(date.slice(0, 4))) ? leagueYear(date) : leagueYear(date) + 1;

@@ -63,6 +63,27 @@ cut, and eliminated teams sign reserve/future deals in January. The Free
 agents page has the pool, the waiver wire, the practice squad and a league
 transaction wire.
 
+Trades follow the league's rules too. The window runs from the new league
+year to the trade deadline (4 PM ET, November 10); nothing moves from then
+until the Super Bowl, and deals agreed after it become official when the new
+league year opens. Teams trade players and picks in the next three drafts
+(three 2027 first-rounders start out already traded, as in real life). The
+team that acquires a player takes on the rest of his salary and its
+guarantees for the weeks left; his signing bonus stays behind, with later
+years' proration accelerating as dead money (onto next year after June 1).
+Both teams have to be under the cap and inside the roster limit once a trade
+is processed. Practice squad players, reserve/future signings, players who
+haven't signed a tag or tender, and a matched offer-sheet player (to the team
+that made the sheet, for a year) can't be traded, and a no-trade clause needs
+the player's consent. Every front office values a trade through its GM's eye:
+what a player is worth for the ability they see, against what he costs, at
+the role he'd have, and where the team is headed (contenders pay for now,
+rebuilders want picks and youth); picks are valued on a draft chart at their
+projected slot. CPU teams trade with each other all year, most of all in the
+last week before the deadline, and unhappy players ask out. The owner can
+propose deals, ask what a player would cost, shop players on the trade block
+and take or leave calls from other teams. Three outlets grade every trade.
+
 Next up: the draft, then the business side.
 
 ## Playing locally
@@ -80,7 +101,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
-  agent market is `freeagency.ts`.
+  agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

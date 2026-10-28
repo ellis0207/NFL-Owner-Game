@@ -28,6 +28,7 @@ import { gaussian, rngFor } from "./rng";
 import { claimView, depthChart, logMove, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
 import { perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
 import type { Deal, FaOffer, FreeAgent, GameState, OfferTerms, Position } from "./types";
+import { lockMatchedSheet, transferOwnPick } from "./trades";
 import { onWaivers } from "./waivers";
 
 const KEY = RULES.keyDates;
@@ -757,7 +758,12 @@ export function resolveSheet(state: GameState, player: string, match: boolean): 
   const p = PLAYER_BY_ID[player];
   const deal = writeDeal({ ...sheet.terms }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(player, NEXT) });
   install(state, player, team, deal);
-  if (!match && sheet.compensation) o.picksOwed.push({ from: sheet.to, to: sheet.from, pick: sheet.compensation, player });
+  if (!match && sheet.compensation) {
+    // The signing team's own pick in this year's draft goes to the old team.
+    const round = sheet.compensation === "first" ? 1 : sheet.compensation === "second" ? 2 : Number(sheet.compensation.replace("round", ""));
+    if (!transferOwnPick(state, NEXT, round, sheet.to, sheet.from)) o.picksOwed.push({ from: sheet.to, to: sheet.from, pick: sheet.compensation, player });
+  }
+  if (match) lockMatchedSheet(state, player, sheet.to);
   news(state, match
     ? `The ${teamLabel(sheet.from)} match the offer sheet and keep ${p.name}`
     : `The ${teamLabel(sheet.from)} decline to match; ${p.name} joins the ${teamLabel(sheet.to)}${sheet.compensation ? ` for a ${compLabel(sheet.compensation)} pick` : ""}`);

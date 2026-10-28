@@ -23,9 +23,10 @@ import { StaffScreen } from "./screens/StaffScreen";
 import { StandingsScreen } from "./screens/StandingsScreen";
 import { StatsScreen } from "./screens/StatsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
+import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Trades", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -64,7 +65,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [talks, setTalks] = useState<string | null>(null);
   const openPlayer = useCallback((id: string) => { setTalks(null); setPlayer(id); }, []);
   const openTalks = useCallback((id: string) => { setPlayer(null); setTalks(id); }, []);
-  const ui = useMemo(() => ({ openBox, openPlayer, openTalks }), [openBox, openPlayer, openTalks]);
+  const [tradeStart, setTradeStart] = useState<TradeStart | null>(null);
+  const openTrade = useCallback((id: string) => { setPlayer(null); setTradeStart({ player: id }); setScreen("Trades"); }, []);
+  const ui = useMemo(() => ({ openBox, openPlayer, openTalks, openTrade }), [openBox, openPlayer, openTalks, openTrade]);
   const team = TEAM_BY_ID[game.userTeam];
   // After the Super Bowl the cap that matters is next year's.
   const capYear = isSeasonOver(game) ? RULES.season + 1 : undefined;
@@ -72,6 +75,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const rec = standings(game)[game.userTeam];
   const counts = rosterCount(game, game.userTeam);
   const unread = game.inbox.filter((i) => !i.read).length;
+  const tradeOffers = game.trades?.offers.filter((o) => o.status === "open").length ?? 0;
   const over = isGameOver(game);
   const offseason = isSeasonOver(game);
   const left = pendingEvents(game).length;
@@ -99,6 +103,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <button key={s} aria-current={screen === s ? "page" : undefined} onClick={() => setScreen(s)}>
               {s}
               {s === "Inbox" && unread > 0 && <span className="badge">{unread}</span>}
+              {s === "Trades" && tradeOffers > 0 && <span className="badge">{tradeOffers}</span>}
             </button>
           ))}
         </nav>
@@ -141,6 +146,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Standings" && <StandingsScreen game={game} />}
           {screen === "Roster" && <RosterScreen game={game} changed={changed} />}
           {screen === "Free agents" && <FreeAgentsScreen game={game} changed={changed} />}
+          {screen === "Trades" && <TradesScreen key={tradeStart?.player ?? "trades"} game={game} changed={changed} start={tradeStart} />}
           {screen === "Cap" && <CapScreen game={game} />}
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
