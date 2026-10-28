@@ -348,7 +348,9 @@ export function comps(state: GameState, id: string, count = 6): Comp[] {
 export function teamValue(state: GameState, team: string, id: string, startYear: number): number {
   const p = PLAYER_BY_ID[id];
   const fx = staffEffects(team);
-  const view = perceivedAbility(state, id, `gm:${team}`, fx.gmEval) + 0.35 * schemeFit(state, id, team);
+  // Front offices anchor to the market and adjust by their own scouting; better evaluators trust their eye more.
+  const own = Math.max(0.5, Math.min(0.9, 0.5 + (fx.gmEval - 50) / 100));
+  const view = own * (perceivedAbility(state, id, `gm:${team}`, fx.gmEval) + productionBump(state, id)) + (1 - own) * marketView(state, id) + 0.35 * schemeFit(state, id, team);
   const age = (ageOn(p.birthDate, state.date) ?? 26) + Math.max(0, startYear - leagueYear(state.date) - 0.5);
   const dur = HIDDEN_RATINGS[id]?.durability ?? 70;
   const durability = Math.max(0.65, Math.min(1.05, 0.7 + dur / 250));

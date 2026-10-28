@@ -82,7 +82,9 @@ const dataDeals = new Map<string, Deal>();
  */
 function lastRealYear(c: PlayerData["contract"]): number {
   const stated = (c.signedYear ?? RULES.season) + (c.years ?? c.seasons.length) - 1;
-  const flexible = c.type === "Extension" || c.type === "Other" || c.type === "Drafted";
+  // A tag followed by a long-term deal keeps the tag's type and length in the data: read its seasons instead.
+  const retagged = (c.type === "Franchise" || c.type === "Transition") && c.seasons.length > 1;
+  const flexible = c.type === "Extension" || c.type === "Other" || c.type === "Drafted" || retagged;
   let last = c.seasons[0]?.year ?? RULES.season;
   for (const s of c.seasons) {
     const counts = s.capHit > 0 && s.capHit >= s.baseSalary;
@@ -116,7 +118,7 @@ export function originalDeal(id: string): Deal {
   d = {
     team: p.team,
     signed: `${c.signedYear ?? RULES.season}-03-15`,
-    kind: KIND_FROM_DATA[c.type ?? ""] ?? "veteran",
+    kind: (c.type === "Franchise" || c.type === "Transition") && c.seasons.length > 1 ? "extension" : KIND_FROM_DATA[c.type ?? ""] ?? "veteran",
     signingBonus: prorated,
     total: c.totalValue ?? 0,
     apy: c.apy ?? 0,
@@ -305,11 +307,12 @@ export function writeExtension(current: Deal, terms: Terms, date: string, yearsE
 }
 
 /** A one-year minimum deal; veterans with four or more seasons count only a two-year player's minimum. */
-export function writeMinimumDeal(team: string, date: string, yearsExp: number, opts: { bonus?: number; guaranteed?: boolean } = {}): Deal {
-  const year = leagueYear(date);
+export function writeMinimumDeal(team: string, date: string, yearsExp: number, opts: { bonus?: number; guaranteed?: boolean; year?: number } = {}): Deal {
+  // A reserve/future deal signed after the season covers next league year.
+  const year = opts.year ?? leagueYear(date);
   const base = minimumSalary(yearsExp, year);
   const bonus = Math.min(opts.bonus ?? 0, VSB_MAX_BONUS);
-  const weeks = REG_WEEKS - weeksPaid(date);
+  const weeks = year > leagueYear(date) ? REG_WEEKS : REG_WEEKS - weeksPaid(date);
   const vsb = yearsExp >= 4 ? base - minimumSalary(2, year) : 0;
   const y: DealYear = {
     year, base, proration: bonus, bonus: -vsb * (Math.max(1, weeks) / REG_WEEKS), guaranteed: opts.guaranteed ? base : 0, injuryGuaranteed: 0,
@@ -329,6 +332,19 @@ export function writeOneYear(team: string, date: string, kind: DealKind, amount:
     team, signed: date, kind, signingBonus: 0, total: amount, apy: amount, guaranteedAtSigning: guaranteed,
     years: [{ year, base: amount, proration: 0, bonus: 0, guaranteed, injuryGuaranteed: 0 }],
   };
+}
+
+/**
+ * A tag or tender added to a player's current contract for next league year.
+ * The years already played stay for the cap's history; any void years are
+ * dropped, and their proration is returned so it can be charged as dead money.
+ */
+export function addOneYear(current: Deal | null, team: string, date: string, kind: DealKind, amount: number, year: number): { deal: Deal; voided: number } {
+  const keep = (current?.years ?? []).filter((y) => y.year < year && !y.void).map((y) => ({ ...y }));
+  const voided = (current?.years ?? []).filter((y) => y.void && y.year >= year).reduce((s, y) => s + y.proration, 0);
+  const one = writeOneYear(team, date, kind, amount);
+  one.years = [...keep, { ...one.years[0], year }];
+  return { deal: one, voided };
 }
 
 /** Void years reached at the new league year: their proration lands as dead money. */

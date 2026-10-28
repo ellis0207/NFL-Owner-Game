@@ -1,10 +1,11 @@
 // Salary cap accounting.
 //
-// Offseason (before the first regular-season game) only a team's 51 largest
-// cap hits count, the "Top 51" rule. From opening night every player on the
-// 53 counts in full and practice squad players count at their weekly pay.
-// Dead money from released players counts throughout.
-import { dealCapHit, dealOf, dealYearsLeft, leagueYear, releaseCharges, writeMinimumDeal } from "./contracts";
+// Offseason (from the new league year to the first regular-season game) only
+// a team's 51 largest cap hits count, the "Top 51" rule. From opening night
+// every player on the 53 counts in full and practice squad players count at
+// their weekly pay. Dead money from released players counts throughout.
+// Unused cap space rolls over into the next league year.
+import { dealCapHit, dealOf, dealYearsLeft, leagueYear, releaseCharges, salaryCap, writeMinimumDeal } from "./contracts";
 import { PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
 import type { GameState } from "./types";
 
@@ -22,7 +23,12 @@ export function contractYearsLeft(playerId: string, year = SEASON, state?: GameS
 
 /** A one-year minimum deal; signed mid-season, only the weeks left count. */
 export function signMinimumDeal(state: GameState, playerId: string, team: string): void {
-  state.contracts[playerId] = writeMinimumDeal(team, state.date, PLAYER_BY_ID[playerId].yearsExp);
+  state.contracts[playerId] = writeMinimumDeal(team, state.date, yearsExpIn(playerId, leagueYear(state.date)));
+}
+
+/** Credited seasons a player will have going into a league year. */
+export function yearsExpIn(playerId: string, year: number): number {
+  return PLAYER_BY_ID[playerId].yearsExp + Math.max(0, year - SEASON);
 }
 
 export function isRegularSeasonOrLater(date: string): boolean {
@@ -57,13 +63,36 @@ export function teamPlayerIds(state: GameState, team: string): string[] {
   });
 }
 
-export function deadMoney(state: GameState, team: string, year = SEASON): number {
+export function deadMoney(state: GameState, team: string, year = leagueYear(state.date)): number {
   const base = year === SEASON ? TEAM_BY_ID[team].cap2026.deadMoney : 0;
   return base + (state.deadMoney[team]?.[String(year)] ?? 0);
 }
 
-export function capLimit(team: string, year = SEASON): number {
-  return year === SEASON ? TEAM_BY_ID[team].cap2026.adjustedCap : RULES.salaryCap;
+/** Space carried over from the year before, once the league year has opened. */
+export function rollover(state: GameState | undefined, team: string, year: number): number {
+  return state?.league?.rollover?.[team]?.[year] ?? 0;
+}
+
+/** A team's adjusted cap: the league cap plus rollover (2026 is the real adjusted figure). */
+export function capLimit(team: string, year = SEASON, state?: GameState): number {
+  if (year === SEASON) return TEAM_BY_ID[team].cap2026.adjustedCap;
+  return salaryCap(state, year) + rollover(state, team, year);
+}
+
+/**
+ * Rollover: unused space carries into the next league year. It is set when
+ * the season ends; moves made after that, before the new league year, change
+ * this year's books and so the amount carried over.
+ */
+export function adjustRollover(state: GameState, team: string, delta: number): void {
+  const rollover = state.league?.rollover?.[team];
+  if (!rollover || leagueYear(state.date) !== SEASON || !delta) return;
+  rollover[SEASON + 1] = Math.max(0, (rollover[SEASON + 1] ?? 0) + delta);
+}
+
+/** The Top 51 rule applies from the new league year until opening night. */
+export function isTop51(date: string): boolean {
+  return leagueYear(date) > SEASON || date < RULES.keyDates.regularSeasonStart;
 }
 
 export interface CapSummary {
@@ -75,21 +104,21 @@ export interface CapSummary {
   rule: "top51" | "full";
 }
 
-export function capSummary(state: GameState, team: string): CapSummary {
+export function capSummary(state: GameState, team: string, year = leagueYear(state.date)): CapSummary {
   const ids = teamPlayerIds(state, team);
-  const rule = isRegularSeasonOrLater(state.date) ? "full" : "top51";
+  const rule = year > leagueYear(state.date) || isTop51(state.date) ? "top51" : "full";
   let players: number;
   if (rule === "top51") {
-    const hits = ids.map((id) => capHit(id, SEASON, state)).sort((a, b) => b - a);
+    const hits = ids.map((id) => capHit(id, year, state)).sort((a, b) => b - a);
     players = hits.slice(0, 51).reduce((a, b) => a + b, 0);
   } else {
     players = ids.reduce(
-      (sum, id) => sum + (state.players[id].status === "ps" ? practiceSquadCapHit() : capHit(id, SEASON, state)),
+      (sum, id) => sum + (state.players[id].status === "ps" ? practiceSquadCapHit() : capHit(id, year, state)),
       0,
     );
   }
-  const dead = deadMoney(state, team);
-  const limit = capLimit(team);
+  const dead = deadMoney(state, team, year);
+  const limit = capLimit(team, year, state);
   return { limit, players, dead, used: players + dead, space: limit - players - dead, rule };
 }
 

@@ -15,5 +15,5 @@ export function send(state: GameState, kind: InboxItem["kind"], from: string, ti
 
 export function news(state: GameState, text: string): void {
   state.news.unshift({ date: state.date, text });
-  if (state.news.length > 300) state.news.length = 300;
+  if (state.news.length > 600) state.news.length = 600;
 }

@@ -3,7 +3,7 @@ import { GAMES_BY_DATE, SCHEDULE, teamLabel } from "../../engine/league";
 import { injuryStatus } from "../../engine/injuries";
 import { PLAYER_BY_ID } from "../../engine/league";
 import { teamPlayerIds } from "../../engine/cap";
-import { agenda, isSeasonOver } from "../../engine/season";
+import { agenda, isGameOver, isSeasonOver, upcomingKeyDates } from "../../engine/season";
 import { publicPulse } from "../../engine/negotiation";
 import { useUi } from "../ui";
 import { matchup } from "../../engine/standings";
@@ -31,7 +31,19 @@ export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => 
         <section className="panel champion">
           <span className="label">Super Bowl LXI champion</span>
           <span className="big">{teamLabel(game.champion)}</span>
-          <p className="muted">The 2026 season is complete. The offseason (free agency, the draft and new contracts) is coming in a later update.</p>
+          <p className="muted">
+            {isGameOver(game)
+              ? "Draft day. This is as far as the game goes for now: the draft is coming in a later update, and your save keeps everything until then."
+              : "The 2026 season is complete. The offseason runs through draft day: re-sign or tag our own free agents, then chase other teams' players once free agency opens."}
+          </p>
+        </section>
+      )}
+      {isSeasonOver(game) && !isGameOver(game) && (
+        <section className="panel stack tight">
+          <h2>Coming up</h2>
+          {upcomingKeyDates(game).map((d) => (
+            <div key={d.date + d.label}><strong>{shortDate(d.date)}</strong> <span className="muted">{d.label}</span></div>
+          ))}
         </section>
       )}
       <section className="panel stack">

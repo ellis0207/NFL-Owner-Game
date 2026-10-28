@@ -2,7 +2,7 @@
 // reserve and replacement signings. Every team's decisions are made by its
 // own staff from what they believe about players (true ability blurred by
 // how good their evaluators are); the owner only sees the outcome.
-import { addDeadMoney, capHit, invalidateRosters, releaseCost, signMinimumDeal, teamPlayerIds, chargeYear } from "./cap";
+import { addDeadMoney, adjustRollover, capHit, invalidateRosters, releaseCost, signMinimumDeal, teamPlayerIds, chargeYear } from "./cap";
 import { addDays } from "./dates";
 import { isHurt } from "./injuries";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, SEASON } from "./league";
@@ -85,8 +85,10 @@ export function releasePlayer(state: GameState, id: string): void {
   const year = chargeYear(state);
   addDeadMoney(state, p.team, year, cost.deadThisYear);
   addDeadMoney(state, p.team, year + 1, cost.deadNextYear);
+  // After the season the player's hit is already in the rollover; only the extra acceleration costs more.
+  adjustRollover(state, p.team, cost.savingsThisYear);
   state.contracts[id] = null;
-  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev };
+  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, morale: p.morale, lastTeam: p.team };
 }
 
 /** Practice squad eligibility, simplified: players with two or fewer accrued seasons, plus up to six veterans. */

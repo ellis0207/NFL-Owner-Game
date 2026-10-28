@@ -179,6 +179,8 @@ export interface PlayerState {
   irDate?: string;
   /** 0-100, how the player feels about the team; absent means content (70). Never shown as a number. */
   morale?: number;
+  /** The team that last held the player's rights, for a free agent. */
+  lastTeam?: string;
   /** Staying away from camp, or showing up and not practicing, until a new deal is done. */
   holdout?: { kind: "holdout" | "holdin"; since: string };
 }
@@ -370,6 +372,8 @@ export interface Negotiation {
   askGuarantee: number;
   /** Rounds of patience left before the agent ends talks. */
   patience: number;
+  /** For a free agent: how far market prices had fallen when the numbers above were last set. */
+  marketScale?: number;
 }
 
 /** A contract signed anywhere in the league during the game, for the transaction log and grades. */
@@ -389,6 +393,65 @@ export interface Signing {
   valueAtSigning: number;
 }
 
+/** An offer to a free agent from a team (the owner's offers go through talks instead). */
+export interface FaOffer {
+  team: string;
+  terms: OfferTerms;
+  apy: number;
+  /** First-year cap hit, for the team's budget. */
+  hit: number;
+  date: string;
+  /** An offer sheet to a restricted free agent or transition-tagged player. */
+  sheet?: boolean;
+}
+
+/** A player on the open market. Everything here but the offers' existence is hidden. */
+export interface FreeAgent {
+  player: string;
+  /** The team that last held the player's rights. */
+  from: string | null;
+  since: string;
+  status: "open" | "agreed" | "signed";
+  base: number;
+  ask: number;
+  floor: number;
+  /** The floor on the first day, to scale talks as the price comes down. */
+  floor0: number;
+  askYears: number;
+  askGuarantee: number;
+  offers: FaOffer[];
+  /** Terms agreed during the negotiating window, signed when the league year opens. */
+  agreed?: { team: string; terms: OfferTerms; date: string };
+  /** The owner's team gets a day to beat another team's offer. */
+  lastLook?: { until: string; apy: number; team: string };
+}
+
+/** An offer sheet a restricted player signed: the old team can match. */
+export interface OfferSheet {
+  player: string;
+  from: string;
+  to: string;
+  terms: OfferTerms;
+  date: string;
+  decideBy: string;
+  /** Draft pick the signing team owes if the old team doesn't match. */
+  compensation?: string;
+}
+
+export interface OffseasonState {
+  /** The draft order, first pick first, set after the Super Bowl. */
+  draftOrder?: string[];
+  /** Franchise or transition tag used this year, by team. */
+  tags: Record<string, { player: string; kind: "franchise" | "transition"; exclusive?: boolean }>;
+  /** RFA and ERFA tenders by player. */
+  tenders: Record<string, { team: string; level: "first" | "second" | "original" | "erfa"; amount: number }>;
+  /** Fifth-year option decisions by player. */
+  options: Record<string, "exercised" | "declined">;
+  sheets: OfferSheet[];
+  /** Draft picks owed for offer sheets that weren't matched (the draft is a later step). */
+  picksOwed: { from: string; to: string; pick: string; player: string }[];
+}
+
 export interface TeamFinance {
   /** Cash paid to players, by league year. */
   paid: Record<number, number>;
@@ -405,7 +468,7 @@ export interface GameState {
   seed: number;
   players: Record<string, PlayerState>;
   /** League-wide numbers that change as the game goes: the cap once each league year's is set. */
-  league?: { caps: Record<number, number> };
+  league?: { caps: Record<number, number>; rollover?: Record<string, Record<number, number>> };
   /** Dead money a team carries, by team then season. */
   deadMoney: Record<string, Record<string, number>>;
   results: Record<string, GameResult>;
@@ -419,6 +482,10 @@ export interface GameState {
   trust: Record<string, Record<string, number>>;
   signings: Signing[];
   finance: Record<string, TeamFinance>;
+  /** The offseason: tags, tenders and options; created after the Super Bowl. */
+  offseason?: OffseasonState;
+  /** The free-agent market by player, from the negotiating window on. */
+  fa?: Record<string, FreeAgent>;
   /** Fan and media mood toward the owner's team, 0-100 (50 neutral). */
   pressure: { fans: number; media: number };
   /** Teams filled into postseason slots as the bracket is decided. */

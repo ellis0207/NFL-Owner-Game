@@ -11,8 +11,9 @@ decides how accurate those reports are.
 
 ## Status
 
-Playable: pick a team, run camp and the cut to 53, and play the full 2026
-season day by day through Super Bowl LXI. Saves autosave in the browser,
+Playable: pick a team, run camp and the cut to 53, play the full 2026
+season day by day through Super Bowl LXI, then run the 2027 offseason up to
+draft day. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
 
 Every game is simulated play by play, with box scores and per-game stats for
@@ -36,8 +37,18 @@ hold in at camp, and three made-up outlets grade every deal. The market is
 built from live contracts, so a record deal resets its position and nudges
 neighboring positions. Cash is tracked apart from the cap.
 
-Next up: the 2027 offseason through draft day (tags, tenders, options, the new
-league year and free agency for all 32 teams), then the business side.
+The offseason follows the real calendar. The 2027 cap is set in late
+February and unused space rolls over. Each team gets one franchise or
+transition tag, restricted and exclusive-rights players need tenders, and
+first-round picks get fifth-year option calls. Teams re-sign their own players
+until the negotiating window, restructure or cut to make room, and then all
+32 teams bid in free agency. Players weigh money against winning, scheme,
+role, city and loyalty, and bidding wars and "last looks" decide close calls.
+Deals agreed in the window are signed when the league year opens, and the Top
+51 rule applies until the next opener. Offer sheets on restricted players are
+rare, as in the real league. The game stops on draft day.
+
+Next up: the draft, then the business side.
 
 ## Playing locally
 
@@ -53,6 +64,8 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 - `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim, standings and playoffs.
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
+  The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
+  agent market is `freeagency.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
@@ -93,7 +106,10 @@ camps run 87-99 players instead of exactly 90.
 - About a third of contracts have no year-by-year line in the data; their cap
   hit is estimated as the deal's APY.
 - Agents, agencies and media outlets are made up. The 2027 cap is OverTheCap's
-  projection (about $327M) until the offseason sets it.
+  projection (about $327M) until the league sets it in the game, within about
+  1% of that.
+- The offseason doesn't model retirements, Pro Bowl tiers for fifth-year
+  options, compensatory picks, or offer sheets from the owner's own team yet.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
   real league averages (`npx vite-node tests/calibrate.ts 4`).

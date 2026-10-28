@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { agentFor, clientsOnTeam, STYLE_LABEL } from "../engine/agents";
 import { dealOf, leagueYear } from "../engine/contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "../engine/dates";
-import { PLAYER_BY_ID, TEAM_BY_ID } from "../engine/league";
+import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "../engine/league";
 import { comps, teamValue } from "../engine/market";
+import { interestReport, market } from "../engine/freeagency";
 import {
-  checkOffer, delegate, draftDeal, endTalks, extensionEligibility, holdoutFines, moodRead, openTalks, sendOffer, startYearFor,
+  capYearFor, checkOffer, delegate, draftDeal, endTalks, holdoutFines, moodRead, openTalks, sendOffer, startYearFor, talksFor,
 } from "../engine/negotiation";
+import { isOffseason, isPendingFreeAgent } from "../engine/offseason";
 import { teamStaff } from "../engine/staff";
 import type { GameState, Mandate, OfferTerms } from "../engine/types";
 import { ContractTable, dealSummary } from "./ContractTable";
@@ -48,8 +50,13 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
   const agent = agentFor(id);
   const deal = dealOf(game, id);
   const gm = teamStaff(us).GM;
-  const elig = extensionEligibility(game, id);
-  const start = startYearFor(game, id, "extension");
+  const elig = talksFor(game, us, id);
+  const kind = neg?.kind ?? elig.kind;
+  const start = startYearFor(game, id, kind);
+  const ps = game.players[id];
+  const fa = market(game)[id];
+  const reSign = kind === "extension" && isOffseason(game.date) && isPendingFreeAgent(game, id);
+  const capYear = neg ? capYearFor(game, neg) : leagueYear(game.date);
   const gmValue = Math.round(teamValue(game, us, id, start) / 500_000) * 500_000;
   const lastAgent = neg ? [...neg.rounds].reverse().find((r) => r.from === "agent") : undefined;
   const [form, setForm] = useState<Form | null>(null);
@@ -75,7 +82,7 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
   const compList = useMemo(() => comps(game, id), [game, id]);
 
   function begin() {
-    openTalks(game, us, id, "extension", "owner");
+    openTalks(game, us, id, kind, "owner");
     setForm(null);
     changed();
   }
@@ -100,9 +107,16 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
         <header>
           <div>
             <h2>{p.name}</h2>
-            <span className="muted">{p.position} · age {ageOn(p.birthDate, game.date) ?? "?"} · {TEAM_BY_ID[us].name}</span>
+            <span className="muted">
+              {p.position} · age {ageOn(p.birthDate, game.date) ?? "?"} · {ps?.team ? TEAM_BY_ID[ps.team].name : `Free agent${ps?.lastTeam ? `, last with the ${TEAM_BY_ID[ps.lastTeam].name}` : ""}`}
+            </span>
           </div>
         </header>
+
+        {kind === "free-agent" && fa?.status === "open" && open && <p className="notice">{interestReport(game, id, us)}</p>}
+        {open && fa?.lastLook && fa.lastLook.until >= game.date && (
+          <p className="notice error">Another team has an offer on the table. {agent.name} needs our best offer by {shortDate(fa.lastLook.until)}.</p>
+        )}
 
         {game.players[id].holdout && (
           <div className="notice error">
@@ -113,7 +127,7 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
 
         <section className="stack tight">
           <h3>Current contract</h3>
-          {deal ? <><ContractTable deal={deal} from={leagueYear(game.date)} /><span className="muted">{dealSummary(deal)}</span></> : <p className="muted">No contract.</p>}
+          {deal ? <><ContractTable deal={deal} from={leagueYear(game.date)} /><span className="muted">{dealSummary(deal)}{reSign ? `. Expires when the ${start} league year opens.` : ""}</span></> : <p className="muted">No contract: free agent.</p>}
         </section>
 
         <section className="split">
@@ -134,7 +148,7 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
           !elig.ok ? <p className="muted">{elig.reason}</p>
             : neg && daysBetween(neg.notes[0]?.date ?? neg.opened, game.date) < 14
               ? <p className="muted">Talks ended recently. {agent.name} will take our call again after {shortDate(addDays(neg.notes[0]?.date ?? neg.opened, 14))}.</p>
-              : <div className="btn-row"><button className="btn primary" onClick={begin}>{neg ? "Reopen extension talks" : "Open extension talks"}</button></div>
+              : <div className="btn-row"><button className="btn primary" onClick={begin}>{`${neg ? "Reopen" : "Open"} ${kind === "free-agent" ? "free-agent" : reSign ? "re-signing" : "extension"} talks`}</button></div>
         )}
 
         {neg && (
@@ -178,9 +192,10 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
             </div>
             {preview && (
               <>
-                <ContractTable deal={preview.deal} from={leagueYear(game.date)} />
+                <ContractTable deal={preview.deal} from={Math.min(capYear, leagueYear(game.date))} />
                 <span className="muted">
-                  {money((terms?.total ?? 0))} total. This year's cap hit changes by {money(preview.check.capChange)}; {money(preview.check.cashNow)} cash due at signing.
+                  {money((terms?.total ?? 0))} total. The {capYear} cap hit changes by {money(preview.check.capChange)}; {money(preview.check.cashNow)} cash due at signing.
+                  {kind === "free-agent" && game.date < RULES.keyDates.newLeagueYear ? " Agreements in the negotiating window are signed when the league year opens." : ""}
                 </span>
                 {!preview.check.ok && <span className="bad">{preview.check.reason}</span>}
               </>
