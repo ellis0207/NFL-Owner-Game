@@ -799,7 +799,7 @@ function execute(state: GameState, deal: TradeDeal): void {
       releasePlayer(state, cut);
     }
     // In the season a team that sent out more players than it got fills the 53 back up.
-    if (!isOffseason(state.date) && state.date > KEY.rosterCutdown) {
+    if (!isOffseason(state.date) && state.date >= KEY.rosterCutdown) {
       const gone = playersIn(deal.send[deal.teams[0] === team ? 0 : 1]).map((id) => PLAYER_BY_ID[id].position);
       for (let i = 0; i < gone.length && count() < limit; i++) signReplacement(state, team, gone[i]);
     }

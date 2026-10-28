@@ -2,7 +2,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { capHit, capSummary, teamPlayerIds } from "../src/engine/cap";
 import { dealOf } from "../src/engine/contracts";
 import { market, signFreeAgent } from "../src/engine/freeagency";
-import { RULES, TEAMS } from "../src/engine/league";
+import { RULES, SCHEDULE, TEAMS } from "../src/engine/league";
+import { addDays } from "../src/engine/dates";
 import { marketPrice } from "../src/engine/market";
 import { talksFor } from "../src/engine/negotiation";
 import { applyTag, canTag, faClass, isPendingFreeAgent, NEXT, pendingFreeAgents, tagCost } from "../src/engine/offseason";
@@ -137,9 +138,10 @@ describe("the offseason", () => {
     expect(top.filter((f) => f.status !== "open").length / Math.max(1, top.length)).toBeGreaterThan(0.7);
   }, 60_000);
 
-  it("runs the draft at the owner's pace and stops after it", async () => {
+  it("runs the draft at the owner's pace, then moves on to the next season", async () => {
     const state = await clone();
-    until(state, K.draftStart);
+    const draftStart = K.draftStart;
+    until(state, draftStart);
     const d = state.draft!;
     // Our staff weighs in when we're on the clock, and the owner can pick.
     advanceToOurPick(state);
@@ -162,7 +164,14 @@ describe("the offseason", () => {
     advanceDay(state);
     expect(d.made.length).toBe(256);
     expect(d.made.filter((m) => m.team === TEAM && m.overall > slot.overall).every((m) => m.by === "gm")).toBe(true);
-    expect(isGameOver(state)).toBe(true);
+    // The day after the draft the league moves on to the next season.
+    expect(state.date).toBe(addDays(draftStart, 3));
+    expect(state.season).toBe(2027);
+    expect(RULES.season).toBe(2027);
+    expect(isGameOver(state)).toBe(false);
+    expect(state.history!.seasons[0].champion).toBeTruthy();
+    expect(state.history!.drafts[0].picks.length).toBe(256);
+    expect(SCHEDULE.filter((g) => g.type === "REG").length).toBe(272);
     // Undrafted free agents signed; nobody is over 90.
     expect(Object.keys(d.udfa ?? {}).length).toBeGreaterThan(100);
     for (const t of TEAMS) expect(rosterCount(state, t.id).roster).toBeLessThanOrEqual(90);
@@ -170,8 +179,9 @@ describe("the offseason", () => {
     const back = await decompress(await compress(state));
     expect(back.players[rookie].team).toBe(TEAM);
     expect(capHit(rookie, NEXT, back)).toBeGreaterThan(0);
+    // The new season's clock runs.
     const date = state.date;
     advanceDay(state);
-    expect(state.date).toBe(date);
+    expect(state.date).toBe(addDays(date, 1));
   }, 120_000);
 });
