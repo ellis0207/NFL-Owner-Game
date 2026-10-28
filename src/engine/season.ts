@@ -1,7 +1,9 @@
 // The game clock: starting a new game and moving the league forward one day.
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
-import { GAMES_BY_DATE, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
+import { BASE_SEASON, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
+import { superBowlName } from "./calendar";
+import { applySeason, recordCredits, scheduleReleaseDate, scheduleReleased, startNewSeason } from "./seasons";
 import { weeklyDevelopment } from "./development";
 import { healInjuries, injure, injuryRisk } from "./injuries";
 import { applyCutdown, depthChart, fillEmergencies, fillPracticeSquad, formPracticeSquads, gameDayElevations, manageInjuredReserve, practiceSquad, proposeFinal53, protectPracticeSquads, rosterCount, trimPlan, type RosterMove } from "./roster";
@@ -29,9 +31,8 @@ import { scoutingDaily } from "./scouting";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
 
 const KEY = RULES.keyDates;
-export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
-/** The game runs through the draft for now. */
-export const GAME_OVER_DATE = DRAFT_OVER;
+export let SEASON_OVER_DATE = "";
+
 
 /** A team's first regular-season game. */
 export function openingGame(team: string): ScheduledGame {
@@ -47,6 +48,7 @@ export function veteranReportDate(team: string): string {
 
 export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31): GameState {
   clearDraftees();
+  applySeason({ season: BASE_SEASON } as GameState);
   const players: GameState["players"] = {};
   for (const p of PLAYERS) {
     players[p.id] = p.team ? { team: p.team, status: "camp" } : { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
@@ -75,7 +77,11 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     inbox: [],
     news: [],
     draft: { made: [], mocks: [], daysDone: [], nextMock: FIRST_MOCK },
+    season: BASE_SEASON,
+    league: { caps: {} },
+    history: { seasons: [], drafts: [], stats: {}, snaps: {}, retired: {} },
   };
+  applySeason(state);
   state.college = newCollege(state);
   business(state);
   const team = TEAM_BY_ID[userTeam];
@@ -140,6 +146,7 @@ export const KEY_DATE_LABELS: Record<string, string> = {
   divisionalRound: "Divisional Round begins",
   conferenceChampionships: "Conference Championship Sunday",
   superBowl: "Super Bowl LXI at SoFi Stadium",
+  franchiseTagExtensionDeadline: "Deadline for tagged players to sign long-term deals",
   franchiseTagWindowOpens: "Teams can use franchise and transition tags",
   scoutingCombineStart: "The scouting combine opens in Indianapolis",
   franchiseTagDeadline: "Tag deadline, 4 PM ET",
@@ -148,6 +155,13 @@ export const KEY_DATE_LABELS: Record<string, string> = {
   annualLeagueMeeting: "Annual league meeting",
   draftStart: "The 2027 NFL Draft",
 };
+
+onSeasonChange(() => {
+  SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
+  const sb = SCHEDULE.find((g) => g.round === "SB");
+  KEY_DATE_LABELS.superBowl = `${superBowlName(RULES.season)}${sb?.stadium ? ` at ${sb.stadium}` : ""}`;
+  KEY_DATE_LABELS.draftStart = `The ${RULES.season + 1} NFL Draft`;
+});
 
 function nextTeamGame(team: string, date: string, state: GameState): ScheduledGame | undefined {
   return SCHEDULE.find((g) => g.date >= date && (() => {
@@ -195,9 +209,14 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
     });
     return items;
   }
-  if (date === CAP_SET_DATE) items.push({ id: "league:cap", kind: "league", title: "The league announces the 2027 salary cap" });
+  if (date === CAP_SET_DATE) items.push({ id: "league:cap", kind: "league", title: `The league announces the ${RULES.season + 1} salary cap` });
+  if (date === scheduleReleaseDate()) items.push({ id: "league:schedule", kind: "league", title: `The league releases the ${RULES.season} schedule` });
   if (date >= SEASON_OVER_DATE) {
     if (!items.length) items.push(offseasonItem(date));
+    return items;
+  }
+  if (date < veteranReportDate(team)) {
+    if (!items.length) items.push(summerItem(state, date));
     return items;
   }
 
@@ -233,7 +252,9 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
 
 /** What the calendar shows for a day: the agenda, plus waiver deadlines that involve us. */
 export function calendarItems(state: GameState, date: string): AgendaItem[] {
-  const items = agenda(state, date);
+  let items = agenda(state, date);
+  // Until the league releases the schedule, nobody knows the games: only the league calendar shows.
+  if (!scheduleReleased(state) && date >= veteranReportDate(state.userTeam)) items = items.filter((a) => a.kind === "league" || a.kind === "draft");
   if (date >= state.date) {
     for (const w of Object.values(state.waivers ?? {})) {
       if (w.clears !== date) continue;
@@ -251,6 +272,15 @@ export function calendarItems(state: GameState, date: string): AgendaItem[] {
   return items;
 }
 
+/** Between the draft and training camp. */
+function summerItem(state: GameState, date: string): AgendaItem {
+  const camp = veteranReportDate(state.userTeam);
+  if (date < addDays(KEY.franchiseTagExtensionDeadline, -30)) {
+    return { id: "meeting:offseason", kind: "meeting", title: "Offseason program", detail: "Rookies and veterans work out at the facility; the front office keeps an eye on the free agents still out there." };
+  }
+  return { id: "off", kind: "off", title: "Summer break", detail: `Players and coaches are off until camp opens on ${shortDate(camp)}.` };
+}
+
 function offseasonItem(date: string): AgendaItem {
   const item = (title: string, detail: string): AgendaItem => ({ id: "meeting:offseason", kind: "meeting", title, detail });
   if (date < KEY.franchiseTagWindowOpens) return item("Season review", "Exit interviews and end-of-season evaluations.");
@@ -263,7 +293,7 @@ function offseasonItem(date: string): AgendaItem {
 export function gameTypeLabel(g: ScheduledGame): string {
   if (g.type === "PRE") return g.week === 0 ? "Hall of Fame Game" : `Preseason Week ${g.week}`;
   if (g.type === "REG") return `Week ${g.week}`;
-  return { WC: "Wild Card", DIV: "Divisional Round", CONF: `${g.conference} Championship`, SB: "Super Bowl LXI" }[g.round!];
+  return { WC: "Wild Card", DIV: "Divisional Round", CONF: `${g.conference} Championship`, SB: g.label ?? superBowlName(Number(g.id.slice(0, 4))) }[g.round!];
 }
 
 // ---- Advancing ----
@@ -281,9 +311,15 @@ export function isSeasonOver(state: GameState): boolean {
   return state.date >= SEASON_OVER_DATE;
 }
 
-/** The end of what the game can play for now: draft day. */
+/** Between the draft and training camp: no games, so the clock moves from event to event. */
+export function isSummer(state: GameState): boolean {
+  return state.date < veteranReportDate(state.userTeam);
+}
+
+/** The game never ends: after each draft the league moves on to the next season. */
 export function isGameOver(state: GameState): boolean {
-  return state.date >= GAME_OVER_DATE;
+  void state;
+  return false;
 }
 
 /** The start of the day, before any event: injuries heal, waiver claims are awarded, Week 1 moves. Runs once a day. */
@@ -414,6 +450,7 @@ export function advanceDay(state: GameState): void {
     if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2)) payWeek(state);
   }
   if (date === KEY.regularSeasonEnd) {
+    recordCredits(state);
     fillWildCard(state);
     const seeds = state.seeds!;
     const conf = TEAM_BY_ID[state.userTeam].conference;
@@ -430,10 +467,10 @@ export function advanceDay(state: GameState): void {
     const r = state.results[sb.id];
     if (r) {
       state.champion = r.homeScore > r.awayScore ? r.home : r.away;
-      send(state, "league", "League Office", `${teamLabel(state.champion)} win Super Bowl LXI`,
+      send(state, "league", "League Office", `${teamLabel(state.champion)} win ${superBowlName(RULES.season)}`,
         state.champion === state.userTeam
           ? "You're a Super Bowl champion. The parade route is being planned."
-          : "The 2026 season is complete. The offseason starts tomorrow.");
+          : `The ${RULES.season} season is complete. The offseason starts tomorrow.`);
     }
   }
   if (date === addDays(KEY.rosterCutdown, -3)) {
@@ -449,6 +486,24 @@ export function advanceDay(state: GameState): void {
   pressDaily(state);
 
   state.date = addDays(date, 1);
+  // The day after the draft the league moves on to the next season.
+  if (state.date === DRAFT_OVER) startNewSeason(state);
+  if (state.date === veteranReportDate(state.userTeam) && (state.season ?? BASE_SEASON) > BASE_SEASON) openCamp(state);
+}
+
+/** Training camp opens (for seasons after the first, which starts in camp). */
+function openCamp(state: GameState): void {
+  startHoldouts(state);
+  const us = state.userTeam;
+  const cap = capSummary(state, us);
+  const { roster } = rosterCount(state, us);
+  const opener = openingGame(us);
+  const oppId = opener.home === us ? opener.away! : opener.home!;
+  const staff = teamStaff(us);
+  send(state, "staff", staff.GM ? `${staff.GM.name}, general manager` : "General Manager", `${RULES.season} training camp opens`,
+    `Veterans report today. We have ${roster} players in camp and have to be at 53 by ${shortDate(KEY.rosterCutdown)}. ` +
+    `Under the Top 51 rule we're using ${money(cap.used)} of our ${money(cap.limit)} adjusted cap, which leaves ${money(cap.space)} in space. ` +
+    `Our opener is ${opener.home === us ? "at home against" : "on the road at"} ${teamLabel(oppId)} on ${weekday(opener.date)}, ${shortDate(opener.date)}.`);
 }
 
 function runCutdown(state: GameState): void {
@@ -633,8 +688,12 @@ function weeklyReport(state: GameState): void {
     `Cap space: ${money(cap.space)}. Trade deadline: ${shortDate(KEY.tradeDeadline)}.`);
 }
 
-/** Offseason days worth stopping on. */
-const OFFSEASON_STOPS = [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear, addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), ...DRAFT_DAYS];
+/** Offseason and summer days worth stopping on. */
+function offseasonStops(state: GameState): string[] {
+  return [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear,
+    addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), ...DRAFT_DAYS, DRAFT_OVER, scheduleReleaseDate(),
+    KEY.franchiseTagExtensionDeadline, veteranReportDate(state.userTeam)];
+}
 
 /** A draft day the owner hasn't finished: the clock waits for the owner (or "Sim rest of day"). */
 export function draftWaiting(state: GameState): boolean {
@@ -645,16 +704,17 @@ export function draftWaiting(state: GameState): boolean {
 export function advanceToNextEvent(state: GameState): void {
   if (draftWaiting(state)) return;
   const start = state.date;
-  for (let i = 0; i < 7 && !isGameOver(state); i++) {
+  for (let i = 0; i < 7; i++) {
     advanceDay(state);
-    if (OFFSEASON_STOPS.includes(state.date) && state.date !== start) return;
+    if (offseasonStops(state).includes(state.date) && state.date !== start) return;
+    if (!isSeasonOver(state) && !isSummer(state)) return;
   }
 }
 
 /** Advances until the user's next game has been played, or a stop day. */
 export function simToNextGame(state: GameState): void {
   const start = state.date;
-  if (isSeasonOver(state)) return advanceToNextEvent(state);
+  if (isSeasonOver(state) || isSummer(state)) return advanceToNextEvent(state);
   for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
     const hadGame = agenda(state).some((a) => a.kind === "game");
     const isStop = state.date !== start && state.date === KEY.rosterCutdown;

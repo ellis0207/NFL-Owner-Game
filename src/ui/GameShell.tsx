@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { capSummary } from "../engine/cap";
-import { longDate } from "../engine/dates";
+import { addDays, longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, pendingEvents, playEvent, simToNextGame } from "../engine/season";
+import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, simToNextGame } from "../engine/season";
 import { draftDayOf, onTheClock } from "../engine/draft";
 import { DraftScreen } from "./screens/DraftScreen";
 import { standings } from "../engine/standings";
@@ -41,12 +41,12 @@ export type Screen = (typeof SCREENS)[number];
 export function phaseLabel(state: GameState): string {
   const d = state.date;
   const k = RULES.keyDates;
-  if (isGameOver(state)) return "Draft complete";
   if (draftDayOf(d)) return `NFL Draft · Day ${draftDayOf(d)}`;
   if (d >= k.newLeagueYear) return `Free agency · ${d.slice(0, 4)} league year`;
   if (d >= k.negotiatingWindowOpens) return "Negotiating window";
   if (d >= k.franchiseTagWindowOpens && d <= k.franchiseTagDeadline) return "Offseason · tag window";
   if (isSeasonOver(state)) return "Offseason";
+  if (isSummer(state)) return d < addDays(k.franchiseTagExtensionDeadline, -30) ? `Offseason program · ${RULES.season}` : "Summer break";
   if (d > k.regularSeasonEnd) return "Playoffs";
   if (d >= k.regularSeasonStart) {
     const next = SCHEDULE.find((g) => g.type === "REG" && g.date >= d);
@@ -86,14 +86,18 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   // After the Super Bowl the cap that matters is next year's.
   const capYear = isSeasonOver(game) ? RULES.season + 1 : undefined;
   const cap = capSummary(game, game.userTeam, capYear);
-  const rec = standings(game)[game.userTeam];
+  const summer = isSummer(game);
+  // In the summer the record that means anything is last season's.
+  const last = summer ? game.history?.seasons.at(-1) : undefined;
+  const now = standings(game)[game.userTeam];
+  const rec = last ? { w: last.records[game.userTeam][0], l: last.records[game.userTeam][1], t: last.records[game.userTeam][2] } : now;
   const counts = rosterCount(game, game.userTeam);
   const unread = game.inbox.filter((i) => !i.read).length;
   const pressAsks = openQuestions(game).length;
   const tradeOffers = game.trades?.offers.filter((o) => o.status === "open").length ?? 0;
   const bookings = game.business?.events.filter((e) => e.status === "offered").length ?? 0;
   const over = isGameOver(game);
-  const offseason = isSeasonOver(game);
+  const offseason = isSeasonOver(game) || summer;
   const left = pendingEvents(game).length;
   const waiting = draftWaiting(game);
 
@@ -136,7 +140,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <span className="phase">{phaseLabel(game)}</span>
           </div>
           <div className="figures">
-            <div className="figure"><span className="label">{isSeasonOver(game) ? `${RULES.season} record` : "Record"}</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
+            <div className="figure"><span className="label">{last ? `${last.season} record` : isSeasonOver(game) ? `${RULES.season} record` : "Record"}</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
             <div className="figure"><span className="label">Roster</span><strong>{counts.roster}{counts.ps ? ` + ${counts.ps} PS` : ""}{counts.ir ? ` · ${counts.ir} IR` : ""}</strong></div>
             <div className="figure">
               <span className="label">{capYear ? `${capYear} cap space` : "Cap space"}</span>

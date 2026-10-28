@@ -290,8 +290,9 @@ export interface CollegeState {
 /**
  * camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. ir: injured reserve.
  * future: signed to a reserve/future deal that starts next league year. fa: free agent (or on waivers).
+ * retired: done playing.
  */
-export type RosterStatus = "camp" | "active" | "ps" | "ir" | "future" | "fa";
+export type RosterStatus = "camp" | "active" | "ps" | "ir" | "future" | "fa" | "retired";
 
 export interface Injury {
   type: string;
@@ -306,8 +307,12 @@ export interface PlayerState {
   team: string | null;
   status: RosterStatus;
   injury?: Injury;
-  /** In-season development: change to true ability since the season began. */
+  /** Development: change to true ability since the save began (in-season growth and offseason progression or decline). */
   dev?: number;
+  /** Change to the player's ceiling since the save began (engine only). */
+  pot?: number;
+  /** Credited seasons before the current season, once the save has moved past 2026 (else the data's count). */
+  exp?: number;
   /** Date placed on injured reserve (eligible to return after four games). */
   irDate?: string;
   /** 0-100, how the player feels about the team; absent means content (70). Never shown as a number. */
@@ -363,6 +368,8 @@ export interface Deal {
   years: DealYear[];
   /** First-round rookie deals: the team may pick up a fifth year. */
   fifthYearOption?: { year: number; amount: number; exercised?: boolean; declined?: boolean };
+  /** The league year the deal was last restructured. */
+  restructured?: number;
 }
 
 /** @deprecated version 2 saves stored this shape; migrated to Deal. */
@@ -618,7 +625,7 @@ export interface Transaction {
   date: string;
   team: string;
   player: string;
-  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir" | "traded" | "drafted";
+  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir" | "traded" | "drafted" | "retired";
   text: string;
 }
 
@@ -913,6 +920,65 @@ export interface BusinessState {
   ask?: { kind: "tickets" | "attendance"; date: string; context: string };
   /** The owner's price changes, newest first. */
   priceLog: { date: string; text: string }[];
+  /** Season-ticket and premium prices against the 2026 market prices, as the years' increases add up. */
+  index?: { season: number; premium: number };
+}
+
+/** A free agent who left in the spring, for the compensatory pick formula. */
+export interface CompMove {
+  player: string;
+  from: string;
+  to: string;
+  apy: number;
+}
+
+export interface LeagueState {
+  caps: Record<number, number>;
+  rollover?: Record<string, Record<number, number>>;
+  /** Unrestricted free agents heading to the market this spring, with the team they'd leave (until they sign). */
+  expiring?: Record<string, string>;
+  /** The draft their departures count for. */
+  cfaYear?: number;
+  /** Players who will announce their retirement this offseason, with the day (engine only). */
+  retiring?: Record<string, string>;
+  /** Departures that count toward compensatory picks, by draft year. */
+  cfa?: Record<number, CompMove[]>;
+}
+
+/** One finished season, as the record books keep it. */
+export interface SeasonRecord {
+  season: number;
+  champion?: string;
+  runnerUp?: string;
+  /** Regular-season record by team: wins, losses, ties, points for and against. */
+  records: Record<string, [number, number, number, number, number]>;
+  /** Finish within the division, 1-4. */
+  place: Record<string, number>;
+  seeds?: Record<"AFC" | "NFC", string[]>;
+  /** How far each playoff team went: WC, DIV, CONF, SB (lost the Super Bowl) or CHAMP. */
+  playoffs: Record<string, string>;
+  /** League leaders: stat key to [player, team, value]. */
+  leaders: Record<string, [string, string, number]>;
+}
+
+/** One draft, kept so its players can be rebuilt when a save loads. */
+export interface DraftArchive {
+  year: number;
+  /** player, team, round, overall pick, height and weight from the combine. */
+  picks: [string, string, number, number, number, number][];
+  udfa: [string, string][];
+  /** Underclassmen who went back to school (they join the next class). */
+  returned: string[];
+}
+
+export interface History {
+  seasons: SeasonRecord[];
+  drafts: DraftArchive[];
+  /** Regular-season stats from the seasons played in this save, by player. */
+  stats: Record<string, SeasonStats[]>;
+  snaps: Record<string, Record<string, SnapSeason>>;
+  /** Players who retired, with the season they last played. */
+  retired: Record<string, number>;
 }
 
 export interface GameState {
@@ -926,7 +992,17 @@ export interface GameState {
   seed: number;
   players: Record<string, PlayerState>;
   /** League-wide numbers that change as the game goes: the cap once each league year's is set. */
-  league?: { caps: Record<number, number>; rollover?: Record<string, Record<number, number>> };
+  league?: LeagueState;
+  /** The season the league is in (2026 when absent): it moves forward the day after each draft. */
+  season?: number;
+  /** This season's schedule, for seasons after 2026 (2026 is the real one from the data). */
+  schedule?: ScheduledGame[];
+  /** Waiver priority until the standings take over: the last draft's order. */
+  waiverOrder?: string[];
+  /** Players on a 53 or injured reserve when the regular season ended: they earn a credited season. */
+  credited?: string[];
+  /** Seasons gone by: final standings, champions, drafts, and every player's stats. */
+  history?: History;
   /** Dead money a team carries, by team then season. */
   deadMoney: Record<string, Record<string, number>>;
   results: Record<string, GameResult>;

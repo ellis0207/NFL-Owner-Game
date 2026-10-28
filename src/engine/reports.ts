@@ -5,7 +5,7 @@ import { ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { OFFENSE_LABEL, DEFENSE_LABEL } from "./schemes";
-import { ability, perceivedAbility, schemeFit, staffEffects, teamSchemes, teamStaff, trait } from "./staff";
+import { ability, perceivedAbility, schemeFit, staffEffects, teamSchemes, teamStaff, trait, upside as upsideOf } from "./staff";
 import type { GameState } from "./types";
 
 export interface PlayerReport {
@@ -89,7 +89,7 @@ export function playerReport(state: GameState, id: string): PlayerReport {
   const concerns = reads.filter(([, v]) => v <= -5).slice(-2).reverse().map(([t]) => TRAIT_WORDS[t]?.[1]).filter(Boolean) as string[];
 
   const age = ageOn(p.birthDate, state.date) ?? 26;
-  const upside = r.potential - r.overall + gaussian(rng) * sd;
+  const upside = upsideOf(state, id) + gaussian(rng) * sd;
   const notes: string[] = [];
   if (age <= 25 && upside >= 6) notes.push("Still developing, and the staff sees a lot of room to grow.");
   else if (age <= 25 && upside >= 3) notes.push("Should keep getting better.");

@@ -10,7 +10,7 @@ import {
 import { RULES, TEAMS } from "../src/engine/league";
 import { draftClass } from "../src/engine/prospects";
 import { rosterCount } from "../src/engine/roster";
-import { advanceDay, isGameOver, newGame } from "../src/engine/season";
+import { advanceDay, newGame } from "../src/engine/season";
 import { trades } from "../src/engine/trades";
 import { compress, decompress } from "../src/save/codec";
 import type { GameState } from "../src/engine/types";
@@ -51,7 +51,7 @@ for (const day of DRAFT_DAYS) {
   advanceToEndOfDay(state);
 }
 advanceDay(state);
-console.log(`\nGame over: ${isGameOver(state)} on ${state.date}`);
+console.log(`\nThe league moved on to ${state.season} on ${state.date}`);
 
 const made = d.made;
 console.log(`\nFirst round:`);

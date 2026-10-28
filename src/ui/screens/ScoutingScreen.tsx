@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { injuryNote, mediaRank, prospectLine, prospectTotals } from "../../engine/college";
+import { COLLEGE_SEASON, injuryNote, mediaRank, prospectLine, prospectTotals } from "../../engine/college";
+import { RULES } from "../../engine/league";
 import { COLLEGE_TEAMS, CONFERENCE_IDS, CONFERENCES, DEFENSE_NAMES, OFFENSE_NAMES, REGIONS, schoolName } from "../../engine/collegeData";
 import { shortDate } from "../../engine/dates";
 import { POSITION_ORDER } from "../../engine/roster";
@@ -25,7 +26,7 @@ export function ScoutingScreen({ game, changed }: { game: GameState; changed: ()
       <h2>College scouting</h2>
       <p className="muted">
         {director ? `${director.name}, our director of college scouting, runs the staff. ` : ""}
-        Point the scouts at a slice of the 2027 draft class each week. Narrow assignments learn a lot about a few players;
+        Point the scouts at a slice of the {RULES.season + 1} draft class each week. Narrow assignments learn a lot about a few players;
         broad ones learn a little about many. Travel adds up, and campuses far from our building cost more to reach.
         The week's work is filed every Sunday.
       </p>
@@ -228,7 +229,7 @@ function Board({ game, changed }: { game: GameState; changed: () => void }) {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th className="num">Media</th><th>Prospect</th><th>Pos</th><th>School</th><th>Class</th><th>Listed</th><th>2026 season</th><th>Our file</th><th>Our grade</th><th></th></tr>
+            <tr><th className="num">Media</th><th>Prospect</th><th>Pos</th><th>School</th><th>Class</th><th>Listed</th><th>{COLLEGE_SEASON} season</th><th>Our file</th><th>Our grade</th><th></th></tr>
           </thead>
           <tbody>
             {rows.map(({ p, media, know, report }) => {

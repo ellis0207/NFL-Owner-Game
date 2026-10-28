@@ -29,23 +29,27 @@ import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
 import { gradeLean } from "./outlets";
 import { money, news, send } from "./inbox";
-import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
+import { HIDDEN_RATINGS, onSeasonChange, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { ageFactor, marketView, productionBump, shareFor } from "./market";
 import { STARTERS } from "./negotiation";
 import { isOffseason, NEXT, off, OFFSEASON_START } from "./offseason";
 import { gaussian, rngFor } from "./rng";
 import { depthChart, logMove, releasePlayer, rosterLimit, rosterStatusNow, signReplacement, weakestOnRoster } from "./roster";
-import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
+import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside } from "./staff";
 import { standings } from "./standings";
 import type { GameState, Position, TradeAsset, TradeDeal, TradeOffer, TradeRecord, TradeState } from "./types";
 
 const KEY = RULES.keyDates;
 /** Picks in the next three drafts can be traded. */
 // (From the league data, not offseason.ts: this module is in an import cycle with it.)
-export const PICK_YEARS = [RULES.season + 1, RULES.season + 2, RULES.season + 3];
+export let PICK_YEARS: number[] = [];
 export const ROUNDS = 7;
 /** The next draft: picks in it are valued at their projected slot, later ones less. */
-const DRAFT_YEAR = RULES.season + 1;
+let DRAFT_YEAR = 0;
+onSeasonChange(() => {
+  PICK_YEARS = [RULES.season + 1, RULES.season + 2, RULES.season + 3];
+  DRAFT_YEAR = RULES.season + 1;
+});
 
 /**
  * Picks traded before the game starts (2027 first-rounders): Green Bay's to
@@ -269,7 +273,7 @@ function computeView(state: GameState, eye: Eye, team: string, id: string): numb
 function growthFor(state: GameState, eye: Eye, team: string, id: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r || PLAYER_BY_ID[id].yearsExp > 3) return 0;
-  const gap = Math.max(0, r.potential - r.overall);
+  const gap = upside(state, id);
   if (eye === "truth") return gap;
   const skill = eye === "gm" ? staffEffects(team).gmEval : 80;
   const z = gaussian(rngFor(state.seed, `potential:${eye}:${team}:${id}`));
@@ -385,6 +389,8 @@ export function tradeBalance(state: GameState, eye: Eye, deal: TradeDeal, side: 
     const own = eye !== "gm" ? 1 : a.kind === "player" && trades(state).requests[a.id] ? 0.85 : 1.05;
     outValue += v > 0 ? v * own : v;
   }
+  // Bonus money already paid stays behind: front offices weigh the dead money a trade pushes onto next year.
+  if (without.size) outValue += (0.5 * capAfter(state, deal, side).deadNext) / DOLLARS_PER_POINT;
   let inValue = 0;
   for (const a of inc) inValue += assetValue(state, eye, team, a, { without, date });
   return { gain: inValue - outValue, inValue, outValue };
@@ -795,7 +801,7 @@ function execute(state: GameState, deal: TradeDeal): void {
       releasePlayer(state, cut);
     }
     // In the season a team that sent out more players than it got fills the 53 back up.
-    if (!isOffseason(state.date) && state.date > KEY.rosterCutdown) {
+    if (!isOffseason(state.date) && state.date >= KEY.rosterCutdown) {
       const gone = playersIn(deal.send[deal.teams[0] === team ? 0 : 1]).map((id) => PLAYER_BY_ID[id].position);
       for (let i = 0; i < gone.length && count() < limit; i++) signReplacement(state, team, gone[i]);
     }

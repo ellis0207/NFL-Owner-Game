@@ -1,7 +1,7 @@
 // Plays a save through the draft and prints the business side: the P&L by
 // league year, the gate at each home game, stadium events and cash.
 // Run: npx vite-node tests/business-report.ts [team] [seed]
-import { advanceDay, isGameOver, newGame } from "../src/engine/season";
+import { advanceDay, newGame } from "../src/engine/season";
 import { answerOffer, business, cashBalance, CATEGORY, operatingEstimate, pnl, revenueEstimate, valuation, billions } from "../src/engine/business";
 import { money } from "../src/engine/inbox";
 import { TEAMS } from "../src/engine/league";
@@ -12,7 +12,8 @@ const seed = Number(process.argv[3] ?? 7);
 const t0 = Date.now();
 const state = newGame(team, "Report", { capRules: "real" }, seed);
 let low = Infinity;
-while (!isGameOver(state)) {
+// One season: through the draft, until the league moves on.
+while ((state.season ?? 2026) === 2026) {
   for (const e of business(state).events) if (e.status === "offered") answerOffer(state, e.id, true);
   advanceDay(state);
   low = Math.min(low, cashBalance(state));

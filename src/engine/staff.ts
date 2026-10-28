@@ -87,6 +87,14 @@ export function ability(state: GameState, id: string): number {
   return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id);
 }
 
+/** Room a player still has to grow: his ceiling (as it has moved) over where he is now. Engine only. */
+export function upside(state: GameState, id: string): number {
+  const r = HIDDEN_RATINGS[id];
+  if (!r) return 0;
+  const p = state.players[id];
+  return Math.max(0, r.potential + (p?.pot ?? 0) - (r.overall + (p?.dev ?? 0)));
+}
+
 export function trait(state: GameState, id: string, name: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r) return 45;

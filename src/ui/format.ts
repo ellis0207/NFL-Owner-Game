@@ -1,4 +1,4 @@
-import { PLAYER_BY_ID } from "../engine/league";
+import { PLAYER_BY_ID, RULES } from "../engine/league";
 import { isOffseason } from "../engine/offseason";
 import { seasonTotals, type StatLine } from "../engine/stats";
 import type { GameState, PlayerData, Position, SeasonStats } from "../engine/types";
@@ -58,10 +58,11 @@ function snapLine(snaps?: { offense: number; defense: number; st: number }): str
 }
 
 export function lastSeasonLine(p: PlayerData): string {
-  const s = p.stats.filter((x) => x.season === 2025);
+  const last = RULES.season - 1;
+  const s = p.stats.filter((x) => x.season === last);
   const merged = mergeSeason(s);
-  const snaps = p.snaps["2025"];
-  if (!merged && !snaps) return p.rookieYear === 2026 ? `Rookie · ${p.college ?? "—"}` : "Did not play in 2025";
+  const snaps = p.snaps[String(last)];
+  if (!merged && !snaps) return p.rookieYear === RULES.season ? `Rookie · ${p.college ?? "—"}` : `Did not play in ${last}`;
   return statLine(p.position, merged, snaps);
 }
 
@@ -87,7 +88,7 @@ export function onColor(hex: string): string {
   return lum > 0.6 ? "#10161d" : "#ffffff";
 }
 
-/** One game's or one season's line from the simulated 2026 stats. */
+/** One game's or one season's line from the simulated stats. */
 export function gameLine(pos: Position, l: StatLine): string {
   const v = (k: keyof StatLine) => l[k] ?? 0;
   const parts: string[] = [];
@@ -114,11 +115,11 @@ export function gameLine(pos: Position, l: StatLine): string {
   return parts.join(" · ");
 }
 
-/** The most recent season's line: the simulated 2026 season once it's over, otherwise 2025's real stats. */
+/** The most recent season's line: this season once it's over, otherwise last season's. */
 export function recentSeasonLine(game: GameState, id: string): string {
   const p = PLAYER_BY_ID[id];
   if (!isOffseason(game.date)) return lastSeasonLine(p);
   const line = seasonTotals(game, "REG")[id]?.line;
-  if (!line) return "Did not play in 2026";
+  if (!line) return `Did not play in ${RULES.season}`;
   return statLine(p.position, line as unknown as SeasonStats);
 }

@@ -7,7 +7,7 @@
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
 import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
 import {
-  dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, minimumSalary, prorateFirstYear, writeDeal, writeExtension, type Terms,
+  dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, minimumSalary, prorateFirstYear, salaryCap, writeDeal, writeExtension, type Terms,
 } from "./contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
@@ -15,7 +15,7 @@ import { gradeDeal } from "./grades";
 import { leakStory, ownerLeverage } from "./outlets";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
-import { invalidateMarket, marketPrice, teamValue } from "./market";
+import { capScale, invalidateMarket, marketPrice, teamValue } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { schemeFit, staffEffects, teamStaff } from "./staff";
 import { standings } from "./standings";
@@ -278,6 +278,11 @@ export function draftDeal(state: GameState, neg: Negotiation, t: OfferTerms) {
   // Re-signing an expiring player after the season: a new deal from next year, the bonus spread from then.
   if (reSigning(state, neg) && current) {
     const deal = writeDeal(terms, { team: neg.team, date: state.date, kind: "extension", firstYear: NEXT, yearsExp: yearsExpIn(neg.player, NEXT) });
+    // Void years the new deal covers become real years: their bonus money stays where it was.
+    for (const v of current.years.filter((y) => y.void && y.year >= NEXT)) {
+      const y = deal.years.find((x) => x.year === v.year);
+      if (y) y.proration += v.proration;
+    }
     deal.years = [...current.years.filter((y) => y.year < NEXT && !y.void).map((y) => ({ ...y })), ...deal.years];
     return deal;
   }
@@ -512,8 +517,8 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   }
   // Signed after the season: this year's extra cap hit comes out of what rolls over.
   if (capYearFor(state, neg) === leagueYear(state.date)) adjustRollover(state, neg.team, -check.capChange);
-  // Void years on the old deal still accelerate when it would have voided.
-  if (reSigning(state, neg)) addDeadMoney(state, neg.team, NEXT, dealOf(state, id)?.years.filter((y) => y.void && y.year >= NEXT).reduce((a, y) => a + y.proration, 0) ?? 0);
+  // Void years on the old deal past the end of the new one still accelerate when it would have voided.
+  if (reSigning(state, neg)) addDeadMoney(state, neg.team, NEXT, dealOf(state, id)?.years.filter((y) => y.void && y.year >= NEXT + t.years).reduce((a, y) => a + y.proration, 0) ?? 0);
   const deal = draftDeal(state, neg, t);
   const start = startYearFor(state, id, neg.kind);
   // Graded against the market as it stood before this deal.
@@ -647,7 +652,9 @@ function cpuExtensions(state: GameState): void {
   // Teams do most extensions in camp and early in the season, and re-sign their own free agents before the market opens.
   const offseason = isOffseason(state.date);
   if (offseason && state.date >= RULES.keyDates.negotiatingWindowOpens) return;
-  const busy = offseason ? 0.35 : state.date < addDays(RULES.keyDates.regularSeasonStart, 14) ? 0.05 : state.date < RULES.keyDates.tradeDeadline ? 0.018 : 0.008;
+  // The early summer is quiet; deals pick up as camp nears.
+  const camp = addDays(RULES.keyDates.regularSeasonStart, -50);
+  const busy = offseason ? 0.35 : state.date < camp ? 0.012 : state.date < addDays(RULES.keyDates.regularSeasonStart, 14) ? 0.05 : state.date < RULES.keyDates.tradeDeadline ? 0.018 : 0.008;
   for (const t of TEAMS) {
     if (t.id === state.userTeam || rng() > busy) continue;
     const candidates = Object.keys(state.players).filter((id) => {
@@ -662,8 +669,10 @@ function cpuExtensions(state: GameState): void {
     const chart = depthChart(state, t.id);
     const starters = new Set(Object.entries(chart).flatMap(([pos, ids]) => ids.slice(0, (STARTERS[pos as Position] ?? 1) + (offseason ? 1 : 0))));
     const start = year + 1;
+    // Front offices keep an eye on next year's cap: an extension has to fit, with some help from restructures.
+    const room = state.settings.capRules === "real" ? capSummary(state, t.id, start).space + 0.04 * salaryCap(state, start) : Infinity;
     const scored = candidates.filter((id) => starters.has(id)).map((id) => ({ id, v: teamValue(state, t.id, id, start) }))
-      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000)).sort((a, b) => b.v - a.v);
+      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000) * capScale(state, start) && x.v * 0.8 <= room).sort((a, b) => b.v - a.v);
     const pick = scored[0];
     if (!pick) continue;
     const ask = marketPrice(state, pick.id, start).apy;

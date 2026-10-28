@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { addDays, kickoff, longDate, shortDate } from "../../engine/dates";
-import { GAME_BY_ID, RULES, teamLabel } from "../../engine/league";
-import { calendarItems, GAME_OVER_DATE, type AgendaItem } from "../../engine/season";
+import { BASE_SEASON, GAME_BY_ID, RULES, teamLabel } from "../../engine/league";
+import { DRAFT_OVER } from "../../engine/draft";
+import { calendarItems, type AgendaItem } from "../../engine/season";
 import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
 import { useUi } from "../ui";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const KIND_LABEL = { game: "Game", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
-/** The calendar runs from the start of camp to draft day. */
-const FIRST_MONTH = "2026-07";
-const LAST_MONTH = GAME_OVER_DATE.slice(0, 7);
 
 /** Worth a spot on the month grid and the coming-up list: not routine practices or the offseason's daily grind. */
 function notable(a: AgendaItem): boolean {
@@ -41,6 +39,10 @@ function gameLine(game: GameState, id: string): { opp: string; result?: string; 
 
 export function CalendarScreen({ game }: { game: GameState }) {
   const ui = useUi();
+  // The calendar covers this season: from camp (the first year) or the day after the last draft, to the next draft.
+  const FIRST_MONTH = RULES.season === BASE_SEASON ? "2026-07" : `${RULES.season}-05`;
+  const lastDay = addDays(DRAFT_OVER, -1);
+  const LAST_MONTH = lastDay.slice(0, 7);
   const [month, setMonth] = useState(game.date.slice(0, 7));
   const [picked, setPicked] = useState(game.date);
 
@@ -51,7 +53,7 @@ export function CalendarScreen({ game }: { game: GameState }) {
   while (days.length % 7) days.push(null);
 
   const upcoming: { date: string; item: AgendaItem }[] = [];
-  for (let d = game.date; d <= GAME_OVER_DATE && upcoming.length < 14 && d <= addDays(game.date, 200); d = addDays(d, 1)) {
+  for (let d = game.date; d <= lastDay && upcoming.length < 14 && d <= addDays(game.date, 200); d = addDays(d, 1)) {
     for (const item of calendarItems(game, d)) {
       if (item.gameId && game.results[item.gameId]) continue;
       if (notable(item) && item.id !== "meeting:weekly") upcoming.push({ date: d, item });

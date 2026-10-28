@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  AWARDS, awardRace, collegeGames, collegeRecords, collegeWeeks, conferenceStandings, latestPoll, prospectLine,
+  AWARDS, awardRace, COLLEGE_SEASON, FINAL_POLL, collegeGames, collegeRecords, collegeWeeks, conferenceStandings, latestPoll, prospectLine,
   prospectTotals, rankOf, recordLabel, watchList, type AwardDef,
 } from "../../engine/college";
 import { COLLEGE_TEAM, CONFERENCE_IDS, CONFERENCES, conferenceName, schoolName } from "../../engine/collegeData";
@@ -19,7 +19,7 @@ export function CollegeScreen({ game }: { game: GameState }) {
     <section className="stack">
       <h2>College football</h2>
       <p className="muted">
-        All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : "playing the 2026 season every Saturday."} Only the
+        All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : `playing the ${COLLEGE_SEASON} season every Saturday.`} Only the
         NFL prospects are tracked as players: their stats and game logs are on each prospect's page, and the Scouting page is where you send our scouts.
       </p>
       <div className="tabs" role="group" aria-label="View">
@@ -35,7 +35,7 @@ export function CollegeScreen({ game }: { game: GameState }) {
 
 export function SchoolLink({ game, id, rank = true }: { game: GameState; id: string; rank?: boolean }) {
   const ui = useUi();
-  const r = rank ? rankOf(game, id, game.college!.cfp.length && game.date < "2027-01-26" ? "cfp" : "ap") : null;
+  const r = rank ? rankOf(game, id, game.college!.cfp.length && game.date < FINAL_POLL ? "cfp" : "ap") : null;
   return (
     <button className="link" onClick={() => ui.openSchool(id)}>
       {r ? <span className="muted">{r} </span> : null}{schoolName(id)}
@@ -127,7 +127,7 @@ function PollTable({ game, poll, prev }: { game: GameState; poll: CollegePoll; p
 
 function Polls({ game }: { game: GameState }) {
   const c = game.college!;
-  const [kind, setKind] = useState<"ap" | "cfp">(c.cfp.length && game.date < "2027-01-26" ? "cfp" : "ap");
+  const [kind, setKind] = useState<"ap" | "cfp">(c.cfp.length && game.date < FINAL_POLL ? "cfp" : "ap");
   const polls = c[kind];
   const [idx, setIdx] = useState<number | null>(null);
   const i = idx ?? polls.length - 1;

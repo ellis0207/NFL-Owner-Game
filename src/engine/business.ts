@@ -16,10 +16,10 @@
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
-import { dealOf, dealYear, leagueYear, leagueYearStart } from "./contracts";
-import { COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS } from "./collegeData";
+import { dealOf, dealYear, leagueYear, leagueYearStart, salaryCap } from "./contracts";
+import { cfbDate, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS } from "./collegeData";
 import { money, news, send } from "./inbox";
-import { RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
+import { BASE_SEASON, onSeasonChange, RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { addStory, MEDIA_BY_ID, mediaState } from "./outlets";
 import { rngFor, type Rng } from "./rng";
@@ -31,9 +31,15 @@ import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameSt
 const KEY = RULES.keyDates;
 const M = 1_000_000;
 
-/** Each team's share of national revenue (TV, NFL Ventures, licensing) by league year. */
+/** Each team's share of national revenue (TV, NFL Ventures, licensing) by league year: it moves with the cap, which is built on it. */
 export function nationalRevenue(year: number): number {
-  return Math.round(472 * M * Math.pow(1.06, year - 2026));
+  if (year <= BASE_SEASON) return 472 * M;
+  return Math.round(472 * M * salaryCap(undefined, year) / salaryCap(undefined, BASE_SEASON));
+}
+
+/** Prices and costs that rise with the years, about 4% a year from the first season. */
+function inflation(year: number, rate = 0.04): number {
+  return Math.pow(1 + rate, Math.max(0, year - BASE_SEASON));
 }
 
 /** Gate sharing: 34% of general ticket money after a 15% stadium deduction. */
@@ -44,8 +50,20 @@ const OPENING_CASH = 100 * M;
 /** How far the team can draw on its credit line before the owner has to put money in. */
 export const CREDIT_LINE = 300 * M;
 const INTEREST = 0.075;
-/** Last day the stadium calendar runs to while the game stops at the draft. */
-const CALENDAR_END = addDays(KEY.draftStart, -1);
+/** The stadium calendar runs a season at a time, to the eve of the draft. */
+let CALENDAR_END = "";
+/** The window to set next season's season-ticket and premium prices: after the regular season, before renewals. */
+export let PRICING_OPENS = "";
+export let RENEWAL_DEADLINE = "";
+let DEPOSITS_DUE = "";
+let VALUATIONS_DAY = "";
+onSeasonChange(() => {
+  CALENDAR_END = addDays(KEY.draftStart, -1);
+  PRICING_OPENS = addDays(KEY.regularSeasonEnd, 1);
+  RENEWAL_DEADLINE = `${RULES.season + 1}-03-31`;
+  DEPOSITS_DUE = `${RULES.season + 1}-04-15`;
+  VALUATIONS_DAY = addDays(KEY.regularSeasonStart, -7);
+});
 const COLD = new Set(["BUF", "NE", "NYJ", "NYG", "CLE", "PIT", "CIN", "BAL", "CHI", "GB", "DEN", "KC", "PHI", "WAS", "SEA", "TEN"]);
 
 // ---- Departments ----
@@ -154,6 +172,30 @@ function newBusiness(state: GameState): BusinessState {
   return b;
 }
 
+/**
+ * A new season on the books, the day after the draft: renewed season-ticket
+ * holders and the new prices take over, and the stadium calendar fills in
+ * through next spring.
+ */
+export function newBusinessSeason(state: GameState): void {
+  const b = business(state);
+  const idx = b.index ?? { season: 1, premium: 1 };
+  b.index = { season: idx.season * (b.next?.season ?? 1.03), premium: idx.premium * (b.next?.premium ?? 1.03) };
+  b.holders = b.renewal?.holders ?? b.holders;
+  delete b.renewal;
+  delete b.next;
+  delete b.ask;
+  const year = leagueYear(state.date);
+  // Older years leave the ledger; their net stays in the opening balance.
+  const old = b.ledger.filter((e) => e.year < year - 2);
+  b.opening += old.reduce((t, e) => t + e.amount, 0);
+  b.ledger = b.ledger.filter((e) => e.year >= year - 2);
+  b.gates = b.gates.slice(0, 60);
+  b.priceLog = b.priceLog.slice(0, 30);
+  const cutoff = addDays(state.date, -365);
+  b.events = [...b.events.filter((e) => e.date >= cutoff), ...standingCalendar(state, state.userTeam)];
+}
+
 /** Saves from before the business side get the books opened today. */
 export function ensureBusiness(state: GameState): void {
   if (!state.business) state.business = newBusiness(state);
@@ -226,14 +268,14 @@ function sponsorship(team: string): number {
   const games = SCHEDULE.filter((g) => g.home === team && !g.neutral && (g.type === "PRE" || g.type === "REG"));
   let gate = 0;
   for (const g of games) {
-    const r = gateModel(team, g, { mood: 1, win: 1, marketing: 1, price: 1, concessions: team === "ATL" ? "value" : "standard", parking: 1, noise: 1 });
+    const r = gateModel(team, g, { mood: 1, win: 1, marketing: 1, price: 1, concessions: team === "ATL" ? "value" : "standard", parking: 1, noise: 1, ticketIdx: 1, premiumIdx: 1 });
     gate += r.tickets * (1 - GATE_SHARE) + r.premium + r.concessions + r.parking + r.merch;
   }
   const abroad = SCHEDULE.filter((g) => g.home === team && g.neutral && g.type === "REG").length;
   gate += abroad * (gate / Math.max(1, games.length));
   // The shared pool comes back about even for a typical team.
   const landlord = team === "LA" ? 30 * M : 0;
-  const baseline = nationalRevenue(2026) + s.naming * s.namingShare + typicalEvents(s) * s.eventShare + gate + landlord;
+  const baseline = nationalRevenue(BASE_SEASON) + s.naming * s.namingShare + typicalEvents(s) * s.eventShare + gate + landlord;
   SPONSORSHIP[team] = Math.max(30 * M, mk.target - baseline);
   return SPONSORSHIP[team];
 }
@@ -243,7 +285,7 @@ export function revenueEstimate(state: GameState, team: string): number {
   const rec = standings(state)[team];
   const played = rec ? rec.w + rec.l + rec.t : 0;
   const wp = played ? winPct(rec.w, rec.l, rec.t) : 0.5;
-  return Math.round(MARKETS[team].target * (0.97 + 0.06 * wp) * Math.pow(1.06, leagueYear(state.date) - 2026));
+  return Math.round(MARKETS[team].target * (0.97 + 0.06 * wp) * inflation(leagueYear(state.date), 0.06));
 }
 
 /** A franchise value estimate: a revenue multiple, richer for teams that control their building and markets that pay. */
@@ -256,7 +298,7 @@ export function valuation(state: GameState, team: string): number {
 /** Rough yearly operating income at league-average budgets (for the league table). */
 export function operatingEstimate(state: GameState, team: string): number {
   const s = STADIUM_BY_TEAM[team];
-  const players = 300 * M * Math.pow(1.08, leagueYear(state.date) - 2026);
+  const players = 300 * M * salaryCap(state, leagueYear(state.date)) / salaryCap(state, BASE_SEASON);
   const depts = (Object.keys(DEPTS) as Dept[]).reduce((t, d) => t + DEPTS[d].cost[1] * (DEPTS[d].perGame ? homeDates(team).length : 1), 0);
   const costs = players + FOOTBALL_STAFF + BENEFITS + LEAGUE_DUES + businessOps(team) + depts + s.upkeep + s.rent + s.debt + 4 * M;
   return revenueEstimate(state, team) - Math.round(costs);
@@ -272,6 +314,9 @@ interface GateInputs {
   concessions: ConcessionTier;
   parking: number;
   noise: number;
+  /** Season-ticket and premium prices against the 2026 market prices. */
+  ticketIdx: number;
+  premiumIdx: number;
 }
 
 interface GateResult {
@@ -303,16 +348,16 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
     (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise;
   const want = general * index * 1.05;
   const singleSeats = Math.max(0, general - holders);
-  const singlePrice = mk.ticket * 1.2 * x.price * (pre ? 0.6 : 1);
+  const singlePrice = mk.ticket * x.ticketIdx * 1.2 * x.price * (pre ? 0.6 : 1);
   const singleWant = Math.max(0, want - holders) * Math.pow(x.price, -1.5);
   const singleSold = Math.round(Math.min(singleSeats, singleWant));
   const sold = holders + singleSold + premiumSeats(s);
   const attendance = Math.round((holders + singleSold) * (pre ? 0.82 : 0.93) + premiumSeats(s) * 0.9);
   const regHome = SCHEDULE.filter((x2) => x2.type === "REG" && x2.home === team && !x2.neutral).length;
   const preHome = SCHEDULE.filter((x2) => x2.type === "PRE" && x2.home === team && !x2.neutral).length;
-  const tickets = holders * mk.ticket * (pre ? 0.6 : 1) + singleSold * singlePrice;
+  const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + singleSold * singlePrice;
   // Suite and club money is spread over the home schedule; preseason games count half.
-  const premium = (mk.premium / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
+  const premium = (mk.premium * x.premiumIdx / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * CONCESSION_COMMISSION * s.gameDayShare;
   const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
   const merch = attendance * 11 * 0.45;
@@ -336,6 +381,8 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
     concessions: ours && b ? (controlOf(STADIUM_BY_TEAM[team]).concessions ? b.prices.concessions : "standard") : team === "ATL" ? "value" : "standard",
     parking: ours && b && controlOf(STADIUM_BY_TEAM[team]).parking ? b.prices.parking : 1,
     noise: rng ? 0.96 + rng() * 0.08 : 1,
+    ticketIdx: ours && b?.index ? b.index.season : inflation(RULES.season, 0.035),
+    premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
   };
 }
 
@@ -580,7 +627,11 @@ function standingCalendar(state: GameState, team: string): StadiumEvent[] {
   const s = STADIUM_BY_TEAM[team];
   const out: StadiumEvent[] = [];
   const mk = (e: Omit<StadiumEvent, "id" | "status">): StadiumEvent => ({ ...e, id: `ev-${e.date}-${out.length}`, status: "booked" });
-  for (const f of s.fixed) if (f.date > state.date) out.push(mk({ date: f.date, kind: "bowl", name: f.name, by: "fixed", low: f.net * 0.85, high: f.net * 1.15 }));
+  // The fixed events (bowls, title games) come back each year in the same week.
+  for (const f0 of s.fixed) {
+    const f = { ...f0, date: cfbDate(f0.date), net: f0.net * inflation(RULES.season) };
+    if (f.date > state.date && f.date <= CALENDAR_END) out.push(mk({ date: f.date, kind: "bowl", name: f.name, by: "fixed", low: f.net * 0.85, high: f.net * 1.15 }));
+  }
   if (s.collegeTenant) {
     for (const g of COLLEGE_SCHEDULE) {
       if (g.home !== s.collegeTenant || (g as { site?: string }).site || g.date <= state.date) continue;
@@ -589,7 +640,7 @@ function standingCalendar(state: GameState, team: string): StadiumEvent[] {
   }
   const nfl = nflDates(team);
   if (s.mls) {
-    const windows: [string, string][] = [["2026-08-01", "2026-10-31"], ["2027-02-27", CALENDAR_END]];
+    const windows: [string, string][] = [[`${RULES.season}-08-01`, `${RULES.season}-10-31`], [`${RULES.season + 1}-02-27`, CALENDAR_END]];
     for (const [from, to] of windows) {
       for (let d = from; d <= to; d = addDays(d, 14)) {
         let day = d;
@@ -734,7 +785,7 @@ function monthItems(state: GameState, note?: string): void {
   const us = state.userTeam;
   const s = STADIUM_BY_TEAM[us];
   const year = leagueYear(state.date);
-  const grow = Math.pow(1.06, year - 2026);
+  const grow = inflation(year, 0.05);
   const m = (x: number) => x / 12;
   post(state, "national", m(nationalRevenue(year)), note ?? "Monthly distribution from the league");
   post(state, "sponsorship", m(sponsorship(us) * grow * [0.97, 1, 1.02, 1.03][b.budget.marketing]), note);
@@ -819,10 +870,6 @@ function sync(state: GameState): void {
 
 // ---- Next season's tickets ----
 
-/** The window to set next season's season-ticket and premium prices: after the regular season, before renewals. */
-export const PRICING_OPENS = addDays(KEY.regularSeasonEnd, 1);
-export const RENEWAL_DEADLINE = "2027-03-31";
-const DEPOSITS_DUE = "2027-04-15";
 
 export function setNextSeasonPrices(state: GameState, season: number, premium: number): string | null {
   const b = business(state);
@@ -866,8 +913,9 @@ function renewals(state: GameState): void {
   if (state.date === DEPOSITS_DUE && b.renewal) {
     const mk = MARKETS[us];
     const games = 9;
-    const season = b.renewal.holders * mk.ticket * (b.next?.season ?? 1.03) * games;
-    const premium = mk.premium * (b.next?.premium ?? 1.03) * (b.renewal.rate + 0.03);
+    const idx = b.index ?? { season: 1, premium: 1 };
+    const season = b.renewal.holders * mk.ticket * idx.season * (b.next?.season ?? 1.03) * games;
+    const premium = mk.premium * idx.premium * (b.next?.premium ?? 1.03) * (b.renewal.rate + 0.03);
     post(state, "deposits", (season + premium) * 0.35, `${RULES.season + 1} season tickets and suites: 35% deposits`);
   }
 }
@@ -892,7 +940,7 @@ export function businessDaily(state: GameState): void {
     const m = mediaState(state);
     m.coach = Math.max(0, Math.min(100, m.coach + [-0.4, 0, 0.2, 0.35][b.budget.facilities]));
   }
-  if (state.date === "2026-09-02") valuationsStory(state);
+  if (state.date === VALUATIONS_DAY) valuationsStory(state);
   creditCheck(state);
 }
 
