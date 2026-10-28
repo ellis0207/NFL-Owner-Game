@@ -4,7 +4,9 @@ import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
 import { GAMES_BY_DATE, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
 import { weeklyDevelopment } from "./development";
 import { healInjuries, injure, injuryRisk } from "./injuries";
-import { applyCutdown, depthChart, fillEmergencies, manageInjuredReserve, proposeFinal53, rosterCount, trimPlan, type RosterMove } from "./roster";
+import { applyCutdown, depthChart, fillEmergencies, fillPracticeSquad, formPracticeSquads, gameDayElevations, manageInjuredReserve, practiceSquad, proposeFinal53, protectPracticeSquads, rosterCount, trimPlan, type RosterMove } from "./roster";
+import { processWaivers } from "./waivers";
+import { applyTerminationPay } from "./roster";
 import { rngFor } from "./rng";
 import { simulateGame } from "./sim";
 import { stat } from "./stats";
@@ -15,7 +17,7 @@ import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, s
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
 import { contractsDaily, startHoldouts } from "./negotiation";
-import { faDaily } from "./freeagency";
+import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
 
@@ -38,7 +40,9 @@ export function veteranReportDate(team: string): string {
 
 export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31): GameState {
   const players: GameState["players"] = {};
-  for (const p of PLAYERS) players[p.id] = { team: p.team, status: "camp" };
+  for (const p of PLAYERS) {
+    players[p.id] = p.team ? { team: p.team, status: "camp" } : { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
+  }
   const date = veteranReportDate(userTeam);
   const state: GameState = {
     version: 3,
@@ -236,12 +240,25 @@ export function advanceDay(state: GameState): void {
   if (isGameOver(state)) return;
   const date = state.date;
   healInjuries(state);
+  // Waiver claims are awarded first thing; practice squads form once the cutdown claims are in.
+  processWaivers(state);
+  if (date === KEY.practiceSquadSigningOpens) formPracticeSquads(state);
+  if (date === KEY.regularSeasonStart) applyTerminationPay(state);
 
   const playedToday = new Set<string>();
   for (const g of GAMES_BY_DATE[date] ?? []) {
     if (state.results[g.id]) continue;
     const m = matchup(state, g);
     if (!m) continue;
+    if (g.type !== "PRE") {
+      for (const team of [m.away, m.home]) {
+        const up = gameDayElevations(state, team);
+        if (team === state.userTeam && up.length) {
+          send(state, "staff", `${teamStaff(team).HC?.name ?? "Head Coach"}, head coach`, "Practice squad elevations",
+            `We're thin, so I elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for today's game.`);
+        }
+      }
+    }
     const { result, box } = simulateGame(state, g, m.away, m.home);
     state.results[g.id] = result;
     state.box[g.id] = box;
@@ -256,6 +273,12 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   contractsDaily(state);
   faDaily(state);
+  if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
+    protectPracticeSquads(state);
+    for (const t of Object.keys(TEAM_BY_ID)) {
+      if (stillPlaying(state, t) && practiceSquad(state, t).length < RULES.rosterLimits.practiceSquad - 2) fillPracticeSquad(state, t);
+    }
+  }
   if (weekday(date) === "Tuesday" && !offseason) {
     weeklyDevelopment(state, playedLastWeek(state));
     if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2)) payWeek(state);

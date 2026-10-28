@@ -1,23 +1,34 @@
-// Free agency. From the negotiating window, every team can make offers to
-// every unrestricted free agent. Players weigh money, guarantees and length,
-// then winning, role, scheme, city and loyalty, and the agent shops the best
-// offer to the other bidders. Top players go in the first days; the rest see
-// their prices fall the longer they wait. CPU teams bid within their own cap
-// room and needs; the owner bids through contract talks.
+// Free agency. Every unsigned player is on the market all year: the real
+// pool of unsigned veterans when camps open, the players cut at the cutdown
+// once they clear waivers, and everyone released after that.
+//
+// During the season free agents sign one-year deals for the weeks that are
+// left, mostly near the minimum: teams sign them to fill injuries, to upgrade
+// a weak spot, or for the practice squad. Once a team's season is over it can
+// sign reserve/future deals for next year.
+//
+// From the negotiating window, every team can make offers to every
+// unrestricted free agent. Players weigh money, guarantees and length, then
+// winning, role, scheme, city and loyalty, and the agent shops the best offer
+// to the other bidders. Top players go in the first days; the rest see their
+// prices fall the longer they wait. CPU teams bid within their own cap room
+// and needs; the owner bids through contract talks.
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
-import { capHit, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
-import { dealCapHit, dealOf, minimumSalary, writeDeal, writeMinimumDeal } from "./contracts";
-import { addDays, ageOn, daysBetween } from "./dates";
+import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
+import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, writeDeal, writeMinimumDeal } from "./contracts";
+import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { invalidateMarket, marketPrice, marketView, teamValue } from "./market";
 import { offerValue, STARTERS, teamQuality } from "./negotiation";
-import { faClass, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
+import { faClass, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
+import { claimView, depthChart, logMove, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
 import { perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
-import type { FaOffer, FreeAgent, GameState, OfferTerms, Position } from "./types";
+import type { Deal, FaOffer, FreeAgent, GameState, OfferTerms, Position } from "./types";
+import { onWaivers } from "./waivers";
 
 const KEY = RULES.keyDates;
 
@@ -37,43 +48,95 @@ export function inWindow(date: string): boolean {
   return date >= KEY.negotiatingWindowOpens && date < KEY.newLeagueYear;
 }
 
+/**
+ * The league year a free agent signs for today: this season until the
+ * regular season ends, then next year (reserve/future deals, then free agency).
+ */
+export function marketYear(date: string): number {
+  return date > KEY.regularSeasonEnd && leagueYear(date) === RULES.season ? NEXT : leagueYear(date);
+}
+
+/** Camp and the season: the street market, where unsigned players take one-year deals at a discount. */
+export function isStreetMarket(date: string): boolean {
+  return leagueYear(date) === RULES.season && date <= KEY.regularSeasonEnd;
+}
+
+/** Nobody signed them for the full year: in camp and during the season, the street pays a fraction of a market deal. */
+export const STREET_SCALE = 0.5;
+
+function minFor(id: string, year: number): number {
+  return minimumSalary(yearsExpIn(id, year), year);
+}
+
 function minNext(id: string): number {
-  return minimumSalary(yearsExpIn(id, NEXT), NEXT);
+  return minFor(id, NEXT);
+}
+
+function faYear(fa: FreeAgent): number {
+  return fa.year ?? NEXT;
 }
 
 // ---- Entering the market ----
 
 function enter(state: GameState, id: string, from: string | null): FreeAgent {
-  const price = marketPrice(state, id, NEXT);
+  const year = marketYear(state.date);
+  const street = isStreetMarket(state.date);
+  const price = marketPrice(state, id, year);
   const ah = agentHidden(agentFor(id).id);
   const pr = priorities(id);
-  const min = minNext(id);
-  const base = Math.max(min, price.apy);
+  const min = minFor(id, year);
+  const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 27;
+  const base = Math.max(min, price.apy * (street ? STREET_SCALE * (age >= 31 ? 0.8 : 1) : 1));
   // What the player will settle for on the open market, before any team's pull.
   const reservation = Math.max(0.72, Math.min(1.05, 0.84 + 0.12 * pr.money + 0.04 * pr.ego - (state.players[id]?.injury?.seasonEnding ? 0.06 : 0)));
   const floor = Math.max(min, base * reservation);
   const fa: FreeAgent = {
-    player: id, from, since: state.date, status: "open",
+    player: id, year, from, since: state.date, status: "open",
     base, floor, floor0: floor,
     ask: Math.max(floor * 1.03, base * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power)),
-    askYears: price.years,
-    askGuarantee: Math.max(0.03, Math.min(0.8, price.guaranteeShare * (0.9 + 0.25 * ah.guaranteeFocus))),
+    askYears: street ? 1 : price.years,
+    askGuarantee: Math.max(street ? 0 : 0.03, Math.min(0.8, price.guaranteeShare * (street ? 0.25 : 0.9 + 0.25 * ah.guaranteeFocus))),
     offers: [],
   };
   market(state)[id] = fa;
   return fa;
 }
 
-/** Pending free agents enter the market when the window opens; released players whenever they're cut. */
+/** The yearly salary a free agent would sign for today (one-year terms), before any team's pull. */
+export function freeAgentPrice(state: GameState, id: string): number {
+  const fa = market(state)[id];
+  if (fa?.status === "open" && faYear(fa) === marketYear(state.date)) return fa.floor;
+  if (state.players[id]?.status !== "fa") return Infinity;
+  return enter(state, id, state.players[id].lastTeam ?? null).floor;
+}
+
+/**
+ * Unsigned players are on the market all year (once they clear waivers), and
+ * re-price when the year they'd sign for changes. Pending free agents join
+ * when the negotiating window opens.
+ */
 function admit(state: GameState): void {
   const m = market(state);
   const opening = state.date === KEY.negotiatingWindowOpens;
+  const year = marketYear(state.date);
   for (const [id, ps] of Object.entries(state.players)) {
     const cur = m[id];
     if (ps.status === "fa") {
+      if (onWaivers(state, id)) continue;
       if (!cur || cur.status === "signed") enter(state, id, ps.lastTeam ?? null);
+      else if (cur.status === "open" && faYear(cur) !== year) {
+        // Nobody signed him all season: the market for next year starts well below his old number.
+        const fa = enter(state, id, ps.lastTeam ?? null);
+        const min = minFor(id, year);
+        fa.base = Math.max(min, fa.base * 0.55);
+        fa.floor = fa.floor0 = Math.max(min, fa.floor * 0.55);
+        fa.ask = Math.max(fa.floor * 1.03, fa.ask * 0.55);
+        fa.askYears = Math.min(fa.askYears, 2);
+        fa.since = cur.since;
+      }
       continue;
     }
+    if (!isMarketOpen(state.date)) continue;
     if (!ps.team) continue;
     const last = dealOf(state, id)?.years.filter((y) => !y.void).pop()?.year ?? null;
     const expiring = last === null || last < NEXT;
@@ -138,6 +201,12 @@ function firstYearHit(state: GameState, id: string, team: string, t: OfferTerms)
   return dealCapHit(deal, NEXT);
 }
 
+/** A free agent's contract from agreed terms, starting in the year the market is signing for. */
+function faDeal(state: GameState, id: string, team: string, t: OfferTerms, year: number): Deal {
+  const deal = writeDeal({ ...t }, { team, date: state.date, kind: "veteran", firstYear: year, yearsExp: yearsExpIn(id, year) });
+  return prorateFirstYear(deal, state.date);
+}
+
 /** Cap already promised by a team: window agreements not yet signed. */
 export function committed(state: GameState, team: string): number {
   let total = 0;
@@ -154,13 +223,14 @@ export function committed(state: GameState, team: string): number {
 export function signFreeAgent(state: GameState, id: string, team: string, t: OfferTerms): void {
   const fa = market(state)[id] ?? enter(state, id, state.players[id]?.lastTeam ?? state.players[id]?.team ?? null);
   const p = PLAYER_BY_ID[id];
-  const deal = writeDeal({ ...t }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(id, NEXT) });
+  const year = isMarketOpen(state.date) ? NEXT : marketYear(state.date);
+  const deal = faDeal(state, id, team, t, year);
   const reSigned = fa.from === team;
-  const grades = gradeDeal(state, { player: id, team, date: state.date, years: t.years, apy: deal.apy, guaranteed: deal.guaranteedAtSigning, total: deal.total }, NEXT, reSigned);
+  const grades = gradeDeal(state, { player: id, team, date: state.date, years: t.years, apy: deal.apy, guaranteed: deal.guaranteedAtSigning, total: deal.total }, year, reSigned);
   state.signings.unshift({
     id: `${state.date}-${id}`, player: id, team, date: state.date, kind: "free-agent",
     years: t.years, total: deal.total, apy: deal.apy, guaranteed: deal.guaranteedAtSigning,
-    grades, valueAtSigning: teamValue(state, team, id, NEXT),
+    grades, valueAtSigning: teamValue(state, team, id, year),
   });
   fa.offers = [];
   delete fa.lastLook;
@@ -174,7 +244,12 @@ export function signFreeAgent(state: GameState, id: string, team: string, t: Off
     fa.status = "agreed";
     fa.agreed = { team, terms: { ...t }, date: state.date };
   } else install(state, id, team, deal);
-  // Anyone else still talking to the player hears it's over.
+  endOtherTalks(state, id, team);
+}
+
+/** Anyone else still talking to the player hears it's over. */
+function endOtherTalks(state: GameState, id: string, team: string): void {
+  const p = PLAYER_BY_ID[id];
   const neg = state.negotiations[id];
   if (neg && neg.status === "open" && neg.team !== team) {
     neg.status = "ended";
@@ -191,11 +266,18 @@ function install(state: GameState, id: string, team: string, deal = dealOf(state
   const fa = market(state)[id];
   state.contracts[id] = deal;
   const ps = state.players[id];
-  state.players[id] = { ...ps, team, status: "camp" };
+  // After the regular season, deals for next year are reserve/future contracts until the offseason starts.
+  const future = !isOffseason(state.date) && deal.years[0]?.year > leagueYear(state.date);
+  state.players[id] = { ...ps, team, status: future ? "future" : rosterStatusNow(state) };
   delete state.players[id].lastTeam;
+  delete state.players[id].elevations;
+  if (state.psPlans) delete state.psPlans[id];
   if (fa) fa.status = "signed";
-  payCash(state, team, deal.signingBonus, NEXT);
+  endOtherTalks(state, id, team);
+  payCash(state, team, deal.signingBonus, deal.years[0]?.year ?? NEXT);
   invalidateRosters(state);
+  const p = PLAYER_BY_ID[id];
+  logMove(state, team, id, future ? "future" : "signed", `signed ${p.position} ${p.name}${future ? " to a reserve/future deal" : ""}`);
 }
 
 /** At 4 PM on the first day of the league year, the window's agreements become contracts. */
@@ -209,15 +291,225 @@ function signAgreed(state: GameState): void {
   invalidateMarket(state);
 }
 
+// ---- The street: camp, the season, and reserve/future deals ----
+
+/**
+ * Signs a free agent to a one-year deal at what the player will take today
+ * (at least the minimum), for the weeks left in the season. A veteran
+ * minimum deal counts like a two-year player's minimum on the cap.
+ */
+export function signStreetFreeAgent(state: GameState, team: string, id: string, opts: { guaranteedWeeks?: number; salary?: number } = {}): void {
+  const year = marketYear(state.date);
+  const price = Math.max(minFor(id, year), opts.salary ?? freeAgentPrice(state, id));
+  const min = minFor(id, year);
+  let deal: Deal;
+  if (price <= min * 1.02) {
+    deal = writeMinimumDeal(team, state.date, yearsExpIn(id, year), { year });
+  } else {
+    const total = Math.round(price / 10_000) * 10_000;
+    deal = faDeal(state, id, team, { years: 1, total, signingBonus: 0, guaranteed: 0, injuryGuaranteed: 0, voidYears: 0, shape: "flat" }, year);
+  }
+  if (opts.guaranteedWeeks) {
+    const y = deal.years[0];
+    y.guaranteed = Math.max(y.guaranteed, Math.round((y.base * opts.guaranteedWeeks) / REG_WEEKS));
+    deal.guaranteedAtSigning = Math.max(deal.guaranteedAtSigning, y.guaranteed);
+  }
+  if (price > min * 1.3) {
+    state.signings.unshift({
+      id: `${state.date}-${id}`, player: id, team, date: state.date, kind: "free-agent",
+      years: 1, total: deal.total, apy: deal.apy, guaranteed: deal.guaranteedAtSigning,
+      grades: gradeDeal(state, { player: id, team, date: state.date, years: 1, apy: deal.apy, guaranteed: deal.guaranteedAtSigning, total: deal.total }, year, false),
+      valueAtSigning: teamValue(state, team, id, year),
+    });
+    if (deal.total >= 3_000_000) news(state, `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} signs with the ${teamLabel(team)}: one year, ${money(deal.total)}`);
+  }
+  changeMorale(state, id, 4);
+  install(state, id, team, deal);
+}
+
+/** The minimum a free agent can be signed for today, by the year the deal covers. */
+export function minimumToday(state: GameState, id: string): number {
+  return minFor(id, marketYear(state.date));
+}
+
+/**
+ * The GM's estimate of what a free agent will cost on a one-year deal: what
+ * agents are saying around the league, read as well as the GM reads them.
+ */
+export function priceEstimate(state: GameState, team: string, id: string): number {
+  const price = freeAgentPrice(state, id);
+  if (!Number.isFinite(price)) return price;
+  const err = gaussian(rngFor(state.seed, `price:${team}:${id}`)) * Math.max(0.03, (100 - staffEffects(team).gmEval) / 400);
+  const min = minimumToday(state, id);
+  const est = price * (1 + err);
+  return est <= min * 1.08 ? min : Math.round(est / 50_000) * 50_000;
+}
+
+/** The owner signs a free agent to a one-year minimum deal on the spot, if his agent will take it. */
+export function canSignAtMinimum(state: GameState, team: string, id: string): { ok: boolean; reason?: string } {
+  if (state.players[id]?.status !== "fa") return { ok: false, reason: "Not a free agent." };
+  if (onWaivers(state, id)) return { ok: false, reason: "On waivers: claim him, or wait until he clears." };
+  if (isMarketOpen(state.date)) return { ok: false, reason: "Free agency is open: make an offer through contract talks." };
+  const fa = market(state)[id] ?? (freeAgentPrice(state, id), market(state)[id]);
+  if (!fa || fa.status !== "open") return { ok: false, reason: "Not available." };
+  const year = marketYear(state.date);
+  const future = year > leagueYear(state.date);
+  if (future && stillPlaying(state, team)) return { ok: false, reason: "Reserve/future deals can be signed once our season is over." };
+  if (!future && rosterRoom(state, team) <= 0) return { ok: false, reason: "The roster is full: release someone first." };
+  const min = minimumToday(state, id);
+  if (state.settings.capRules === "real" && !future && capSummary(state, team).space < min) return { ok: false, reason: "Not enough cap space." };
+  if (!streetAccepts(state, team, id, min)) return { ok: false, reason: "His agent wants more than the minimum: open contract talks." };
+  return { ok: true };
+}
+
+export function signAtMinimum(state: GameState, team: string, id: string): void {
+  if (!canSignAtMinimum(state, team, id).ok) return;
+  const year = marketYear(state.date);
+  if (year > leagueYear(state.date)) {
+    install(state, id, team, writeMinimumDeal(team, state.date, yearsExpIn(id, year), { year }));
+    return;
+  }
+  signStreetFreeAgent(state, team, id, { salary: minimumToday(state, id) });
+}
+
+/** Would the player sign a one-year deal with this team at this salary today? */
+export function streetAccepts(state: GameState, team: string, id: string, salary: number): boolean {
+  const fa = market(state)[id];
+  if (!fa || fa.status !== "open") return false;
+  return salary * (1 + teamPull(state, id, team, fa.from)) >= fa.floor * 0.999;
+}
+
+/** During the season, unsigned players' prices drift down week by week. */
+function streetDecay(state: GameState): void {
+  if (weekday(state.date) !== "Tuesday") return;
+  for (const fa of Object.values(market(state))) {
+    if (fa.status !== "open") continue;
+    const min = minFor(fa.player, faYear(fa));
+    fa.floor = Math.max(min, fa.floor * 0.95);
+    fa.ask = Math.max(fa.floor * 1.03, fa.ask * 0.96);
+  }
+}
+
+/**
+ * Tuesdays in camp and the season: CPU front offices look over the street for
+ * a clear upgrade at a position, and sign one if it fits under the cap.
+ */
+function cpuStreetSignings(state: GameState): void {
+  if (weekday(state.date) !== "Tuesday" || !isStreetMarket(state.date)) return;
+  const year = marketYear(state.date);
+  const open = Object.values(market(state)).filter((fa) => fa.status === "open" && faYear(fa) === year && !onWaivers(state, fa.player) && state.players[fa.player]?.status === "fa");
+  if (!open.length) return;
+  // The public's best available: front offices only look hard at the top of the list.
+  const board = open.map((fa) => ({ fa, v: marketView(state, fa.player) })).sort((a, b) => b.v - a.v).slice(0, 80);
+  for (const t of TEAMS) {
+    const team = t.id;
+    if (team === state.userTeam) continue;
+    const rng = rngFor(state.seed, `street:${team}:${state.date}`);
+    if (rng() > 0.35) continue;
+    const space = state.settings.capRules === "real" ? capSummary(state, team).space - 2_000_000 : Infinity;
+    if (space < 1_000_000) continue;
+    const chart = depthChart(state, team);
+    let best: { id: string; gain: number; price: number } | null = null;
+    for (const { fa } of board) {
+      const id = fa.player;
+      const pos = PLAYER_BY_ID[id].position;
+      const starters = STARTERS[pos] ?? 1;
+      const room = chart[pos] ?? [];
+      const weakest = room[Math.min(room.length, starters) - 1];
+      const gain = claimView(state, team, id) - (weakest ? claimView(state, team, weakest) : 40);
+      if (gain < 3 + rng() * 2) continue;
+      const price = Math.max(fa.floor, minFor(id, year));
+      if (price > space) continue;
+      // What the front office will pay for a short-term fix.
+      if (price > Math.max(minFor(id, year) * 1.5, teamValue(state, team, id, year) * STREET_SCALE * 1.2)) continue;
+      if (!streetAccepts(state, team, id, price)) continue;
+      if (!best || gain > best.gain) best = { id, gain, price };
+    }
+    if (!best) continue;
+    if (rosterRoom(state, team) <= 0) {
+      const cut = weakestOnRoster(state, team, PLAYER_BY_ID[best.id].position);
+      if (!cut) continue;
+      releasePlayer(state, cut);
+    }
+    signStreetFreeAgent(state, team, best.id);
+  }
+}
+
+/**
+ * Before the cutdown, a team that loses a player for the season (or is below
+ * 90) signs a camp body at the position.
+ */
+function cpuCampBodies(state: GameState): void {
+  if (state.date >= KEY.rosterCutdown || leagueYear(state.date) !== RULES.season) return;
+  for (const t of TEAMS) {
+    const team = t.id;
+    if (rosterRoom(state, team) <= 1) continue;
+    const rng = rngFor(state.seed, `camp:${team}:${state.date}`);
+    if (rng() > 0.25) continue;
+    const need = needs(state, team, RULES.season);
+    const pos = (Object.entries(need) as [Position, Need][])
+      .map(([pos, n]) => ({ pos, gap: n.depth + 2 - n.have })).sort((a, b) => b.gap - a.gap)[0]?.pos;
+    if (!pos) continue;
+    const pick = Object.values(market(state))
+      .filter((fa) => fa.status === "open" && PLAYER_BY_ID[fa.player].position === pos && state.players[fa.player]?.status === "fa" && !onWaivers(state, fa.player) && fa.floor <= minFor(fa.player, RULES.season) * 1.05)
+      .map((fa) => ({ id: fa.player, v: claimView(state, team, fa.player) + rng() * 3 }))
+      .sort((a, b) => b.v - a.v)[0];
+    if (!pick) continue;
+    signStreetFreeAgent(state, team, pick.id);
+    if (team === state.userTeam) {
+      send(state, "transaction", gmName(state), "Camp signing",
+        `With an open spot on the 90 I signed ${pos} ${PLAYER_BY_ID[pick.id].name} to a one-year minimum deal for depth in camp.`);
+    }
+  }
+}
+
+/** Reserve/future deals: once its season is over, a team signs players for next year from the street. */
+function cpuFutures(state: GameState): void {
+  if (state.date < KEY.reserveFutureSigningsOpen || state.date >= KEY.newLeagueYear) return;
+  for (const t of TEAMS) {
+    const team = t.id;
+    if (team === state.userTeam || stillPlaying(state, team)) continue;
+    const rng = rngFor(state.seed, `futures:${team}:${state.date}`);
+    if (rng() > 0.3) continue;
+    // Most reserve/future deals go to a team's own practice squad (about three in four stay on); the street tops it up.
+    const futures = teamPlayerIds(state, team).filter((id) => {
+      const d = dealOf(state, id);
+      return state.players[id].status === "future" || (d?.kind === "minimum" && d.signed > KEY.regularSeasonEnd && d.years[0]?.year === NEXT);
+    }).length;
+    const target = 9 + Math.floor(rngFor(state.seed, `futures-target:${team}`)() * 5);
+    if (futures + 0.75 * practiceSquad(state, team).length >= target) continue;
+    const pick = Object.values(market(state))
+      .filter((fa) => fa.status === "open" && state.players[fa.player]?.status === "fa" && !onWaivers(state, fa.player) && fa.floor <= minNext(fa.player) * 1.05 && PLAYER_BY_ID[fa.player].yearsExp <= 4)
+      .map((fa) => ({ id: fa.player, v: claimView(state, team, fa.player) + rng() * 4 }))
+      .sort((a, b) => b.v - a.v)[0];
+    if (!pick) continue;
+    install(state, pick.id, team, writeMinimumDeal(team, state.date, yearsExpIn(pick.id, NEXT), { year: NEXT }));
+  }
+}
+
+/** Teams still alive in the playoffs (or the regular season). */
+export function stillPlaying(state: GameState, team: string): boolean {
+  if (state.date <= KEY.regularSeasonEnd) return true;
+  if (isOffseason(state.date)) return false;
+  const seeds = state.seeds;
+  if (!seeds || ![...seeds.AFC, ...seeds.NFC].includes(team)) return false;
+  for (const [gid, m] of Object.entries(state.playoffTeams)) {
+    const r = state.results[gid];
+    if (!r || (m.away !== team && m.home !== team)) continue;
+    if ((r.home === team) !== (r.homeScore > r.awayScore)) return false;
+  }
+  return true;
+}
+
 // ---- CPU teams ----
 
 interface Need { have: number; starters: number; depth: number; starterView: number }
 
-function needs(state: GameState, team: string): Record<string, Need> {
+function needs(state: GameState, team: string, year = NEXT): Record<string, Need> {
   const eye = staffEffects(team).gmEval;
   const byPos: Record<string, number[]> = {};
   for (const id of teamPlayerIds(state, team)) {
-    if (capHit(id, NEXT, state) <= 0 && dealOf(state, id)?.years.every((y) => y.year < NEXT)) continue;
+    if (capHit(id, year, state) <= 0 && dealOf(state, id)?.years.every((y) => y.year < year)) continue;
     (byPos[PLAYER_BY_ID[id].position] ??= []).push(perceivedAbility(state, id, `gm:${team}`, eye));
   }
   for (const fa of Object.values(market(state))) {
@@ -513,7 +805,17 @@ export function interestReport(state: GameState, id: string, team: string): stri
 // ---- Each day ----
 
 export function faDaily(state: GameState): void {
-  if (!isMarketOpen(state.date) || state.date >= KEY.draftStart) return;
+  if (state.date >= KEY.draftStart) return;
+  if (!isMarketOpen(state.date)) {
+    admit(state);
+    if (isStreetMarket(state.date)) {
+      streetDecay(state);
+      cpuCampBodies(state);
+      cpuStreetSignings(state);
+    }
+    cpuFutures(state);
+    return;
+  }
   const day = daysBetween(KEY.negotiatingWindowOpens, state.date);
   if (state.date === KEY.newLeagueYear) signAgreed(state);
   admit(state);

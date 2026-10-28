@@ -18,7 +18,7 @@ export interface ContractSeason {
 }
 
 export interface Contract {
-  source: "overthecap" | "estimated-from-apy" | "estimated-minimum";
+  source: "overthecap" | "estimated-from-apy" | "estimated-minimum" | "free-agent";
   signedYear: number | null;
   years: number | null;
   totalValue: number | null;
@@ -52,7 +52,10 @@ export interface PlayerData {
   name: string;
   firstName: string | null;
   lastName: string | null;
-  team: string;
+  /** The camp roster the player starts on; null for the free agent pool. */
+  team: string | null;
+  /** For the free agent pool: the player's last NFL team. */
+  lastTeam?: string | null;
   position: Position;
   depthChartPosition: string | null;
   jersey: number | null;
@@ -149,6 +152,8 @@ export interface Rules {
   minimumSalaryNextYear: Record<string, number>;
   practiceSquadWeekly: { standard: number; veteranMin: number; veteranMax: number };
   rosterLimits: { offseason: number; regularSeason: number; practiceSquad: number; gameDayActive: number };
+  /** Waiver priority before the standings take over: the 2026 draft order, first claim first. */
+  waiverOrder: string[];
   veteranReportDaysBeforeOpener: number;
   veteranReportDaysBeforeMondayOpener: number;
   rookieEarlyReportDays: number;
@@ -157,8 +162,11 @@ export interface Rules {
 
 // ---- Saved game ----
 
-/** camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. ir: injured reserve. fa: free agent. */
-export type RosterStatus = "camp" | "active" | "ps" | "ir" | "fa";
+/**
+ * camp: on the offseason (90-man) roster. active: on the 53. ps: practice squad. ir: injured reserve.
+ * future: signed to a reserve/future deal that starts next league year. fa: free agent (or on waivers).
+ */
+export type RosterStatus = "camp" | "active" | "ps" | "ir" | "future" | "fa";
 
 export interface Injury {
   type: string;
@@ -183,6 +191,12 @@ export interface PlayerState {
   lastTeam?: string;
   /** Staying away from camp, or showing up and not practicing, until a new deal is done. */
   holdout?: { kind: "holdout" | "holdin"; since: string };
+  /** Practice squad: times elevated to the game-day roster this season (three is the limit). */
+  elevations?: number;
+  /** Practice squad: the game day the player is elevated for. */
+  elevatedFor?: string;
+  /** Signed off another team's practice squad: has to stay on the 53 until this date. */
+  keepUntil?: string;
 }
 
 export type DealKind =
@@ -408,6 +422,8 @@ export interface FaOffer {
 /** A player on the open market. Everything here but the offers' existence is hidden. */
 export interface FreeAgent {
   player: string;
+  /** The league year the prices below are for: this season's remaining weeks, or next year's. Absent: next year. */
+  year?: number;
   /** The team that last held the player's rights. */
   from: string | null;
   since: string;
@@ -452,6 +468,33 @@ export interface OffseasonState {
   picksOwed: { from: string; to: string; pick: string; player: string }[];
 }
 
+/** A released player on the waiver wire: other teams can claim the contract until the deadline. */
+export interface WaiverEntry {
+  player: string;
+  /** The team that released the player. */
+  from: string;
+  placed: string;
+  /** Claims are awarded at 4 PM ET on this day. */
+  clears: string;
+  /** The contract a claiming team takes on (bonus proration stays with the old team). */
+  deal: Deal | null;
+  /** Dead money the old team is relieved of if someone claims the player. */
+  relief: { thisYear: number; nextYear: number };
+  /** Teams that put in a claim; the owner can name who to release to make room. */
+  claims: { team: string; drop?: string }[];
+  /** The old team plans to sign the player to its practice squad if no one claims him. */
+  psIntent?: boolean;
+}
+
+/** One line in the league's transaction wire. */
+export interface Transaction {
+  date: string;
+  team: string;
+  player: string;
+  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir";
+  text: string;
+}
+
 export interface TeamFinance {
   /** Cash paid to players, by league year. */
   paid: Record<number, number>;
@@ -484,8 +527,21 @@ export interface GameState {
   finance: Record<string, TeamFinance>;
   /** The offseason: tags, tenders and options; created after the Super Bowl. */
   offseason?: OffseasonState;
-  /** The free-agent market by player, from the negotiating window on. */
+  /** The free-agent market by player: every unsigned player, all year. */
   fa?: Record<string, FreeAgent>;
+  /** Players on waivers, by player. */
+  waivers?: Record<string, WaiverEntry>;
+  /** Players a team released at cutdown and plans to bring back on its practice squad. */
+  psPlans?: Record<string, string>;
+  /** Practice squad players each team protects from other teams this week (up to four). */
+  psProtect?: Record<string, string[]>;
+  /**
+   * Termination pay: vested veterans on a roster for Week 1, by player, with
+   * the league year. Their salary for that season is owed even if released.
+   */
+  termPay?: Record<string, number>;
+  /** The league's transaction wire, newest first. */
+  transactions?: Transaction[];
   /** Fan and media mood toward the owner's team, 0-100 (50 neutral). */
   pressure: { fans: number; media: number };
   /** Teams filled into postseason slots as the bracket is decided. */

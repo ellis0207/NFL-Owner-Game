@@ -14,6 +14,7 @@ from pathlib import Path
 from constants import RULES_2026, SEASON, TEAMS
 from ratings import rate_players
 from rosters import build_camp_rosters, build_players
+from free_agents import build_free_agents, waiver_order
 from schedule import build_schedule, home_stadiums
 from team_cap_2026 import team_cap
 from sources import HISTORY_SEASONS, load_all
@@ -61,6 +62,21 @@ def main(refresh: bool) -> None:
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
     ratings = rate_players(players, stats, snaps)
     traits = build_traits(players, ratings, data["stats"], data["combine"])
+
+    # The free agent pool. Its players are rated alongside the camp rosters so
+    # the scales match, without moving any rostered player's numbers. Nobody
+    # signed them: that is a market verdict, so their contract standing is low.
+    free_agents = build_free_agents(data["weekly_rosters"], camp, data["players"], stats, snaps,
+                                    pass_rush_rates(data["stats"]))
+    for p in free_agents:
+        p["stats"] = stats.get(p["id"], [])
+        p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
+    combined = rate_players(players + free_agents, stats, snaps, unsigned={p["id"] for p in free_agents})
+    fa_ratings = {p["id"]: combined[p["id"]] for p in free_agents}
+    combined_traits = build_traits(players + free_agents, {**ratings, **fa_ratings}, data["stats"], data["combine"])
+    for p in free_agents:
+        ratings[p["id"]] = fa_ratings[p["id"]]
+        traits[p["id"]] = combined_traits[p["id"]]
     stadiums = home_stadiums(data["games"])
     schedule = build_schedule(data["games"], stadiums)
 
@@ -72,7 +88,7 @@ def main(refresh: bool) -> None:
 
     OUT.mkdir(parents=True, exist_ok=True)
     write("teams.json", teams)
-    write("players.json", players)
+    write("players.json", players + free_agents)
     # Kept in its own file so UI code never reads true ratings by accident.
     write("hidden-ratings.json", {
         pid: {**{k: v for k, v in r.items() if k != "signals"}, "traits": traits[pid]} for pid, r in ratings.items()
@@ -82,7 +98,7 @@ def main(refresh: bool) -> None:
     write("staff.json", {"people": staff, "teamSchemes": TEAM_SCHEMES,
                          "schemeNames": {"offense": OFFENSE_SCHEMES, "defense": DEFENSE_SCHEMES}})
     write("hidden-staff.json", staff_hidden)
-    write("rules.json", RULES_2026)
+    write("rules.json", {**RULES_2026, "waiverOrder": waiver_order(data["games"])})
     write("meta.json", {
         "season": SEASON, "startPhase": "preseason",
         "sources": {
@@ -94,7 +110,7 @@ def main(refresh: bool) -> None:
         },
     })
 
-    report = validate(camp, players, ratings, schedule, coverage)
+    report = validate(camp, players, ratings, schedule, coverage) + free_agent_report(free_agents, ratings)
     (OUT / "VALIDATION.md").write_text(report)
     print(f"  wrote data/league-{SEASON}/VALIDATION.md")
 
@@ -185,6 +201,18 @@ def validate(camp, players, ratings, schedule, coverage) -> str:
 
     lines += ["## Problems", ""] + ([f"- {p}" for p in problems] or ["None found."])
     return "\n".join(lines) + "\n"
+
+
+def free_agent_report(free_agents, ratings) -> str:
+    lines = ["", "## Free agent pool", "",
+             f"{len(free_agents)} unsigned players when camps open: players who signed after Week 1 without being "
+             "in a camp at cutdown, plus 2025 players on no 2026 roster who haven't announced their retirement "
+             "(pipeline/free_agents.py).", ""]
+    by_pos = collections.Counter(p["position"] for p in free_agents)
+    lines.append("By position: " + ", ".join(f"{k} {v}" for k, v in sorted(by_pos.items())))
+    best = sorted(free_agents, key=lambda p: -ratings[p["id"]]["overall"])[:15]
+    lines += ["", "Highest rated: " + ", ".join(f"{p['name']} ({p['position']}, {p['lastTeam']}) {ratings[p['id']]['overall']}" for p in best), ""]
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":

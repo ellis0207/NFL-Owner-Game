@@ -124,7 +124,7 @@ def _percentiles(values: dict) -> dict:
     return {pid: float(r) / n for pid, r in zip(ids, ranks)}
 
 
-def rate_players(players: list, stats: dict, snaps: dict) -> dict:
+def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozenset()) -> dict:
     by_pos: dict[str, list] = {}
     for p in players:
         by_pos.setdefault(p["position"], []).append(p)
@@ -155,7 +155,10 @@ def rate_players(players: list, stats: dict, snaps: dict) -> dict:
                 bins.setdefault(min(4, int(pct["usage"][pid] * 5)), []).append(m)
         for p in group:
             pid = p["id"]
-            if pid not in pct["market"] and pid in pct["usage"] and p["yearsExp"] > 0:
+            if pid in unsigned and p["yearsExp"] > 0:
+                # Unsigned when camps open: every team passed at the minimum.
+                pct["market"][pid] = 0.05
+            elif pid not in pct["market"] and pid in pct["usage"] and p["yearsExp"] > 0:
                 peers = bins.get(min(4, int(pct["usage"][pid] * 5)))
                 if peers:
                     pct["market"][pid] = float(np.median(peers))

@@ -197,7 +197,7 @@ function curves(state: GameState): Record<string, Curve> {
   const pts: Record<string, { v: number; s: number }[]> = {};
   for (const p of PLAYERS) {
     const deal = dealOf(state, p.id);
-    if (!deal || !VETERAN_KINDS.has(deal.kind) || !deal.apy) continue;
+    if (!deal || !VETERAN_KINDS.has(deal.kind) || !deal.apy || isStreetDeal(deal)) continue;
     if (Number(deal.signed.slice(0, 4)) < RULES.season - 4) continue;
     (pts[p.position] ??= []).push({ v: perceivedAbility(state, p.id, "market", MARKET_EYE), s: deal.apy / capAtSigning(state, deal) });
   }
@@ -219,6 +219,12 @@ function curves(state: GameState): Record<string, Curve> {
   }
   curveCache.set(state, c);
   return c;
+}
+
+/** A one-year deal signed off the street in camp or during the season: not a market price. */
+export function isStreetDeal(deal: Deal): boolean {
+  return deal.signed > RULES.keyDates.franchiseTagExtensionDeadline && deal.signed <= RULES.keyDates.regularSeasonEnd
+    && deal.years.filter((y) => !y.void).length === 1 && deal.kind === "veteran";
 }
 
 /** Positions whose markets move together. */
@@ -324,7 +330,7 @@ export function comps(state: GameState, id: string, count = 6): Comp[] {
   for (const q of PLAYERS) {
     if (q.id === id || q.position !== p.position) continue;
     const deal = dealOf(state, q.id);
-    if (!deal || !VETERAN_KINDS.has(deal.kind) || deal.kind === "franchise" || deal.kind === "transition" || !deal.apy) continue;
+    if (!deal || !VETERAN_KINDS.has(deal.kind) || deal.kind === "franchise" || deal.kind === "transition" || !deal.apy || isStreetDeal(deal)) continue;
     const signedYear = Number(deal.signed.slice(0, 4));
     if (signedYear < RULES.season - 3) continue;
     const cap = capAtSigning(state, deal);

@@ -26,6 +26,16 @@ export function signMinimumDeal(state: GameState, playerId: string, team: string
   state.contracts[playerId] = writeMinimumDeal(team, state.date, yearsExpIn(playerId, leagueYear(state.date)));
 }
 
+/**
+ * Accrued seasons on a date: the seasons before 2026, plus 2026 once its
+ * regular season is over. Four or more makes a vested veteran.
+ */
+export function accruedSeasons(playerId: string, date: string): number {
+  const year = leagueYear(date);
+  const done = year === SEASON && date > RULES.keyDates.regularSeasonEnd ? 1 : 0;
+  return PLAYER_BY_ID[playerId].yearsExp + Math.max(0, year - SEASON) + done;
+}
+
 /** Credited seasons a player will have going into a league year. */
 export function yearsExpIn(playerId: string, year: number): number {
   return PLAYER_BY_ID[playerId].yearsExp + Math.max(0, year - SEASON);
@@ -37,6 +47,12 @@ export function isRegularSeasonOrLater(date: string): boolean {
 
 export function practiceSquadCapHit(): number {
   return RULES.practiceSquadWeekly.standard * REGULAR_SEASON_WEEKS;
+}
+
+/** A practice squad player's cap charge: the weekly pay left on the practice deal. */
+export function psCapHit(state: GameState, playerId: string, year: number): number {
+  const deal = dealOf(state, playerId);
+  return deal?.kind === "practice" ? dealCapHit(deal, year) : practiceSquadCapHit();
 }
 
 // Team -> player ids, rebuilt whenever a player joins a team (see invalidateRosters).
@@ -113,7 +129,7 @@ export function capSummary(state: GameState, team: string, year = leagueYear(sta
     players = hits.slice(0, 51).reduce((a, b) => a + b, 0);
   } else {
     players = ids.reduce(
-      (sum, id) => sum + (state.players[id].status === "ps" ? practiceSquadCapHit() : capHit(id, year, state)),
+      (sum, id) => sum + (state.players[id].status === "ps" ? psCapHit(state, id, year) : capHit(id, year, state)),
       0,
     );
   }
@@ -131,14 +147,18 @@ export interface ReleaseCost {
   savingsThisYear: number;
   /** Guaranteed cash still owed to the player. */
   cashOwed: number;
+  /** Salary still owed inside the dead money, this year and next: a waiver claim takes it over. */
+  salaryThisYear: number;
+  salaryNextYear: number;
 }
 
 /** What releasing a player today would cost, under the June 1 rules for today's date. */
 export function releaseCost(playerId: string, state?: GameState, opts: { june1?: boolean; date?: string } = {}): ReleaseCost {
   const date = opts.date ?? state?.date ?? RULES.keyDates.regularSeasonStart;
   const injured = !!state?.players[playerId]?.injury;
-  const c = releaseCharges(dealOf(state, playerId), date, { june1: opts.june1, injured });
-  return { deadThisYear: c.thisYear, deadNextYear: c.nextYear, savingsThisYear: c.savings, cashOwed: c.cashOwed };
+  const termPay = !!state && state.termPay?.[playerId] === leagueYear(date);
+  const c = releaseCharges(dealOf(state, playerId), date, { june1: opts.june1, injured, termPay });
+  return { deadThisYear: c.thisYear, deadNextYear: c.nextYear, savingsThisYear: c.savings, cashOwed: c.cashOwed, salaryThisYear: c.salaryThisYear, salaryNextYear: c.salaryNextYear };
 }
 
 /** The league year a release made today is charged to. */

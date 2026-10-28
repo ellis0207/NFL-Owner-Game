@@ -48,6 +48,21 @@ Deals agreed in the window are signed when the league year opens, and the Top
 51 rule applies until the next opener. Offer sheets on restricted players are
 rare, as in the real league. The game stops on draft day.
 
+Free agency runs all year. The pool starts with the real 2026 free agents
+(about 500 veterans and young players who were on no camp roster, minus
+announced retirements), and every cut lands there too. Players with fewer
+than four accrued seasons, and everyone after the trade deadline, go through
+waivers first: claims are due by 4 PM the next business day and go by
+priority (the 2026 draft order until late September, then the standings). A
+team that claims a player takes over his salary. Practice squads (17 spots,
+6 for veterans) form after the cutdown claims; each team protects four a
+week, other teams can sign the rest to their 53, and coaches elevate up to two
+per game, three times per player. In-season signings are one-year deals for
+the weeks left, vested veterans on a Week 1 roster are owed the full season if
+cut, and eliminated teams sign reserve/future deals in January. The Free
+agents page has the pool, the waiver wire, the practice squad and a league
+transaction wire.
+
 Next up: the draft, then the business side.
 
 ## Playing locally
@@ -77,10 +92,10 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 | File | What it holds |
 |---|---|
 | `teams.json` | 32 teams, divisions, home stadium, 2026 dead money and adjusted cap |
-| `players.json` | ~2,900 players on rebuilt 90-man camp rosters, with bio, draft, contract (year by year) and 2023-25 stats and snap counts |
+| `players.json` | ~2,900 players on rebuilt 90-man camp rosters plus ~500 unsigned free agents (`team: null`), with bio, draft, contract (year by year) and 2023-25 stats and snap counts |
 | `hidden-ratings.json` | True overall, potential and durability. Engine only; never shown to the player |
 | `schedule.json` | Hall of Fame Game, 48 preseason games, all 272 regular-season games, 13 playoff slots |
-| `rules.json` | 2026 cap ($301.2M), minimum salaries, roster limits, league calendar |
+| `rules.json` | 2026 cap ($301.2M), minimum salaries, roster limits, league calendar, 2026 waiver order |
 | `VALIDATION.md` | Checks against the real Week 1 rosters, team cap totals and schedule |
 
 To rebuild:
@@ -98,6 +113,15 @@ does list every player released at final cutdown, so camp roster = that
 snapshot minus players who retired. Players cut earlier in camp are missing,
 and players claimed or signed after cutdown show up on their new team, so
 camps run 87-99 players instead of exactly 90.
+
+### How the free agent pool is built
+
+`pipeline/free_agents.py` takes players who played in 2025 but are on no 2026
+roster, plus veterans who signed after Week 1 without having been in a camp
+(they were available all summer). Players with retired status, a hand-entered
+list of announced 2026 retirements, players 37 or older, and veterans who
+didn't play in 2024 or 2025 are left out. They are rated with the camp
+rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
 

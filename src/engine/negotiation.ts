@@ -7,7 +7,7 @@
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
 import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
 import {
-  dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, writeDeal, writeExtension, type Terms,
+  dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, minimumSalary, prorateFirstYear, writeDeal, writeExtension, type Terms,
 } from "./contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
@@ -18,8 +18,9 @@ import { invalidateMarket, marketPrice, teamValue } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { schemeFit, staffEffects, teamStaff } from "./staff";
 import { standings } from "./standings";
-import { depthChart } from "./roster";
-import { bestRival, committed, market, signFreeAgent, teamPull } from "./freeagency";
+import { depthChart, rosterLimit, rosterRoom } from "./roster";
+import { bestRival, committed, inWindow, isStreetMarket, market, marketYear, signFreeAgent, STREET_SCALE, teamPull } from "./freeagency";
+import { onWaivers } from "./waivers";
 import { isOffseason, isPendingFreeAgent, NEXT } from "./offseason";
 import type { GameState, Mandate, Position, Negotiation, NegotiationKind, OfferTerms, Signing } from "./types";
 
@@ -60,8 +61,12 @@ export function talksFor(state: GameState, team: string, id: string): Eligibilit
   const ps = state.players[id];
   const k = RULES.keyDates;
   if (ps?.team === team && ps.status !== "fa") return { ...extensionEligibility(state, id), kind: "extension" };
+  if (ps?.status === "fa" && onWaivers(state, id)) return { ok: false, kind: "free-agent", reason: "On waivers: we can claim him, or talk once he clears." };
   if (!isOffseason(state.date)) {
-    return { ok: false, kind: "free-agent", reason: ps?.status === "fa" ? "During the season the GM signs free agents as roster moves. Free agency opens after the Super Bowl." : "Under contract with another team." };
+    if (ps?.status !== "fa") return { ok: false, kind: "free-agent", reason: ps?.status === "ps" ? "On another team's practice squad: we can sign him to our 53, but not negotiate." : "Under contract with another team." };
+    const fa = market(state)[id];
+    if (fa?.status === "agreed") return { ok: false, kind: "free-agent", reason: `Agreed to terms with the ${teamLabel(fa.agreed!.team)}.` };
+    return { ok: true, kind: "free-agent" };
   }
   if (ps?.status === "fa") {
     const fa = market(state)[id];
@@ -79,8 +84,8 @@ export function talksFor(state: GameState, team: string, id: string): Eligibilit
 
 /** The first league year a new deal would cover. */
 export function startYearFor(state: GameState, id: string, kind: NegotiationKind): number {
-  // After the Super Bowl, free agents sign for next season.
-  if (kind === "free-agent") return isOffseason(state.date) ? NEXT : leagueYear(state.date);
+  // During the season free agents sign for the weeks left; after it, for next season.
+  if (kind === "free-agent") return isOffseason(state.date) ? NEXT : marketYear(state.date);
   const last = lastYear(dealOf(state, id));
   return Math.max(leagueYear(state.date), (last ?? leagueYear(state.date)) + 1);
 }
@@ -96,7 +101,13 @@ export function teamQuality(state: GameState, team: string): number {
 interface Stance { base: number; floor: number; ask: number; askYears: number; askGuarantee: number }
 
 function stance(state: GameState, team: string, id: string, startYear: number): Stance {
-  const price = marketPrice(state, id, startYear);
+  const price = { ...marketPrice(state, id, startYear) };
+  // Unsigned in camp or during the season: the street pays a fraction of a market deal, one year at a time.
+  if (state.players[id]?.status === "fa" && isStreetMarket(state.date)) {
+    price.apy = Math.max(minimumSalary(yearsExpIn(id, startYear), startYear), price.apy * STREET_SCALE);
+    price.years = 1;
+    price.guaranteeShare *= 0.25;
+  }
   const agent = agentFor(id);
   const ah = agentHidden(agent.id);
   const pr = priorities(id);
@@ -237,6 +248,9 @@ export function checkOffer(state: GameState, neg: Negotiation, t: OfferTerms): O
   const current = neg.kind === "free-agent" ? null : dealOf(state, neg.player);
   const capChange = dealCapHit(deal, year) - dealCapHit(current, year);
   const space = capSummary(state, neg.team, year).space - (neg.kind === "free-agent" ? committed(state, neg.team) : 0);
+  if (neg.kind === "free-agent" && year === leagueYear(state.date) && rosterRoom(state, neg.team) <= 0) {
+    return { ok: false, reason: `There's no room on the ${rosterLimit(state)}-man roster: release someone first.`, capChange, cashNow: t.signingBonus };
+  }
   if (state.settings.capRules === "real" && capChange > 0 && capChange > space) {
     return { ok: false, reason: `Not enough cap space: this adds ${money(capChange)} to the ${year} cap and we have ${money(Math.max(0, space))}.`, capChange, cashNow: t.signingBonus };
   }
@@ -249,7 +263,8 @@ function reSigning(state: GameState, neg: Negotiation): boolean {
 
 /** The league year whose cap an offer is checked against. */
 export function capYearFor(state: GameState, neg: Negotiation): number {
-  return neg.kind === "free-agent" || reSigning(state, neg) ? NEXT : leagueYear(state.date);
+  if (neg.kind === "free-agent") return startYearFor(state, neg.player, neg.kind);
+  return reSigning(state, neg) ? NEXT : leagueYear(state.date);
 }
 
 /** The contract these terms would produce. */
@@ -265,7 +280,7 @@ export function draftDeal(state: GameState, neg: Negotiation, t: OfferTerms) {
   }
   if (neg.kind === "extension" && current) return writeExtension(current, terms, state.date, p.yearsExp);
   const first = startYearFor(state, neg.player, neg.kind);
-  return writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: first, yearsExp: yearsExpIn(neg.player, first) });
+  return prorateFirstYear(writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: first, yearsExp: yearsExpIn(neg.player, first) }), state.date);
 }
 
 /** Sends an offer. The agent answers in a day or a few. */
@@ -483,7 +498,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
       const s = state.signings.find((x) => x.player === id && x.team === neg.team)!;
       send(state, "transaction", neg.handler === "gm" ? gmName(state) : `${agentFor(id).name}, agent`, `${p.name} agrees to terms`,
         `Done: ${t.years} years, ${money(s.total)} total, ${money(s.guaranteed)} guaranteed. ` +
-        (state.date < RULES.keyDates.newLeagueYear ? `The deal is signed when the league year opens on ${RULES.keyDates.newLeagueYear}. ` : `${money(t.signingBonus)} signing bonus paid now. `) +
+        (inWindow(state.date) ? `The deal is signed when the league year opens on ${RULES.keyDates.newLeagueYear}. ` : t.signingBonus ? `${money(t.signingBonus)} signing bonus paid now. ` : "He's on the roster. ") +
         `Early grades: ${s.grades.map((g) => `${g.outlet}: ${g.grade}`).join(" · ")}.`);
     }
     return;

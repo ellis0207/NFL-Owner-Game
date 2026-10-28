@@ -125,7 +125,7 @@ function baseline(wants: Record<string, number>, pos: Position): number {
   let b = fitBaseline.get(wants);
   if (b === undefined) {
     // Compared with starter-level players, whose production-based traits run higher than a camp body's.
-    const group = PLAYERS.filter((p) => p.position === pos && HIDDEN_RATINGS[p.id].overall >= 78);
+    const group = PLAYERS.filter((p) => p.team && p.position === pos && HIDDEN_RATINGS[p.id].overall >= 78);
     b = group.reduce((sum, p) => sum + rawFit(wants, HIDDEN_RATINGS[p.id].traits, HIDDEN_RATINGS[p.id].overall), 0) / Math.max(1, group.length);
     fitBaseline.set(wants, b);
   }
