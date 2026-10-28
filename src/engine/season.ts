@@ -20,6 +20,7 @@ import { contractsDaily, startHoldouts } from "./negotiation";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
+import { tradesDaily } from "./trades";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
@@ -367,6 +368,7 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   contractsDaily(state);
   faDaily(state);
+  tradesDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
     protectPracticeSquads(state);
     for (const t of Object.keys(TEAM_BY_ID)) {

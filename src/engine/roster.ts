@@ -586,7 +586,8 @@ function weakestCuttable(state: GameState, team: string, pos: Position): string 
 
 /** Keeps a team able to field a lineup: if a position runs out of healthy players, sign one. */
 export function fillEmergencies(state: GameState, team: string): RosterMove[] {
-  if (state.date <= RULES.keyDates.rosterCutdown) return [];
+  // A team whose season is over has no game to field (a signing now would be a reserve/future deal).
+  if (state.date <= RULES.keyDates.rosterCutdown || !stillPlaying(state, team)) return [];
   const moves: RosterMove[] = [];
   const need: Partial<Record<Position, number>> = { QB: 2, RB: 2, WR: 4, TE: 2, OT: 2, OG: 2, C: 1, EDGE: 3, IDL: 3, LB: 3, CB: 4, S: 3, K: 1, P: 1, LS: 1 };
   const healthy: Partial<Record<Position, number>> = {};

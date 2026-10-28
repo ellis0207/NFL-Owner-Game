@@ -7,6 +7,7 @@ import { compress, decompress, migrate } from "../src/save/codec";
 import { rosterCount } from "../src/engine/roster";
 import { advanceDay, isSeasonOver, newGame, veteranReportDate } from "../src/engine/season";
 import { standings } from "../src/engine/standings";
+import { trades } from "../src/engine/trades";
 import type { GameState } from "../src/engine/types";
 
 function playSeason(seed: number): GameState {
@@ -112,6 +113,16 @@ describe("a full season", () => {
     expect(top("recYds")).toBeLessThan(2200);
     expect(top("sacks")).toBeGreaterThan(10);
     expect(top("sacks")).toBeLessThan(26);
+  });
+
+  it("makes trades before the deadline and none after it", () => {
+    for (const state of seasons) {
+      const log = trades(state).log;
+      expect(log.length).toBeGreaterThan(10);
+      expect(log.length).toBeLessThan(90);
+      expect(log.every((t) => t.date <= RULES.keyDates.tradeDeadline)).toBe(true);
+      expect(log.some((t) => t.send.some((side) => side.some((a) => a.kind === "pick")))).toBe(true);
+    }
   });
 
   it("injures players, uses injured reserve and keeps rosters legal", () => {

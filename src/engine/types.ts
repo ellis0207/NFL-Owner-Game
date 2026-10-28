@@ -491,8 +491,57 @@ export interface Transaction {
   date: string;
   team: string;
   player: string;
-  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir";
+  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir" | "traded";
   text: string;
+}
+
+/** Something a team can put in a trade: a player under contract, or a draft pick (by pick id, see engine/trades.ts). */
+export type TradeAsset = { kind: "player"; id: string } | { kind: "pick"; pick: string };
+
+/** A trade between two teams: what each one sends. */
+export interface TradeDeal {
+  teams: [string, string];
+  /** Assets sent by teams[0] and by teams[1]. */
+  send: [TradeAsset[], TradeAsset[]];
+}
+
+/** A completed (or agreed) trade, for the league's trade log. */
+export interface TradeRecord extends TradeDeal {
+  id: string;
+  date: string;
+  /** Agreed after the season; it becomes official when the new league year opens. */
+  status: "done" | "agreed" | "voided";
+  /** Every first-round pick and star in it makes the headlines. */
+  blockbuster?: boolean;
+  /** What the press says about each side, by team. */
+  grades?: Record<string, { outlet: string; grade: string; take: string }[]>;
+  /** True value each team got minus what it gave at the time, kept for grading later (engine only). */
+  edge?: Record<string, number>;
+}
+
+/** A trade a CPU team put to the owner, open until it expires. */
+export interface TradeOffer extends TradeDeal {
+  id: string;
+  date: string;
+  expires: string;
+  /** teams[0] is the CPU team that called, teams[1] is the owner's team. */
+  note: string;
+  status: "open" | "accepted" | "declined" | "expired" | "withdrawn";
+}
+
+export interface TradeState {
+  /** Draft pick ownership where it differs from the original team, by pick id. */
+  picks: Record<string, string>;
+  log: TradeRecord[];
+  offers: TradeOffer[];
+  /** Our players we've told other teams are available. */
+  block: string[];
+  /** Players who have asked their team for a trade, with the date. */
+  requests: Record<string, string>;
+  /** How each CPU front office feels about our calls: lowballs wear on them. */
+  talks: Record<string, { strikes: number; coolingUntil?: string }>;
+  /** A matched offer sheet: the player can't be traded to the team that made it until the date. */
+  noTradeTo?: Record<string, { team: string; until: string }>;
 }
 
 export interface TeamFinance {
@@ -542,6 +591,8 @@ export interface GameState {
   termPay?: Record<string, number>;
   /** The league's transaction wire, newest first. */
   transactions?: Transaction[];
+  /** Trades, draft pick ownership, offers to the owner and the trade block. */
+  trades?: TradeState;
   /** Fan and media mood toward the owner's team, 0-100 (50 neutral). */
   pressure: { fans: number; media: number };
   /** Teams filled into postseason slots as the bracket is decided. */
