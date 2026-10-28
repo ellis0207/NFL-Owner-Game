@@ -3,13 +3,14 @@ import { capSummary } from "../engine/cap";
 import { longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, advanceToNextEvent, isGameOver, isSeasonOver, simToNextGame } from "../engine/season";
+import { advanceDay, advanceToNextEvent, isGameOver, isSeasonOver, pendingEvents, playEvent, simToNextGame } from "../engine/season";
 import { standings } from "../engine/standings";
 import type { GameState } from "../engine/types";
 import { BoxScore } from "./BoxScore";
 import { money } from "./format";
 import { PlayerPanel } from "./PlayerPanel";
 import { NegotiationPanel } from "./NegotiationPanel";
+import { CalendarScreen } from "./screens/CalendarScreen";
 import { CapScreen } from "./screens/CapScreen";
 import { ContractsScreen } from "./screens/ContractsScreen";
 import { InboxScreen } from "./screens/InboxScreen";
@@ -24,7 +25,7 @@ import { StatsScreen } from "./screens/StatsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -73,6 +74,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const unread = game.inbox.filter((i) => !i.read).length;
   const over = isGameOver(game);
   const offseason = isSeasonOver(game);
+  const left = pendingEvents(game).length;
 
   function step(fn: (s: GameState) => void) {
     setBusy(true);
@@ -119,14 +121,18 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             </div>
           </div>
           <div className="btn-row">
-            <button className="btn primary" disabled={busy || over} onClick={() => step(advanceDay)}>Next day</button>
+            <button className="btn primary" disabled={busy || over} onClick={() => step(advanceDay)}
+              title={left ? "Your staff handles whatever is left today, then the clock moves to tomorrow." : undefined}>
+              {left ? `Sim rest of day (${left})` : "Next day"}
+            </button>
             {offseason
               ? <button className="btn" disabled={busy || over} onClick={() => step(advanceToNextEvent)}>Advance to next event</button>
               : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>}
           </div>
         </header>
         <main className="content">
-          {screen === "Today" && <TodayScreen game={game} go={setScreen} />}
+          {screen === "Today" && <TodayScreen game={game} go={setScreen} busy={busy} play={(id) => step((s) => playEvent(s, id))} />}
+          {screen === "Calendar" && <CalendarScreen game={game} />}
           {screen === "Stats" && <StatsScreen game={game} />}
           {screen === "Contracts" && <ContractsScreen game={game} changed={changed} />}
           {screen === "Staff" && <StaffScreen game={game} />}

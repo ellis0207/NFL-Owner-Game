@@ -551,6 +551,8 @@ export interface GameState {
   champion?: string;
   /** The owner's edited cutdown plan: the full list of players to keep on the 53. */
   cutPlan?: string[];
+  /** Today's events the owner has already handled, by agenda id, with what came of each. */
+  day?: { date: string; done: Record<string, string> };
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

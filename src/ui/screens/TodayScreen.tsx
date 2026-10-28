@@ -3,7 +3,7 @@ import { GAMES_BY_DATE, SCHEDULE, teamLabel } from "../../engine/league";
 import { injuryStatus } from "../../engine/injuries";
 import { PLAYER_BY_ID } from "../../engine/league";
 import { teamPlayerIds } from "../../engine/cap";
-import { agenda, isGameOver, isSeasonOver, upcomingKeyDates } from "../../engine/season";
+import { agenda, eventOutcome, isGameOver, isSeasonOver, upcomingKeyDates, type AgendaItem } from "../../engine/season";
 import { publicPulse } from "../../engine/negotiation";
 import { useUi } from "../ui";
 import { matchup } from "../../engine/standings";
@@ -12,8 +12,19 @@ import type { Screen } from "../GameShell";
 import { Score } from "../Score";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel" };
+const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
+  game: "Simulate game", practice: "Run practice", meeting: "Hold meeting", review: "Review the 53",
+};
 
-export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+interface Props {
+  game: GameState;
+  go: (s: Screen) => void;
+  busy: boolean;
+  /** Plays out one of today's events. */
+  play: (id: string) => void;
+}
+
+export function TodayScreen({ game, go, busy, play }: Props) {
   const ui = useUi();
   const items = agenda(game);
   const yesterday = addDays(game.date, -1);
@@ -47,15 +58,35 @@ export function TodayScreen({ game, go }: { game: GameState; go: (s: Screen) => 
         </section>
       )}
       <section className="panel stack">
-        <h2>Today</h2>
+        <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+          <h2>Today</h2>
+          <button className="btn small" onClick={() => go("Calendar")}>Open calendar</button>
+        </div>
         <div className="agenda">
           {items.length === 0 && <p className="muted">Nothing on the calendar.</p>}
-          {items.map((a, i) => (
-            <div key={i} className="agenda-item">
-              <span className={`kind ${a.kind}`}>{KIND_LABEL[a.kind]}</span>
-              <div><strong>{a.title}</strong>{a.detail && <div className="muted">{a.detail}</div>}</div>
-            </div>
-          ))}
+          {items.map((a) => {
+            const outcome = eventOutcome(game, a.id);
+            const done = outcome !== undefined;
+            return (
+              <div key={a.id} className={`agenda-item${a.action ? " event" : ""}${done ? " done" : ""}`}>
+                <span className={`kind ${a.kind}`}>{KIND_LABEL[a.kind]}</span>
+                <div>
+                  <strong>{a.title}</strong>{a.detail && <div className="muted">{a.detail}</div>}
+                  {done && <div className="outcome">{outcome}</div>}
+                  {!a.action && a.kind === "league" && <div className="muted">Happens when the day ends.</div>}
+                </div>
+                {a.action && !done && (
+                  <button className={`btn small${a.action === "game" ? " primary" : ""}`} disabled={busy || isGameOver(game)}
+                    onClick={() => { play(a.id); if (a.action === "review") go("Roster"); }}>
+                    {ACTION_LABEL[a.action]}
+                  </button>
+                )}
+                {done && a.gameId && game.box[a.gameId] && (
+                  <button className="btn small" onClick={() => ui.openBox(a.gameId!)}>Box score</button>
+                )}
+              </div>
+            );
+          })}
         </div>
         {next && !items.some((a) => a.kind === "game") && (
           <p className="muted">Next game: {shortDate(next.date)}, {(() => {
