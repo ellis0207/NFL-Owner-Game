@@ -149,7 +149,36 @@ team a Super Bowl team and miss the playoffs, and the press brings it up.
 Unanswered questions become "declined to comment." Check a save's coverage with
 `npx vite-node tests/media-report.ts [seed]`.
 
-Next up: the business side.
+The owner runs the business too. Every stadium is entered with its real
+ownership and lease: some teams own their building (the Dolphins, Patriots,
+Rams, Commanders and Panthers) and book any concert, fight or bowl game they
+like and keep the money; the Giants and Jets own MetLife together and need
+each other's sign-off; most teams run a publicly owned stadium under a lease,
+booking events with the landlord's approval and keeping an agreed share; a
+few (the Bears, Vikings, Saints, Texans, Colts and Cardinals) are tenants in
+buildings their public authority runs and books; and the Chargers rent SoFi
+from the Rams' owner. Rent, upkeep, stadium debt, naming rights, game-day
+concession and parking shares, curfews and blackout dates (the Houston rodeo)
+follow from that. Money comes in from the league's national revenue, the
+shared gate pool (34% of general ticket money after a 15% stadium deduction,
+split 32 ways), season and single-game tickets, suites and clubs,
+concessions, parking, the team store, local sponsors, naming rights and
+stadium events; playoff gates go to the league, and teams that give up a home
+game abroad are made whole. Season tickets for 2026 are already sold when
+the owner takes over; single-game prices, concessions and parking (where the
+team controls them) can change any time, and next season's prices are set
+after the regular season, with renewals and deposits in the spring. Prices,
+empty seats and sellouts move the fans, the press writes about them, and the
+owner gets asked. Department budgets (marketing, game-day experience,
+community, medical, the training facility) cost money and change demand,
+fan mood, injury recovery and the head coach's mood. Player cash (not cap
+dollars), scouting trips and league fines are charged to the books; a team
+that runs through its credit line needs the owner's money. The Business page
+has the statement, the ledger, the gate, the stadium calendar and booking
+requests, budgets and league-wide estimates of revenue and franchise values.
+Check a save's books with `npx vite-node tests/business-report.ts [team] [seed]`.
+
+Next up: relocation and new stadiums, then the coaching carousel.
 
 ## Playing locally
 
@@ -168,6 +197,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
   The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.
+  The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

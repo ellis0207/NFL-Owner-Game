@@ -81,6 +81,33 @@ function candidates(state: GameState, rng: Rng): Ask[] {
   const todays = m.stories.filter((s) => s.date === date && s.teams?.includes(us));
   const hostile = (outlet: string) => relOf(state, outlet) < -12;
 
+  // The business side: ticket prices and empty seats.
+  const biz = state.business?.ask;
+  if (biz && daysBetween(biz.date, date) <= 1) {
+    out.push(biz.kind === "tickets"
+      ? {
+        topic: "tickets", key: `tickets:${biz.date}`, outlet: hostile("blitz") ? "blitz" : "ledger", by: "columnist", context: biz.context,
+        question: "Fans are upset about ticket prices. What do you say to them?",
+        options: [
+          { key: "invest", text: "Every dollar goes back into winning. They'll see it on the field." },
+          { key: "market", text: "We price to the market. The demand is there." },
+          { key: "families", text: "We'll always keep affordable seats for families." },
+          { key: "hear", text: "We hear them. We'll take another look." },
+          NO_COMMENT,
+        ],
+      }
+      : {
+        topic: "attendance", key: `attendance:${biz.date}`, outlet: "blitz", by: "columnist", context: biz.context,
+        question: "There were a lot of empty seats. What happened?",
+        options: [
+          { key: "earn", text: "Our fans have been loyal. It's on us to give them a reason to come." },
+          { key: "noGiveaways", text: "We're not going to give tickets away. Win and they'll come." },
+          { key: "prices", text: "We're looking at our prices. That's on us." },
+          { key: "thanks", text: "I want to thank everyone who was there. That was a great crowd." },
+          NO_COMMENT,
+        ],
+      });
+  }
   // The draft: our picks today.
   const day = draftDayOf(date);
   if (day && state.draft?.daysDone.includes(day)) {
@@ -528,6 +555,15 @@ function consequences(state: GameState, q: PressQuestion, key: string, rng: Rng)
       if (rng() < 0.7) echo(state, 2 + Math.floor(rng() * 3), "fineRefs", q, { amount: 100_000 + Math.round(rng() * 3) * 50_000 });
       break;
     case "loss:changes": coach(state, -15 * r()); teamMorale(state, -4 * r()); fans(state, 4); press(state, 2); echo(state, 1, "coachUpset", q); break;
+    // Tickets and attendance.
+    case "tickets:invest": fans(state, -1 * r()); coach(state, 1); break;
+    case "tickets:market": fans(state, -3 * r()); press(state, -1); changeRel(state, "blitz", -2); changeRel(state, "capspace", 2); break;
+    case "tickets:families": fans(state, 2 * r()); press(state, 1); break;
+    case "tickets:hear": fans(state, 3 * r()); press(state, 1); changeRel(state, q.outlet, 2); break;
+    case "attendance:earn": fans(state, 3 * r()); press(state, 1); break;
+    case "attendance:noGiveaways": fans(state, -3 * r()); changeRel(state, "blitz", -3); break;
+    case "attendance:prices": fans(state, 3 * r()); press(state, 1); break;
+    case "attendance:thanks": fans(state, 1); break;
     // Wins.
     case "win:bold": fans(state, 4); changeRel(state, "blitz", 3); teamMorale(state, 1); m.stances.push({ kind: "playoffs", date: state.date }); break;
     case "win:humble": coach(state, 3); press(state, 1); break;
@@ -750,7 +786,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
       m.fines.push({ date: state.date, amount, reason });
       fans(state, e.kind === "fineRefs" ? 1 : 0);
       send(state, "league", "League Office", "Fine notice",
-        `The league has fined you ${money(amount)} for ${reason}. The fine is paid by the owner personally and does not count against the salary cap.`);
+        `The league has fined you ${money(amount)} for ${reason}. The fine is charged to the club's accounts and does not count against the salary cap.`);
       news(state, `The league fines ${teamLabel(us)} owner ${owner} ${money(amount)} for ${e.kind === "fineRefs" ? "criticizing officials" : "tampering comments"}`);
       addStory(state, {
         outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [us], players: p ? [p] : undefined,

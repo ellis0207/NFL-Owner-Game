@@ -16,6 +16,7 @@ import { playCaller, teamSchemes, teamStaff } from "./staff";
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
+import { business, businessDaily, businessGame } from "./business";
 import { contractsDaily, startHoldouts } from "./negotiation";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
@@ -76,6 +77,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     draft: { made: [], mocks: [], daysDone: [], nextMock: FIRST_MOCK },
   };
   state.college = newCollege(state);
+  business(state);
   const team = TEAM_BY_ID[userTeam];
   startHoldouts(state);
   const cap = capSummary(state, userTeam);
@@ -313,6 +315,7 @@ function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
   const { result, box } = simulateGame(state, g, m.away, m.home);
   state.results[g.id] = result;
   state.box[g.id] = box;
+  businessGame(state, g, result);
   reportGame(state, g, result, box);
   return result;
 }
@@ -440,6 +443,7 @@ export function advanceDay(state: GameState): void {
   }
   const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
+  businessDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   pressDaily(state);

@@ -6,18 +6,6 @@ import { teamPlayerIds, practiceSquadCapHit } from "./cap";
 import { TEAMS } from "./league";
 import type { GameState } from "./types";
 
-/**
- * Rough annual revenue by team, dollars: public estimates of each franchise's
- * football revenue (national TV and licensing are shared equally; the gap is
- * local revenue). The business side will model this in detail later.
- */
-export const REVENUE_ESTIMATE: Record<string, number> = {
-  DAL: 1_250e6, NE: 790e6, LA: 770e6, NYG: 730e6, SF: 720e6, LV: 700e6, NYJ: 690e6, PHI: 680e6, CHI: 680e6, WAS: 650e6,
-  HOU: 640e6, MIA: 630e6, KC: 620e6, GB: 620e6, DEN: 610e6, SEA: 610e6, ATL: 610e6, BAL: 610e6, PIT: 610e6, MIN: 600e6,
-  TB: 600e6, LAC: 600e6, CAR: 590e6, NO: 590e6, TEN: 590e6, CLE: 590e6, DET: 590e6, IND: 580e6, JAX: 580e6, BUF: 570e6,
-  ARI: 570e6, CIN: 560e6,
-};
-
 export function payCash(state: GameState, team: string, amount: number, year = leagueYear(state.date)): void {
   if (!amount) return;
   const f = (state.finance[team] ??= { paid: {} });
