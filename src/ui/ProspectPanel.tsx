@@ -5,6 +5,8 @@ import { shortDate } from "../engine/dates";
 import { CLASS_LABEL, draftClass, prospectAge } from "../engine/prospects";
 import { DEPTHS, onScoutList, scoutPlayer, scoutReport, unscoutPlayer } from "../engine/scouting";
 import type { GameState, ScoutDepth } from "../engine/types";
+import { mockSpot, selectionOf } from "../engine/draft";
+import { teamLabel } from "../engine/league";
 import { height } from "./format";
 import { useUi } from "./ui";
 
@@ -18,6 +20,11 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
   const listed = onScoutList(game, id);
   const hurt = injuryNote(game, id);
   const school = COLLEGE_TEAM[p.school];
+  const picked = selectionOf(game, id);
+  const udfa = game.draft?.udfa?.[id];
+  const back = game.draft?.returned?.includes(id);
+  const combine = game.draft?.combine?.[id];
+  const mock = mockSpot(game, id);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -48,7 +55,22 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           <dt>Media big board</dt><dd>{mediaRank(game, id) <= 300 ? `No. ${mediaRank(game, id)}` : "Not ranked"}</dd>
           <dt>Role</dt><dd>{p.starter ? "Starter" : "Backup"}</dd>
           {hurt && <><dt>Injury</dt><dd className="bad">{hurt}</dd></>}
+          {picked && <><dt>Drafted</dt><dd>Round {picked.pick.split("-")[1]}, No. {picked.overall}, {teamLabel(picked.team)}{picked.grade ? ` (our GM: ${picked.grade})` : ""}</dd></>}
+          {udfa && <><dt>Signed</dt><dd>Undrafted free agent, {teamLabel(udfa)}</dd></>}
+          {back && <><dt>Draft</dt><dd>Went back to school for another year</dd></>}
+          {!picked && !udfa && !back && mock && <><dt>Latest mock</dt><dd>No. {mock.overall} to {teamLabel(mock.team)} ({mock.mock.analyst}, {shortDate(mock.mock.date)})</dd></>}
         </dl>
+        {combine && (
+          <section className="panel stack tight">
+            <h3 style={{ margin: 0 }}>Scouting combine</h3>
+            <dl className="kv">
+              <dt>Height, weight</dt><dd>{height(combine.heightIn)}, {combine.weightLb} lb</dd>
+              <dt>40-yard dash</dt><dd>{combine.forty ? combine.forty.toFixed(2) : "Did not run"}</dd>
+              <dt>Vertical</dt><dd>{combine.vertical ? `${combine.vertical}"` : "—"}</dd>
+              <dt>Bench (225 lb)</dt><dd>{combine.bench ? `${combine.bench} reps` : "—"}</dd>
+            </dl>
+          </section>
+        )}
 
         <section className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

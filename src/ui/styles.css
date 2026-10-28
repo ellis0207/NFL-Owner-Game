@@ -277,3 +277,12 @@ td.name { font-weight: 600; white-space: nowrap; }
   .cal-chips { display: none; }
   .cal-dots { display: flex; }
 }
+
+/* The draft */
+.kind.draft { background: var(--team); color: var(--team-ink); }
+.cal-chip.draft, .cal-dots i.draft { background: var(--team); color: var(--team-ink); }
+.rec { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 0.75rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+.rec:last-child { border-bottom: 0; }
+.rec > div { grid-column: 1; }
+.rec > button { grid-column: 2; grid-row: 1 / span 2; }
+tr.ours td { background: color-mix(in srgb, var(--team) 8%, transparent); }

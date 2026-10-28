@@ -616,7 +616,7 @@ export interface Transaction {
   date: string;
   team: string;
   player: string;
-  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir" | "traded";
+  kind: "signed" | "released" | "waived" | "claimed" | "ps" | "promoted" | "poached" | "future" | "elevated" | "ir" | "traded" | "drafted";
   text: string;
 }
 
@@ -667,6 +667,69 @@ export interface TradeState {
   talks: Record<string, { strikes: number; coolingUntil?: string }>;
   /** A matched offer sheet: the player can't be traded to the team that made it until the date. */
   noTradeTo?: Record<string, { team: string; until: string }>;
+}
+
+// ---- The draft (see engine/draft.ts) ----
+
+/** One selection in the draft. */
+export interface DraftSelection {
+  /** Pick id (see engine/trades.ts). */
+  pick: string;
+  overall: number;
+  team: string;
+  player: string;
+  /** Who made it: the owner, our GM on the owner's behalf, or a CPU front office. */
+  by: "owner" | "gm" | "cpu";
+  /** Our GM's letter grade, given when the day ends, and a line on it. */
+  grade?: string;
+  note?: string;
+  /** Engine only: the team's need at the position when it picked (for the grade). */
+  need?: number;
+}
+
+/** A media mock draft: the projected pick for each slot. */
+export interface MockDraft {
+  date: string;
+  outlet: string;
+  analyst: string;
+  /** "Mock draft 3.0" counts by outlet. */
+  version: number;
+  rounds: number;
+  /** Pick ids in projected order, the team projected to hold each, and the prospect. */
+  slots: string[];
+  teams: string[];
+  players: string[];
+}
+
+/** Public results from the scouting combine. */
+export interface CombineResult {
+  heightIn: number;
+  weightLb: number;
+  /** Absent when the player didn't run (or do the drill). */
+  forty?: number;
+  vertical?: number;
+  bench?: number;
+}
+
+export interface DraftState {
+  /** Every pick in the draft in order (pick ids), once the order is set after the Super Bowl. */
+  order?: string[];
+  /** Compensatory picks, once the league announces them: pick id, the free agent lost and where he went. */
+  comp?: { pick: string; player: string; to: string }[];
+  made: DraftSelection[];
+  mocks: MockDraft[];
+  nextMock?: string;
+  /** Underclassmen who decided to go back to school. */
+  returned?: string[];
+  /** Underclassmen who declared (set at the deadline). */
+  declared?: boolean;
+  combine?: Record<string, CombineResult>;
+  /** Undrafted free agents: prospect id to team. */
+  udfa?: Record<string, string>;
+  /** Overall pick the draft-day calls to the owner were made for. */
+  callsFor?: number;
+  /** Draft days finished (1-3). */
+  daysDone: number[];
 }
 
 export interface TeamFinance {
@@ -731,6 +794,8 @@ export interface GameState {
   day?: { date: string; done: Record<string, string> };
   /** The college football season and our draft scouting. */
   college?: CollegeState;
+  /** The 2027 draft: order, compensatory picks, mock drafts and the selections. */
+  draft?: DraftState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

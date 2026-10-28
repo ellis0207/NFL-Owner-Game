@@ -209,12 +209,21 @@ export function decideOption(state: GameState, team: string, id: string, exercis
 
 // ---- Draft order and rookie money ----
 
-/** 2027 draft order: non-playoff teams worst first, then playoff teams by how far they went. */
-export function draftOrder(state: GameState): string[] {
+/**
+ * Where each team stands for the draft: how far it went in the playoffs (0 for
+ * non-playoff teams, 5 for the champion), its record, and its strength of
+ * schedule (opponents' combined winning percentage, the first tiebreaker).
+ */
+export function draftStanding(state: GameState): Record<string, { lost: number; pct: number; sos: number }> {
   const table = standings(state);
   const lost: Record<string, number> = {};
   const depth: Record<string, number> = { WC: 1, DIV: 2, CONF: 3, SB: 4 };
+  const opps: Record<string, string[]> = {};
   for (const g of SCHEDULE) {
+    if (g.type === "REG" && g.away && g.home) {
+      (opps[g.away] ??= []).push(g.home);
+      (opps[g.home] ??= []).push(g.away);
+    }
     if (g.type !== "POST" || !g.round) continue;
     const r = state.results[g.id];
     if (!r) continue;
@@ -223,8 +232,25 @@ export function draftOrder(state: GameState): string[] {
     if (g.round === "SB") lost[loser === r.home ? r.away : r.home] = 5;
   }
   const pct = (t: string) => winPct(table[t].w, table[t].l, table[t].t);
+  const out: Record<string, { lost: number; pct: number; sos: number }> = {};
+  for (const t of TEAMS) {
+    const os = opps[t.id] ?? [];
+    let w = 0;
+    let gp = 0;
+    for (const o of os) {
+      w += table[o].w + 0.5 * table[o].t;
+      gp += table[o].w + table[o].l + table[o].t;
+    }
+    out[t.id] = { lost: lost[t.id] ?? 0, pct: pct(t.id), sos: gp ? w / gp : 0.5 };
+  }
+  return out;
+}
+
+/** 2027 draft order: non-playoff teams worst first, then playoff teams by how far they went; ties go to the easier schedule. */
+export function draftOrder(state: GameState): string[] {
+  const st = draftStanding(state);
   return TEAMS.map((t) => t.id).sort((a, b) =>
-    (lost[a] ?? 0) - (lost[b] ?? 0) || pct(a) - pct(b) || (table[a].pf - table[a].pa) - (table[b].pf - table[b].pa) || a.localeCompare(b));
+    st[a].lost - st[b].lost || st[a].pct - st[b].pct || st[a].sos - st[b].sos || a.localeCompare(b));
 }
 
 /** Cap room a team should keep for its draft class (first-year cap hits under the rookie scale). */

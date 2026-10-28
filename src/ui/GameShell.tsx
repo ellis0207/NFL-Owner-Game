@@ -3,7 +3,9 @@ import { capSummary } from "../engine/cap";
 import { longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, advanceToNextEvent, isGameOver, isSeasonOver, pendingEvents, playEvent, simToNextGame } from "../engine/season";
+import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, pendingEvents, playEvent, simToNextGame } from "../engine/season";
+import { draftDayOf, onTheClock } from "../engine/draft";
+import { DraftScreen } from "./screens/DraftScreen";
 import { standings } from "../engine/standings";
 import type { GameState } from "../engine/types";
 import { BoxScore } from "./BoxScore";
@@ -30,13 +32,14 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
   const d = state.date;
   const k = RULES.keyDates;
-  if (isGameOver(state)) return "Draft day";
+  if (isGameOver(state)) return "Draft complete";
+  if (draftDayOf(d)) return `NFL Draft · Day ${draftDayOf(d)}`;
   if (d >= k.newLeagueYear) return `Free agency · ${d.slice(0, 4)} league year`;
   if (d >= k.negotiatingWindowOpens) return "Negotiating window";
   if (d >= k.franchiseTagWindowOpens && d <= k.franchiseTagDeadline) return "Offseason · tag window";
@@ -87,6 +90,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const over = isGameOver(game);
   const offseason = isSeasonOver(game);
   const left = pendingEvents(game).length;
+  const waiting = draftWaiting(game);
 
   function step(fn: (s: GameState) => void) {
     setBusy(true);
@@ -112,6 +116,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               {s}
               {s === "Inbox" && unread > 0 && <span className="badge">{unread}</span>}
               {s === "Trades" && tradeOffers > 0 && <span className="badge">{tradeOffers}</span>}
+              {s === "Draft" && onTheClock(game) && <span className="badge">On the clock</span>}
             </button>
           ))}
         </nav>
@@ -139,7 +144,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               {left ? `Sim rest of day (${left})` : "Next day"}
             </button>
             {offseason
-              ? <button className="btn" disabled={busy || over} onClick={() => step(advanceToNextEvent)}>Advance to next event</button>
+              ? <button className="btn" disabled={busy || over || waiting} onClick={() => step(advanceToNextEvent)}
+                title={waiting ? "The draft is on: run it from the draft room, or use Sim rest of day to let the GM finish today's rounds." : undefined}>Advance to next event</button>
               : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>}
           </div>
         </header>
@@ -148,6 +154,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Calendar" && <CalendarScreen game={game} />}
           {screen === "College" && <CollegeScreen game={game} />}
           {screen === "Scouting" && <ScoutingScreen game={game} changed={changed} />}
+          {screen === "Draft" && <DraftScreen game={game} changed={changed} />}
           {screen === "Stats" && <StatsScreen game={game} />}
           {screen === "Contracts" && <ContractsScreen game={game} changed={changed} />}
           {screen === "Staff" && <StaffScreen game={game} />}

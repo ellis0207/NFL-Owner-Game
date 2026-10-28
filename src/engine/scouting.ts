@@ -319,7 +319,8 @@ function roundRange(state: GameState, pv: number, sd: number): string {
   return `Rounds ${hi}-${lo}`;
 }
 
-function fitRead(state: GameState, id: string, team: string): number {
+/** How well a prospect's traits fit a team's schemes, in rating points around zero (engine only). */
+export function fitRead(state: GameState, id: string, team: string): number {
   const dc = draftClass(state.seed);
   const p = dc.byId[id];
   const h = dc.hidden[id];

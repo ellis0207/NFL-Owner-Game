@@ -737,20 +737,22 @@ export function prospectLine(p: Prospect, t: Record<string, number> & { g: numbe
 /** The media's big board: prospects by buzz, best first. */
 export function mediaBoard(state: GameState): string[] {
   const hype = state.college!.hype;
-  return Object.keys(hype).sort((a, b) => hype[b] - hype[a]);
+  // Underclassmen who go back to school drop off the boards.
+  const back = new Set(state.draft?.returned ?? []);
+  return Object.keys(hype).filter((id) => !back.has(id)).sort((a, b) => hype[b] - hype[a]);
 }
 
 const boardCache = new WeakMap<object, { key: string; ranks: Record<string, number> }>();
 
 export function mediaRank(state: GameState, id: string): number {
   const c = state.college!;
-  const key = `${Object.keys(c.results).length}`;
+  const key = `${Object.keys(c.results).length}:${state.draft?.returned?.length ?? 0}:${state.draft?.combine ? 1 : 0}`;
   let hit = boardCache.get(c.hype);
   if (!hit || hit.key !== key) {
     hit = { key, ranks: Object.fromEntries(mediaBoard(state).map((x, i) => [x, i + 1])) };
     boardCache.set(c.hype, hit);
   }
-  return hit.ranks[id];
+  return hit.ranks[id] ?? 999;
 }
 
 export function injuryNote(state: GameState, id: string): string | null {

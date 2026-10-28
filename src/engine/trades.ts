@@ -66,9 +66,24 @@ export function pickId(year: number, round: number, from: string): string {
   return `${year}-${round}-${from}`;
 }
 
-export function parsePick(id: string): { year: number; round: number; from: string } {
-  const [y, r, from] = id.split("-");
-  return { year: Number(y), round: Number(r), from };
+/** Compensatory picks carry a suffix: "2027-5-SEA-c2". */
+export function parsePick(id: string): { year: number; round: number; from: string; comp: boolean } {
+  const [y, r, from, c] = id.split("-");
+  return { year: Number(y), round: Number(r), from, comp: !!c };
+}
+
+/** A pick already used in the draft. */
+export function pickUsed(state: GameState, id: string): boolean {
+  const d = state.draft;
+  if (!d?.order || parsePick(id).year !== DRAFT_YEAR) return false;
+  const i = d.order.indexOf(id);
+  return i >= 0 && i < d.made.length;
+}
+
+/** Overall number of a pick in this year's draft, once the order is set. */
+export function pickOverall(state: GameState, id: string): number | null {
+  const i = state.draft?.order?.indexOf(id) ?? -1;
+  return i >= 0 ? i + 1 : null;
 }
 
 export function pickOwner(state: GameState, id: string): string {
@@ -78,23 +93,34 @@ export function pickOwner(state: GameState, id: string): string {
 /** Every pick a team holds, its own and others', soonest first. */
 export function picksOf(state: GameState, team: string): string[] {
   const out: string[] = [];
+  const comp = (state.draft?.comp ?? []).map((c) => c.pick);
   for (const year of PICK_YEARS) {
     for (let round = 1; round <= ROUNDS; round++) {
       for (const t of TEAMS) {
         const id = pickId(year, round, t.id);
-        if (pickOwner(state, id) === team) out.push(id);
+        if (pickOwner(state, id) === team && !pickUsed(state, id)) out.push(id);
+      }
+      for (const id of comp) {
+        const p = parsePick(id);
+        if (p.year === year && p.round === round && pickOwner(state, id) === team && !pickUsed(state, id)) out.push(id);
       }
     }
   }
-  return out;
+  // Once the draft order is set, this year's picks go in the order they come up.
+  return state.draft?.order ? out.sort((a, b) => (pickOverall(state, a) ?? 999) - (pickOverall(state, b) ?? 999) || a.localeCompare(b)) : out;
 }
 
 const ORD = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th"];
 
-/** "2027 1st", or "2027 1st (GB)" for a pick that came from another team. */
+/** "2027 1st", "2027 1st (GB)" for a pick that came from another team, "2027 5th (No. 170, comp)" once the order is set. */
 export function pickLabel(state: GameState, id: string, holder = pickOwner(state, id)): string {
-  const { year, round, from } = parsePick(id);
-  return `${year} ${ORD[round]}${from !== holder ? ` (${from})` : ""}`;
+  const { year, round, from, comp } = parsePick(id);
+  const notes: string[] = [];
+  const overall = pickOverall(state, id);
+  if (overall) notes.push(`No. ${overall}`);
+  if (from !== holder) notes.push(from);
+  if (comp) notes.push("comp");
+  return `${year} ${ORD[round]}${notes.length ? ` (${notes.join(", ")})` : ""}`;
 }
 
 /** Moves a team's own pick to another team, if it still has it (offer-sheet compensation). */
@@ -200,9 +226,10 @@ const OUTLOOK: Record<Direction, { years: number[]; picks: number }> = {
 
 export function pickValue(state: GameState, team: string, id: string): number {
   const { year, round, from } = parsePick(id);
-  const slot = projectedSlot(state, from, year);
   const out = Math.max(0, year - DRAFT_YEAR);
-  return chartValue((round - 1) * 32 + slot) * Math.pow(0.8, out) * OUTLOOK[direction(state, team)].picks;
+  // Once the order is set, a pick is worth its exact slot on the chart.
+  const overall = pickOverall(state, id) ?? (round - 1) * 32 + projectedSlot(state, from, year);
+  return chartValue(overall) * Math.pow(0.8, out) * OUTLOOK[direction(state, team)].picks;
 }
 
 /** Whose eyes: a team's front office, the press (the consensus), or the truth (for grading later). */
@@ -380,7 +407,6 @@ export function tradeWindow(state: GameState): Window {
 }
 
 function windowOn(d: string): Window {
-  if (d >= KEY.draftStart) return { open: false, official: false, text: "Draft day: trades during the draft come with the draft itself." };
   if (d <= KEY.tradeDeadline) return { open: true, official: true, text: `Trades are open until the deadline, 4 PM ET on ${shortDate(KEY.tradeDeadline)}.` };
   if (d < OFFSEASON_START) return { open: false, official: false, text: `The trade deadline passed on ${shortDate(KEY.tradeDeadline)}. Trading reopens after the Super Bowl.` };
   if (d < KEY.newLeagueYear) return { open: true, official: false, text: `Trades agreed now become official when the new league year opens on ${shortDate(KEY.newLeagueYear)}. Players whose contracts expire can't be included.` };
@@ -512,6 +538,7 @@ export function checkTrade(state: GameState, deal: TradeDeal): Legality {
         const { year } = parsePick(a.pick);
         if (pickOwner(state, a.pick) !== team) problems.push(`The ${teamLabel(team)} don't own the ${pickLabel(state, a.pick, team)} pick.`);
         if (!PICK_YEARS.includes(year)) problems.push("Only picks in the next three drafts can be traded.");
+        if (pickUsed(state, a.pick)) problems.push(`The ${pickLabel(state, a.pick, team)} pick has already been used.`);
       }
     }
   }
@@ -692,7 +719,8 @@ export function describe(state: GameState, assets: TradeAsset[], holder: string)
       const p = PLAYER_BY_ID[a.id];
       return `${p.position} ${p.name}`;
     }
-    return `a ${pickLabel(state, a.pick, holder)}-round pick`.replace(/(\d)(st|nd|rd|th) \((\w+)\)-round/, "$1$2-round ($3)");
+    const m = pickLabel(state, a.pick, holder).match(/^(\d+ \d\w\w)(?: \((.+)\))?$/)!;
+    return `a ${m[1]}-round pick${m[2] ? ` (${m[2]})` : ""}`;
   });
   if (parts.length <= 1) return parts[0] ?? "nothing";
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
