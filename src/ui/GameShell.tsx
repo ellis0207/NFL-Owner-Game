@@ -20,6 +20,8 @@ import { SchoolPanel } from "./SchoolPanel";
 import { CapScreen } from "./screens/CapScreen";
 import { ContractsScreen } from "./screens/ContractsScreen";
 import { InboxScreen } from "./screens/InboxScreen";
+import { MediaScreen } from "./screens/MediaScreen";
+import { openQuestions } from "../engine/press";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
@@ -32,7 +34,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -86,6 +88,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const rec = standings(game)[game.userTeam];
   const counts = rosterCount(game, game.userTeam);
   const unread = game.inbox.filter((i) => !i.read).length;
+  const pressAsks = openQuestions(game).length;
   const tradeOffers = game.trades?.offers.filter((o) => o.status === "open").length ?? 0;
   const over = isGameOver(game);
   const offseason = isSeasonOver(game);
@@ -115,6 +118,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <button key={s} aria-current={screen === s ? "page" : undefined} onClick={() => setScreen(s)}>
               {s}
               {s === "Inbox" && unread > 0 && <span className="badge">{unread}</span>}
+              {s === "Media" && pressAsks > 0 && <span className="badge">{pressAsks}</span>}
               {s === "Trades" && tradeOffers > 0 && <span className="badge">{tradeOffers}</span>}
               {s === "Draft" && onTheClock(game) && <span className="badge">On the clock</span>}
             </button>
@@ -159,6 +163,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Contracts" && <ContractsScreen game={game} changed={changed} />}
           {screen === "Staff" && <StaffScreen game={game} />}
           {screen === "Inbox" && <InboxScreen game={game} changed={changed} />}
+          {screen === "Media" && <MediaScreen game={game} changed={changed} />}
           {screen === "Schedule" && <ScheduleScreen game={game} />}
           {screen === "Standings" && <StandingsScreen game={game} />}
           {screen === "Roster" && <RosterScreen game={game} changed={changed} />}

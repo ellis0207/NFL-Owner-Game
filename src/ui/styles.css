@@ -286,3 +286,23 @@ td.name { font-weight: 600; white-space: nowrap; }
 .rec > div { grid-column: 1; }
 .rec > button { grid-column: 2; grid-row: 1 / span 2; }
 tr.ours td { background: color-mix(in srgb, var(--team) 8%, transparent); }
+
+/* Media */
+.news-feed { display: grid; }
+.news-date { margin: 1rem 0 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.story { border-bottom: 1px solid var(--rule); padding: 0.6rem 0; display: grid; gap: 0.35rem; }
+.story.ours { border-left: 3px solid var(--team); padding-left: 0.6rem; }
+.story button.head { all: unset; cursor: pointer; display: flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; }
+.story .headline { flex: 1 1 22rem; }
+.story .byline { font-size: 0.8rem; }
+.story .body { white-space: pre-line; max-width: 72ch; margin: 0; }
+.story .related { gap: 0.75rem; align-items: center; }
+.pill.kind-rumor, .pill.kind-leak { color: var(--warn); border-color: currentColor; }
+.pill.kind-owner { color: var(--team); border-color: currentColor; }
+.pill.kind-injury { color: var(--bad); border-color: currentColor; }
+.question .ask { font-size: 1.1rem; font-weight: 600; margin: 0; }
+.question p { margin: 0; }
+.answers { display: grid; gap: 0.4rem; }
+.btn.answer { text-align: left; white-space: normal; }
+.said { border-bottom: 1px solid var(--rule); padding-bottom: 0.5rem; display: grid; gap: 0.15rem; }
+.said:last-child { border-bottom: 0; }

@@ -21,6 +21,8 @@ import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
 import { tradesDaily } from "./trades";
+import { mediaDaily } from "./media";
+import { pressDaily } from "./press";
 import { collegeDaily, newCollege } from "./college";
 import { scoutingDaily } from "./scouting";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
@@ -438,6 +440,9 @@ export function advanceDay(state: GameState): void {
   }
   const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
+  // The press files on everything that happened today, then asks the owner about it.
+  mediaDaily(state);
+  pressDaily(state);
 
   state.date = addDays(date, 1);
 }

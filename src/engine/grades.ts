@@ -5,6 +5,7 @@ import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
 import { marketPrice } from "./market";
 import { PLAYER_BY_ID } from "./league";
+import { gradeLean } from "./outlets";
 import { gaussian, rngFor } from "./rng";
 import type { GameState, Position, Signing } from "./types";
 
@@ -60,6 +61,7 @@ export function gradeDeal(state: GameState, s: Pick<Signing, "player" | "team" |
     let ratio = (fair / Math.max(1, s.apy)) * (1 + (o.bias[p.position] ?? 0)) * (1 + gaussian(rng) * o.noise);
     ratio -= Math.max(0, gShare - 0.4) * o.guaranteeTaste;
     if (reSigned) ratio += o.loyaltyTaste;
+    ratio += gradeLean(state, o.name, s.team);
     if (s.apy < 2_000_000) ratio = Math.max(ratio, 0.97);
     return { outlet: o.name, grade: letter(ratio), take: take(ratio, s, p.name.split(" ").slice(-1)[0], gShare) };
   });

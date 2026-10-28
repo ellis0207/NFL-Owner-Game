@@ -732,6 +732,94 @@ export interface DraftState {
   daysDone: number[];
 }
 
+// ---- Media (see engine/outlets.ts, media.ts, press.ts) ----
+
+export type StoryKind =
+  | "recap" | "injury" | "signing" | "release" | "trade" | "rumor" | "leak" | "interview" | "trend"
+  | "rankings" | "preview" | "college" | "draft" | "owner" | "league";
+
+/** A piece of coverage from one of the made-up outlets. */
+export interface Story {
+  id: string;
+  date: string;
+  /** Outlet id (see engine/outlets.ts). */
+  outlet: string;
+  by: string;
+  kind: StoryKind;
+  headline: string;
+  body: string;
+  /** NFL teams, players and college prospects it's about. */
+  teams?: string[];
+  players?: string[];
+  prospects?: string[];
+  gameId?: string;
+  college?: boolean;
+}
+
+/** One answer the owner can give. Its effects are worked out by the engine and never shown. */
+export interface PressOption {
+  key: string;
+  text: string;
+}
+
+export interface PressQuestion {
+  id: string;
+  date: string;
+  /** Last day to answer; after that the team "declined to comment". */
+  expires: string;
+  outlet: string;
+  by: string;
+  topic: string;
+  /** The development the question is about, in a line. */
+  context: string;
+  question: string;
+  options: PressOption[];
+  player?: string;
+  team?: string;
+  prospect?: string;
+  /** What the owner said: an option index, or -1 for no answer in time. */
+  answer?: number;
+  answeredOn?: string;
+}
+
+/** Something the owner said in public that can come back later. */
+export interface Stance {
+  kind: "untouchable" | "playoffs" | "willPay" | "noSell";
+  date: string;
+  player?: string;
+  resolved?: boolean;
+}
+
+/** A consequence of something the owner said that surfaces on a later day. */
+export interface Echo {
+  date: string;
+  kind: string;
+  question: string;
+  player?: string;
+  amount?: number;
+}
+
+export interface MediaState {
+  stories: Story[];
+  questions: PressQuestion[];
+  /** Engine only: each outlet's attitude toward the owner, -50 to 50. */
+  rel: Record<string, number>;
+  /** Engine only: the head coach's faith in the owner, 0-100. */
+  coach: number;
+  stances: Stance[];
+  echoes: Echo[];
+  /** Owner fines from the league office. */
+  fines: { date: string; amount: number; reason: string }[];
+  /** Engine only: how much the owner's words have helped a player's agent, as a share of the price. */
+  leverage: Record<string, number>;
+  /** Last power rankings, best first, for the movement. */
+  ranks?: string[];
+  /** Prospect buzz at the last stock report. */
+  hypeSnap?: Record<string, number>;
+  /** Topics already asked about, so the same development isn't asked twice. */
+  asked: Record<string, string>;
+}
+
 export interface TeamFinance {
   /** Cash paid to players, by league year. */
   paid: Record<number, number>;
@@ -796,6 +884,8 @@ export interface GameState {
   college?: CollegeState;
   /** The 2027 draft: order, compensatory picks, mock drafts and the selections. */
   draft?: DraftState;
+  /** Media coverage, press questions and how the press feels about the owner. */
+  media?: MediaState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

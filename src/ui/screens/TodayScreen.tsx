@@ -14,6 +14,9 @@ import { gamesOn, latestPoll } from "../../engine/college";
 import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
 import { CollegeScore } from "./CollegeScreen";
+import { openQuestions } from "../../engine/press";
+import { MEDIA_BY_ID } from "../../engine/outlets";
+import { StoryCard } from "./MediaScreen";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -148,6 +151,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
+      <MediaToday game={game} go={go} />
       {unread.length > 0 && (
         <section className="panel stack">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
@@ -179,6 +183,35 @@ export function TodayScreen({ game, go, busy, play }: Props) {
         </section>
       )}
     </>
+  );
+}
+
+/** Requests for comment, and this morning's headlines. */
+function MediaToday({ game, go }: { game: GameState; go: (s: Screen) => void }) {
+  const asks = openQuestions(game);
+  const stories = game.media?.stories ?? [];
+  const latest = stories[0]?.date;
+  // Our team first, then the biggest league stories.
+  const today = latest ? stories.filter((s) => s.date >= addDays(latest, -1)) : [];
+  const rank = (k: string) => ["owner", "trade", "signing", "rumor", "leak", "injury", "draft", "recap"].indexOf(k);
+  const top = [...today].sort((a, b) => Number(b.teams?.includes(game.userTeam) ?? 0) - Number(a.teams?.includes(game.userTeam) ?? 0) || (rank(a.kind) < 0 ? 99 : rank(a.kind)) - (rank(b.kind) < 0 ? 99 : rank(b.kind))).slice(0, 5);
+  if (!asks.length && !top.length) return null;
+  return (
+    <section className="panel stack tight">
+      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+        <h2>Media</h2>
+        <button className="btn small" onClick={() => go("Media")}>Open media</button>
+      </div>
+      {asks.map((q) => (
+        <div key={q.id}>
+          <span className="warn">Request for comment</span>{" "}
+          <button className="link" onClick={() => go("Media")}>{q.question}</button>
+          <span className="muted"> · {MEDIA_BY_ID[q.outlet]?.name}, by {shortDate(q.expires)}</span>
+        </div>
+      ))}
+      {top.length > 0 && <span className="label">In the news</span>}
+      {top.map((s) => <StoryCard key={s.id} game={game} s={s} compact />)}
+    </section>
   );
 }
 
