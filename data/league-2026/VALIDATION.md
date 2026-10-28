@@ -79,3 +79,11 @@ Highest rated at each position, for a gut check. Owners never see these numbers.
 ## Problems
 
 None found.
+
+## Free agent pool
+
+498 unsigned players when camps open: players who signed after Week 1 without being in a camp at cutdown, plus 2025 players on no 2026 roster who haven't announced their retirement (pipeline/free_agents.py).
+
+By position: C 7, CB 68, EDGE 46, IDL 48, K 12, LB 47, LS 5, OG 30, OT 47, P 6, QB 12, RB 41, S 29, TE 33, WR 67
+
+Highest rated: Luke Elkin (LS, LV) 98, Eric Kendricks (LB, SF) 82, Kenneth Murray, Jr. (LB, DAL) 81, Tyreek Hill (WR, MIA) 81, Joe Mixon (RB, HOU) 81, Germaine Pratt (LB, IND) 80, Jaire Alexander (CB, BAL) 79, Ja'Whaun Bentley (LB, NE) 79, Marshon Lattimore (CB, WAS) 77, Logan Wilson (LB, DAL) 76, Kendall Fuller (CB, MIA) 75, Justin Jones (IDL, ARI) 75, Zach Ertz (TE, WAS) 74, Austin Ekeler (RB, WAS) 74, Kareem Hunt (RB, KC) 73

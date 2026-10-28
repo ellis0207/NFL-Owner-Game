@@ -1,5 +1,6 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
+import { PLAYERS } from "../engine/league";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
 export const SAVE_FORMAT = "nfl-owner-sim-save";
@@ -56,6 +57,10 @@ export function migrate(state: GameState): GameState {
     state.finance ??= {};
     state.pressure ??= { fans: 50, media: 50 };
     state.version = 3;
+  }
+  // Saves from before the free agent pool: the unsigned players join the league as free agents.
+  for (const p of PLAYERS) {
+    if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
   }
   return state;
 }

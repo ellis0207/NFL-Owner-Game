@@ -116,7 +116,7 @@ export function originalDeal(id: string): Deal {
   });
   const prorated = years.reduce((sum, y) => sum + y.proration, 0);
   d = {
-    team: p.team,
+    team: p.team ?? "",
     signed: `${c.signedYear ?? RULES.season}-03-15`,
     kind: (c.type === "Franchise" || c.type === "Transition") && c.seasons.length > 1 ? "extension" : KIND_FROM_DATA[c.type ?? ""] ?? "veteran",
     signingBonus: prorated,
@@ -171,6 +171,9 @@ export interface ReleaseCharges {
   savings: number;
   /** Cash still owed to the player (guarantees not yet paid). */
   cashOwed: number;
+  /** The part of the dead money that is salary still owed: a team that claims the player off waivers takes it over. */
+  salaryThisYear: number;
+  salaryNextYear: number;
 }
 
 /**
@@ -180,12 +183,13 @@ export interface ReleaseCharges {
  * this year's share stays and the rest moves to next year.
  * During the season, base salary already paid has already counted.
  */
-export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: boolean; injured?: boolean } = {}): ReleaseCharges {
-  if (!deal) return { thisYear: 0, nextYear: 0, savings: 0, cashOwed: 0 };
+export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: boolean; injured?: boolean; termPay?: boolean } = {}): ReleaseCharges {
+  if (!deal) return { thisYear: 0, nextYear: 0, savings: 0, cashOwed: 0, salaryThisYear: 0, salaryNextYear: 0 };
   const year = leagueYear(date);
   const cur = dealYear(deal, year);
   const later = deal.years.filter((y) => y.year > year);
-  const guaranteeOf = (y: DealYear) => y.guaranteed + (opts.injured || (y.vests && y.vests <= date) ? y.injuryGuaranteed : 0);
+  // Termination pay makes the whole season's salary owed, like a guarantee.
+  const guaranteeOf = (y: DealYear) => (opts.termPay && y.year === year ? Math.max(y.guaranteed, y.base) : y.guaranteed) + (opts.injured || (y.vests && y.vests <= date) ? y.injuryGuaranteed : 0);
 
   let paid = 0;
   let salaryNow = 0;
@@ -209,6 +213,8 @@ export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: 
     nextYear,
     savings: yearCapHit(cur) - thisYear,
     cashOwed: Math.round(salaryNow - paid + guaranteeLater),
+    salaryThisYear: Math.round(salaryNow - paid + (split ? 0 : guaranteeLater)),
+    salaryNextYear: Math.round(split ? guaranteeLater : 0),
   };
 }
 
@@ -306,6 +312,15 @@ export function writeExtension(current: Deal, terms: Terms, date: string, yearsE
   return deal;
 }
 
+/** A deal signed after the season has started covers only the weeks left: base salary is paid by the week. */
+export function prorateFirstYear(deal: Deal, date: string): Deal {
+  const first = deal.years[0];
+  const paid = weeksPaid(date);
+  if (!first || first.year !== leagueYear(date) || paid <= 0) return deal;
+  first.weeks = Math.max(1, REG_WEEKS - paid);
+  return deal;
+}
+
 /** A one-year minimum deal; veterans with four or more seasons count only a two-year player's minimum. */
 export function writeMinimumDeal(team: string, date: string, yearsExp: number, opts: { bonus?: number; guaranteed?: boolean; year?: number } = {}): Deal {
   // A reserve/future deal signed after the season covers next league year.
@@ -321,6 +336,51 @@ export function writeMinimumDeal(team: string, date: string, yearsExp: number, o
   return {
     team, signed: date, kind: "minimum", signingBonus: bonus, total: base + bonus, apy: base + bonus,
     guaranteedAtSigning: bonus + y.guaranteed, years: [y],
+  };
+}
+
+/** Practice squad pay: weekly, by accrued seasons (veterans are paid more). */
+export function practiceWeekly(accrued: number): number {
+  const w = RULES.practiceSquadWeekly;
+  return accrued >= 3 ? w.veteranMin : w.standard;
+}
+
+/** A practice squad contract for the rest of the league year, paid by the week. */
+export function writePracticeDeal(team: string, date: string, accrued: number): Deal {
+  const year = leagueYear(date);
+  const base = practiceWeekly(accrued) * REG_WEEKS;
+  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  return {
+    team, signed: date, kind: "practice", signingBonus: 0, total: base, apy: base, guaranteedAtSigning: 0,
+    years: [{ year, base, proration: 0, bonus: 0, guaranteed: 0, injuryGuaranteed: 0, ...(weeks < REG_WEEKS ? { weeks } : {}) }],
+  };
+}
+
+/**
+ * The contract a team takes on when it claims a player off waivers: the
+ * salary that's left, guarantees included. Bonus proration stays with the
+ * team that released him, and so does termination pay.
+ */
+export function claimedDeal(deal: Deal | null, team: string, date: string, yearsExp: number): Deal {
+  const year = leagueYear(date);
+  if (!deal) return writeMinimumDeal(team, date, yearsExp);
+  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  const years = deal.years.filter((y) => y.year >= year && !y.void).map((y) => {
+    const next: DealYear = { ...y, proration: 0 };
+    if (y.year === year) {
+      // Bonuses already earned this league year were paid by the old team.
+      if (date >= leagueYearStart(year)) next.bonus = Math.min(0, y.bonus);
+      next.weeks = Math.min(y.weeks ?? REG_WEEKS, weeks);
+      if (next.weeks >= REG_WEEKS) delete next.weeks;
+    }
+    return next;
+  });
+  if (!years.length) return writeMinimumDeal(team, date, yearsExp);
+  const total = years.reduce((s, y) => s + y.base + Math.max(0, y.bonus), 0);
+  return {
+    team, signed: date, kind: deal.kind === "practice" ? "minimum" : deal.kind, signingBonus: 0, total,
+    apy: Math.round(total / years.length), guaranteedAtSigning: years.reduce((s, y) => s + y.guaranteed, 0), years,
+    ...(deal.fifthYearOption && !deal.fifthYearOption.declined ? { fifthYearOption: deal.fifthYearOption } : {}),
   };
 }
 

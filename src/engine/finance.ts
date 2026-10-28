@@ -31,12 +31,14 @@ export function cashPaid(state: GameState, team: string, year = leagueYear(state
 /** One regular-season paycheck for every team: a week of base salary for the 53, IR and practice squad. */
 export function payWeek(state: GameState): void {
   const year = leagueYear(state.date);
-  const ps = practiceSquadCapHit() / REG_WEEKS;
   for (const { id: team } of TEAMS) {
     let total = 0;
     for (const id of teamPlayerIds(state, team)) {
       const p = state.players[id];
-      if (p.status === "ps") total += ps;
+      if (p.status === "ps") {
+        const d = dealOf(state, id);
+        total += (d?.kind === "practice" ? dealYear(d, year)?.base ?? 0 : practiceSquadCapHit()) / REG_WEEKS;
+      }
       else if (p.status === "active" || p.status === "ir") {
         if (p.holdout?.kind === "holdout") continue; // holdouts forfeit game checks
         const y = dealYear(dealOf(state, id), year);

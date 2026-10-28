@@ -426,6 +426,9 @@ function startOffseason(state: GameState): void {
       const p = state.players[id];
       delete p.holdout;
       delete p.irDate;
+      delete p.elevations;
+      delete p.elevatedFor;
+      delete p.keepUntil;
       if (p.status === "ps") ps.push(id);
       else p.status = "camp";
     }
@@ -440,6 +443,7 @@ function startOffseason(state: GameState): void {
       }
     }
   }
+  state.psProtect = {};
   invalidateRosters(state);
   const user = state.userTeam;
   const pending = pendingFreeAgents(state, user);

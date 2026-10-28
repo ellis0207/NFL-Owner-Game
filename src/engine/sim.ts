@@ -614,7 +614,7 @@ class GameSim {
       const ok = this.rng() < 0.47 + (this.ab(lineup.qb) - 80) * 0.004;
       if (ok) {
         team.score += 2;
-        team.quarters[Math.min(this.q, 5) - 1] += 2;
+        team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 2;
         const scorer2 = this.rng() < 0.6 ? lineup.wrs[0] ?? lineup.qb : lineup.rbs[0] ?? lineup.qb;
         this.add(team, scorer2, "twoPt");
         last.text += " (two-point conversion good)";
@@ -625,7 +625,7 @@ class GameSim {
       if (this.rng() < 0.968 + (acc - 80) * 0.002) {
         this.add(team, kicker, "xpm");
         team.score += 1;
-        team.quarters[Math.min(this.q, 5) - 1] += 1;
+        team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 1;
         last.text += ` (${this.name(kicker)} kick)`;
       } else last.text += " (kick failed)";
     }
@@ -639,7 +639,7 @@ class GameSim {
 
   safety(defense: Team): void {
     defense.score += 2;
-    defense.quarters[Math.min(this.q, 5) - 1] += 2;
+    defense.quarters[Math.min(this.q, 5) - 1] = (defense.quarters[Math.min(this.q, 5) - 1] ?? 0) + 2;
     this.scoring.push({ q: this.q, clock: Math.max(0, Math.round(this.clock)), team: defense.id, text: "Safety", away: this.t.away.score, home: this.t.home.score });
     if (this.ot.active) {
       this.over = true;

@@ -11,7 +11,7 @@ import type { GameState, Position } from "../../engine/types";
 import { money, POSITION_NAMES, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
 
-type Filter = "all" | "active" | "ps" | "ir";
+type Filter = "all" | "active" | "ps" | "ir" | "future";
 
 export function RosterScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -70,7 +70,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
       )}
       {!beforeCutdown && (
         <div className="tabs" role="group" aria-label="Show">
-          {([["all", "Everyone"], ["active", "53-man roster"], ["ps", "Practice squad"], ["ir", "Injured reserve"]] as const).map(([k, label]) => (
+          {([["all", "Everyone"], ["active", "53-man roster"], ["ps", "Practice squad"], ["ir", "Injured reserve"], ["future", "Future deals"]] as const).map(([k, label]) => (
             <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label}</button>
           ))}
         </div>
@@ -151,7 +151,7 @@ function PositionGroup(props: {
                 </button>
               ) : (
                 <span className={`pill ${holdout || expiring ? "cut" : tag ? "keep" : status === "ps" ? "ps" : status === "ir" ? "ir" : injured ? "inj" : ""}`}>
-                  {tag ? (tag.kind === "franchise" ? "Franchise tag" : "Transition tag") : expiring ? `Expiring (${expiring})` : holdout ? (holdout.kind === "holdout" ? "Holding out" : "Holding in") : status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : "Camp"}
+                  {tag ? (tag.kind === "franchise" ? "Franchise tag" : "Transition tag") : expiring ? `Expiring (${expiring})` : holdout ? (holdout.kind === "holdout" ? "Holding out" : "Holding in") : status === "ps" ? "Practice squad" : status === "ir" ? "Injured reserve" : injured ? "Injured" : status === "active" ? "Active" : status === "future" ? "Future deal" : "Camp"}
                 </span>
               )}
             </td>

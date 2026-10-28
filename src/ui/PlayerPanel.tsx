@@ -6,6 +6,7 @@ import { injuryStatus } from "../engine/injuries";
 import { GAME_BY_ID, PLAYER_BY_ID, SCHEDULE, SEASON, TEAM_BY_ID } from "../engine/league";
 import { playerReport } from "../engine/reports";
 import { releasePlayer } from "../engine/roster";
+import { claimDueLabel, onWaivers } from "../engine/waivers";
 import { talksFor } from "../engine/negotiation";
 import { isOffseason, restructure, restructurePreview } from "../engine/offseason";
 import { gameTypeLabel, outLabel } from "../engine/season";
@@ -20,6 +21,7 @@ const CONTRACT_SOURCE = {
   overthecap: "Year-by-year figures from OverTheCap.",
   "estimated-from-apy": "Cap hits estimated from the contract's average per year.",
   "estimated-minimum": "No contract on record; estimated at the league minimum.",
+  "free-agent": "",
 };
 
 export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
@@ -49,13 +51,15 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   }, [onClose]);
 
   function release() {
-    releasePlayer(game, id);
+    const where = releasePlayer(game, id);
+    const w = onWaivers(game, id);
     if (game.cutPlan) game.cutPlan = game.cutPlan.filter((x) => x !== id);
     game.inbox.unshift({
       id: `${game.date}-rel-${id}`, date: game.date, kind: "transaction", from: "General Manager",
       title: `${p.name} released`,
       body: `We released ${p.name}. ${money(cost.deadThisYear)} stays on this year's cap as dead money` +
-        (cost.deadNextYear ? ` and ${money(cost.deadNextYear)} moves to next year.` : "."),
+        (cost.deadNextYear ? ` and ${money(cost.deadNextYear)} moves to next year.` : ".") +
+        (where === "waivers" && w ? ` He's on waivers until ${claimDueLabel(w)}; a team that claims him takes over his salary.` : " He's a free agent now."),
       read: true,
     });
     changed();
@@ -69,7 +73,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
         <header>
           <div>
             <h2>{p.name}</h2>
-            <span className="muted">{p.position} · {state.team ? `${TEAM_BY_ID[state.team].city} ${TEAM_BY_ID[state.team].name}` : "Free agent"}{state.status === "ps" ? " (practice squad)" : state.status === "ir" ? " (injured reserve)" : ""}</span>
+            <span className="muted">{p.position} · {state.team ? `${TEAM_BY_ID[state.team].city} ${TEAM_BY_ID[state.team].name}` : onWaivers(game, id) ? `On waivers (from ${TEAM_BY_ID[onWaivers(game, id)!.from].name}, claims due ${claimDueLabel(onWaivers(game, id)!)})` : `Free agent${state.lastTeam ? `, last with the ${TEAM_BY_ID[state.lastTeam]?.name ?? state.lastTeam}` : ""}`}{state.status === "ps" ? " (practice squad)" : state.status === "ir" ? " (injured reserve)" : ""}</span>
           </div>
           {p.jersey != null && <span className="jersey" style={{ marginLeft: "auto" }}>{p.jersey}</span>}
         </header>
@@ -159,7 +163,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               </span>
             </>
           ) : <p className="muted">No contract: free agent.</p>}
-          {(mine && deal || isOffseason(game.date) && (state.status === "fa" || talksFor(game, game.userTeam, id).ok)) && (() => {
+          {(mine && deal || (state.status === "fa" || isOffseason(game.date) && talksFor(game, game.userTeam, id).ok)) && (() => {
             const talking = game.negotiations[id]?.status === "open";
             const elig = talksFor(game, game.userTeam, id);
             if (!talking && !elig.ok) return <span className="muted">{elig.reason}</span>;
