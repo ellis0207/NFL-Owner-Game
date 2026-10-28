@@ -21,6 +21,8 @@ import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
 import { tradesDaily } from "./trades";
+import { collegeDaily, newCollege } from "./college";
+import { scoutingDaily } from "./scouting";
 
 const KEY = RULES.keyDates;
 export const SEASON_OVER_DATE = addDays(KEY.superBowl, 1);
@@ -68,6 +70,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     inbox: [],
     news: [],
   };
+  state.college = newCollege(state);
   const team = TEAM_BY_ID[userTeam];
   startHoldouts(state);
   const cap = capSummary(state, userTeam);
@@ -91,6 +94,12 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     `We'll practice most days and take a day off every so often to keep the legs fresh. On offense we run ${OFFENSE_LABEL[schemes.offense].toLowerCase()}` +
     ` (${off.name} calls the plays); on defense, ${DEFENSE_LABEL[schemes.defense].toLowerCase()} (${def.name} calls it). ` +
     "Players who fit what we do will get every chance to win jobs. You'll hear from me after every game, and my read on any player is on their page.");
+  const col = teamStaff(userTeam).COL;
+  send(state, "staff", `${col?.name ?? "Director of college scouting"}, director of college scouting`, "Setting up our draft scouting",
+    "The college season kicks off at the end of August, and the 2027 draft class is out there now. Tell us where to look on the " +
+    "Scouting page: a region, a conference, a school, positions, a college system, or specific players. Narrow assignments get you " +
+    "the full picture on a few players; broad ones get a little on a lot of them. Every trip comes out of our scouting budget, and " +
+    "campuses far from here cost more to reach. I'll file a report every Sunday.");
   return state;
 }
 
@@ -369,6 +378,8 @@ export function advanceDay(state: GameState): void {
   contractsDaily(state);
   faDaily(state);
   tradesDaily(state);
+  collegeDaily(state);
+  scoutingDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
     protectPracticeSquads(state);
     for (const t of Object.keys(TEAM_BY_ID)) {

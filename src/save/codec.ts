@@ -1,5 +1,6 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
+import { ensureCollege } from "../engine/college";
 import { PLAYERS } from "../engine/league";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
@@ -62,6 +63,8 @@ export function migrate(state: GameState): GameState {
   for (const p of PLAYERS) {
     if (!(p.id in state.players)) state.players[p.id] = { team: null, status: "fa", ...(p.lastTeam ? { lastTeam: p.lastTeam } : {}) };
   }
+  // Saves from before the college universe get the season played up to today.
+  ensureCollege(state);
   return state;
 }
 

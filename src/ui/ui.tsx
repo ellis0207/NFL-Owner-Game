@@ -7,9 +7,15 @@ export interface UiActions {
   openTalks: (playerId: string) => void;
   /** The Trades page, set up to trade for (or shop) a player. */
   openTrade: (playerId: string) => void;
+  /** A college prospect's page. */
+  openProspect: (prospectId: string) => void;
+  /** A college team's page. */
+  openSchool: (schoolId: string) => void;
 }
 
-export const UiContext = createContext<UiActions>({ openBox: () => {}, openPlayer: () => {}, openTalks: () => {}, openTrade: () => {} });
+export const UiContext = createContext<UiActions>({
+  openBox: () => {}, openPlayer: () => {}, openTalks: () => {}, openTrade: () => {}, openProspect: () => {}, openSchool: () => {},
+});
 
 export function useUi(): UiActions {
   return useContext(UiContext);

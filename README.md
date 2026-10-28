@@ -84,7 +84,29 @@ last week before the deadline, and unhappy players ask out. The owner can
 propose deals, ask what a player would cost, shop players on the trade block
 and take or leave calls from other teams. Three outlets grade every trade.
 
-Next up: the draft, then the business side.
+College football runs alongside the NFL. All 138 FBS teams play the 2026
+season in their 2026 conferences under their real head coaches: a generated
+12-game schedule with the real rivalry weekend, Red River and Florida-Georgia
+at their neutral sites, and Army-Navy on its own Saturday; conference title
+games; the AP poll every Sunday and the playoff committee's ranking every
+Tuesday from November 3; bowl season; and the 12-team College Football Playoff
+on its real 2026-27 dates and sites. Teams are simulated at the score level.
+The only players are the 2027 NFL draft prospects (about 640, generated for
+each save), and each has season totals and a game log. Award watch lists turn
+into semifinalists, finalists and winners on the real award calendar.
+
+Scouting is how the owner learns who those prospects are. Each week the owner
+points up to six assignments at a region, a conference, a school, positions, a
+college system, or specific players, at one of three depths: film study,
+campus visits or a deep dive. Narrow assignments fill a player's file fast;
+broad ones learn a little about many. Every assignment costs money from a
+$2.4M budget that runs to the draft, and campus trips cost more the farther
+the school is from the team's building. Reports come out as a round range,
+strengths and concerns, size and speed, scheme fit, makeup and medical as the
+file fills in, with the accuracy of the college scouting director. Other teams
+scout the class too.
+
+Next up: the draft itself, then the business side.
 
 ## Playing locally
 
@@ -104,6 +126,15 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
+
+## College data
+
+`data/college-2026/` is written by `pipeline/college_2026.py`: the 138 FBS
+teams with 2026 conferences and head coaches (Wikipedia's current-coaches list,
+October 2026), campus locations, college schemes (hand-entered for most
+programs), NFL facility locations for travel costs, the real bowl and CFP dates,
+and the generated regular-season schedule. Program strength is our own read and
+stays hidden. Check a season with `npx vite-node tests/college-report.ts [seed]`.
 
 ## League data
 

@@ -13,7 +13,7 @@ const ROLE_JOB: Partial<Record<StaffRole, string>> = {
   GM: "Runs the roster: cuts, signings, practice squad call-ups and, soon, trades and contracts.",
   TRN: "Keeps players healthy and gets injured players back on the field.",
   PRO: "Writes our reports on players around the league and in free agency.",
-  COL: "Leads draft scouting. College reports arrive with the draft update.",
+  COL: "Leads draft scouting: how much a week of scouting learns, and how accurate the college reports are.",
   STC: "Coaches the kicking game, returns and coverage units.",
 };
 
