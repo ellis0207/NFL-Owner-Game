@@ -102,7 +102,8 @@ export function capLimit(team: string, year = SEASON, state?: GameState): number
  */
 export function adjustRollover(state: GameState, team: string, delta: number): void {
   const rollover = state.league?.rollover?.[team];
-  if (!rollover || leagueYear(state.date) !== SEASON || !delta) return;
+  // Only between the season's end (when rollover is set) and the new league year; in-season moves change this year's books only.
+  if (!rollover || rollover[SEASON + 1] === undefined || leagueYear(state.date) !== SEASON || !delta) return;
   rollover[SEASON + 1] = Math.max(0, (rollover[SEASON + 1] ?? 0) + delta);
 }
 

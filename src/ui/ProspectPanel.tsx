@@ -25,6 +25,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
   const udfa = game.draft?.udfa?.[id];
   const back = game.draft?.returned?.includes(id);
   const combine = game.draft?.combine?.[id];
+  const proDay = game.draft?.proDay?.[id];
   const mock = mockSpot(game, id);
 
   useEffect(() => {
@@ -70,6 +71,19 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
               <dt>Vertical</dt><dd>{combine.vertical ? `${combine.vertical}"` : "—"}</dd>
               <dt>Bench (225 lb)</dt><dd>{combine.bench ? `${combine.bench} reps` : "—"}</dd>
             </dl>
+          </section>
+        )}
+
+        {proDay && (
+          <section className="panel stack tight">
+            <h3 style={{ margin: 0 }}>Pro day ({shortDate(proDay.date)})</h3>
+            <dl className="kv">
+              {!combine && <><dt>Height, weight</dt><dd>{height(proDay.heightIn)}, {proDay.weightLb} lb</dd></>}
+              {(proDay.forty || !combine) && <><dt>40-yard dash</dt><dd>{proDay.forty ? proDay.forty.toFixed(2) : "Did not run"}</dd></>}
+              {(proDay.vertical || !combine) && <><dt>Vertical</dt><dd>{proDay.vertical ? `${proDay.vertical}"` : "—"}</dd></>}
+              {(proDay.bench || !combine) && <><dt>Bench (225 lb)</dt><dd>{proDay.bench ? `${proDay.bench} reps` : "—"}</dd></>}
+            </dl>
+            <span className="muted">Campus times run a little fast; scouts trust them less than the combine's.</span>
           </section>
         )}
 

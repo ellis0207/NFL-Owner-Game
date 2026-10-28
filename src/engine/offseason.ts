@@ -2,9 +2,11 @@
 // ends, the cap for next year is set, teams use their tags and tenders and
 // clear cap room, and the new league year turns expiring contracts into free
 // agents. Free agency itself is in freeagency.ts.
+import { cpuPayCut, june1Left, june1Preview, releaseJune1 } from "./capmoves";
+import { inAgreedTrade } from "./trades";
 import { agentFor, changeMorale, changeTrust, priorities } from "./agents";
 import { addDeadMoney, capHit, capSummary, invalidateRosters, releaseCost, teamPlayerIds, yearsExpIn } from "./cap";
-import { addOneYear, dealCapHit, dealOf, lastYear, leagueYear, minimumSalary, projectedCap, rookieScale } from "./contracts";
+import { addOneYear, dealCapHit, dealOf, lastYear, leagueYear, minimumSalary, projectedCap, rookieScale, salaryCap } from "./contracts";
 import { addDays, ageOn, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { money, news, send } from "./inbox";
@@ -292,6 +294,15 @@ export function plannedSpace(state: GameState, team: string): number {
   return space - voids - rookies;
 }
 
+/**
+ * Room in a later league year as a front office sees it: the projected cap,
+ * less what's already committed and a cushion for rookies and in-season moves.
+ */
+export function futureRoom(state: GameState, team: string, year: number): number {
+  if (state.settings.capRules !== "real") return Infinity;
+  return capSummary(state, team, year).space - 0.05 * salaryCap(state, year);
+}
+
 // ---- Restructures ----
 
 /**
@@ -385,7 +396,10 @@ function cpuOptions(state: GameState): void {
     for (const id of teamPlayerIds(state, team)) {
       const info = optionInfo(state, id);
       if (!info.eligible || off(state).options[id]) continue;
-      decideOption(state, team, id, teamValue(state, team, id, info.year) >= info.amount * 0.9);
+      const v = teamValue(state, team, id, info.year);
+      // The option is guaranteed once picked up: it has to fit that year's books unless the player is a star.
+      const fits = futureRoom(state, team, info.year) - info.amount > 0 || v >= info.amount * 1.4;
+      decideOption(state, team, id, v >= info.amount * 0.9 && fits);
     }
   }
 }
@@ -416,7 +430,10 @@ function cpuCapWork(state: GameState): void {
         if (space >= target) break;
         // Void years only stretch a deal with years left; near its end they just pile money onto the day it voids.
         const yearsLeft = (lastYear(dealOf(state, b.id)!) ?? 0) - leagueYear(state.date);
-        space += restructure(state, b.id, b.age <= 28 && yearsLeft >= 2 && rng() < 0.3 ? 2 : 0);
+        // When next year is already full, spreading the money thinner (with void years) is the only way to restructure.
+        const tight = futureRoom(state, team, NEXT + 1) < 0;
+        if (tight && yearsLeft < 1) continue;
+        space += restructure(state, b.id, (tight || b.age <= 28 && rng() < 0.3) && yearsLeft >= 1 ? 2 : 0);
       }
     }
     if (space >= target) continue;
@@ -429,13 +446,29 @@ function cpuCapWork(state: GameState): void {
         const saved = state.date < KEY.newLeagueYear ? hit - Math.max(0, cost.deadThisYear - capHit(id, RULES.season, state)) - cost.deadNextYear : cost.savingsThisYear;
         return { id, hit, saved, v: teamValue(state, team, id, NEXT), age: ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26 };
       })
-      .filter((x) => x.hit >= 3_000_000 && x.saved >= 2_500_000 && x.v < x.saved * (mustComply ? 0.9 : space < 0 ? 0.75 : 0.55) && x.age >= 26)
+      .filter((x) => x.hit >= 3_000_000 && x.saved >= 2_500_000 && x.v < x.saved * (mustComply ? 0.9 : space < 0 ? 0.75 : 0.55) && x.age >= 26 && !inAgreedTrade(state, x.id))
       .sort((a, b) => a.v / a.saved - b.v / b.saved);
     for (const c of cands.slice(0, mustComply ? 6 : 2)) {
       if (space >= target && !(mustComply && capSummary(state, team, NEXT).space < 0)) break;
+      // A veteran gets the chance to take less before he's let go.
+      if (c.age >= 28 && c.v > c.hit * 0.35) {
+        const saved = cpuPayCut(state, team, c.id, c.v);
+        if (saved) { space += saved; continue; }
+      }
+      // With room to spare now, a big dead-money release is split across two years.
+      const name = `${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name}`;
+      if (state.date >= KEY.newLeagueYear && !mustComply && june1Left(state, team) > 0) {
+        const pv = june1Preview(state, c.id);
+        const normal = releaseCost(c.id, state).deadThisYear;
+        if (normal - pv.dead >= 6_000_000 && capSummary(state, team, NEXT).space - (pv.now - capHit(c.id, NEXT, state)) > 0) {
+          releaseJune1(state, c.id);
+          news(state, `The ${teamLabel(team)} release ${name} with a post-June 1 designation, spreading ${money(pv.dead + pv.deadNext)} in dead money over two years`);
+          continue;
+        }
+      }
       const dead = releaseOffseason(state, c.id);
       space += c.saved;
-      news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name}${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
+      news(state, `The ${teamLabel(team)} release ${name}${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
     }
   }
 }
@@ -461,23 +494,31 @@ function complyAll(state: GameState): void {
 }
 
 /** Over the cap once the league year is open: restructure, then release the least value per dollar saved until compliant. */
-function comply(state: GameState, team: string): void {
+export function comply(state: GameState, team: string, floor = 60): void {
   if (capSummary(state, team).space >= 0) return;
+  const later = leagueYear(state.date) + 1;
   for (const squeeze of [false, true]) {
     for (const b of restructureCandidates(state, team, squeeze)) {
       if (capSummary(state, team).space >= 0) return;
-      restructure(state, b.id);
+      const yearsLeft = (lastYear(dealOf(state, b.id)!) ?? 0) - leagueYear(state.date);
+      restructure(state, b.id, futureRoom(state, team, later) < 0 && yearsLeft >= 1 ? 2 : 0);
     }
+  }
+  // Veterans asked to take less before anyone is cut.
+  for (const id of teamPlayerIds(state, team)) {
+    if (capSummary(state, team).space >= 0) return;
+    const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
+    if (age >= 29 && !inAgreedTrade(state, id)) cpuPayCut(state, team, id, teamValue(state, team, id, leagueYear(state.date)));
   }
   const year = leagueYear(state.date);
   // Deep in the red, a team cuts real money rather than a roster's worth of minimum deals.
   const short = -capSummary(state, team).space;
   const cands = teamPlayerIds(state, team)
     .map((id) => ({ id, saved: releaseCost(id, state).savingsThisYear, v: teamValue(state, team, id, year) }))
-    .filter((x) => x.saved >= Math.max(1_000_000, Math.min(short, 12_000_000) / 3))
+    .filter((x) => x.saved >= Math.max(1_000_000, Math.min(short, 12_000_000) / 3) && !inAgreedTrade(state, x.id))
     .sort((a, b) => a.v / a.saved - b.v / b.saved);
-  for (const c of cands.slice(0, 4)) {
-    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= 60) return;
+  for (const c of cands.slice(0, 8)) {
+    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= floor) return;
     const dead = releaseOffseason(state, c.id);
     news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
   }

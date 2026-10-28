@@ -702,6 +702,8 @@ export interface FreeAgent {
   agreed?: { team: string; terms: OfferTerms; date: string };
   /** The owner's team gets a day to beat another team's offer. */
   lastLook?: { until: string; apy: number; team: string };
+  /** Visits to teams' facilities, scheduled or done. */
+  visits?: { team: string; date: string; done?: boolean }[];
 }
 
 /** An offer sheet a restricted player signed: the old team can match. */
@@ -848,6 +850,9 @@ export interface CombineResult {
   bench?: number;
 }
 
+/** Who goes to a pro day: an area scout, the scouting director, or the GM and head coach. */
+export type ProDayCrew = "scout" | "director" | "brass";
+
 export interface DraftState {
   /** Every pick in the draft in order (pick ids), once the order is set after the Super Bowl. */
   order?: string[];
@@ -861,6 +866,10 @@ export interface DraftState {
   /** Underclassmen who declared (set at the deadline). */
   declared?: boolean;
   combine?: Record<string, CombineResult>;
+  /** Pro day workouts: prospects the combine didn't invite, and invitees making up drills they skipped. */
+  proDay?: Record<string, CombineResult & { date: string }>;
+  /** Who we're sending to each school's pro day. */
+  proDayCrews?: Record<string, ProDayCrew>;
   /** Undrafted free agents: prospect id to team. */
   udfa?: Record<string, string>;
   /** Overall pick the draft-day calls to the owner were made for. */
@@ -1071,6 +1080,35 @@ export interface LeagueState {
   retiring?: Record<string, string>;
   /** Departures that count toward compensatory picks, by draft year. */
   cfa?: Record<number, CompMove[]>;
+  /** Post-June 1 releases: the cap hit held on the books until June 2. */
+  june1?: June1Release[];
+  /** Teams the press has linked to upcoming free agents before the market opens. */
+  linked?: Record<string, string[]>;
+  /** Pay cuts asked for this year, with the player's answer. */
+  payCuts?: Record<string, PayCutAsk>;
+}
+
+export interface June1Release {
+  team: string;
+  player: string;
+  year: number;
+  /** Cap charge held until June 2, then taken off. */
+  held: number;
+  /** Dead money this year and next once the split takes effect. */
+  dead: number;
+  deadNext: number;
+  done?: boolean;
+}
+
+export interface PayCutAsk {
+  team: string;
+  year: number;
+  date: string;
+  /** What we asked for, as this year's base salary. */
+  asked: number;
+  /** The base salary the player would take instead, if any. */
+  counter?: number;
+  answer: "accepted" | "countered" | "refused";
 }
 
 /** One finished season, as the record books keep it. */

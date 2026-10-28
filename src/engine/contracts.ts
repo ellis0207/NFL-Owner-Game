@@ -323,9 +323,19 @@ export function writeExtension(current: Deal, terms: Terms, date: string, yearsE
   const oldVoids = current.years.filter((y) => y.void);
   const first = (keep.length ? keep[keep.length - 1].year : year - 1) + 1;
   const deal = writeDeal(terms, { team: current.team, date, kind: "extension", firstYear: first, yearsExp, carry: keep });
-  // Old void-year proration accelerates onto the current year when the deal is redone.
+  // Old void years the extension now covers become real years and keep their proration; any past the new end stay void.
+  // (Contract data lumps a deal's void money into its first void year; it's spread over up to five, as the proration was.)
   const leftover = oldVoids.reduce((s, y) => s + y.proration, 0);
-  if (leftover && deal.years[0]) deal.years[0].proration += leftover;
+  const spread = oldVoids.filter((y) => y.year >= first).slice(0, 5);
+  if (!spread.length && leftover && deal.years[0]) deal.years[0].proration += leftover;
+  const per = spread.length ? Math.round(leftover / spread.length) : 0;
+  spread.forEach((v, i) => {
+    const amount = i === spread.length - 1 ? leftover - per * (spread.length - 1) : per;
+    const existing = deal.years.find((y) => y.year === v.year);
+    if (existing) existing.proration += amount;
+    else deal.years.push({ year: v.year, base: 0, proration: amount, bonus: 0, guaranteed: 0, injuryGuaranteed: 0, void: true });
+  });
+  deal.years.sort((a, b) => a.year - b.year);
   return deal;
 }
 

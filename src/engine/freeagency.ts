@@ -20,10 +20,10 @@ import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
-import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
+import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { capScale, invalidateMarket, marketPrice, marketView, teamValue } from "./market";
 import { offerValue, STARTERS, teamQuality } from "./negotiation";
-import { faClass, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
+import { faClass, futureRoom, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
 import { claimView, depthChart, logMove, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
 import { perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
@@ -179,8 +179,109 @@ export function teamPull(state: GameState, id: string, team: string, from: strin
 }
 
 export function utility(state: GameState, fa: FreeAgent, team: string, t: OfferTerms): number {
-  return offerValue(fa, t) * (1 + teamPull(state, fa.player, team, fa.from));
+  // A visit that went well leaves a mark.
+  const visited = fa.visits?.some((v) => v.team === team && v.done) ? 0.03 : 0;
+  return offerValue(fa, t) * (1 + teamPull(state, fa.player, team, fa.from) + visited);
 }
+
+// ---- Visits ----
+
+/** Free agents visit teams once the league year opens; we can have three visits on the calendar at once. */
+export function canVisit(state: GameState, team: string, id: string): { ok: boolean; reason?: string } {
+  const fa = market(state)[id];
+  if (!fa || fa.status !== "open") return { ok: false, reason: "Not an available free agent." };
+  if (!isMarketOpen(state.date) || state.date < KEY.newLeagueYear) return { ok: false, reason: "Visits start when the new league year opens." };
+  if (fa.visits?.some((v) => v.team === team)) return { ok: false, reason: fa.visits.some((v) => v.team === team && v.done) ? "He's already visited." : "His visit is already set." };
+  const pending = Object.values(market(state)).filter((f) => f.visits?.some((v) => v.team === team && !v.done)).length;
+  if (pending >= 3) return { ok: false, reason: "We have three visits lined up already." };
+  return { ok: true };
+}
+
+export function scheduleVisit(state: GameState, team: string, id: string): { ok: boolean; text: string } {
+  const can = canVisit(state, team, id);
+  if (!can.ok) return { ok: false, text: can.reason! };
+  const fa = market(state)[id];
+  const date = addDays(state.date, 1);
+  (fa.visits ??= []).push({ team, date });
+  return { ok: true, text: `${PLAYER_BY_ID[id].name} will visit our facility on ${date}. He won't sign anywhere before then.` };
+}
+
+/** Visits happen: the player meets the staff, takes a physical, and holds off on decisions for the day. */
+function runVisits(state: GameState): void {
+  for (const fa of Object.values(market(state))) {
+    for (const v of fa.visits ?? []) {
+      if (v.done || v.date !== state.date) continue;
+      v.done = true;
+      if (fa.status !== "open") continue;
+      const p = PLAYER_BY_ID[fa.player];
+      if (v.team === state.userTeam) send(state, "transaction", gmName(state), `${p.name} visited`, visitReport(state, fa.player, v.team));
+      else if (fa.base >= 8_000_000 * capScale(state, NEXT)) news(state, `${p.position} ${p.name} visits the ${teamLabel(v.team)}`);
+    }
+  }
+}
+
+/** What we learn from a visit: the physical, the coaches' read, and what the player says he wants. */
+function visitReport(state: GameState, id: string, team: string): string {
+  const p = PLAYER_BY_ID[id];
+  const trn = teamStaff(team).TRN;
+  // The physical is only as sharp as our medical staff.
+  const sharp = staffEffects(team).injuryPrevention ?? 60;
+  const durability = (HIDDEN_RATINGS[id]?.durability ?? 70) + gaussian(rngFor(state.seed, `visit-med:${team}:${id}`)) * Math.max(3, (100 - sharp) / 6);
+  const med = durability >= 78 ? "Clean physical. Nothing in the medicals worries us."
+    : durability >= 66 ? "Normal wear for a veteran; nothing that should keep him off the field."
+    : durability >= 56 ? "Some concerns in the medicals: we'd want protection in the guarantees."
+    : "Red flags in the medicals. The doctors would pass at anything but a short, cheap deal.";
+  const fit = schemeFit(state, id, team) + gaussian(rngFor(state.seed, `visit-fit:${team}:${id}`)) * 1.2;
+  const coach = fit >= 2 ? "The coaches loved him in the meetings: he knows our kind of system." : fit >= -1 ? "The coaches think he'd fit fine." : "The coaches aren't sure he fits what we do.";
+  const pr = priorities(id);
+  const wants: [keyof typeof pr, string][] = [["money", "getting paid"], ["winning", "playing for a winner"], ["role", "being a starter"], ["city", "the city and the area"], ["scheme", "the system he'd play in"], ["playingTime", "playing time"], ["loyalty", "where he's been before"]];
+  const top = wants.sort((a, b) => pr[b[0]] - pr[a[0]]).slice(0, 2).map(([, w]) => w);
+  return `${p.name} spent the day with us. ${trn ? `${trn.name}'s staff ran the physical: ` : ""}${med}
+
+${coach}
+
+` +
+    `He told us what matters most to him: ${top[0]}, then ${top[1]}.
+
+${interestReport(state, id, team)}`;
+}
+
+// ---- Rumors before the market opens ----
+
+/**
+ * From the combine to the negotiating window the press links top free agents
+ * to teams. Most links come from real interest (need, room, the agent talking
+ * to people in Indianapolis); some are wrong. The teams linked come in hot.
+ */
+function tamperingRumors(state: GameState): void {
+  if (state.date < KEY.scoutingCombineStart || state.date >= KEY.negotiatingWindowOpens) return;
+  const league = (state.league ??= { caps: {} });
+  const expiring = league.expiring ?? {};
+  const rng = rngFor(state.seed, `tamper:${state.date}`);
+  const big = Object.entries(expiring)
+    .filter(([id, team]) => state.players[id]?.team === team)
+    .map(([id, team]) => ({ id, team, apy: marketPrice(state, id, NEXT).apy }))
+    .filter((x) => x.apy >= 10_000_000 * capScale(state, NEXT))
+    .sort((a, b) => b.apy - a.apy);
+  if (!big.length) return;
+  const linked = (league.linked ??= {});
+  const n = state.date === KEY.scoutingCombineStart ? 3 : rng() < 0.6 ? 1 : 0;
+  for (let i = 0; i < n; i++) {
+    const pick = big[Math.floor(Math.pow(rng(), 1.6) * big.length)];
+    const pos = PLAYER_BY_ID[pick.id].position;
+    const suitors = TEAMS.map((t) => t.id)
+      .filter((t) => t !== pick.team && t !== state.userTeam && (needs(state, t)[pos]?.have ?? 9) <= (needs(state, t)[pos]?.starters ?? 0) + 1 && plannedSpace(state, t) >= pick.apy * 0.8)
+      .sort((a, b) => plannedSpace(state, b) - plannedSpace(state, a));
+    const real = rng() < 0.75 && suitors.length;
+    const team = real ? suitors[Math.floor(rng() * Math.min(4, suitors.length))] : TEAMS[Math.floor(rng() * TEAMS.length)].id;
+    if (team === pick.team || (linked[pick.id] ?? []).includes(team)) continue;
+    (linked[pick.id] ??= []).push(team);
+    const p = PLAYER_BY_ID[pick.id];
+    const where = state.date < addDays(KEY.scoutingCombineStart, 7) ? "Word out of Indianapolis" : "League sources";
+    news(state, `${where}: the ${teamLabel(team)} are expected to pursue ${teamLabel(pick.team)} ${p.position} ${p.name} in free agency`);
+  }
+}
+
 
 /** The best offer from anyone but `except`, in the player's eyes. */
 export function bestRival(state: GameState, id: string, except: string): { offer: FaOffer; u: number } | null {
@@ -200,6 +301,21 @@ export function bestRival(state: GameState, id: string, except: string): { offer
 function firstYearHit(state: GameState, id: string, team: string, t: OfferTerms): number {
   const deal = writeDeal({ ...t }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(id, NEXT) });
   return dealCapHit(deal, NEXT);
+}
+
+/** The second year's cap hit of an offer. */
+function laterHit(state: GameState, id: string, team: string, t: OfferTerms): number {
+  const deal = writeDeal({ ...t }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(id, NEXT) });
+  return dealCapHit(deal, NEXT + 1);
+}
+
+/** Next-next year's money in window agreements not yet signed. */
+function committedLater(state: GameState, team: string): number {
+  let total = 0;
+  for (const fa of Object.values(market(state))) {
+    if (fa.status === "agreed" && fa.agreed?.team === team) total += laterHit(state, fa.player, team, fa.agreed.terms);
+  }
+  return total;
 }
 
 /** A free agent's contract from agreed terms, starting in the year the market is signing for. */
@@ -565,6 +681,9 @@ function cpuBids(state: GameState, day: number): void {
     let budget = plannedSpace(state, team) - committed(state, team) - 2 * least;
     for (const fa of open) for (const o of fa.offers) if (o.team === team) budget -= o.hit;
     if (budget < least) continue;
+    // Deals rise, so the year after has to fit as well.
+    let later = futureRoom(state, team, NEXT + 1) - committedLater(state, team);
+    for (const fa of open) for (const o of fa.offers) if (o.team === team) later -= laterHit(state, fa.player, team, o.terms);
     const need = needs(state, team);
     const eye = staffEffects(team).gmEval;
     const aggr = Math.min(1, Math.max(0, budget / (40 * least))) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5;
@@ -590,8 +709,9 @@ function cpuBids(state: GameState, day: number): void {
     for (const { fa, weight, v } of scored) {
       if (made >= perTeam || budget < least) break;
       if (weight < 0.4 && rng() > 0.25) continue;
-      // The first days of free agency run hot: teams stretch to land their targets.
-      const max = v * (0.95 + 0.2 * aggr + (day <= 3 ? 0.06 : 0)) * (weight >= 1 ? 1 : 0.9);
+      // The first days of free agency run hot: teams stretch to land their targets, and the ones linked in the rumors most of all.
+      const hot = day <= 1 && state.league?.linked?.[fa.player]?.includes(team) ? 0.05 : 0;
+      const max = v * (0.95 + 0.2 * aggr + (day <= 3 ? 0.06 : 0) + hot) * (weight >= 1 ? 1 : 0.9);
       const mine = fa.offers.find((o) => o.team === team);
       const rival = bestRival(state, fa.player, team);
       let apy: number;
@@ -615,6 +735,10 @@ function cpuBids(state: GameState, day: number): void {
       const terms = offerTerms(state, fa, apy, rng);
       const hit = firstYearHit(state, fa.player, team, terms);
       if (hit > budget + (mine?.hit ?? 0)) continue;
+      const hit2 = laterHit(state, fa.player, team, terms);
+      const had2 = mine ? laterHit(state, fa.player, team, mine.terms) : 0;
+      if (hit2 - had2 > later && hit2 > least) continue;
+      later -= hit2 - had2;
       fa.offers = fa.offers.filter((o) => o.team !== team);
       fa.offers.push({ team, terms, apy: terms.total / terms.years, hit, date: state.date });
       budget -= hit - (mine?.hit ?? 0);
@@ -648,6 +772,13 @@ function decide(state: GameState, day: number): void {
     const fair = best.u >= fa.floor && onMarket >= wait && (fa.offers.length === 1 || day >= 1 || rng() < 0.5);
     if (!good && !fair) continue;
     if (onMarket < wait && fa.offers.length > 1 && day < 2) continue;
+    // A player on a visit doesn't sign anywhere that day.
+    if (fa.visits?.some((v) => v.date === state.date || (!v.done && v.date > state.date))) continue;
+    // Big names visit the team at the top of their list before saying yes (once the league year is open).
+    if (fa.base >= 8_000_000 * capScale(state, NEXT) && state.date >= KEY.newLeagueYear && best.o.team !== user && fa.offers.length > 1 && !fa.visits?.some((v) => v.team === best!.o.team) && rng() < 0.6) {
+      (fa.visits ??= []).push({ team: best.o.team, date: addDays(state.date, 1) });
+      continue;
+    }
     // If the owner is in talks and close, the agent gives one last look.
     const neg = state.negotiations[fa.player];
     if (neg && neg.status === "open" && neg.team === user && best.o.team !== user && !fa.lastLook) {
@@ -809,7 +940,10 @@ function rumors(state: GameState): void {
   for (const fa of Object.values(market(state))) {
     if (fa.status !== "open" || fa.base < 10_000_000 || fa.offers.length < 2 || rng() > 0.35) continue;
     const teams = fa.offers.map((o) => teamLabel(o.team));
-    news(state, `Report: ${PLAYER_BY_ID[fa.player].name} is drawing interest from the ${teams.slice(0, 3).join(", the ")}${teams.length > 3 ? " and others" : ""}`);
+    const top = Math.max(...fa.offers.map((o) => o.apy));
+    if (fa.offers.length >= 3 && top >= fa.base * 1.08) {
+      news(state, `Bidding war: ${PLAYER_BY_ID[fa.player].name}'s price is past ${money(Math.floor(top / 1_000_000) * 1_000_000)} a year with the ${teams.slice(0, 3).join(", the ")} in the mix`);
+    } else news(state, `Report: ${PLAYER_BY_ID[fa.player].name} is drawing interest from the ${teams.slice(0, 3).join(", the ")}${teams.length > 3 ? " and others" : ""}`);
   }
 }
 
@@ -831,6 +965,7 @@ export function interestReport(state: GameState, id: string, team: string): stri
 
 export function faDaily(state: GameState): void {
   if (state.date >= KEY.draftStart) return;
+  tamperingRumors(state);
   if (!isMarketOpen(state.date)) {
     admit(state);
     if (isStreetMarket(state.date)) {
@@ -844,6 +979,7 @@ export function faDaily(state: GameState): void {
   const day = daysBetween(KEY.negotiatingWindowOpens, state.date);
   if (state.date === KEY.newLeagueYear) signAgreed(state);
   admit(state);
+  runVisits(state);
   cpuBids(state, day);
   decide(state, day);
   decay(state);

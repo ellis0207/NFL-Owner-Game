@@ -110,13 +110,13 @@ export function logMove(state: GameState, team: string, player: string, kind: Tr
  * waivers, where another team can claim the rest of the contract; vested
  * veterans and practice squad players become free agents at once.
  */
-export function releasePlayer(state: GameState, id: string, opts: { psIntent?: boolean } = {}): "waivers" | "fa" | null {
+export function releasePlayer(state: GameState, id: string, opts: { psIntent?: boolean; june1?: boolean } = {}): "waivers" | "fa" | null {
   const p = state.players[id];
   if (!p?.team) return null;
   const team = p.team;
   const fromPs = p.status === "ps" || p.status === "future";
   const deal = dealOf(state, id);
-  const cost = releaseCost(id, state);
+  const cost = releaseCost(id, state, { june1: opts.june1 });
   const year = chargeYear(state);
   addDeadMoney(state, team, year, cost.deadThisYear);
   addDeadMoney(state, team, year + 1, cost.deadNextYear);
@@ -133,7 +133,7 @@ export function releasePlayer(state: GameState, id: string, opts: { psIntent?: b
     return "waivers";
   }
   if (opts.psIntent) (state.psPlans ??= {})[id] = team;
-  logMove(state, team, id, "released", `released ${pd.position} ${pd.name}${fromPs && p.status === "ps" ? " from the practice squad" : ""}`);
+  logMove(state, team, id, "released", `released ${pd.position} ${pd.name}${fromPs && p.status === "ps" ? " from the practice squad" : ""}${opts.june1 ? " (post-June 1)" : ""}`);
   return "fa";
 }
 

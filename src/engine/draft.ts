@@ -420,7 +420,7 @@ function register(state: GameState, id: string, team: string, pick: { round: num
   const h = dc.hidden[id];
   if (!p || !h) return;
   const [first, ...rest] = p.name.split(" ");
-  const combine = year === DRAFT_YEAR ? state.draft?.combine?.[id] : undefined;
+  const combine = year === DRAFT_YEAR ? state.draft?.combine?.[id] ?? state.draft?.proDay?.[id] : undefined;
   const data: PlayerData = {
     id, name: p.name, firstName: first, lastName: rest.join(" "), team: null, position: p.position, depthChartPosition: p.position,
     jersey: null, birthDate: p.birthDate, heightIn: hw?.[0] ?? combine?.heightIn ?? p.heightIn, weightLb: hw?.[1] ?? combine?.weightLb ?? p.weightLb,

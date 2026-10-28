@@ -20,6 +20,8 @@ import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings
 import { payWeek } from "./finance";
 import { business, businessDaily, businessGame } from "./business";
 import { carouselDaily } from "./carousel";
+import { capMovesDaily } from "./capmoves";
+import { proDayDaily } from "./prodays";
 import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
 import { faDaily, stillPlaying } from "./freeagency";
@@ -438,9 +440,11 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   carouselDaily(state);
   contractsDaily(state);
+  capMovesDaily(state);
   faDaily(state);
   tradesDaily(state);
   draftDaily(state);
+  proDayDaily(state);
   collegeDaily(state);
   scoutingDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
