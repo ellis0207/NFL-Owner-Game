@@ -1226,6 +1226,8 @@ export interface GameState {
   business?: BusinessState;
   /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */
   program?: ProgramState;
+  /** The other owners, the league meeting and the rule changes adopted (owners.ts, rules.ts). */
+  owners?: OwnersState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
@@ -1292,4 +1294,63 @@ export interface ProgramState {
   battles: PositionBattle[];
   decisions: OwnerDecision[];
   incidents: Incident[];
+}
+
+// ---- Owners and the league meeting ----
+
+/** How one of the other owners feels about ours. */
+export interface OwnerRelation {
+  /** -100 to 100. Shown to the owner only in words. */
+  rapport: number;
+  ally?: boolean;
+  rival?: boolean;
+  /** How much this owner dislikes changing the game, 0-1 (engine only). */
+  tradition: number;
+  /** How many votes follow this owner's lead, 0-1 (engine only). */
+  influence: number;
+}
+
+export interface RuleProposal {
+  id: string;
+  rule: string;
+  /** A team id, or "committee" for the Competition Committee. */
+  sponsor: string;
+  /** The Competition Committee's recommendation. */
+  committee: "for" | "against" | "neutral";
+  /** Our vote, if the owner has decided. */
+  ourVote?: boolean;
+  /** Lobbying pressure on each owner: positive toward yes (engine only). */
+  lobby: Record<string, number>;
+  votes?: Record<string, boolean>;
+  yes?: number;
+  passed?: boolean;
+}
+
+export interface LeagueMeeting {
+  /** The league year the changes would start in. */
+  year: number;
+  published: string;
+  /** Last day to submit our own proposal. */
+  deadline: string;
+  voteDate: string;
+  proposals: RuleProposal[];
+  /** Lobbying calls made so far (there's only so much goodwill to spend). */
+  calls: number;
+  done?: boolean;
+}
+
+export interface AdoptedRule {
+  rule: string;
+  /** The first season it's in force. */
+  year: number;
+  yes: number;
+  sponsor: string;
+}
+
+export interface OwnersState {
+  relations: Record<string, OwnerRelation>;
+  rules: AdoptedRule[];
+  meeting?: LeagueMeeting;
+  /** Every proposal voted on, newest last. */
+  history: { year: number; rule: string; sponsor: string; yes: number; passed: boolean; ours?: boolean }[];
 }

@@ -143,7 +143,6 @@ export function releasePlayer(state: GameState, id: string, opts: { psIntent?: b
 
 /** Up to six practice squad players can have any number of accrued seasons; the rest two or fewer. */
 export const PS_VETERAN_SLOTS = 6;
-const PS_SIZE = RULES.rosterLimits.practiceSquad;
 
 function psVeteran(state: GameState, id: string): boolean {
   return accruedSeasons(id, state.date) >= 3;
@@ -154,7 +153,7 @@ export function practiceSquad(state: GameState, team: string): string[] {
 }
 
 export function psRoom(state: GameState, team: string): number {
-  return PS_SIZE - practiceSquad(state, team).length;
+  return RULES.rosterLimits.practiceSquad - practiceSquad(state, team).length;
 }
 
 /** Can this player join this team's practice squad now? */
@@ -171,7 +170,7 @@ export function canSignToPracticeSquad(state: GameState, team: string, id: strin
   }
   if (state.players[id]?.status !== "fa") return { ok: false, reason: "Only free agents can be signed to the practice squad." };
   if (onWaivers(state, id)) return { ok: false, reason: "On waivers: he has to clear first." };
-  if (psRoom(state, team) <= 0) return { ok: false, reason: `The practice squad is full (${PS_SIZE}).` };
+  if (psRoom(state, team) <= 0) return { ok: false, reason: `The practice squad is full (${RULES.rosterLimits.practiceSquad}).` };
   if (!psEligible(state, team, id)) return { ok: false, reason: `We already have ${PS_VETERAN_SLOTS} veterans on the practice squad.` };
   return { ok: true };
 }
@@ -225,7 +224,7 @@ function psValue(state: GameState, team: string, id: string): number {
  * Fills a team's practice squad: first the players it cut and meant to bring
  * back (if no one claimed them), then the best young free agents.
  */
-export function fillPracticeSquad(state: GameState, team: string, target = PS_SIZE - 1): string[] {
+export function fillPracticeSquad(state: GameState, team: string, target = RULES.rosterLimits.practiceSquad - 1): string[] {
   const signed: string[] = [];
   for (const [id, t] of Object.entries(state.psPlans ?? {})) {
     if (t !== team) continue;

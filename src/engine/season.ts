@@ -22,6 +22,7 @@ import { business, businessDaily, businessGame } from "./business";
 import { carouselDaily } from "./carousel";
 import { capMovesDaily } from "./capmoves";
 import { campDaily } from "./camp";
+import { ownersDaily } from "./owners";
 import { disciplineDaily } from "./discipline";
 import { springDaily, springItem, springPracticeOutcome } from "./spring";
 import { proDayDaily } from "./prodays";
@@ -452,6 +453,7 @@ export function advanceDay(state: GameState): void {
   tradesDaily(state);
   springDaily(state);
   campDaily(state);
+  ownersDaily(state);
   disciplineDaily(state);
   draftDaily(state);
   proDayDaily(state);

@@ -12,6 +12,7 @@ import { teamPlayerIds } from "./cap";
 import { injure, injuryRisk, isHurt } from "./injuries";
 import { PLAYER_BY_ID, RULES } from "./league";
 import { depthChart, isHoldingOut, isSuspended } from "./roster";
+import { LEAGUE_RULES } from "./rules";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { DEFENSE, OFFENSE, type DefenseStyle, type OffenseStyle, type Personnel, type RunType } from "./schemes";
 import { ability, schemeFit, staffEffects, teamSchemes, trait, type StaffEffects } from "./staff";
@@ -400,7 +401,7 @@ class GameSim {
   startOvertime(): void {
     this.ot.active = true;
     this.q = 5;
-    this.clock = this.game.type === "POST" ? QUARTER : 600;
+    this.clock = this.game.type === "POST" ? QUARTER : LEAGUE_RULES.otMinutes * 60;
     this.t.away.timeouts = 2;
     this.t.home.timeouts = 2;
     const receiver: Side = this.rng() < 0.5 ? "away" : "home";
@@ -449,17 +450,20 @@ class GameSim {
     const trail = r.score - k.score;
     if (this.q >= 4 && this.clock < 150 && trail > 0 && trail <= 16 && !this.ot.active) {
       this.tick(4);
-      if (this.rng() < 0.12) {
-        this.newPossession(kicking, 48);
+      // The 4th-and-20 alternative, where it's allowed, keeps the ball more often than an onside kick.
+      if (this.rng() < (LEAGUE_RULES.fourthAndTwenty ? 0.22 : 0.12)) {
+        this.newPossession(kicking, LEAGUE_RULES.fourthAndTwenty ? 45 : 48);
         return;
       }
       this.newPossession(r.side, 52);
       return;
     }
-    // 2025 kickoff rules: touchbacks come out to the 35, and most kicks are returned.
+    // 2025 kickoff rules: touchbacks come out to the 35, and most kicks are returned. A closer
+    // touchback spot makes kicking it deep more attractive; a farther one keeps more kicks in play.
     const power = this.tr(kicker, "kickPower");
-    if (this.rng() < 0.28 + (power - 80) * 0.006) {
-      this.newPossession(r.side, 35);
+    const tb = LEAGUE_RULES.touchback;
+    if (this.rng() < 0.28 + (35 - tb) * 0.025 + (power - 80) * 0.006) {
+      this.newPossession(r.side, tb);
       return;
     }
     const ret = this.returner(r, "kr");
@@ -590,7 +594,7 @@ class GameSim {
       return;
     }
     this.possessionEnded(o.side);
-    if (!this.over) this.newPossession(d.side, Math.max(20, 100 - (this.ydl - 7)));
+    if (!this.over) this.newPossession(d.side, Math.max(20, 100 - (LEAGUE_RULES.missedFgAtLos ? this.ydl : this.ydl - 7)));
   }
 
   touchdown(team: Team, text: string, scorer?: string): void {
@@ -605,13 +609,15 @@ class GameSim {
     const diff = team.score - opp.score;
     const late = this.q >= 4 || (this.q === 3 && this.clock < 300);
     const chart = late && [-2, -5, -10, 1, 5, -13, -16].includes(diff);
-    const goForTwo = (!this.ot.active || !this.ot.suddenDeath) && (chart || this.rng() < 0.03 + (team.fx.gameManagement - 70) * 0.001);
+    // A longer extra point or a shorter two-point try sends more coaches for two.
+    const twoBias = (LEAGUE_RULES.twoPointLine === 1 ? 0.1 : 0) + (LEAGUE_RULES.xpLine - 15) * 0.006;
+    const goForTwo = (!this.ot.active || !this.ot.suddenDeath) && (chart || this.rng() < 0.03 + twoBias + (team.fx.gameManagement - 70) * 0.001);
     const kicker = this.specialist(team, "K");
     this.snaps(team, [kicker, this.specialist(team, "LS"), ...this.coverage(team)], "stSnaps");
     const last = this.scoring[this.scoring.length - 1];
     if (goForTwo) {
       const lineup = this.offenseLineup(team, "11");
-      const ok = this.rng() < 0.47 + (this.ab(lineup.qb) - 80) * 0.004;
+      const ok = this.rng() < (LEAGUE_RULES.twoPointLine === 1 ? 0.56 : 0.47) + (this.ab(lineup.qb) - 80) * 0.004;
       if (ok) {
         team.score += 2;
         team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 2;
@@ -622,7 +628,9 @@ class GameSim {
     } else {
       this.add(team, kicker, "xpa");
       const acc = this.tr(kicker, "kickAccuracy");
-      if (this.rng() < 0.968 + (acc - 80) * 0.002) {
+      // Snapped from farther back, the extra point is just a longer field goal.
+      const xpScale = LEAGUE_RULES.xpLine === 15 ? 1 : this.fgMakeChance(kicker, LEAGUE_RULES.xpLine + 18) / this.fgMakeChance(kicker, 33);
+      if (this.rng() < (0.968 + (acc - 80) * 0.002) * xpScale) {
         this.add(team, kicker, "xpm");
         team.score += 1;
         team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 1;
@@ -732,7 +740,7 @@ class GameSim {
 
     // Penalties before or instead of the play.
     if (this.penalty(o, d)) {
-      this.afterPlay(hurry ? 12 : milk ? 38 : 30, true);
+      this.afterPlay(hurry ? 12 : milk ? Math.min(38, LEAGUE_RULES.playClock - 2) : 30 * (LEAGUE_RULES.playClock / 40), true);
       return;
     }
     if (this.down === 3) o.box.thirdAtt++;
@@ -758,7 +766,9 @@ class GameSim {
       return;
     }
     this.advance(o, d, outcome.yards, startDown, before);
-    const runoff = outcome.clockStops ? 0 : hurry ? 12 : milk ? 38 : 29 + o.off.tempo;
+    // The play clock sets how long an offense can take between snaps.
+    const clockScale = LEAGUE_RULES.playClock / 40;
+    const runoff = outcome.clockStops ? 0 : hurry ? 12 : milk ? Math.min(38, LEAGUE_RULES.playClock - 2) : (29 + o.off.tempo) * clockScale;
     this.tick(outcome.playTime);
     this.afterPlay(runoff, outcome.clockStops);
   }
@@ -939,10 +949,12 @@ class GameSim {
         yards = 5; // defensive holding, illegal contact
         autoFirst = true;
       } else if (kind < 0.8) {
-        yards = Math.round(8 + this.rng() * 28); // defensive pass interference: a spot foul
+        yards = Math.min(LEAGUE_RULES.dpiCap, Math.round(8 + this.rng() * 28)); // defensive pass interference: a spot foul
         autoFirst = true;
       } else {
-        yards = 15; // roughing, unnecessary roughness, face mask
+        // Roughing, unnecessary roughness, face mask; replay takes back some of the roughing calls.
+        if (LEAGUE_RULES.roughingReview && this.rng() < 0.2) return false;
+        yards = 15;
         autoFirst = true;
       }
       yards = Math.min(yards, Math.max(1, Math.floor((100 - this.ydl) / 2)));
@@ -997,7 +1009,7 @@ class GameSim {
     const goalLine = this.ydl >= 97;
     const redZone = this.ydl >= 80 ? 0.07 : 0;
     let pStuff = clamp(0.155 - 0.006 * e + (shortYardage || goalLine ? 0.06 : 0) + redZone, 0.06, 0.4);
-    if (type === "qbRun" && this.dist <= 1) pStuff *= 0.6; // the sneak
+    if (type === "qbRun" && this.dist <= 1) pStuff *= LEAGUE_RULES.tushPush ? 0.6 : 0.8; // the sneak, with or without the push
     const burst = type === "qbRun" ? tr(carrier, "speed") : tr(carrier, "burst");
     const pBig = clamp(0.108 + 0.004 * e + (burst - 82) * 0.0025, 0.03, 0.22);
     const r = this.rng();
@@ -1060,7 +1072,7 @@ class GameSim {
     const mob = this.tr(lu.qb, "mobility");
     const mix = { ...o.off.runMix };
     mix.qbRun *= clamp(1 + (mob - 80) * 0.08, 0.2, 3);
-    if (this.dist <= 1 && this.down >= 3) mix.qbRun += 0.15; // sneaks
+    if (this.dist <= 1 && this.down >= 3) mix.qbRun += LEAGUE_RULES.tushPush ? 0.15 : 0.08; // sneaks
     const total = mix.outsideZone + mix.insideZone + mix.gap + mix.qbRun;
     let r = this.rng() * total;
     for (const k of ["outsideZone", "insideZone", "gap", "qbRun"] as RunType[]) {
@@ -1369,7 +1381,7 @@ class GameSim {
   // ---- Injuries ----
 
   maybeInjure(o: Team, d: Team, involved: (string | undefined)[], onField: (string | undefined)[]): void {
-    if (this.rng() > 0.024) return;
+    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.024 : 0.025)) return;
     const pool = this.rng() < 0.6 ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
     if (!pool.length) return;
     const id = pool[Math.floor(this.rng() * pool.length)];

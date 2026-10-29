@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { changeRapport } from "./owners";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
 import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
@@ -634,6 +635,10 @@ export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1): A
   }
   const bal = tradeBalance(state, "gm", deal, side);
   let need = margin(team, bal.outValue);
+  // Owners talk: an ally's front office gives us a little more room, a rival's less.
+  const rel = deal.teams[1 - side] === state.userTeam ? state.owners?.relations[team] : undefined;
+  if (rel?.ally) need -= 0.04 * bal.outValue;
+  else if (rel?.rival) need += 0.08 * bal.outValue;
   const stars = playersIn(deal.send[side]).filter((id) => cornerstone(state, team, id));
   if (stars.length) need = Math.max(need, 0.35 * bal.outValue);
   if (bal.gain >= need) return { verdict: "accept", text: `${name}: "You've got a deal."` };
@@ -854,6 +859,8 @@ export function headline(state: GameState, deal: TradeDeal): string {
 /** Records and (if the window allows) processes a trade both sides have agreed to. */
 export function completeTrade(state: GameState, deal: TradeDeal): TradeRecord {
   const ts = trades(state);
+  const partner = deal.teams[0] === state.userTeam ? deal.teams[1] : deal.teams[1] === state.userTeam ? deal.teams[0] : null;
+  if (partner) changeRapport(state, partner, 3);
   const official = tradeWindow(state).official;
   const id = `trade-${state.date}-${ts.log.length}`;
   const rec: TradeRecord = {
