@@ -205,5 +205,43 @@ export function perceivedAbility(state: GameState, id: string, evaluatorKey: str
 
 /** A team's coaching staff's view of its own player, including how well the player fits the scheme. */
 export function coachView(state: GameState, team: string, id: string): number {
-  return perceivedAbility(state, id, `coach:${team}`, staffEffects(team).coachEval) + 0.35 * schemeFit(state, id, team);
+  return coachRead(state, team, id) + 0.35 * schemeFit(state, id, team);
+}
+
+/** One practice tells the coaches only so much: the spread of a single day's work around a player's true level. */
+const PRACTICE_VAR = 100;
+const campNoiseCache = new Map<string, number>();
+
+/** How a player's practices have looked this season, in units of one day's spread (engine only). */
+function campNoise(state: GameState, id: string): number {
+  const key = `${state.seed}:${state.program?.season}:${id}`;
+  let z = campNoiseCache.get(key);
+  if (z === undefined) {
+    if (campNoiseCache.size > 100_000) campNoiseCache.clear();
+    z = gaussian(rngFor(state.seed, `camp:${state.program?.season}:${id}`));
+    campNoiseCache.set(key, z);
+  }
+  return z;
+}
+
+/**
+ * The coaches' grade of a player: their first impression, sharpened by the
+ * practices they have watched him take this season. A player who has a hot
+ * camp can fool them for a while, just as a slow starter can.
+ */
+export function coachRead(state: GameState, team: string, id: string): number {
+  const skill = staffEffects(team).coachEval;
+  const prior = perceivedAbility(state, id, `coach:${team}`, skill);
+  const n = state.program?.reps[`${team}:${id}`] ?? 0;
+  if (n <= 0) return prior;
+  const sd = Math.max(0.8, (100 - skill) / 7);
+  const wPrior = 1 / (sd * sd);
+  const wSeen = n / PRACTICE_VAR;
+  const seen = ability(state, id) + campNoise(state, id) * Math.sqrt(PRACTICE_VAR / n);
+  return (prior * wPrior + seen * wSeen) / (wPrior + wSeen);
+}
+
+/** How much the practices have moved the coaches off their first impression (engine only). */
+export function campChange(state: GameState, team: string, id: string): number {
+  return coachRead(state, team, id) - perceivedAbility(state, id, `coach:${team}`, staffEffects(team).coachEval);
 }

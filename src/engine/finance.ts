@@ -28,7 +28,7 @@ export function payWeek(state: GameState): void {
         total += (d?.kind === "practice" ? dealYear(d, year)?.base ?? 0 : practiceSquadCapHit()) / REG_WEEKS;
       }
       else if (p.status === "active" || p.status === "ir") {
-        if (p.holdout?.kind === "holdout") continue; // holdouts forfeit game checks
+        if (p.holdout?.kind === "holdout" || p.suspended) continue; // holdouts and suspended players forfeit game checks
         const y = dealYear(dealOf(state, id), year);
         if (y && !y.void) total += y.base / REG_WEEKS;
       }

@@ -178,7 +178,28 @@ has the statement, the ledger, the gate, the stadium calendar and booking
 requests, budgets and league-wide estimates of revenue and franchise values.
 Check a save's books with `npx vite-node tests/business-report.ts [team] [seed]`.
 
-Next up: relocation and new stadiums, then the coaching carousel.
+The spring and summer are football too. Voluntary OTAs open the week before
+Memorial Day and run three weeks, then a three-day mandatory minicamp in June.
+Most players are there every day; established veterans often train on their
+own, and starters who feel underpaid stay away, which makes a camp holdout
+more likely. Skipping minicamp draws a CBA fine the owner can enforce or
+excuse. A new scheme goes in faster the more players show up, and the young
+players who were there every day get a head start. Players get hurt at OTAs
+and working out on their own over the summer. In camp the coaches learn who
+can play by watching practice and preseason games: their grades sharpen with
+every rep, and a hot camp can fool them for a while. The head coach names the
+open starting spots when camp opens, reports on the battles every Monday, and
+settles them before the cutdown; the roster and cutdown pages note who won a
+job, who had a strong or rough camp, and who skipped OTAs. Discipline is kept
+to policy matters: failed PED tests (six-game suspensions served on the
+reserve/suspended list, off the 53 and without pay), substance abuse policy
+fines, missed meetings, and players sounding off in public, where the owner
+decides whether to fine the player, meet with him or leave it to the coach.
+The Camp page has the battles, spring attendance, the owner's pending calls
+and discipline around the league.
+
+Next up: owners meetings and rule changes, sponsorships and the rest of the
+league and business offseason.
 
 ## Playing locally
 
@@ -198,6 +219,8 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
   The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
+  The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
+  practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

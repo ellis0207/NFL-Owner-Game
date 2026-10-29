@@ -21,6 +21,9 @@ import { payWeek } from "./finance";
 import { business, businessDaily, businessGame } from "./business";
 import { carouselDaily } from "./carousel";
 import { capMovesDaily } from "./capmoves";
+import { campDaily } from "./camp";
+import { disciplineDaily } from "./discipline";
+import { springDaily, springItem, springPracticeOutcome } from "./spring";
 import { proDayDaily } from "./prodays";
 import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
@@ -135,6 +138,8 @@ export interface AgendaItem {
 }
 
 export const KEY_DATE_LABELS: Record<string, string> = {
+  otasStart: "Voluntary OTA practices begin",
+  minicampStart: "Mandatory minicamp opens",
   hallOfFameGame: "Hall of Fame Game in Canton",
   rosterCutdown: "Roster cutdown: every team must be at 53 by 4 PM ET",
   cutdownWaiversExpire: "Waiver claims on cut players are awarded",
@@ -221,7 +226,8 @@ export function agenda(state: GameState, date = state.date): AgendaItem[] {
     return items;
   }
   if (date < veteranReportDate(team)) {
-    if (!items.length) items.push(summerItem(state, date));
+    const summer = summerItem(state, date);
+    if (!items.length || summer.kind === "practice") items.push(summer);
     return items;
   }
 
@@ -280,9 +286,8 @@ export function calendarItems(state: GameState, date: string): AgendaItem[] {
 /** Between the draft and training camp. */
 function summerItem(state: GameState, date: string): AgendaItem {
   const camp = veteranReportDate(state.userTeam);
-  if (date < addDays(KEY.franchiseTagExtensionDeadline, -30)) {
-    return { id: "meeting:offseason", kind: "meeting", title: "Offseason program", detail: "Rookies and veterans work out at the facility; the front office keeps an eye on the free agents still out there." };
-  }
+  const spring = springItem(date);
+  if (spring) return spring;
   return { id: "off", kind: "off", title: "Summer break", detail: `Players and coaches are off until camp opens on ${shortDate(camp)}.` };
 }
 
@@ -399,6 +404,8 @@ export function playEvent(state: GameState, id: string, byOwner = true): string 
       const theirs = r.home === us ? r.awayScore : r.homeScore;
       outcome = `${ours > theirs ? "W" : ours < theirs ? "L" : "T"} ${ours}-${theirs}${r.overtime ? " (OT)" : ""}`;
     }
+  } else if (item.action === "practice" && id.startsWith("practice:")) {
+    outcome = springPracticeOutcome(state);
   } else if (item.action === "practice") {
     const hurt = practiceInjuries(state, new Set(), [us]);
     outcome = !practices(state, us, new Set()) ? "Light day: no contact work."
@@ -443,6 +450,9 @@ export function advanceDay(state: GameState): void {
   capMovesDaily(state);
   faDaily(state);
   tradesDaily(state);
+  springDaily(state);
+  campDaily(state);
+  disciplineDaily(state);
   draftDaily(state);
   proDayDaily(state);
   collegeDaily(state);
@@ -700,7 +710,7 @@ function weeklyReport(state: GameState): void {
 function offseasonStops(state: GameState): string[] {
   return [KEY.franchiseTagWindowOpens, CAP_SET_DATE, KEY.franchiseTagDeadline, addDays(KEY.newLeagueYear, -2), KEY.negotiatingWindowOpens, KEY.newLeagueYear,
     addDays(KEY.newLeagueYear, 1), addDays(KEY.newLeagueYear, 2), ...DRAFT_DAYS, DRAFT_OVER, scheduleReleaseDate(),
-    KEY.franchiseTagExtensionDeadline, veteranReportDate(state.userTeam)];
+    KEY.otasStart, KEY.minicampStart, KEY.franchiseTagExtensionDeadline, veteranReportDate(state.userTeam)];
 }
 
 /** A draft day the owner hasn't finished: the clock waits for the owner (or "Sim rest of day"). */
