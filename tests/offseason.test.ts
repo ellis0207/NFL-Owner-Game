@@ -62,6 +62,15 @@ describe("the offseason", () => {
     expect(state.players[id].team).toBe(TEAM);
   });
 
+  it("CPU teams tag their best expiring players about as often as real teams do", async () => {
+    const state = at("franchiseTagWindowOpens");
+    until(state, addDays(K.franchiseTagDeadline, 1));
+    const tags = state.signings.filter((s) => s.kind === "tag" && s.team !== TEAM);
+    // Real teams use about four to eight a year.
+    expect(tags.length).toBeGreaterThanOrEqual(3);
+    expect(tags.length).toBeLessThanOrEqual(10);
+  });
+
   it("expiring deals end at the new league year and the players become free agents", async () => {
     const state = at("franchiseTagDeadline");
     until(state, K.franchiseTagDeadline);

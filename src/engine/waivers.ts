@@ -9,6 +9,7 @@
 import { accruedSeasons, addDeadMoney, capHit, capSummary, invalidateRosters, teamPlayerIds } from "./cap";
 import { claimedDeal, leagueYear } from "./contracts";
 import { addDays, shortDate, weekday } from "./dates";
+import { payCash } from "./finance";
 import { money, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, SEASON, TEAMS, teamLabel } from "./league";
 import { draftOrder, isOffseason, off } from "./offseason";
@@ -148,6 +149,7 @@ function award(state: GameState, w: WaiverEntry, team: string, drop?: string): b
   const year = leagueYear(state.date);
   addDeadMoney(state, w.from, year, -w.relief.thisYear);
   addDeadMoney(state, w.from, year + 1, -w.relief.nextYear);
+  payCash(state, w.from, -(w.relief.thisYear + w.relief.nextYear));
   state.contracts[id] = claimedDeal(w.deal, team, state.date, p.yearsExp);
   state.players[id] = { ...state.players[id], team, status: rosterStatusNow(state) };
   delete state.players[id].lastTeam;

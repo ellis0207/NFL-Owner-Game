@@ -17,6 +17,7 @@ import { mediaBoard, mediaRank } from "./college";
 import { schoolName } from "./collegeData";
 import { minimumSalary, rookieScale, salaryCap as salaryCapFor } from "./contracts";
 import { addDays } from "./dates";
+import { payCash } from "./finance";
 import { letter, OUTLETS } from "./grades";
 import { news, send } from "./inbox";
 import { HIDDEN_RATINGS, HIDDEN_STAFF, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, TEAMS, teamLabel } from "./league";
@@ -463,6 +464,8 @@ export function makePick(state: GameState, player: string, by: DraftSelection["b
   register(state, player, slot.team, { round: slot.round, overall: slot.overall });
   state.players[player] = { team: slot.team, status: "camp" };
   state.contracts[player] = rookieDeal(slot.team, slot.overall, state.date);
+  // The rookie's signing bonus is paid when he signs, even though the cap spreads it over four years.
+  payCash(state, slot.team, state.contracts[player]!.signingBonus);
   invalidateRosters(state);
   d.made.push({ pick: slot.pick, overall: slot.overall, team: slot.team, player, by, need: Math.round(need * 100) / 100 });
   logMove(state, slot.team, player, "drafted", `drafted ${p.position} ${p.name} (${schoolName(p.school)}), round ${slot.round}, No. ${slot.overall}`);
@@ -805,6 +808,7 @@ function udfaRush(state: GameState): void {
       d.udfa[id] = team;
       state.players[id] = { team, status: "camp" };
       state.contracts[id] = udfaDeal(team, state.date, bonus);
+      payCash(state, team, bonus);
       const p = draftClass(state.seed).byId[id];
       logMove(state, team, id, "signed", `signed undrafted free agent ${p.position} ${p.name} (${schoolName(p.school)})`);
       (signed[team] ??= []).push(id);

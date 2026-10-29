@@ -98,14 +98,19 @@ describe("owners and the league meeting", () => {
       return { plays, xpAtt };
     };
     const before = play();
-    owners(state).rules.push({ rule: "playClock35", year: 2026, yes: 26, sponsor: "committee" }, { rule: "xp25", year: 2026, yes: 25, sponsor: "committee" });
+    // One rule at a time: more snaps also mean more touchdowns, which would hide the extra point change.
+    owners(state).rules.push({ rule: "playClock35", year: 2026, yes: 26, sponsor: "committee" });
     bindRules(state);
     expect(LEAGUE_RULES.playClock).toBe(35);
-    const after = play();
+    const clock = play();
+    owners(state).rules.length = 0;
+    owners(state).rules.push({ rule: "xp25", year: 2026, yes: 25, sponsor: "committee" });
+    bindRules(state);
+    const xp = play();
     owners(state).rules.length = 0;
     bindRules(state);
     // A shorter play clock means more snaps; a longer extra point means more teams go for two.
-    expect(after.plays).toBeGreaterThan(before.plays * 1.02);
-    expect(after.xpAtt).toBeLessThan(before.xpAtt);
+    expect(clock.plays).toBeGreaterThan(before.plays * 1.02);
+    expect(xp.xpAtt).toBeLessThan(before.xpAtt);
   });
 });

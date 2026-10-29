@@ -1,10 +1,10 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
 import { ensureCollege } from "../engine/college";
-import { clearDraftees, ensureDraft } from "../engine/draft";
+import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
-import { PLAYERS, RULES } from "../engine/league";
-import { applySeason, patchPlayers } from "../engine/seasons";
+import { BASE_SEASON, PLAYERS, RULES } from "../engine/league";
+import { applySeason, patchPlayers, startNewSeason } from "../engine/seasons";
 import { ensureStaff } from "../engine/coaches";
 import type { Deal, GameState, SignedContract } from "../engine/types";
 
@@ -85,6 +85,8 @@ export function migrate(state: GameState): GameState {
   patchPlayers(state);
   // Saves from before the business side open their books today.
   ensureBusiness(state);
+  // Saves from when the game ended with the draft sit on the day after it, where the next season now starts.
+  if (state.date >= DRAFT_OVER && (state.season ?? BASE_SEASON) === RULES.season) startNewSeason(state);
   return state;
 }
 

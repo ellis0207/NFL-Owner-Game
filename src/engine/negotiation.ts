@@ -15,7 +15,7 @@ import { gradeDeal } from "./grades";
 import { leakStory, ownerLeverage } from "./outlets";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
-import { capScale, invalidateMarket, marketPrice, teamValue } from "./market";
+import { capScale, invalidateMarket, marketCeiling, marketPrice, teamValue } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { schemeFit, staffEffects, teamStaff } from "./staff";
 import { standings } from "./standings";
@@ -133,11 +133,14 @@ function stance(state: GameState, team: string, id: string, startYear: number): 
   reservation = Math.max(0.7, Math.min(1.08, reservation));
   // The owner told the press this player would be paid: his agent heard it too.
   reservation += ownerLeverage(state, id, team);
-  const ask = price.apy * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power);
+  // At the top of a market the agent wants the record deal, a little past the biggest one, not a share above it.
+  const record = marketCeiling(state, PLAYER_BY_ID[id].position, startYear) * 1.04;
+  const floor = Math.min(price.apy * reservation, record * 0.97);
+  const ask = Math.min(record, Math.max(price.apy * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power), floor * 1.03));
   return {
     base: price.apy,
-    floor: price.apy * reservation,
-    ask: Math.max(ask, price.apy * reservation * 1.03),
+    floor,
+    ask,
     askYears: price.years,
     askGuarantee: Math.max(0.03, Math.min(0.8, price.guaranteeShare * (0.9 + 0.25 * ah.guaranteeFocus))),
   };

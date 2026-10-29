@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, CONCESSION_LABEL, CREDIT_LINE, DEPTS, gateForecast, nationalRevenue,
+  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, CONCESSION_LABEL, CREDIT_LINE, deptCost, DEPTS, gateForecast, nationalRevenue,
   operatingEstimate, ownerCash, pnl, PRICING_OPENS, RENEWAL_DEADLINE, revenueEstimate, setBudget, setConcessions, setNextSeasonPrices,
   setParking, setSinglePrice, valuation,
 } from "../../engine/business";
@@ -356,7 +356,7 @@ function Budget({ game, changed }: { game: GameState; changed: () => void }) {
         <div key={d} className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <strong>{DEPTS[d].label}</strong>
-            <span className="muted">{money(DEPTS[d].cost[b.budget[d]])}{DEPTS[d].perGame ? " a home game" : " a year"}</span>
+            <span className="muted">{money(deptCost(d, b.budget[d], leagueYear(game.date)))}{DEPTS[d].perGame ? " a home game" : " a year"}</span>
           </div>
           <span className="muted">{DEPTS[d].what}</span>
           <div className="tabs" role="group" aria-label={DEPTS[d].label}>
