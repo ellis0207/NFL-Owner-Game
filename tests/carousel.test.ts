@@ -1,19 +1,15 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { RULES, TEAMS } from "../src/engine/league";
+import { BASE_KEY_DATES, RULES, TEAMS } from "../src/engine/league";
 import { addDays } from "../src/engine/dates";
-import { advanceDay, isSeasonOver, newGame } from "../src/engine/season";
+import { advanceDay, newGame } from "../src/engine/season";
 import { askFor, candidates, decideProposal, fireStaff, makeOffer, openSearches, proposals, requestInterview } from "../src/engine/carousel";
 import { staff } from "../src/engine/coaches";
 import { compress, decompress } from "../src/save/codec";
+import { stateAt } from "./fixtures";
 import type { GameState, StaffRole } from "../src/engine/types";
 
 const TEAM = "NYG";
 const K = RULES.keyDates;
-let endOfSeason: string;
-
-async function clone(): Promise<GameState> {
-  return decompress(await compress(JSON.parse(endOfSeason)));
-}
 
 function until(state: GameState, date: string): void {
   while (state.date < date) advanceDay(state);
@@ -24,9 +20,7 @@ function holder(state: GameState, team: string, role: StaffRole) {
 }
 
 beforeAll(() => {
-  const state = newGame(TEAM, "Owner", { capRules: "real" }, 3);
-  while (!isSeasonOver(state)) advanceDay(state);
-  endOfSeason = JSON.stringify(state);
+  stateAt(TEAM, 3);
 }, 180_000);
 
 describe("the coaching carousel", () => {
@@ -40,8 +34,7 @@ describe("the coaching carousel", () => {
   });
 
   it("other teams' staff can't be interviewed during the season", () => {
-    const state = newGame(TEAM, "Owner", { capRules: "real" }, 5);
-    until(state, addDays(K.regularSeasonStart, 30));
+    const state = stateAt(TEAM, 5, addDays(BASE_KEY_DATES.regularSeasonStart, 30));
     const hc = holder(state, TEAM, "HC")!;
     expect(fireStaff(state, hc.id).ok).toBe(true);
     // A coordinator steps in as interim and the search waits for the offseason.
@@ -52,7 +45,7 @@ describe("the coaching carousel", () => {
   });
 
   it("turns over a realistic number of head coaches and fills every job by March", async () => {
-    const state = await clone();
+    const state = stateAt(TEAM, 3);
     until(state, addDays(K.superBowl, 16));
     const log = staff(state).log.filter((l) => / hire .* as head coach/.test(l.text));
     expect(log.length).toBeGreaterThanOrEqual(2);
@@ -65,7 +58,7 @@ describe("the coaching carousel", () => {
   });
 
   it("lets the owner fire, interview and hire a head coach, who then proposes coordinators", async () => {
-    const state = await clone();
+    const state = stateAt(TEAM, 3);
     until(state, addDays(K.superBowl, 2));
     const old = holder(state, TEAM, "HC")!;
     expect(fireStaff(state, old.id).ok).toBe(true);

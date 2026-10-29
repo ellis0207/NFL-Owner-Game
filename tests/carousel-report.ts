@@ -1,15 +1,16 @@
 // Plays seasons and prints the coaching carousel: firings, hires, where the
 // new head coaches came from, coordinator turnover and our own staff moves.
-// Run: npx vite-node tests/carousel-report.ts [seasons] [seed]
-import { advanceDay, newGame } from "../src/engine/season";
+// Run: [FROM=<key date|date|end>] npx vite-node tests/carousel-report.ts [seasons] [seed]
+import { advanceDay } from "../src/engine/season";
 import { RULES, teamLabel } from "../src/engine/league";
 import { coachAge, ROLE_NAME } from "../src/engine/coaches";
 import type { GameState } from "../src/engine/types";
+import { reportStart } from "./fixtures";
 
 const seasons = Number(process.argv[2] ?? 1);
 const seed = Number(process.argv[3] ?? 7);
 const t0 = Date.now();
-const state: GameState = newGame("NYG", "Report", { capRules: "real" }, seed);
+const state: GameState = reportStart("NYG", seed);
 
 for (let n = 0; n < seasons; n++) {
   const season = RULES.season;

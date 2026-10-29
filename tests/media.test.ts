@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { morale } from "../src/engine/agents";
 import { addDays } from "../src/engine/dates";
-import { GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
+import { BASE_KEY_DATES, GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
 import { mediaState, ownerLeverage } from "../src/engine/outlets";
 import { answerQuestion, openQuestions, pressDaily } from "../src/engine/press";
 import { advanceDay, newGame } from "../src/engine/season";
+import { stateAt } from "./fixtures";
 import type { GameState, PressQuestion } from "../src/engine/types";
 import { compress, decompress } from "../src/save/codec";
 
@@ -90,8 +91,7 @@ describe("the media", () => {
   });
 
   it("saves keep the coverage and the open questions", async () => {
-    const state = newGame("DET", "Owner", { capRules: "real" }, 9);
-    while (state.date < addDays(KEY.rosterCutdown, 3)) advanceDay(state);
+    const state = stateAt("DET", 9, addDays(BASE_KEY_DATES.rosterCutdown, 3));
     ask(state, { topic: "win", options: [{ key: "humble", text: "One game at a time." }, { key: "noComment", text: "No comment." }, { key: "a", text: "a" }, { key: "b", text: "b" }] });
     const back = await decompress(await compress(state));
     expect(back.media?.stories.length).toBe(state.media?.stories.length);

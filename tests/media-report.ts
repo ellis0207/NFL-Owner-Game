@@ -1,16 +1,17 @@
 // Plays a save through the draft, answering every press question with a
 // random answer, and prints what the media covered: stories by kind and
 // outlet, a sample day, the questions asked, fines and the hidden effects.
-// Run: npx vite-node tests/media-report.ts [seed]
-import { advanceDay, newGame } from "../src/engine/season";
+// Run: [FROM=<key date|date|end>] npx vite-node tests/media-report.ts [seed]
+import { advanceDay } from "../src/engine/season";
 import { answerQuestion, openQuestions } from "../src/engine/press";
 import { mediaState } from "../src/engine/outlets";
 import { compress } from "../src/save/codec";
 import type { Story } from "../src/engine/types";
+import { reportStart } from "./fixtures";
 
 const seed = Number(process.argv[2] ?? 7);
 const t0 = Date.now();
-const state = newGame("NYG", "Report", { capRules: "real" }, seed);
+const state = reportStart("NYG", seed);
 const all: Story[] = [];
 const seen = new Set<string>();
 let days = 0;
