@@ -725,7 +725,10 @@ export function startHoldouts(state: GameState): void {
     const pr: Priorities = priorities(id);
     const rng = rngFor(state.seed, `holdout:${id}`);
     const score = 0.5 * pr.money + 0.5 * pr.ego + Math.min(0.4, (underpaid - 1.6) * 0.15) - 0.3 * pr.loyalty;
-    if (score < 0.7 || rng() > 0.3) continue;
+    // A player who stayed away from the spring program over his deal is halfway out the door already.
+    const spring = state.program?.season === RULES.season ? state.program.spring[id] : undefined;
+    const skipped = spring?.reason === "contract" && spring.plan === "away";
+    if (score < (skipped ? 0.55 : 0.7) || rng() > (skipped ? 0.6 : 0.3)) continue;
     ps.holdout = { kind: rng() < 0.15 ? "holdout" : "holdin", since: state.date };
     changeMorale(state, id, -10);
     const p = PLAYER_BY_ID[id];

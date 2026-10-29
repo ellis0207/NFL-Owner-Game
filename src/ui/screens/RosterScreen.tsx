@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { campNote } from "../../engine/camp";
 import { capHit, contractYearsLeft, teamPlayerIds } from "../../engine/cap";
 import { ageOn, shortDate } from "../../engine/dates";
 import { isHurt } from "../../engine/injuries";
@@ -132,10 +133,11 @@ function PositionGroup(props: {
         const tag = isOffseason(game.date) ? off(game).tags[id] : undefined;
         const expiring = !tag && isPendingFreeAgent(game, id) ? faClass(id) : null;
         const injured = isHurt(game, id);
+        const note = campNote(game, game.userTeam, id);
         return (
           <tr key={id} className="clickable" onClick={() => onOpen(id)}>
             <td className="num">{p.jersey ?? ""}</td>
-            <td className="name">{p.name}</td>
+            <td className="name">{p.name}{note && <span className="muted"> · {note}</span>}</td>
             <td>{status === "ps" ? "PS" : status === "ir" ? "IR" : injured ? <span className="bad">Inj</span> : `${pos}${depthIndex[id] ?? ""}`}</td>
             <td className="muted">{gradeShort(game, id)}</td>
             <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>

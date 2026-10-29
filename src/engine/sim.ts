@@ -11,7 +11,7 @@ import { addLine, pack, type StatKey, type StatLine } from "./stats";
 import { teamPlayerIds } from "./cap";
 import { injure, injuryRisk, isHurt } from "./injuries";
 import { PLAYER_BY_ID, RULES } from "./league";
-import { depthChart, isHoldingOut } from "./roster";
+import { depthChart, isHoldingOut, isSuspended } from "./roster";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { DEFENSE, OFFENSE, type DefenseStyle, type OffenseStyle, type Personnel, type RunType } from "./schemes";
 import { ability, schemeFit, staffEffects, teamSchemes, trait, type StaffEffects } from "./staff";
@@ -133,7 +133,7 @@ class GameSim {
     const { chart, inactive } = this.pre ? { chart: full, inactive: [] as string[] } : gameDayActives(full);
     // Injured players on the 53 are inactive too.
     for (const pid of teamPlayerIds(this.state, id)) {
-      if (this.state.players[pid].status === "active" && (isHurt(this.state, pid, this.game.date) || isHoldingOut(this.state, pid, this.game.date))) inactive.push(pid);
+      if (this.state.players[pid].status === "active" && (isHurt(this.state, pid, this.game.date) || isHoldingOut(this.state, pid, this.game.date) || isSuspended(this.state, pid, this.game.date))) inactive.push(pid);
     }
     const leadershipSd = 3.0 - (fx.leadership - 75) * 0.03;
     const r = this.rng();

@@ -13,6 +13,7 @@ import { money } from "./format";
 import { PlayerPanel } from "./PlayerPanel";
 import { NegotiationPanel } from "./NegotiationPanel";
 import { CalendarScreen } from "./screens/CalendarScreen";
+import { CampScreen } from "./screens/CampScreen";
 import { CollegeScreen } from "./screens/CollegeScreen";
 import { ScoutingScreen } from "./screens/ScoutingScreen";
 import { ProspectPanel } from "./ProspectPanel";
@@ -35,7 +36,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Staff", "Cap", "League", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Staff", "Cap", "League", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -46,7 +47,7 @@ export function phaseLabel(state: GameState): string {
   if (d >= k.negotiatingWindowOpens) return "Negotiating window";
   if (d >= k.franchiseTagWindowOpens && d <= k.franchiseTagDeadline) return "Offseason · tag window";
   if (isSeasonOver(state)) return "Offseason";
-  if (isSummer(state)) return d < addDays(k.franchiseTagExtensionDeadline, -30) ? `Offseason program · ${RULES.season}` : "Summer break";
+  if (isSummer(state)) return d < addDays(k.minicampStart, 3) ? `Offseason program · ${RULES.season}` : "Summer break";
   if (d > k.regularSeasonEnd) return "Playoffs";
   if (d >= k.regularSeasonStart) {
     const next = SCHEDULE.find((g) => g.type === "REG" && g.date >= d);
@@ -174,6 +175,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Schedule" && <ScheduleScreen game={game} />}
           {screen === "Standings" && <StandingsScreen game={game} />}
           {screen === "Roster" && <RosterScreen game={game} changed={changed} />}
+          {screen === "Camp" && <CampScreen game={game} changed={changed} />}
           {screen === "Free agents" && <FreeAgentsScreen game={game} changed={changed} />}
           {screen === "Trades" && <TradesScreen key={tradeStart?.player ?? "trades"} game={game} changed={changed} start={tradeStart} />}
           {screen === "Cap" && <CapScreen game={game} />}

@@ -455,6 +455,8 @@ export interface PlayerState {
   elevatedFor?: string;
   /** Signed off another team's practice squad: has to stay on the 53 until this date. */
   keepUntil?: string;
+  /** Suspended by the league: regular-season games still to sit out, without pay and off the 53. */
+  suspended?: { games: number; reason: string };
 }
 
 export type DealKind =
@@ -1222,7 +1224,72 @@ export interface GameState {
   staff?: StaffState;
   /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
   business?: BusinessState;
+  /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */
+  program?: ProgramState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
+}
+
+// ---- Offseason program, training camp and discipline ----
+
+/** How a player handles the voluntary spring program, and whether he came to the mandatory minicamp. */
+export interface SpringPlan {
+  plan: "full" | "most" | "away";
+  /** Why he isn't there every day. */
+  reason?: "contract" | "training" | "personal";
+  minicamp?: "present" | "absent" | "excused" | "fined";
+}
+
+/** Two players competing for a starting spot in camp. */
+export interface PositionBattle {
+  team: string;
+  pos: Position;
+  ids: string[];
+  opened: string;
+  winner?: string;
+  decided?: string;
+}
+
+export type IncidentKind = "ped" | "substance" | "comments" | "conduct" | "minicamp";
+
+/** A discipline matter: a failed drug test, something said in public, a missed meeting. */
+export interface Incident {
+  date: string;
+  team: string;
+  player: string;
+  kind: IncidentKind;
+  /** Regular-season games suspended. */
+  games?: number;
+  fine?: number;
+  text: string;
+}
+
+/** A call the owner gets to make; the staff's default stands if the owner doesn't answer in time. */
+export interface OwnerDecision {
+  id: string;
+  date: string;
+  expires: string;
+  player: string;
+  kind: "minicamp" | "comments";
+  title: string;
+  body: string;
+  options: { key: string; label: string }[];
+  /** The option taken if the owner says nothing. */
+  fallback: string;
+  answer?: string;
+  outcome?: string;
+}
+
+export interface ProgramState {
+  season: number;
+  /** Spring attendance, by player: only the ones not planning to be there every day. */
+  spring: Record<string, SpringPlan>;
+  /** The attendance plans have been made for this spring. */
+  springSet?: boolean;
+  /** Practice reps the coaches have watched this season, by "team:player" (engine only). */
+  reps: Record<string, number>;
+  battles: PositionBattle[];
+  decisions: OwnerDecision[];
+  incidents: Incident[];
 }

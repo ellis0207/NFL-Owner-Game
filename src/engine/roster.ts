@@ -44,6 +44,8 @@ export function rosterCount(state: GameState, team: string): { roster: number; p
     const p = state.players[id];
     if (p.status === "ps") ps++;
     else if (p.status === "ir") ir++;
+    // A suspended player sits on the reserve/suspended list from the cutdown through the season, off the roster count.
+    else if (p.suspended && state.date >= RULES.keyDates.rosterCutdown && state.date <= RULES.keyDates.superBowl) continue;
     else if (p.status === "camp" || p.status === "active") roster++;
   }
   return { roster, ps, ir };
@@ -51,7 +53,7 @@ export function rosterCount(state: GameState, team: string): { roster: number; p
 
 /** The GM's plan for the 53: ids to keep, best first. */
 export function proposeFinal53(state: GameState, team: string, mustKeep: string[] = []): string[] {
-  const ids = teamPlayerIds(state, team).filter((id) => state.players[id].status === "camp" || state.players[id].status === "active");
+  const ids = teamPlayerIds(state, team).filter((id) => (state.players[id].status === "camp" || state.players[id].status === "active") && !state.players[id].suspended);
   const value = Object.fromEntries(ids.map((id) => [id, keepValue(state, team, id)]));
   const byPos = new Map<Position, string[]>();
   for (const id of ids) {
@@ -382,7 +384,7 @@ export function applyCutdown(state: GameState, team: string, keepIds: string[]):
   for (const id of teamPlayerIds(state, team)) {
     const status = state.players[id].status;
     if (status === "ps" || status === "ir") continue;
-    if (keep.has(id)) state.players[id].status = "active";
+    if (keep.has(id) || state.players[id].suspended) state.players[id].status = "active";
     else cut.push(id);
   }
   // The cuts the team hopes to bring back on the practice squad once they clear waivers.
@@ -408,6 +410,11 @@ export function applyCutdown(state: GameState, team: string, keepIds: string[]):
  * The coaches' depth chart: healthy players by position, best first in the
  * staff's eyes (true ability blurred by their evaluation skill, plus scheme fit).
  */
+/** Suspended players can practice and play in the preseason, then sit out their regular-season games. */
+export function isSuspended(state: GameState, id: string, date = state.date): boolean {
+  return !!state.players[id]?.suspended && date >= RULES.keyDates.regularSeasonStart;
+}
+
 /** Holdouts miss everything; hold-ins sit out the preseason. */
 export function isHoldingOut(state: GameState, id: string, date = state.date): boolean {
   const h = state.players[id]?.holdout;
@@ -421,7 +428,7 @@ export function depthChart(state: GameState, team: string, date = state.date): R
     const ps = state.players[id];
     const elevated = ps.status === "ps" && ps.elevatedFor === date;
     if (ps.status !== "active" && ps.status !== "camp" && !elevated) continue;
-    if (isHurt(state, id, date) || isHoldingOut(state, id, date)) continue;
+    if (isHurt(state, id, date) || isHoldingOut(state, id, date) || isSuspended(state, id, date)) continue;
     chart[PLAYER_BY_ID[id].position].push(id);
     view[id] = coachView(state, team, id);
   }

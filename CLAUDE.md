@@ -7,7 +7,9 @@ parts a task touches. README.md is the player-facing description of features.
 
 - The owner never sees a rating. `HIDDEN_RATINGS`, `HIDDEN_STAFF` and every
   `*Hidden` type are engine-only; the UI shows stats, contracts and staff
-  reports (`reports.ts`, `perceivedAbility`, `coachView`).
+  reports (`reports.ts`, `perceivedAbility`, `coachView`). `coachView` sharpens
+  with the practice reps in `state.program` (`coachRead` in `staff.ts`), so
+  depth charts move during camp.
 - Real data first (`data/`, built by `pipeline/`). Made-up things (agents,
   outlets, prospects, generated coaches) are labeled as such in comments.
 - Everything is deterministic from the save's seed: use `rngFor(state, ...)`
@@ -36,7 +38,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 - **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
   games, then the daily hooks in this order: `offseasonDaily`,
   `carouselDaily`, `contractsDaily`, `capMovesDaily`, `faDaily`,
-  `tradesDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
+  `tradesDaily`, `springDaily`, `campDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `mediaDaily`,
   `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
   the league over. A new system adds an `xxxDaily(state)` and one line here.
@@ -70,6 +72,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | College and draft | `collegeData.ts`, `college.ts`, `prospects.ts`, `scouting.ts`, `prodays.ts`, `draft.ts`, `names.ts` | `college.test.ts`, `college-report.ts`, `draft-report.ts` |
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects) | `media.test.ts`, `media-report.ts` |
 | Business | `business.ts` (books, gate, budgets), `stadiums.ts` | `business.test.ts`, `business-report.ts` |
+| Spring and camp | `spring.ts` (OTAs, minicamp, offseason injuries), `camp.ts` (practice reps, camp battles, `program(state)`), `discipline.ts` (suspensions, fines, owner decisions) | `camp.test.ts` |
 
 UI: `src/ui/GameShell.tsx` holds the nav (`SCREENS`) and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,

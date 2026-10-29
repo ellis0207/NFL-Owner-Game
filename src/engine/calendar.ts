@@ -40,11 +40,20 @@ function draftDate(year: number): string {
 const keyCache = new Map<number, Record<string, string>>();
 
 /**
+ * The spring program before a season: voluntary OTA practices start the
+ * week before Memorial Day and run three weeks (Tuesday to Thursday), and the
+ * three-day mandatory minicamp follows in the second week of June.
+ */
+function springDates(season: number): Record<string, string> {
+  return { otasStart: onOrAfter(`${season}-05-19`, 2), minicampStart: onOrAfter(`${season}-06-09`, 2) };
+}
+
+/**
  * Key dates of one season, from the Hall of Fame Game to the next spring's
  * draft. The 2026 dates are the league's; later ones follow the same rules.
  */
 export function keyDatesFor(season: number): Record<string, string> {
-  if (season === BASE_SEASON) return { ...BASE_KEY_DATES };
+  if (season === BASE_SEASON) return { ...BASE_KEY_DATES, ...springDates(season) };
   const hit = keyCache.get(season);
   if (hit) return { ...hit };
   const k = kickoffDate(season);
@@ -58,6 +67,7 @@ export function keyDatesFor(season: number): Record<string, string> {
   const cutdown = addDays(k, -9);
   const deadline = addDays(k, 61);
   const dates: Record<string, string> = {
+    ...springDates(season),
     franchiseTagExtensionDeadline: extension,
     hallOfFameGame: addDays(k, -35),
     rosterCutdown: cutdown,
