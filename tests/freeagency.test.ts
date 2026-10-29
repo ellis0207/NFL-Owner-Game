@@ -7,28 +7,20 @@ import { openTalks, sendOffer, talksFor } from "../src/engine/negotiation";
 import { practiceSquad, releasePlayer, rosterCount } from "../src/engine/roster";
 import { advanceDay, newGame } from "../src/engine/season";
 import { onWaivers, putInClaim, subjectToWaivers, waiverOrder } from "../src/engine/waivers";
-import { compress, decompress } from "../src/save/codec";
+import { stateAt } from "./fixtures";
 import type { GameState } from "../src/engine/types";
 
 const K = RULES.keyDates;
 const TEAM = "DET";
-let atCutdown: string;
-let inSeason: string;
-
-async function load(json: string): Promise<GameState> {
-  return decompress(await compress(JSON.parse(json)));
-}
+const IN_SEASON = "2026-09-22";
 
 function until(state: GameState, date: string): void {
   while (state.date < date) advanceDay(state);
 }
 
 beforeAll(() => {
-  const state = newGame(TEAM, "Owner", { capRules: "real" }, 5);
-  until(state, K.rosterCutdown);
-  atCutdown = JSON.stringify(state);
-  until(state, "2026-09-22");
-  inSeason = JSON.stringify(state);
+  stateAt(TEAM, 5, "rosterCutdown");
+  stateAt(TEAM, 5, IN_SEASON);
 }, 120_000);
 
 describe("the free agent pool", () => {
@@ -44,7 +36,7 @@ describe("the free agent pool", () => {
   });
 
   it("cutdown cuts go through waivers, and practice squads form after the claims", async () => {
-    const state = await load(atCutdown);
+    const state = stateAt(TEAM, 5, "rosterCutdown");
     advanceDay(state);
     expect(state.date).toBe(K.cutdownWaiversExpire);
     const wire = Object.values(state.waivers ?? {});
@@ -73,14 +65,14 @@ describe("the free agent pool", () => {
   }, 60_000);
 
   it("waiver priority follows the 2026 draft order, then the standings", async () => {
-    const state = await load(inSeason);
+    const state = stateAt(TEAM, 5, IN_SEASON);
     expect(waiverOrder(state, "2026-09-10")).toEqual(RULES.waiverOrder);
     const order = waiverOrder(state, "2026-10-05");
     expect(new Set(order).size).toBe(32);
   });
 
   it("vested veterans skip waivers until the trade deadline", async () => {
-    const state = await load(inSeason);
+    const state = stateAt(TEAM, 5, IN_SEASON);
     const vet = teamPlayerIds(state, "KC").find((id) => state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp >= 6)!;
     const young = teamPlayerIds(state, "KC").find((id) => state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp <= 1)!;
     expect(releasePlayer(state, vet)).toBe("fa");
@@ -90,7 +82,7 @@ describe("the free agent pool", () => {
   });
 
   it("vested veterans on the Week 1 roster are owed the season's salary", async () => {
-    const state = await load(inSeason);
+    const state = stateAt(TEAM, 5, IN_SEASON);
     const vet = TEAMS.flatMap((t) => teamPlayerIds(state, t.id)).find((id) => {
       const y = dealOf(state, id)?.years.find((x) => x.year === 2026);
       return state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp >= 5 && y && y.base > 2_000_000 && y.guaranteed === 0 && !y.weeks;
@@ -106,7 +98,7 @@ describe("the free agent pool", () => {
   });
 
   it("the owner can sign a free agent during the season, for the weeks that are left", async () => {
-    const state = await load(inSeason);
+    const state = stateAt(TEAM, 5, IN_SEASON);
     const team = TEAM;
     const cut = teamPlayerIds(state, team).find((id) => state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp <= 1)!;
     const id = Object.values(market(state)).filter((f) => f.status === "open" && state.players[f.player].status === "fa" && !onWaivers(state, f.player))
@@ -128,7 +120,7 @@ describe("the free agent pool", () => {
   }, 30_000);
 
   it("the owner's waiver claims are awarded by priority", async () => {
-    const state = await load(inSeason);
+    const state = stateAt(TEAM, 5, IN_SEASON);
     const victim = teamPlayerIds(state, "NYJ").find((id) => state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp <= 2)!;
     const deadBefore = deadMoney(state, "NYJ");
     const cost = releaseCost(victim, state);

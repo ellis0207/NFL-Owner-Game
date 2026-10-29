@@ -1,14 +1,15 @@
 // Prints how free agency, waivers and practice squads play out over a simulated season.
-// Run: npx vite-node tests/fa-report.ts [seed] [stopDate]
+// Run: [FROM=<key date|date|end>] npx vite-node tests/fa-report.ts [seed] [stopDate]
 import { teamPlayerIds } from "../src/engine/cap";
 import { PLAYER_BY_ID, RULES, TEAMS } from "../src/engine/league";
 import { rosterCount } from "../src/engine/roster";
-import { advanceDay, newGame } from "../src/engine/season";
+import { advanceDay } from "../src/engine/season";
+import { reportStart } from "./fixtures";
 
 const seed = Number(process.argv[2] ?? 7);
 const stop = process.argv[3] ?? RULES.keyDates.draftStart;
 const t0 = Date.now();
-const state = newGame("DET", "Report", { capRules: "real" }, seed);
+const state = reportStart("DET", seed);
 const checkpoints = [RULES.keyDates.rosterCutdown, RULES.keyDates.cutdownWaiversExpire, "2026-09-02", "2026-10-15", "2026-12-01", RULES.keyDates.regularSeasonEnd, "2027-02-20", "2027-03-20", stop];
 const fa = () => Object.values(state.players).filter((p) => p.status === "fa").length;
 console.log(`start ${state.date}: ${fa()} free agents`);

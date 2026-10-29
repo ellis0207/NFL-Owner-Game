@@ -1,12 +1,13 @@
 // Trade calibration: what notable players are worth, and the trades a season produces.
 // npx vite-node tests/trade-report.ts [seed]
 import { PLAYERS } from "../src/engine/league";
-import { advanceDay, newGame } from "../src/engine/season";
+import { advanceDay } from "../src/engine/season";
 import { headline, chartValue, direction, outlook, picksOf, pickValue, playerValue, trades } from "../src/engine/trades";
 import { RULES } from "../src/engine/league";
+import { reportStart } from "./fixtures";
 
 const seed = Number(process.argv[2] ?? 7);
-const state = newGame("DET", "Calibration", { capRules: "real" }, seed);
+const state = reportStart("DET", seed);
 const names = ["Micah Parsons", "Myles Garrett", "Maxx Crosby", "Sauce Gardner", "Quinnen Williams", "Ja'Marr Chase", "Justin Jefferson", "Davante Adams", "Patrick Mahomes", "Josh Allen", "Kirk Cousins", "Christian McCaffrey", "Brock Bowers", "Malik Nabers", "Trey Hendrickson", "Cooper Kupp", "Jakobi Meyers", "Tyreek Hill", "Jalen Ramsey", "Brian Thomas"];
 const wp = outlook(state);
 console.log("dir", Object.fromEntries(Object.keys(wp).map((t) => [t, `${wp[t].toFixed(2)} ${direction(state, t)}`])));

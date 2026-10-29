@@ -1,6 +1,6 @@
 // Plays one college season on its own and prints what it looked like: scoring,
 // polls, the playoff, bowls, award winners and the stat leaders among prospects.
-// Run: npx vite-node tests/college-report.ts [seed]
+// Run: [FROM=<key date|date|end>] npx vite-node tests/college-report.ts [seed]
 import { addDays } from "../src/engine/dates";
 import {
   AWARDS, collegeDaily, collegeGames, collegeRecords, conferenceChampions, latestPoll, prospectLine, prospectTotals,
@@ -8,11 +8,11 @@ import {
 import { schoolName } from "../src/engine/collegeData";
 import { draftClass } from "../src/engine/prospects";
 import { addAssignment, knowledge, scoutingDaily, scoutReport } from "../src/engine/scouting";
-import { newGame } from "../src/engine/season";
+import { reportStart } from "./fixtures";
 
 const seed = Number(process.argv[2] ?? 7);
 const t0 = Date.now();
-const state = newGame("NYG", "Report", { capRules: "real" }, seed);
+const state = reportStart("NYG", seed);
 addAssignment(state, { conference: "SEC", positions: ["CB"] }, "campus");
 const dc = draftClass(seed);
 const five = dc.prospects.filter((p) => p.position === "QB").slice(0, 5).map((p) => p.id);

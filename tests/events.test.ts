@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
 import { advanceDay, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent } from "../src/engine/season";
+import { stateAt } from "./fixtures";
 
 const opener = SCHEDULE.find((g) => g.type === "REG" && (g.home === "DET" || g.away === "DET"))!;
 
 describe("today's events", () => {
   it("waits for the owner to sim our game, and the rest of the league plays when the day ends", () => {
-    const state = newGame("DET", "Owner", { capRules: "real" }, 7);
-    while (state.date < opener.date) advanceDay(state);
+    const state = stateAt("DET", 7, opener.date);
     const pending = pendingEvents(state);
     expect(pending.map((a) => a.id)).toContain("game");
     expect(state.results[opener.id]).toBeUndefined();

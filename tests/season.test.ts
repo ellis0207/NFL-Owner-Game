@@ -5,15 +5,14 @@ import { playerReport } from "../src/engine/reports";
 import { seasonTotals, stat } from "../src/engine/stats";
 import { compress, decompress, migrate } from "../src/save/codec";
 import { rosterCount } from "../src/engine/roster";
-import { advanceDay, isSeasonOver, newGame, veteranReportDate } from "../src/engine/season";
+import { advanceDay, newGame, veteranReportDate } from "../src/engine/season";
 import { standings } from "../src/engine/standings";
 import { trades } from "../src/engine/trades";
+import { stateAt } from "./fixtures";
 import type { GameState } from "../src/engine/types";
 
 function playSeason(seed: number): GameState {
-  const state = newGame("DET", "Test Owner", { capRules: "real" }, seed);
-  while (!isSeasonOver(state)) advanceDay(state);
-  return state;
+  return stateAt("DET", seed);
 }
 
 describe("new game", () => {

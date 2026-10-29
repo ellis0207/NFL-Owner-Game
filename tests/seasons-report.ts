@@ -1,22 +1,23 @@
 // Plays a save through several seasons and prints how the league holds up:
 // champions, the talent level, ages, the free agent pool, retirements, the
 // cap and money, so drift over the years shows.
-// Run: npx vite-node tests/seasons-report.ts [seasons] [seed]
+// Run: [FROM=<key date|date|end>] npx vite-node tests/seasons-report.ts [seasons] [seed]
 import { writeFileSync } from "node:fs";
 import { capSummary } from "../src/engine/cap";
 import { salaryCap } from "../src/engine/contracts";
 import { ageOn } from "../src/engine/dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS } from "../src/engine/league";
 import { rosterCount } from "../src/engine/roster";
-import { advanceDay, newGame } from "../src/engine/season";
+import { advanceDay } from "../src/engine/season";
 import { cashBalance } from "../src/engine/business";
 import { compress, decompress } from "../src/save/codec";
 import type { GameState } from "../src/engine/types";
+import { reportStart } from "./fixtures";
 
 const seasons = Number(process.argv[2] ?? 3);
 const seed = Number(process.argv[3] ?? 7);
 const t0 = Date.now();
-let state: GameState = newGame("NYG", "Report", { capRules: "real" }, seed);
+let state: GameState = reportStart("NYG", seed);
 
 function ability(id: string): number {
   return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0);
