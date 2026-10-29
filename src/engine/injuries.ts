@@ -1,6 +1,7 @@
 // Injuries: what happens, how long it takes, and how the training staff changes both.
 import { addDays, ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES } from "./league";
+import { projectEffects } from "./projects";
 import type { Rng } from "./rng";
 import { staffEffects } from "./staff";
 import type { GameState, Injury } from "./types";
@@ -56,7 +57,7 @@ function pick(rng: Rng, list: InjuryType[]): InjuryType {
 
 /** The owner's medical and training budget (see business.ts): only our team's changes from league average. */
 function medical(state: GameState, team: string): { risk: number; days: number } {
-  const lvl = team === state.userTeam ? state.business?.budget.medical ?? 1 : 1;
+  const lvl = team === state.userTeam ? Math.min(3, (state.business?.budget.medical ?? 1) + projectEffects(state).medical) : 1;
   return { risk: [1.05, 1, 0.97, 0.95][lvl], days: [1.07, 1, 0.96, 0.92][lvl] };
 }
 

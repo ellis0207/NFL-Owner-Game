@@ -22,6 +22,7 @@ import { rosterCount } from "./roster";
 import { divisionStandings, standings } from "./standings";
 import { teamStaff } from "./staff";
 import { parsePick } from "./trades";
+import { noteDraft } from "./review";
 import { seasonTotals } from "./stats";
 import type { DraftArchive, GameState, History, SeasonRecord, SeasonStats, SnapSeason } from "./types";
 
@@ -237,6 +238,7 @@ export function startNewSeason(state: GameState): void {
   state.college = newCollege(state);
   // What our scouts learned about the underclassmen who went back to school carries over, a little stale.
   for (const id of returned) if (knew[id]) state.college.scouting.know[id] = Math.round(knew[id] * 0.7);
+  noteDraft(state);
   state.draft = { made: [], mocks: [], daysDone: [], nextMock: FIRST_MOCK };
   newBusinessSeason(state);
   if (state.media) {

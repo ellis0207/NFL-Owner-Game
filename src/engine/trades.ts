@@ -145,7 +145,25 @@ export function transferOwnPick(state: GameState, year: number, round: number, f
 // ---- How good teams look ----
 
 const POS_WEIGHT: Partial<Record<Position, number>> = { QB: 3, EDGE: 1.3, OT: 1.1, WR: 1, CB: 1, IDL: 1, S: 0.8, LB: 0.8, TE: 0.8, OG: 0.8, C: 0.8, RB: 0.6, K: 0.3, P: 0.2 };
-const strengthCache = new WeakMap<GameState, { date: string; wp: Record<string, number>; rank: string[] }>();
+const strengthCache = new WeakMap<GameState, { date: string; wp: Record<string, number>; prior: Record<string, number>; rank: string[] }>();
+
+/** How a team's starters at each position look to the league, on average. */
+export function positionStrength(state: GameState, team: string): Partial<Record<Position, number>> {
+  const out: Partial<Record<Position, number>> = {};
+  for (const [pos, ids] of Object.entries(depthChart(state, team)) as [Position, string[]][]) {
+    const n = STARTERS[pos] ?? 1;
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += ids[i] ? marketView(state, ids[i]) : 60;
+    out[pos] = sum / n;
+  }
+  return out;
+}
+
+/** Where each team looks headed from its roster alone, ignoring the record so far. */
+export function rosterOutlook(state: GameState): Record<string, number> {
+  outlook(state);
+  return strengthCache.get(state)!.prior;
+}
 
 /**
  * Where each team looks headed this season, as the league sees it: the record
@@ -175,14 +193,16 @@ export function outlook(state: GameState): Record<string, number> {
   const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length) || 1;
   const table = standings(state);
   const wp: Record<string, number> = {};
+  const priors: Record<string, number> = {};
   for (const t of TEAMS) {
     const prior = Math.max(0.22, Math.min(0.78, 0.5 + ((strength[t.id] - mean) / sd) * 0.12));
+    priors[t.id] = prior;
     const r = table[t.id];
     const g = r ? Math.min(17, r.w + r.l + r.t) : 0;
     wp[t.id] = r ? (r.w + 0.5 * r.t + prior * (17 - g)) / 17 : prior;
   }
   const rank = TEAMS.map((t) => t.id).sort((a, b) => wp[a] - wp[b] || a.localeCompare(b));
-  strengthCache.set(state, { date: state.date, wp, rank });
+  strengthCache.set(state, { date: state.date, wp, prior: priors, rank });
   return wp;
 }
 

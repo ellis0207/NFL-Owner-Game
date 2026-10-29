@@ -27,6 +27,8 @@ import { controlOf, DRAW, MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadi
 import { standings, winPct } from "./standings";
 import { teamStaff } from "./staff";
 import { BUDGETED_TOP_STAFF, payroll } from "./coaches";
+import { localIncome } from "./commerce";
+import { projectEffects } from "./projects";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
 const KEY = RULES.keyDates;
@@ -39,7 +41,7 @@ export function nationalRevenue(year: number): number {
 }
 
 /** Prices and costs that rise with the years, about 4% a year from the first season. */
-function inflation(year: number, rate = 0.04): number {
+export function inflation(year: number, rate = 0.04): number {
   return Math.pow(1 + rate, Math.max(0, year - BASE_SEASON));
 }
 
@@ -77,6 +79,7 @@ export const DEPTS: Record<Dept, { label: string; what: string; cost: number[]; 
   community: { label: "Community relations", what: "The foundation, youth football, hospital visits and the team's name in town.", cost: [2 * M, 5 * M, 9 * M, 14 * M] },
   medical: { label: "Medical and training", what: "Trainers, physical therapists, sports science and recovery equipment.", cost: [6 * M, 10 * M, 15 * M, 21 * M] },
   facilities: { label: "Training facility", what: "The practice facility, weight room, meeting rooms and players' lounge. Coaches and players live there.", cost: [10 * M, 17 * M, 26 * M, 36 * M] },
+  scouts: { label: "College scouting department", what: "Area scouts, cross-checkers, video and the scouts' travel. More eyes on a prospect means truer reports.", cost: [3 * M, 6 * M, 9 * M, 13 * M] },
 };
 
 /** Football staff (coaches, scouts, the front office) and business staff, by team per year. */
@@ -105,7 +108,8 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   concessions: { label: "Concessions", side: "in" },
   parking: { label: "Parking", side: "in" },
   merch: { label: "Team store", side: "in" },
-  sponsorship: { label: "Local sponsorship and media", side: "in" },
+  sponsorship: { label: "Local sponsorships", side: "in" },
+  localMedia: { label: "Local radio and TV rights", side: "in" },
   naming: { label: "Stadium naming rights", side: "in" },
   events: { label: "Stadium events", side: "in" },
   intl: { label: "League compensation for home games abroad", side: "in" },
@@ -121,6 +125,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   community: { label: DEPTS.community.label, side: "out" },
   medical: { label: DEPTS.medical.label, side: "out" },
   facilities: { label: DEPTS.facilities.label, side: "out" },
+  scouts: { label: DEPTS.scouts.label, side: "out" },
   scouting: { label: "Draft scouting trips", side: "out" },
   stadium: { label: "Stadium operations and upkeep", side: "out" },
   rent: { label: "Stadium rent", side: "out" },
@@ -131,10 +136,11 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   fines: { label: "League fines", side: "out" },
   interest: { label: "Interest on the credit line", side: "out" },
   distribution: { label: "Distributions to the owner", side: "out" },
+  projects: { label: "Stadium and facility projects", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
-const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits"];
+const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects"];
 
 // ---- Setup ----
 
@@ -159,7 +165,7 @@ function newBusiness(state: GameState): BusinessState {
     ledger: [],
     prices: { single: 1, concessions: us === "ATL" ? "value" : "standard", parking: 1 },
     holders: defaultHolders(us),
-    budget: { marketing: 1, gameday: 1, community: 1, medical: 1, facilities: 1 },
+    budget: { marketing: 1, gameday: 1, community: 1, medical: 1, facilities: 1, scouts: 1 },
     gates: [],
     events: [],
     pool: 0,
@@ -201,6 +207,7 @@ export function newBusinessSeason(state: GameState): void {
 /** Saves from before the business side get the books opened today. */
 export function ensureBusiness(state: GameState): void {
   if (!state.business) state.business = newBusiness(state);
+  state.business.budget.scouts ??= 1;
 }
 
 /** The made-up head of the business side. */
@@ -213,7 +220,7 @@ export function businessChief(state: GameState): string {
 
 // ---- The ledger ----
 
-function post(state: GameState, cat: LedgerCat, amount: number, note?: string, year = leagueYear(state.date)): void {
+export function post(state: GameState, cat: LedgerCat, amount: number, note?: string, year = leagueYear(state.date)): void {
   if (!amount) return;
   business(state).ledger.push({ date: state.date, year, cat, amount: Math.round(amount), note });
 }
@@ -263,7 +270,7 @@ function typicalEvents(s: Stadium): number {
 
 /** Local sponsorship and media: what a typical season needs to reach the team's revenue estimate. */
 const SPONSORSHIP: Record<string, number> = {};
-function sponsorship(team: string): number {
+export function sponsorship(team: string): number {
   if (SPONSORSHIP[team] !== undefined) return SPONSORSHIP[team];
   const s = STADIUM_BY_TEAM[team];
   const mk = MARKETS[team];
@@ -319,6 +326,10 @@ interface GateInputs {
   /** Season-ticket and premium prices against the 2026 market prices. */
   ticketIdx: number;
   premiumIdx: number;
+  /** Stadium projects: more demand, suite money and spending per fan. */
+  demand?: number;
+  premiumMult?: number;
+  perCap?: number;
 }
 
 interface GateResult {
@@ -347,7 +358,7 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const prime = g.weekday === "Monday" || g.weekday === "Thursday" || g.timeET >= "20:00";
   const cold = s.roof === "open" && COLD.has(team) && (month === 12 || month === 1);
   const index = mk.pull * x.mood * x.win * x.marketing * (DRAW[opp] ?? 1) * (g.divisionGame ? 1.03 : 1) * (prime ? 1.05 : 1) *
-    (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise;
+    (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise * (x.demand ?? 1);
   const want = general * index * 1.05;
   const singleSeats = Math.max(0, general - holders);
   const singlePrice = mk.ticket * x.ticketIdx * 1.2 * x.price * (pre ? 0.6 : 1);
@@ -359,8 +370,8 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const preHome = SCHEDULE.filter((x2) => x2.type === "PRE" && x2.home === team && !x2.neutral).length;
   const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + singleSold * singlePrice;
   // Suite and club money is spread over the home schedule; preseason games count half.
-  const premium = (mk.premium * x.premiumIdx / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
-  const concessions = attendance * CONCESSIONS[x.concessions].perCap * CONCESSION_COMMISSION * s.gameDayShare;
+  const premium = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
+  const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
   const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
   const merch = attendance * 11 * 0.45;
   return {
@@ -385,6 +396,7 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
     noise: rng ? 0.96 + rng() * 0.08 : 1,
     ticketIdx: ours && b?.index ? b.index.season : inflation(RULES.season, 0.035),
     premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
+    ...(ours ? projectEffects(state).gate : {}),
   };
 }
 
@@ -790,7 +802,9 @@ function monthItems(state: GameState, note?: string): void {
   const grow = inflation(year, 0.05);
   const m = (x: number) => x / 12;
   post(state, "national", m(nationalRevenue(year)), note ?? "Monthly distribution from the league");
-  post(state, "sponsorship", m(sponsorship(us) * grow * [0.97, 1, 1.02, 1.03][b.budget.marketing]), note);
+  const local = localIncome(state, year);
+  post(state, "sponsorship", m(local.sponsors), note);
+  post(state, "localMedia", m(local.media), note);
   if (s.naming && s.namingShare) post(state, "naming", m(s.naming * s.namingShare), note ?? `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
   // The base budget covers the coaching staff at going rates; the top jobs and anyone fired but still paid are on top of it.
   const pay = payroll(state, us);
@@ -798,7 +812,7 @@ function monthItems(state: GameState, note?: string): void {
   post(state, "staff", -m(FOOTBALL_STAFF * grow + top), note);
   if (pay.owed) post(state, "staffOwed", -m(pay.owed), note ?? "Fired staff still under contract");
   post(state, "businessOps", -m(businessOps(us) * grow), note);
-  for (const d of ["marketing", "community", "medical", "facilities"] as Dept[]) post(state, d, -m(DEPTS[d].cost[b.budget[d]]), note ?? BUDGET_LEVELS[b.budget[d]]);
+  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) post(state, d, -m(DEPTS[d].cost[b.budget[d]]), note ?? BUDGET_LEVELS[b.budget[d]]);
   post(state, "benefits", -m(BENEFITS * grow), note);
   post(state, "league", -m(LEAGUE_DUES), note);
   if (s.upkeep) post(state, "stadium", -m(s.upkeep), note ?? (s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs"));
@@ -944,7 +958,7 @@ export function businessDaily(state: GameState): void {
   if (wd === "Tuesday") {
     fans(state, [-0.25, 0, 0.15, 0.25][b.budget.community]);
     const m = mediaState(state);
-    m.coach = Math.max(0, Math.min(100, m.coach + [-0.4, 0, 0.2, 0.35][b.budget.facilities]));
+    m.coach = Math.max(0, Math.min(100, m.coach + [-0.4, 0, 0.2, 0.35][Math.min(3, b.budget.facilities + projectEffects(state).facilities)]));
   }
   if (state.date === VALUATIONS_DAY) valuationsStory(state);
   creditCheck(state);

@@ -973,15 +973,15 @@ export interface TeamFinance {
   paid: Record<number, number>;
 }
 
-export type Dept = "marketing" | "gameday" | "community" | "medical" | "facilities";
+export type Dept = "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts";
 export type ConcessionTier = "value" | "standard" | "premium";
 
 /** Where a ledger line goes on the profit and loss statement. */
 export type LedgerCat =
-  | "national" | "tickets" | "premium" | "concessions" | "parking" | "merch" | "sponsorship" | "naming" | "events"
+  | "national" | "tickets" | "premium" | "concessions" | "parking" | "merch" | "sponsorship" | "localMedia" | "naming" | "events"
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
-  | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouting"
-  | "stadium" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution";
+  | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
+  | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution";
 
 export interface LedgerEntry {
   date: string;
@@ -1061,6 +1061,82 @@ export interface BusinessState {
   priceLog: { date: string; text: string }[];
   /** Season-ticket and premium prices against the 2026 market prices, as the years' increases add up. */
   index?: { season: number; premium: number };
+  /** Named local sponsors and radio/TV partners, and the offers on the table in the renewal window. */
+  local?: LocalDeals;
+  /** Stadium and facility projects, built or under way. */
+  projects?: Project[];
+}
+
+/** A local partner's deal: the value is the first year's fee, and it rises 3% a year. */
+export interface LocalDeal {
+  cat: string;
+  partner: string;
+  /** First league year of the deal. */
+  start: number;
+  years: number;
+  value: number;
+}
+
+export interface LocalOffer {
+  id: string;
+  cat: string;
+  partner: string;
+  years: number;
+  value: number;
+  incumbent?: boolean;
+}
+
+export interface LocalDeals {
+  deals: LocalDeal[];
+  offers: LocalOffer[];
+  /** The league year whose expiring deals are being shopped, and when the window closes. */
+  window?: { year: number; closes: string };
+  /** Categories the owner chose to leave empty for a year. */
+  vacant: string[];
+}
+
+export interface Project {
+  id: string;
+  started: string;
+  opens: string;
+  /** Our share of the cost, and what's been paid. */
+  cost: number;
+  paid: number;
+  opened?: boolean;
+}
+
+/** One question the media keeps asking about our team this season. */
+export interface Storyline {
+  id: string;
+  kind: string;
+  season: number;
+  outlet: string;
+  title: string;
+  player?: string;
+  status: "open" | "answered" | "unanswered";
+  /** What the coverage said when it was settled. */
+  verdict?: string;
+}
+
+/** How the offseason went, and what fans expect from the season ahead. */
+export interface ReviewState {
+  /** The season being looked ahead to. */
+  season: number;
+  /** How every team looked to the league the day after the Super Bowl (engine only), and our starters then. */
+  before?: { date: string; wp: Record<string, number>; pos: Record<string, number>; hc?: string; qb?: string };
+  /** Each team's average draft-day grade, in grade points. */
+  draft?: Record<string, number>;
+  /** Our picks in that draft: player and overall pick. */
+  picks?: [string, number][];
+  /** Offseason grades by outlet, then team. */
+  grades?: Record<string, Record<string, string>>;
+  /** Our GM's grade of the offseason the front office just ran. */
+  gm?: string;
+  expect?: { wins: number; date: string };
+  storylines: Storyline[];
+  /** Last season's storylines, once settled. */
+  past?: Storyline[];
+  settled?: boolean;
 }
 
 /** A free agent who left in the spring, for the compensatory pick formula. */
@@ -1228,6 +1304,8 @@ export interface GameState {
   program?: ProgramState;
   /** The other owners, the league meeting and the rule changes adopted (owners.ts, rules.ts). */
   owners?: OwnersState;
+  /** Offseason grades, fan expectations and the season's storylines. */
+  review?: ReviewState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

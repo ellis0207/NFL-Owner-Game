@@ -294,16 +294,18 @@ function noise(state: GameState, team: string, id: string, what: string): number
 }
 
 /** The scouting director's eye: error in rating points at a given knowledge. */
-function errorSd(team: string, k: number): number {
+function errorSd(state: GameState, team: string, k: number): number {
   const eye = staffEffects(team).collegeScouting;
-  return (3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4;
+  // Our scouting department's budget: more area scouts and cross-checks tighten every read.
+  const dept = team === state.userTeam ? [1.15, 1, 0.92, 0.85][state.business?.budget.scouts ?? 1] : 1;
+  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept;
 }
 
 /** The value a team's scouts put on a prospect (engine only: other teams use this on draft day). */
 export function perceivedValue(state: GameState, id: string, team = state.userTeam): number {
   const h = draftClass(state.seed).hidden[id];
   const k = knowledge(state, id, team);
-  return h.value + noise(state, team, id, "value") * errorSd(team, k) * 1.4;
+  return h.value + noise(state, team, id, "value") * errorSd(state, team, k) * 1.4;
 }
 
 function roundOf(cuts: number[], v: number): number {
@@ -347,7 +349,7 @@ export function scoutReport(state: GameState, id: string, team = state.userTeam)
   const p = dc.byId[id];
   const h = dc.hidden[id];
   const k = knowledge(state, id, team);
-  const sd = errorSd(team, k);
+  const sd = errorSd(state, team, k);
   const n = (what: string) => noise(state, team, id, what);
   const author = teamStaff(team).COL?.name ?? "College scouting";
   const report: ProspectReport = { knowledge: k, level: knowledgeLabel(k), author, strengths: [], concerns: [], makeup: [] };
