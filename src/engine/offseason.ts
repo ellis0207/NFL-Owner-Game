@@ -12,7 +12,7 @@ import { payCash } from "./finance";
 import { money, news, send } from "./inbox";
 import { onSeasonChange, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { careersDaily, planRetirements } from "./careers";
-import { fifthYearOption, franchiseTag, invalidateMarket, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
+import { capScale, fifthYearOption, franchiseTag, invalidateMarket, marketPrice, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { releasePlayer, rosterCount } from "./roster";
 import { teamStaff } from "./staff";
@@ -351,25 +351,39 @@ function cpuTeams(state: GameState): string[] {
   return TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam);
 }
 
-/** Before the market opens, each CPU team decides whether its best expiring player is worth the tag. */
+/**
+ * Before the market opens, each CPU team decides whether one of its expiring
+ * players is worth the tag. Real teams use it on starters they can't replace
+ * at the price, often as a bridge to a long-term deal or a trade, so a tag
+ * can run a little above what the player is worth for one year. Teams clear
+ * the room afterwards with restructures and cuts, so the test is whether the
+ * money can be found, not whether it is free today. About six a year.
+ */
 function cpuTags(state: GameState): void {
+  const scale = capScale(state, NEXT);
   for (const team of cpuTeams(state)) {
     if (off(state).tags[team]) continue;
     const rng = rngFor(state.seed, `tag:${team}`);
     // Each team decides on its own day in the last week before the deadline.
     const day = addDays(KEY.franchiseTagDeadline, -Math.floor(rng() * 6));
     if (state.date !== day) continue;
-    const best = pendingFreeAgents(state, team)
+    // Room the front office can find: restructures of its big deals, plus a cut or two.
+    const flex = Math.min(60_000_000 * scale, 0.35 * restructureCandidates(state, team).reduce((s, x) => s + capHit(x.id, NEXT, state), 0));
+    const room = plannedSpace(state, team) + flex + 15_000_000 * scale;
+    const pick = pendingFreeAgents(state, team)
       .filter((id) => faClass(id) === "UFA" && state.negotiations[id]?.status !== "open")
-      .map((id) => ({ id, v: teamValue(state, team, id, NEXT) }))
-      .sort((a, b) => b.v - a.v)[0];
-    if (!best || best.v < 10_000_000) continue;
-    // Teams tag players they can't afford to lose and clear the room later.
-    const space = plannedSpace(state, team) + 25_000_000;
-    const fCost = tagCost(state, best.id, "franchise");
-    const tCost = tagCost(state, best.id, "transition");
-    if (best.v >= fCost * 0.8 && space > fCost && rng() < 0.75) applyTag(state, team, best.id, "franchise");
-    else if (best.v >= tCost * 0.85 && space > tCost && rng() < 0.3) applyTag(state, team, best.id, "transition");
+      .map((id) => {
+        const v = teamValue(state, team, id, NEXT);
+        const ask = marketPrice(state, id, NEXT).apy;
+        return { id, v, ask, f: tagCost(state, id, "franchise"), t: tagCost(state, id, "transition") };
+      })
+      .filter((x) => x.v >= 10_000_000 * scale)
+      .sort((a, b) => b.v / b.f - a.v / a.f)[0];
+    if (!pick) continue;
+    // Worth it to keep him, or the open market would pay him close to the tag and he'd fetch a trade return.
+    const keep = pick.v >= pick.f * 0.7 || (pick.ask >= pick.f * 0.8 && pick.v >= pick.f * 0.6);
+    if (keep && room > pick.f && rng() < 0.9) applyTag(state, team, pick.id, "franchise");
+    else if (pick.v >= pick.t * 0.8 && room > pick.t && rng() < 0.3) applyTag(state, team, pick.id, "transition");
   }
 }
 
@@ -646,6 +660,13 @@ function newLeagueYear(state: GameState): void {
     state.players[id] = { ...ps, team: null, status: "fa", lastTeam: ps.team };
     delete state.players[id].holdout;
     expired++;
+  }
+  // Roster and workout bonuses for the new year come due as it opens (the cap counts them in full this year).
+  for (const id of Object.keys(state.players)) {
+    const ps = state.players[id];
+    if (!ps.team || ps.status === "fa") continue;
+    const y = dealOf(state, id)?.years.find((x) => x.year === NEXT && !x.void);
+    if (y && y.bonus > 0) payCash(state, ps.team, y.bonus, NEXT);
   }
   invalidateRosters(state);
   invalidateMarket(state);

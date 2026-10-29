@@ -170,7 +170,7 @@ export function injuryDiscount(state: GameState, id: string): number {
 
 // ---- Market curves ----
 
-interface Curve { views: number[]; shares: number[]; top: number; spill: number }
+interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number }
 const curveCache = new WeakMap<GameState, Record<string, Curve>>();
 
 const VETERAN_KINDS = new Set(["veteran", "extension", "franchise", "transition"]);
@@ -180,16 +180,29 @@ export function invalidateMarket(state: GameState): void {
   curveCache.delete(state);
 }
 
-/** The cap in the league year a contract was signed. */
+/**
+ * The cap a contract's APY is measured against. Real deals use the cap of the
+ * year they were signed, the way the public trackers report them. Deals
+ * signed in the game use the cap of their first new league year, the same cap
+ * they were priced on: an extension signed in the season is priced on next
+ * year's cap, and measuring it on this year's would read every new deal as a
+ * bigger share than it is and push each market up year after year.
+ */
 function capAtSigning(state: GameState, deal: Deal): number {
   const y = Number(deal.signed.slice(0, 4));
-  return y < BASE_SEASON ? capAt(y) : salaryCap(state, leagueYear(deal.signed));
+  if (y < BASE_SEASON || deal.signed <= `${BASE_SEASON}-03-15`) return capAt(y);
+  const signedIn = leagueYear(deal.signed);
+  const first = deal.kind === "extension" ? signedIn + 1 : deal.years.find((x) => !x.void && x.year >= signedIn)?.year ?? signedIn;
+  return salaryCap(state, first);
 }
 
 /**
- * Price curve per position: veteran deals' APY as a share of the cap at
- * signing, matched by rank to the consensus view of the players who hold them.
- * Live contracts are used, so a new top deal resets the market.
+ * Price curve per position: veteran deals' APY as a share of the cap, against
+ * the consensus view of the players who hold them. The curve is the going rate
+ * for players the league sees a certain way (a monotone fit of share on view),
+ * not a rank-for-rank match, so a player who reads like a mid-tier starter is
+ * priced like the mid-tier starters actually are. Live contracts are used, so
+ * a new top deal resets the market.
  */
 function curves(state: GameState): Record<string, Curve> {
   let c = curveCache.get(state);
@@ -202,15 +215,16 @@ function curves(state: GameState): Record<string, Curve> {
     (pts[p.position] ??= []).push({ v: perceivedAbility(state, p.id, "market", MARKET_EYE), s: deal.apy / capAtSigning(state, deal) });
   }
   c = {};
+  const ceilings = baselineCeilings(state);
   for (const [pos, list] of Object.entries(pts)) {
-    const views = list.map((x) => x.v).sort((a, b) => a - b);
-    const shares = list.map((x) => x.s).sort((a, b) => a - b);
-    c[pos] = { views, shares, top: shares[shares.length - 1], spill: 1 };
+    const { views, shares } = goingRate(list);
+    const top = Math.max(...list.map((x) => x.s));
+    c[pos] = { views, shares, top, spill: 1, ceiling: ceilings[pos] ?? top * 1.1 };
   }
   // Spillover: when the top of one market jumps, agents at neighboring positions point to it.
   const base = baselineTops(state);
   const heat = (pos: string) => {
-    const now = c![pos] ? topFive(c![pos].shares) : 0;
+    const now = c![pos] ? topFive(pts[pos].map((x) => x.s).sort((a, b) => a - b)) : 0;
     return base[pos] && now ? Math.max(0.9, Math.min(1.3, now / base[pos])) : 1;
   };
   for (const [pos, curve] of Object.entries(c)) {
@@ -219,6 +233,22 @@ function curves(state: GameState): Record<string, Curve> {
   }
   curveCache.set(state, c);
   return c;
+}
+
+/** Pool-adjacent-violators: the average share paid at each level of view, never falling as the view rises. */
+function goingRate(list: { v: number; s: number }[]): { views: number[]; shares: number[] } {
+  const blocks: { v: number; s: number; n: number }[] = [];
+  for (const x of [...list].sort((a, b) => a.v - b.v)) {
+    blocks.push({ v: x.v, s: x.s, n: 1 });
+    while (blocks.length > 1 && blocks[blocks.length - 2].s / blocks[blocks.length - 2].n > blocks[blocks.length - 1].s / blocks[blocks.length - 1].n) {
+      const b = blocks.pop()!;
+      const a = blocks[blocks.length - 1];
+      a.v += b.v;
+      a.s += b.s;
+      a.n += b.n;
+    }
+  }
+  return { views: blocks.map((b) => b.v / b.n), shares: blocks.map((b) => b.s / b.n) };
 }
 
 /** A one-year deal signed off the street in camp or during the season: not a market price. */
@@ -239,20 +269,40 @@ function topFive(sorted: number[]): number {
 }
 
 let baseline: Record<string, number> | null = null;
+let ceilingsAtStart: Record<string, number> | null = null;
 
 /** The top of each market when the game starts, from the real contracts. */
 function baselineTops(state: GameState): Record<string, number> {
   if (baseline) return baseline;
+  const pts = baselineShares(state);
+  baseline = {};
+  for (const [pos, list] of Object.entries(pts)) baseline[pos] = topFive(list);
+  return baseline;
+}
+
+/**
+ * The most any player can command at a position: the biggest real deal when
+ * the game starts, as a share of the cap. Top-of-market shares of the cap barely move
+ * in the real league (the best quarterback deal has been about a fifth of the
+ * cap for years), so they shouldn't climb without limit here either.
+ */
+function baselineCeilings(state: GameState): Record<string, number> {
+  if (ceilingsAtStart) return ceilingsAtStart;
+  ceilingsAtStart = {};
+  for (const [pos, list] of Object.entries(baselineShares(state))) ceilingsAtStart[pos] = list[list.length - 1];
+  return ceilingsAtStart;
+}
+
+function baselineShares(state: GameState): Record<string, number[]> {
   const pts: Record<string, number[]> = {};
   for (const p of PLAYERS) {
     const deal = originalDeal(p.id);
     if (!deal || !VETERAN_KINDS.has(deal.kind) || !deal.apy) continue;
-    if (Number(deal.signed.slice(0, 4)) < RULES.season - 4) continue;
+    if (Number(deal.signed.slice(0, 4)) < BASE_SEASON - 4) continue;
     (pts[p.position] ??= []).push(deal.apy / capAtSigning(state, deal));
   }
-  baseline = {};
-  for (const [pos, list] of Object.entries(pts)) baseline[pos] = topFive(list.sort((a, b) => a - b));
-  return baseline;
+  for (const list of Object.values(pts)) list.sort((a, b) => a - b);
+  return pts;
 }
 
 /** Real caps for the years before the game starts. */
@@ -267,7 +317,8 @@ export function shareFor(state: GameState, pos: Position, view: number): number 
   if (!c || !c.views.length) return 0.003;
   const n = c.views.length;
   if (view <= c.views[0]) return c.shares[0];
-  if (view >= c.views[n - 1]) return c.top * c.spill * (1 + 0.015 * (view - c.views[n - 1]));
+  // A player better than everyone already paid gets a little more than the going rate at the top, up to the ceiling.
+  if (view >= c.views[n - 1]) return Math.min(c.ceiling, c.shares[n - 1] * c.spill * Math.min(1.06, 1 + 0.015 * (view - c.views[n - 1])));
   let lo = 0;
   let hi = n - 1;
   while (hi - lo > 1) {
@@ -275,7 +326,12 @@ export function shareFor(state: GameState, pos: Position, view: number): number 
     if (c.views[mid] <= view) lo = mid; else hi = mid;
   }
   const t = (view - c.views[lo]) / Math.max(1e-6, c.views[hi] - c.views[lo]);
-  return (c.shares[lo] + t * (c.shares[hi] - c.shares[lo])) * c.spill;
+  return Math.min(c.ceiling, (c.shares[lo] + t * (c.shares[hi] - c.shares[lo])) * c.spill);
+}
+
+/** The biggest APY the position commands in a league year: the ceiling share of that year's cap. */
+export function marketCeiling(state: GameState, pos: Position, year: number): number {
+  return (curves(state)[pos]?.ceiling ?? 1) * salaryCap(state, year);
 }
 
 export function topOfMarket(state: GameState, pos: Position): number {

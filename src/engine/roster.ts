@@ -5,6 +5,7 @@
 import { accruedSeasons, addDeadMoney, adjustRollover, capHit, capSummary, invalidateRosters, releaseCost, teamPlayerIds, chargeYear, yearsExpIn } from "./cap";
 import { dealOf, leagueYear, writeMinimumDeal, writePracticeDeal } from "./contracts";
 import { addDays } from "./dates";
+import { payCash } from "./finance";
 import { freeAgentPrice, market, minimumToday, signStreetFreeAgent, stillPlaying } from "./freeagency";
 import { send } from "./inbox";
 import { isHurt } from "./injuries";
@@ -124,6 +125,8 @@ export function releasePlayer(state: GameState, id: string, opts: { psIntent?: b
   addDeadMoney(state, team, year + 1, cost.deadNextYear);
   // After the season the player's hit is already in the rollover; only the extra acceleration costs more.
   adjustRollover(state, team, cost.savingsThisYear);
+  // Guaranteed salary still owed is paid out (a team that claims him off waivers takes it back over).
+  payCash(state, team, cost.cashOwed);
   state.contracts[id] = null;
   state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, pot: p.pot, exp: p.exp, morale: p.morale, lastTeam: team };
   if (state.termPay) delete state.termPay[id];

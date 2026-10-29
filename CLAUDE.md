@@ -118,9 +118,18 @@ Calibration targets (what "healthy" looked like when each system shipped):
 - Carousel (`carousel-report.ts 3 11`): 2 to 10 HC changes a year, no search
   left open, ~600 to 630 people tracked.
 - Trades (`trade-report.ts`): ~30 to 50 a year with a deadline rush.
+- Long careers (`longrun-report.ts 11 7`, about 1.5 min a season): 3 to 7
+  CPU tags a year; market tops steady (QB top deal at most ~25% of the cap,
+  set by `marketCeiling` in `market.ts`); league-wide player cash near 100%
+  of the cap; every team at or over zero space at each rollover.
+- Old saves: `saves.test.ts` loads gzipped saves made by earlier versions
+  (`tests/saves/`). Add one when a step changes the save shape.
 - Known lessons: fixed-dollar thresholds break as the cap grows (scale with
   `capScale` in `market.ts`); CPU bids must target players a team can afford;
-  extensions must fit next year's cap; trades count the dead money they leave.
+  extensions must fit next year's cap; trades count the dead money they leave;
+  a deal's share of the cap must be measured on the same cap it was priced on
+  (`capAtSigning`), or every market ratchets up; anything that pays a player
+  must call `payCash` (`finance.ts`) or the cash side drifts from the cap.
 
 ## Shipping a step
 

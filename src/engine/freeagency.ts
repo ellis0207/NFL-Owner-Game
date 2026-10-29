@@ -21,7 +21,7 @@ import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
-import { capScale, invalidateMarket, marketPrice, marketView, teamValue } from "./market";
+import { capScale, invalidateMarket, marketCeiling, marketPrice, marketView, teamValue } from "./market";
 import { offerValue, STARTERS, teamQuality } from "./negotiation";
 import { faClass, futureRoom, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
@@ -90,11 +90,13 @@ function enter(state: GameState, id: string, from: string | null): FreeAgent {
   const base = Math.max(min, price.apy * (street ? STREET_SCALE * (age >= 31 ? 0.8 : 1) : 1));
   // What the player will settle for on the open market, before any team's pull.
   const reservation = Math.max(0.72, Math.min(1.05, 0.84 + 0.12 * pr.money + 0.04 * pr.ego - (state.players[id]?.injury?.seasonEnding ? 0.06 : 0)));
-  const floor = Math.max(min, base * reservation);
+  // At the top of a market the agent wants the record deal, a little past the biggest one.
+  const record = marketCeiling(state, PLAYER_BY_ID[id].position, year) * 1.04;
+  const floor = Math.max(min, Math.min(base * reservation, record * 0.97));
   const fa: FreeAgent = {
     player: id, year, from, since: state.date, status: "open",
     base, floor, floor0: floor,
-    ask: Math.max(floor * 1.03, base * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power)),
+    ask: Math.min(record, Math.max(floor * 1.03, base * (1.04 + 0.14 * ah.aggression + 0.05 * pr.ego + 0.04 * ah.power))),
     askYears: street ? 1 : price.years,
     askGuarantee: Math.max(street ? 0 : 0.03, Math.min(0.8, price.guaranteeShare * (street ? 0.25 : 0.9 + 0.25 * ah.guaranteeFocus))),
     offers: [],
@@ -711,7 +713,8 @@ function cpuBids(state: GameState, day: number): void {
       if (weight < 0.4 && rng() > 0.25) continue;
       // The first days of free agency run hot: teams stretch to land their targets, and the ones linked in the rumors most of all.
       const hot = day <= 1 && state.league?.linked?.[fa.player]?.includes(team) ? 0.05 : 0;
-      const max = v * (0.95 + 0.2 * aggr + (day <= 3 ? 0.06 : 0) + hot) * (weight >= 1 ? 1 : 0.9);
+      // Even a bidding war stops at a record deal for the position.
+      const max = Math.min(marketCeiling(state, PLAYER_BY_ID[fa.player].position, NEXT) * 1.04, v * (0.95 + 0.2 * aggr + (day <= 3 ? 0.06 : 0) + hot) * (weight >= 1 ? 1 : 0.9));
       const mine = fa.offers.find((o) => o.team === team);
       const rival = bestRival(state, fa.player, team);
       let apy: number;

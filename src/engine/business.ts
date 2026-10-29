@@ -45,6 +45,11 @@ export function inflation(year: number, rate = 0.04): number {
   return Math.pow(1 + rate, Math.max(0, year - BASE_SEASON));
 }
 
+/** A department's budget at a level this league year: costs rise about 4% a year, like everything else the team buys. */
+export function deptCost(d: Dept, level: number, year: number): number {
+  return DEPTS[d].cost[level] * inflation(year);
+}
+
 /** Gate sharing: 34% of general ticket money after a 15% stadium deduction. */
 const GATE_SHARE = 0.34 * 0.85;
 /** Share of seats that are suites and club seats. */
@@ -308,8 +313,9 @@ export function valuation(state: GameState, team: string): number {
 export function operatingEstimate(state: GameState, team: string): number {
   const s = STADIUM_BY_TEAM[team];
   const players = 300 * M * salaryCap(state, leagueYear(state.date)) / salaryCap(state, BASE_SEASON);
-  const depts = (Object.keys(DEPTS) as Dept[]).reduce((t, d) => t + DEPTS[d].cost[1] * (DEPTS[d].perGame ? homeDates(team).length : 1), 0);
-  const costs = players + FOOTBALL_STAFF + BENEFITS + LEAGUE_DUES + businessOps(team) + depts + s.upkeep + s.rent + s.debt + 4 * M;
+  const year = leagueYear(state.date);
+  const depts = (Object.keys(DEPTS) as Dept[]).reduce((t, d) => t + deptCost(d, 1, year) * (DEPTS[d].perGame ? homeDates(team).length : 1), 0);
+  const costs = players + (FOOTBALL_STAFF + BENEFITS + businessOps(team)) * inflation(year, 0.05) + (LEAGUE_DUES + s.upkeep) * inflation(year) + depts + s.rent + s.debt + 4 * M;
   return revenueEstimate(state, team) - Math.round(costs);
 }
 
@@ -441,7 +447,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
     post(state, "concessions", gr.concessions * 1.15, `${label(g)} vs ${teamLabel(oppTeam)}`);
     post(state, "parking", gr.parking * 1.2, `${label(g)} vs ${teamLabel(oppTeam)}`);
     post(state, "merch", gr.merch * 2, `${label(g)}: playoff merchandise`);
-    post(state, "gameday", -DEPTS.gameday.cost[b.budget.gameday], `${label(g)}`);
+    post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), `${label(g)}`);
     b.gates.unshift({ game: g.id, date: g.date, opp: oppTeam, type: "POST", capacity: stadium.capacity, sold: stadium.capacity, seasonHolders: b.holders, singleSeats: 0, singleSold: 0, price: 0, heat: 3, revenue: Math.round(gr.concessions * 1.15 + gr.parking * 1.2 + gr.merch * 2) });
   }
   if (g.neutral && g.home === us && g.type === "REG") {
@@ -488,7 +494,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   post(state, "parking", gr.parking, what);
   post(state, "merch", gr.merch, what);
   post(state, "gateShare", -gr.tickets * GATE_SHARE, `${what}: 34% of the gate after the stadium deduction`);
-  post(state, "gameday", -DEPTS.gameday.cost[b.budget.gameday], what);
+  post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), what);
   const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + gr.merch;
   b.gates.unshift({
     game: g.id, date: g.date, opp: o, type: g.type === "PRE" ? "PRE" : "REG", capacity: s.capacity, sold: gr.sold, seasonHolders: gr.holders,
@@ -812,10 +818,11 @@ function monthItems(state: GameState, note?: string): void {
   post(state, "staff", -m(FOOTBALL_STAFF * grow + top), note);
   if (pay.owed) post(state, "staffOwed", -m(pay.owed), note ?? "Fired staff still under contract");
   post(state, "businessOps", -m(businessOps(us) * grow), note);
-  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) post(state, d, -m(DEPTS[d].cost[b.budget[d]]), note ?? BUDGET_LEVELS[b.budget[d]]);
+  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) post(state, d, -m(deptCost(d, b.budget[d], year)), note ?? BUDGET_LEVELS[b.budget[d]]);
   post(state, "benefits", -m(BENEFITS * grow), note);
-  post(state, "league", -m(LEAGUE_DUES), note);
-  if (s.upkeep) post(state, "stadium", -m(s.upkeep), note ?? (s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs"));
+  post(state, "league", -m(LEAGUE_DUES * inflation(year)), note);
+  // Upkeep rises with costs; rent and debt service are fixed by their leases and loans.
+  if (s.upkeep) post(state, "stadium", -m(s.upkeep * inflation(year)), note ?? (s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs"));
   if (s.rent >= 100) post(state, "rent", -m(s.rent), note ?? `To ${s.owner}`);
   if (s.debt) post(state, "debt", -m(s.debt), note);
 }

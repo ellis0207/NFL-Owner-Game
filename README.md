@@ -230,6 +230,19 @@ season ends, the record is measured against those expectations. The
 Business page has Sponsors and Projects tabs; the Media page has the
 storylines and grades.
 
+Long careers hold together. CPU teams use the franchise tag about as often
+as real teams do, on starters they can't replace at the price, and clear the
+room afterwards. Contract prices follow the going rate for players the league
+sees the same way, so a player who reads as a mid-tier starter is paid like
+one, and no deal goes much past the biggest real one at the position as a
+share of the cap: the top quarterback deal stays near a quarter of the cap
+instead of climbing every year. Rookie bonuses, roster bonuses and the
+guarantees owed to released players are paid in cash, so teams spend about
+the cap in cash each year, and the team's own costs rise with inflation like
+its revenue. Saves from every earlier version still load, including ones
+that stopped on the day after the old final draft. Check a long career with
+`npx vite-node tests/longrun-report.ts [seasons] [seed]`.
+
 Later: CBA talks, relocation and new stadiums, and difficulty settings.
 
 ## Playing locally
