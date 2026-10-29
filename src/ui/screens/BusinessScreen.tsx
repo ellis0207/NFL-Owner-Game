@@ -10,12 +10,15 @@ import { RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/leag
 import { controlOf, MARKETS, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
 import type { ConcessionTier, Dept, GameState, StadiumEvent } from "../../engine/types";
 import { money } from "../format";
+import { Projects, Sponsors } from "./BusinessDeals";
+import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Tickets", "Stadium", "Budget", "League"] as const;
+const TABS = ["Overview", "Tickets", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const offers = business(game).events.filter((e) => e.status === "offered").length;
+  const deals = new Set(business(game).local?.offers.map((o) => o.cat)).size;
   const [tab, setTab] = useState<Tab>(offers ? "Stadium" : "Overview");
   return (
     <section className="stack">
@@ -23,13 +26,15 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
         <h2>Business</h2>
         <div className="tabs" role="group" aria-label="Business">
           {TABS.map((t) => (
-            <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}{t === "Stadium" && offers ? ` (${offers})` : ""}</button>
+            <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}{t === "Stadium" && offers ? ` (${offers})` : t === "Sponsors" && deals ? ` (${deals})` : ""}</button>
           ))}
         </div>
       </div>
       {tab === "Overview" && <Overview game={game} changed={changed} />}
       {tab === "Tickets" && <Tickets game={game} changed={changed} />}
       {tab === "Stadium" && <Stadium game={game} changed={changed} />}
+      {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
+      {tab === "Projects" && <Projects game={game} changed={changed} />}
       {tab === "Budget" && <Budget game={game} changed={changed} />}
       {tab === "League" && <League game={game} />}
     </section>
@@ -62,6 +67,7 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
             <dt>Credit line</dt><dd>{money(CREDIT_LINE)}</dd>
             <dt>Franchise value</dt><dd>{billions(valuation(game, us))} <span className="muted">(Gridiron Ledger estimate)</span></dd>
             <dt>Fans</dt><dd>{fanMood(game.pressure.fans)}</dd>
+            {game.review?.expect && game.review.season === RULES.season && <><dt>They expect</dt><dd>About {game.review.expect.wins} wins. {expectLabel(game.review.expect.wins)}.</dd></>}
           </dl>
           <span className="muted">
             Player contracts are paid in cash, not cap dollars: signing bonuses go out the day a deal is signed. If the team runs through its credit line,

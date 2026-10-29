@@ -16,6 +16,9 @@ import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
 import { playCaller, teamSchemes, teamStaff } from "./staff";
 
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
+import { commerceDaily } from "./commerce";
+import { projectsDaily } from "./projects";
+import { reviewDaily } from "./review";
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
 import { business, businessDaily, businessGame } from "./business";
@@ -501,8 +504,11 @@ export function advanceDay(state: GameState): void {
   const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
   businessDaily(state);
+  commerceDaily(state);
+  projectsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
+  reviewDaily(state);
   pressDaily(state);
 
   state.date = addDays(date, 1);

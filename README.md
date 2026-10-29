@@ -213,8 +213,24 @@ you in the room and make their front offices a little easier to deal with,
 and bad ones become rivalries. The Owners page has the agenda, the other
 owners and the rulebook.
 
-Next up: sponsorships, local media deals, stadium projects, budgets, fan
-expectations, media storylines and offseason grades.
+The business has an offseason too. Local sponsors (the jersey patch, the
+official bank, beer, airline and the rest) and the flagship radio and
+preseason TV partners are named deals with their own terms; when one runs
+out, the incumbent and rival companies bid each February, and what they'll
+pay moves with the team's record, the fans and the building. Stadium and
+facility projects (video boards, Wi-Fi, concourses, new seats, field-level
+clubs, a bigger training facility, a recovery center) take one or two
+offseasons to build and are shared with the public owner or the partner team
+where there is one; tenants can't renovate a landlord's building. The college
+scouting department is a budget line that sharpens draft reports. In late
+June the media grade every team's offseason and the GM sends their own
+grade; fans set an expected win total from last season and the offseason,
+and the media settle on a few storylines about the team. When the regular
+season ends, the record is measured against those expectations. The
+Business page has Sponsors and Projects tabs; the Media page has the
+storylines and grades.
+
+Later: CBA talks, relocation and new stadiums, and difficulty settings.
 
 ## Playing locally
 
@@ -237,6 +253,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`.
+  Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

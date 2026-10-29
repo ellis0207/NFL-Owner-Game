@@ -2,13 +2,16 @@ import { useMemo, useState } from "react";
 import { shortDate, weekday } from "../../engine/dates";
 import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
 import { MEDIA, MEDIA_BY_ID, relLabel, relOf } from "../../engine/outlets";
+import { expectLabel } from "../../engine/review";
+import { gradePoints } from "../../engine/grades";
+import { TEAMS } from "../../engine/league";
 import { answerQuestion, openQuestions } from "../../engine/press";
 import { draftClass } from "../../engine/prospects";
-import type { GameState, PressQuestion, Story } from "../../engine/types";
+import type { GameState, PressQuestion, Story, Storyline } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
 
-const TABS = ["News", "Press room", "Outlets"] as const;
+const TABS = ["News", "Press room", "Storylines", "Outlets"] as const;
 type Tab = (typeof TABS)[number];
 
 const FILTERS = {
@@ -52,6 +55,7 @@ export function MediaScreen({ game, changed }: { game: GameState; changed: () =>
       </div>
       {tab === "News" && <NewsFeed game={game} />}
       {tab === "Press room" && <PressRoom game={game} changed={changed} />}
+      {tab === "Storylines" && <Storylines game={game} />}
       {tab === "Outlets" && <Outlets game={game} />}
     </section>
   );
@@ -199,6 +203,47 @@ function Outlets({ game }: { game: GameState }) {
           : fines.map((f, i) => <div key={i}>{shortDate(f.date)}: {money(f.amount)} for {f.reason}.</div>)}
       </section>
       <p className="muted">{teamLabel(game.userTeam)} media relations keeps an eye on the coverage; nobody hands you a scorecard.</p>
+    </div>
+  );
+}
+
+function Storylines({ game }: { game: GameState }) {
+  const r = game.review;
+  const grades = r?.grades;
+  const us = game.userTeam;
+  const rank = (outlet: string) => 1 + TEAMS.filter((t) => gradePoints(grades![outlet][t.id]) > gradePoints(grades![outlet][us])).length;
+  const list = (items: Storyline[]) => items.map((s) => (
+    <div key={s.id} className="report">
+      <strong>{s.title}</strong>
+      <span className="muted">{MEDIA_BY_ID[s.outlet].name}{s.status === "open" ? "" : s.status === "answered" ? ": answered" : ": still open"}</span>
+      {s.verdict && <span>{s.verdict}</span>}
+    </div>
+  ));
+  return (
+    <div className="stack">
+      {r?.expect ? (
+        <section className="panel stack tight">
+          <h3>{r.season} season</h3>
+          <span>Fans expect about {r.expect.wins} wins. {expectLabel(r.expect.wins)}.</span>
+          {r.storylines.length ? list(r.storylines) : <span className="muted">The media haven't settled on their storylines yet.</span>}
+        </section>
+      ) : (
+        <p className="muted">Fans and the media set their expectations in late June, once the offseason's work is done.</p>
+      )}
+      {grades && (
+        <section className="panel stack tight">
+          <h3>Offseason grades</h3>
+          {Object.keys(grades).map((o) => <span key={o}>{o}: {grades[o][us]} <span className="muted">(No. {rank(o)} of 32, counting ties)</span></span>)}
+          {r?.gm && <span>Our GM's own grade: {r.gm}</span>}
+        </section>
+      )}
+      {r?.past && r.past.length > 0 && (
+        <section className="panel stack tight">
+          <h3>Last season's storylines</h3>
+          {list(r.past)}
+        </section>
+      )}
+      <p className="muted">{teamLabel(us)} fans measure a season against what they expected in the summer.</p>
     </div>
   );
 }
