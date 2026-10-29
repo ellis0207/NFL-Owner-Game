@@ -1,4 +1,5 @@
 // Standings, playoff seeding and the postseason bracket.
+import { LEAGUE_RULES } from "./rules";
 import { SCHEDULE, TEAMS, TEAM_BY_ID } from "./league";
 import { hashString } from "./rng";
 import type { GameState, PlayoffRound, ScheduledGame } from "./types";
@@ -97,6 +98,8 @@ export function seedConference(state: GameState, conference: "AFC" | "NFC"): str
     .map((t) => table[t.id])
     .sort((a, b) => compare(a, b, false))
     .slice(0, 3);
+  // Under seeding by record, division winners are still in but a better wild card can pass them.
+  if (LEAGUE_RULES.seedByRecord) return [...winners, ...wildcards].sort((a, b) => compare(a, b, false)).map((r) => r.team);
   return [...winners, ...wildcards].map((r) => r.team);
 }
 

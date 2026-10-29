@@ -198,8 +198,23 @@ decides whether to fine the player, meet with him or leave it to the coach.
 The Camp page has the battles, spring attendance, the owner's pending calls
 and discipline around the league.
 
-Next up: owners meetings and rule changes, sponsorships and the rest of the
-league and business offseason.
+The owners run the league. Three weeks before the annual meeting in March,
+the Competition Committee and a few clubs publish specifically worded
+proposals (a 35-second play clock, touchbacks at the 40, extra points from the
+25, a ban on the push play, seeding playoff teams by record, an 18-man
+practice squad, a later trade deadline and more), and a change needs 24 of 32
+votes. Each one has a real effect on how games are played or how the
+calendar and rosters work, starting the next season, but the game never tells
+you what it will do to your team. You can submit one proposal a year, see
+the front office's whip count, and spend a limited number of calls lobbying
+other owners. How those owners feel about you moves with your votes, trades
+and hiring away their coaches; good relations can become alliances that back
+you in the room and make their front offices a little easier to deal with,
+and bad ones become rivalries. The Owners page has the agenda, the other
+owners and the rulebook.
+
+Next up: sponsorships, local media deals, stadium projects, budgets, fan
+expectations, media storylines and offseason grades.
 
 ## Playing locally
 
@@ -221,6 +236,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

@@ -38,7 +38,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 - **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
   games, then the daily hooks in this order: `offseasonDaily`,
   `carouselDaily`, `contractsDaily`, `capMovesDaily`, `faDaily`,
-  `tradesDaily`, `springDaily`, `campDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
+  `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `mediaDaily`,
   `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
   the league over. A new system adds an `xxxDaily(state)` and one line here.
@@ -73,6 +73,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects) | `media.test.ts`, `media-report.ts` |
 | Business | `business.ts` (books, gate, budgets), `stadiums.ts` | `business.test.ts`, `business-report.ts` |
 | Spring and camp | `spring.ts` (OTAs, minicamp, offseason injuries), `camp.ts` (practice reps, camp battles, `program(state)`), `discipline.ts` (suspensions, fines, owner decisions) | `camp.test.ts` |
+| Owners and rules | `rules.ts` (rule catalog, `LEAGUE_RULES` read by the sim, `bindRules` in `applySeason`), `owners.ts` (relations, the March meeting, lobbying, votes, alliances) | `owners.test.ts` |
 
 UI: `src/ui/GameShell.tsx` holds the nav (`SCREENS`) and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,
