@@ -6,7 +6,7 @@ import { newGame, openingGame, veteranReportDate } from "../engine/season";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../engine/stadiums";
 import type { GameState, Settings } from "../engine/types";
-import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYLES, WEALTH, type OwnerSetup, type Scenario } from "../engine/ownership";
+import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYLES, WEALTH, DEFAULT_CUSTOM, type CustomStart, type OwnerSetup, type Scenario } from "../engine/ownership";
 import { money, onColor } from "./format";
 
 export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; onBack: () => void }) {
@@ -15,6 +15,10 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const [capRules, setCapRules] = useState<Settings["capRules"]>("real");
   const [finances, setFinances] = useState<NonNullable<Settings["finances"]>>("real");
   const [profile, setProfile] = useState<OwnerSetup>(DEFAULT_SETUP);
+  const [scouting, setScouting] = useState<NonNullable<Settings["scouting"]>>("real");
+  const [ironman, setIronman] = useState(false);
+  const custom = profile.custom ?? DEFAULT_CUSTOM;
+  const setCustom = (c: Partial<CustomStart>) => setProfile({ ...profile, custom: { ...custom, ...c } });
   const set = (p: Partial<OwnerSetup>) => setProfile({ ...profile, ...p });
 
   const preview = useMemo(() => {
@@ -83,6 +87,32 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 {Object.entries(SCENARIOS).map(([k, v]) => <option key={k} value={k}>{v.label}: {v.what}</option>)}
               </select>
             </label>
+            {profile.scenario === "custom" && (
+              <div className="stack tight">
+                <label className="field"><span className="label">The club's cash</span>
+                  <select value={custom.cash} onChange={(e) => setCustom({ cash: Number(e.target.value) })}>
+                    {[0, 15, 50, 100, 250, 500].map((m) => <option key={m} value={m * 1_000_000}>${m}M</option>)}
+                  </select>
+                </label>
+                <label className="field"><span className="label">Acquisition debt (floating, seven years)</span>
+                  <select value={custom.debt} onChange={(e) => setCustom({ debt: Number(e.target.value) })}>
+                    {[0, 150, 300, 450, 700, 1000].map((m) => <option key={m} value={m * 1_000_000}>${m}M</option>)}
+                  </select>
+                </label>
+                <label className="field"><span className="label">Your own cash</span>
+                  <select value={custom.liquid} onChange={(e) => setCustom({ liquid: Number(e.target.value) })}>
+                    {[25, 100, 300, 800, 3000].map((m) => <option key={m} value={m * 1_000_000}>${m}M</option>)}
+                  </select>
+                </label>
+                <label className="field"><span className="label">The front office you inherit</span>
+                  <select value={custom.staff} onChange={(e) => setCustom({ staff: e.target.value as CustomStart["staff"] })}>
+                    <option value="weak">Weak: below-average executives</option>
+                    <option value="average">Ordinary</option>
+                    <option value="strong">Strong: one of the best-run clubs</option>
+                  </select>
+                </label>
+              </div>
+            )}
           </div>
           <div className="panel stack">
             <h2>What you want</h2>
@@ -123,7 +153,18 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="finances" type="checkbox" checked={finances === "real"} onChange={(e) => setFinances(e.target.checked ? "real" : "relaxed")} />
               <span><strong>Real owner finances</strong><br /><span className="muted">The team can run short of cash, and you cover it from your own pocket. Turn off to have the team's cash topped up automatically.</span></span>
             </label>
-            <button className="btn primary" onClick={() => onStart(newGame(team, owner.trim() || "Owner", { capRules, finances }, undefined, profile))}>
+            <label className="field"><span className="label">Scouting precision</span>
+              <select value={scouting} onChange={(e) => setScouting(e.target.value as typeof scouting)}>
+                <option value="sharp">Sharper reads (easier)</option>
+                <option value="real">Realistic</option>
+                <option value="foggy">Foggier reads (harder)</option>
+              </select>
+            </label>
+            <label className="toggle">
+              <input id="ironman" type="checkbox" checked={ironman} onChange={(e) => setIronman(e.target.checked)} />
+              <span><strong>Ironman</strong><br /><span className="muted">One continuing save: no loading an earlier save to undo a decision.</span></span>
+            </label>
+            <button className="btn primary" onClick={() => onStart(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, ...(ironman ? { ironman } : {}) }, undefined, profile))}>
               Take over the {selected.name}
             </button>
           </div>

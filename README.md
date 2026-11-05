@@ -350,6 +350,25 @@ each league year, and get calls from other clubs. A record tab keeps every
 decision, incidents, monthly trends and whether your choices match the
 priorities you set.
 
+The Culture tab reads the building each month (trust, stability, fairness,
+accountability, communication and morale) from what happened, and tracks the
+working relationships: your GM's trust in you, how the GM and head coach get
+along, sponsors' confidence, the community, and how many sources reporters
+have inside. Overrides and lost authority get pushed back on, staff
+complaints need handling (an outside investigation, an internal review or
+closing it), unhappy executives resign, and details leak. A staff development
+budget grows people, deputies most of all. The Executives tab draws the
+organization chart.
+
+Settings: scouting precision (sharper or foggier reads by your own staff, never
+the truth), ironman (one continuing save), pauses that stop a multi-day sim
+when something urgent lands, a "Sim a week" button, text size and high
+contrast, and which panels the Today page shows. A new game can start from a
+custom position (the club's cash, acquisition debt, your own cash and the
+front office's quality). The sidebar search finds any player, coach,
+executive, team or message, and the Owner's guide explains the cap, the
+club's money, borrowing and how the league is run.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -387,7 +406,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
-  Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`.
+  Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

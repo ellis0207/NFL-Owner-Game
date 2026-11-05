@@ -15,6 +15,7 @@ import { gamesOn, latestPoll } from "../../engine/college";
 import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
 import { briefing } from "../../engine/memos";
+import { readPrefs } from "../prefs";
 import { CollegeScore } from "./CollegeScreen";
 import { openQuestions } from "../../engine/press";
 import { MEDIA_BY_ID } from "../../engine/outlets";
@@ -39,6 +40,7 @@ interface Props {
 
 export function TodayScreen({ game, go, busy, play }: Props) {
   const ui = useUi();
+  const hidden = readPrefs().hidden;
   const items = agenda(game);
   const yesterday = addDays(game.date, -1);
   const played = (GAMES_BY_DATE[yesterday] ?? []).filter((g) => game.results[g.id]);
@@ -167,7 +169,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
-      {briefing(game).length > 0 && (
+      {!hidden.includes("Your desk") && briefing(game).length > 0 && (
         <section className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <h2>Your desk</h2>
@@ -176,10 +178,10 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           {briefing(game).map((l, i) => <span key={i}>{l}</span>)}
         </section>
       )}
-      <StaffToday game={game} go={go} />
-      <BusinessToday game={game} go={go} />
-      <MediaToday game={game} go={go} />
-      {unread.length > 0 && (
+      {!hidden.includes("Staff") && <StaffToday game={game} go={go} />}
+      {!hidden.includes("Business") && <BusinessToday game={game} go={go} />}
+      {!hidden.includes("Media") && <MediaToday game={game} go={go} />}
+      {!hidden.includes("Inbox") && unread.length > 0 && (
         <section className="panel stack">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <h2>New in your inbox</h2>

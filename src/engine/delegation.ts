@@ -11,6 +11,7 @@
 // Every consequential decision lands in the audit trail: what it was, who
 // proposed it, who approved it, and why.
 import { addDays, weekday } from "./dates";
+import { gmTrust, noteDispute } from "./culture";
 import { execs, EXEC_ROLES, execRole, signer } from "./executives";
 import { money, send } from "./inbox";
 import { RULES } from "./league";
@@ -109,9 +110,12 @@ export function setMode(state: GameState, area: DecisionArea, to: DecisionMode, 
   if (who !== "GM" && who !== "HC") {
     const e = execRole(state, who);
     if (e) e.satisfaction = clamp(e.satisfaction + step * (e.hidden.ambition >= 60 ? 8 : 4));
-  } else if (state.media) {
+    // An ambitious executive doesn't let lost authority go quietly.
+    if (e && step < 0 && e.hidden.ambition >= 60) noteDispute(state, who, area, from);
+  } else {
     // Football people read a pulled decision as a vote of no confidence.
-    state.media.coach = clamp(state.media.coach + step * (area === "coaching" ? 4 : 2));
+    if (state.media) state.media.coach = clamp(state.media.coach + step * (area === "coaching" ? 4 : 2));
+    if (who === "GM") gmTrust(state, step > 0 ? 3 * step : 4 * step, step > 0 ? `You handed the GM more say over ${AREAS[area].label.toLowerCase()}.` : `You took ${AREAS[area].label.toLowerCase()} back from the GM.`);
   }
   if (!quiet) noteDecision(state, "decision rights", `${AREAS[area].label}: ${to === "owner" ? "the owner decides" : to === "approve" ? "the staff proposes, the owner approves" : "delegated to the staff"}`, undefined, "Owner", "owner");
 }

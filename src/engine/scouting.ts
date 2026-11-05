@@ -15,7 +15,7 @@ import { draftClass, type Prospect } from "./prospects";
 import { TRAIT_WORDS } from "./reports";
 import { gaussian, rngFor } from "./rng";
 import { DEFENSE, DEFENSE_LABEL, OFFENSE, OFFENSE_LABEL } from "./schemes";
-import { staffEffects, teamSchemes, teamStaff } from "./staff";
+import { fogOf, staffEffects, teamSchemes, teamStaff } from "./staff";
 import type { GameState, ScoutAssignment, ScoutDepth, ScoutFilter, ScoutingState } from "./types";
 
 export const SCOUTING_BUDGET = 2_400_000;
@@ -298,7 +298,7 @@ function errorSd(state: GameState, team: string, k: number): number {
   const eye = staffEffects(team).collegeScouting;
   // Our scouting department's budget: more area scouts and cross-checks tighten every read.
   const dept = team === state.userTeam ? [1.15, 1, 0.92, 0.85][state.business?.budget.scouts ?? 1] : 1;
-  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept;
+  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept * (team === state.userTeam ? fogOf(state) : 1);
 }
 
 /** The value a team's scouts put on a prospect (engine only: other teams use this on draft day). */

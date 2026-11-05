@@ -60,7 +60,7 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
               })}>Export save file</button>
             </div>
           ) : <p className="muted">File export works when the game is opened on claude.ai.</p>}
-          <label className="field">
+          {game.settings.ironman ? <p className="muted">Ironman: an exported file is a backup, not a way back. Opening saves from inside the game is off.</p> : <label className="field">
             <span className="label">Open a save file</span>
             <input id="import-in-game" type="file" accept=".json,application/json" disabled={busy} onChange={async (e) => {
               const f = e.target.files?.[0];
@@ -68,10 +68,10 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
               if (!f) return;
               act(async () => { onLoad(parseSaveFile(await f.text())); return "Save file loaded."; });
             }} />
-          </label>
+          </label>}
         </div>
       </div>
-      <div className="panel stack">
+      {!game.settings.ironman && <div className="panel stack">
         <h3>Cloud slots</h3>
         {!cloud && <p className="muted">Cloud saves need you to be signed in on claude.ai.</p>}
         {cloud && SLOTS.map((s, i) => {
@@ -100,7 +100,7 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
             </div>
           );
         })}
-      </div>
+      </div>}
       <div><button className="btn" onClick={onQuit}>Back to title screen</button></div>
     </section>
   );

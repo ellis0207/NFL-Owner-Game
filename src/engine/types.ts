@@ -636,6 +636,12 @@ export interface Settings {
   capRules: "real" | "off";
   /** "real": the team can run short of cash and the owner has to cover it. "relaxed": the owner's pockets are bottomless. */
   finances?: "real" | "relaxed";
+  /** How sharp the owner's scouting and staff reads are. The truth is never shown; "foggy" widens every read, "sharp" narrows it. */
+  scouting?: "sharp" | "real" | "foggy";
+  /** One continuing save: no manual slots or loading an earlier save from inside the game. */
+  ironman?: boolean;
+  /** Multi-day sims stop when something lands on the owner's desk: never, or when an urgent decision arrives. */
+  pause?: "never" | "urgent";
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
@@ -1447,6 +1453,7 @@ export interface GameState {
   execs?: ExecState;
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
   office?: OfficeState;
+  culture?: CultureState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
@@ -1821,7 +1828,7 @@ export interface MemoOption {
 /** A decision memo: the proposal, who's responsible, the case, the money and the deadline. */
 export interface Memo {
   id: string;
-  kind: "signing" | "street" | "trade" | "pricing" | "retain" | "overrun" | "refinance" | "coachReview" | "execReview" | "general";
+  kind: "signing" | "street" | "trade" | "pricing" | "retain" | "overrun" | "refinance" | "coachReview" | "execReview" | "complaint" | "dispute" | "general";
   date: string;
   area?: DecisionArea;
   from: string;
@@ -1888,4 +1895,28 @@ export interface OfficeState {
   year?: number;
   /** Trade offers the GM has already written up. */
   seen?: string[];
+}
+
+// ---- Culture and relationships (culture.ts) ----
+
+export type CultureIndicator = "trust" | "stability" | "fairness" | "accountability" | "communication" | "morale";
+
+export interface CultureState {
+  /** Engine only: how much the GM trusts the owner, 0-100. */
+  gmTrust: number;
+  /** Engine only: how well the GM and the head coach work together, 0-100, and the pair it was measured for. */
+  cooperation: number;
+  pair: string;
+  /** Engine only: how fairly the staff thinks it is treated, 0-100 (moves with how complaints are handled). */
+  fairness: number;
+  /** The staff development budget, 0 (none) to 3 (top of the league). */
+  development: number;
+  /** Engine only: relationships outside the building, 0-100: reporters' sources inside the club, sponsors' confidence, the community. */
+  rel: { sources: number; sponsors: number; community: number };
+  /** Month by month readings of the six culture indicators. */
+  history: ({ month: string } & Record<CultureIndicator, number>)[];
+  leaks: { date: string; text: string }[];
+  log: { date: string; text: string }[];
+  /** Authority the owner took back from someone who wants it, waiting to be raised. */
+  disputes?: { who: ExecRole; area: DecisionArea; from: DecisionMode; date: string }[];
 }

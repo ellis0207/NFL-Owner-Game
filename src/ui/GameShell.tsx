@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { capSummary } from "../engine/cap";
 import { addDays, longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, simToNextGame } from "../engine/season";
+import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, simToNextGame, simWeek } from "../engine/season";
 import { draftDayOf, onTheClock } from "../engine/draft";
 import { DraftScreen } from "./screens/DraftScreen";
 import { standings } from "../engine/standings";
@@ -28,6 +28,10 @@ import { LeagueScreen } from "./screens/LeagueScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
+import { GuideScreen } from "./screens/GuideScreen";
+import { SearchBox } from "./Search";
+import { applyPrefs } from "./prefs";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
 import { SaveScreen } from "./screens/SaveScreen";
@@ -39,7 +43,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Staff", "Cap", "League", "Owners", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -72,6 +76,8 @@ interface Props {
 
 export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [screen, setScreen] = useState<Screen>("Today");
+  // Text size and contrast are this browser's preferences.
+  useEffect(() => applyPrefs(), []);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState<string | null>(null);
   const [player, setPlayer] = useState<string | null>(null);
@@ -124,6 +130,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           <div className="team-city">{team.city}</div>
           <div className="team-name">{team.name}</div>
         </div>
+        <SearchBox game={game} go={setScreen} />
         <nav aria-label="Front office">
           {SCREENS.map((s) => (
             <button key={s} aria-current={screen === s ? "page" : undefined} onClick={() => setScreen(s)}>
@@ -164,6 +171,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               ? <button className="btn" disabled={busy || over || waiting} onClick={() => step(advanceToNextEvent)}
                 title={waiting ? "The draft is on: run it from the draft room, or use Sim rest of day to let the GM finish today's rounds." : undefined}>Advance to next event</button>
               : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>}
+            <button className="btn" disabled={busy || over || waiting} onClick={() => step(simWeek)} title="Seven days, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">Sim a week</button>
           </div>
         </header>
         <main className="content">
@@ -189,6 +197,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
+          {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
+          {screen === "Guide" && <GuideScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>
       </div>

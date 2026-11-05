@@ -12,6 +12,7 @@ import { delegateSearch, openSearches } from "./carousel";
 import { staff } from "./coaches";
 import { localDeals, LOCAL_CATS, signLocalOffer } from "./commerce";
 import { leagueYear } from "./contracts";
+import { gmTrust } from "./culture";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { acceptLoan, debt } from "./debt";
 import {
@@ -28,6 +29,7 @@ import { owner } from "./ownership";
 import { decideRoom, roomProposals } from "./positionCoaches";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
+import { settle, workplaceMonthly } from "./workplace";
 import { standings, winPct } from "./standings";
 import { acceptOffer, declineOffer, tradeBalance, trades } from "./trades";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
@@ -73,6 +75,8 @@ export function decideMemo(state: GameState, id: string, choice: number, why = "
   if (!role && (m.area === "signings" || m.area === "trades" || m.kind === "coachReview") && state.media) {
     state.media.coach = clamp(state.media.coach + (choice === m.recommend ? 0.5 : -0.5));
   }
+  // The GM keeps score of whether the owner backs the football staff's calls.
+  if (m.area === "signings" || m.area === "trades") gmTrust(state, choice === m.recommend ? 1 : -3, choice === m.recommend ? undefined : `You overruled the GM on ${m.title.toLowerCase()}.`);
   return null;
 }
 
@@ -125,6 +129,9 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
       }
       return null;
     }
+    case "complaint":
+    case "dispute":
+      return settle(state, m, choice);
     default:
       return null;
   }
@@ -658,6 +665,7 @@ export function officeDaily(state: GameState): void {
   if (state.date === addDays(RULES.keyDates.regularSeasonEnd, 2)) coachReview(state);
   if (state.date.endsWith("-01")) {
     officeMood(state);
+    workplaceMonthly(state);
     incidents(state);
     snapshot(state);
     overruns(state);
@@ -673,7 +681,8 @@ function stale(state: GameState, m: Memo): boolean {
   const p = m.payload ?? {};
   if (m.kind === "signing" || m.kind === "street") {
     const fa = market(state)[p.player as string];
-    return !fa || fa.status !== "open" || state.players[p.player as string]?.status !== "fa";
+    // In the negotiating window a market player is still under his old contract, so only the market's status counts.
+    return !fa || fa.status !== "open" || (m.kind === "street" && state.players[p.player as string]?.status !== "fa");
   }
   if (m.kind === "trade") return trades(state).offers.find((x) => x.id === p.offer)?.status !== "open";
   if (m.kind === "refinance") return !debt(state).offers.some((x) => x.id === p.offer);
@@ -688,10 +697,12 @@ function lapse(state: GameState, m: Memo): void {
   m.notes.push(`Past the deadline: ${m.ifLate}`);
   if (m.kind === "pricing") carryOut(state, m, m.recommend);
   if (m.kind === "retain") carryOut(state, m, 1);
+  if (m.kind === "complaint") carryOut(state, m, 2);
   if (m.kind === "trade") declineOffer(state, m.payload?.offer as string);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: no answer by the deadline`, m.amount, m.from, "policy", m.ifLate);
   const role = roleOf(state, m);
   const e = role ? execRole(state, role) : undefined;
   if (e) e.satisfaction = clamp(e.satisfaction - 3);
   else if (state.media && (m.area === "signings" || m.area === "trades" || m.kind === "coachReview")) state.media.coach = clamp(state.media.coach - 1);
+  if (m.area === "signings" || m.area === "trades") gmTrust(state, -2);
 }

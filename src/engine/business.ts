@@ -33,6 +33,7 @@ import { projectEffects } from "./projects";
 import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
+import { developmentCost } from "./culture";
 import { execBoost, execPayrollOver, signer } from "./executives";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
@@ -874,6 +875,8 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   // The executives' pay above what the budget assumes, and anyone let go but still being paid.
   const execOver = execPayrollOver(state);
   if (execOver) add("businessOps", -m(execOver), "Executive pay above budget and severance");
+  const dev = developmentCost(state);
+  if (dev) add("businessOps", -m(dev * inflation(year, 0.03)), "Staff development");
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));
