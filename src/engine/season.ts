@@ -21,6 +21,7 @@ import { processWaivers } from "./waivers";
 import { applyTerminationPay } from "./roster";
 import { rngFor } from "./rng";
 import { simulateGame } from "./sim";
+import { gameDayOps, gameOpsDaily } from "./gameops";
 import { stat } from "./stats";
 import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
 import { playCaller, teamSchemes, teamStaff } from "./staff";
@@ -385,9 +386,11 @@ function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
       }
     }
   }
-  const { result, box } = simulateGame(state, g, m.away, m.home);
+  const { result, box, log } = simulateGame(state, g, m.away, m.home);
   state.results[g.id] = result;
   state.box[g.id] = box;
+  (state.pbp ??= {})[g.id] = log;
+  gameDayOps(state, g, result);
   businessGame(state, g, result);
   reportGame(state, g, result, box);
   return result;
@@ -537,6 +540,7 @@ export function advanceDay(state: GameState): void {
   debtDaily(state);
   booksDaily(state);
   officeDaily(state);
+  gameOpsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);

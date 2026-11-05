@@ -31,7 +31,7 @@ import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { SearchBox } from "./Search";
-import { applyPrefs } from "./prefs";
+import { applyPrefs, readPrefs } from "./prefs";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
 import { SaveScreen } from "./screens/SaveScreen";
@@ -80,8 +80,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   useEffect(() => applyPrefs(), []);
   const [busy, setBusy] = useState(false);
   const [box, setBox] = useState<string | null>(null);
+  const [follow, setFollow] = useState(false);
   const [player, setPlayer] = useState<string | null>(null);
-  const openBox = useCallback((id: string) => { setPlayer(null); setBox(id); }, []);
+  const openBox = useCallback((id: string, live = false) => { setPlayer(null); setFollow(live); setBox(id); }, []);
   const [talks, setTalks] = useState<string | null>(null);
   const openPlayer = useCallback((id: string) => { setTalks(null); setPlayer(id); }, []);
   const openTalks = useCallback((id: string) => { setPlayer(null); setTalks(id); }, []);
@@ -175,7 +176,11 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
         </header>
         <main className="content">
-          {screen === "Today" && <TodayScreen game={game} go={setScreen} busy={busy} play={(id) => step((s) => playEvent(s, id))} />}
+          {screen === "Today" && <TodayScreen game={game} go={setScreen} busy={busy} play={(id, gameId) => step((s) => {
+            playEvent(s, id);
+            // Your own game can come in a drive at a time.
+            if (gameId && s.pbp?.[gameId] && readPrefs().followGames) openBox(gameId, true);
+          })} />}
           {screen === "Calendar" && <CalendarScreen game={game} />}
           {screen === "College" && <CollegeScreen game={game} />}
           {screen === "Scouting" && <ScoutingScreen game={game} changed={changed} />}
@@ -202,7 +207,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>
       </div>
-      {box && <BoxScore game={game} id={box} onClose={() => setBox(null)} />}
+      {box && <BoxScore key={`${box}-${follow}`} game={game} id={box} follow={follow} changed={changed} onClose={() => setBox(null)} />}
       {player && <PlayerPanel game={game} id={player} onClose={() => setPlayer(null)} changed={changed} />}
       {prospect && <ProspectPanel game={game} id={prospect} onClose={() => setProspect(null)} changed={changed} />}
       {school && <SchoolPanel game={game} id={school} onClose={() => setSchool(null)} />}

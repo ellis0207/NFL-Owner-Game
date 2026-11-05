@@ -35,7 +35,7 @@ interface Props {
   go: (s: Screen) => void;
   busy: boolean;
   /** Plays out one of today's events. */
-  play: (id: string) => void;
+  play: (id: string, gameId?: string) => void;
 }
 
 export function TodayScreen({ game, go, busy, play }: Props) {
@@ -102,7 +102,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
                 </div>
                 {a.action && !done && (
                   <button className={`btn small${a.action === "game" || a.action === "draft" ? " primary" : ""}`} disabled={busy || isGameOver(game)}
-                    onClick={() => { if (a.action === "draft") return go("Draft"); play(a.id); if (a.action === "review") go("Roster"); }}>
+                    onClick={() => { if (a.action === "draft") return go("Draft"); play(a.id, a.action === "game" ? a.gameId : undefined); if (a.action === "review") go("Roster"); }}>
                     {ACTION_LABEL[a.action]}
                   </button>
                 )}

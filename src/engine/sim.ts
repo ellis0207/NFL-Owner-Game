@@ -15,9 +15,11 @@ import { PLAYER_BY_ID, RULES } from "./league";
 import { depthChart, isHoldingOut, isSuspended } from "./roster";
 import { LEAGUE_RULES } from "./rules";
 import { gaussian, rngFor, type Rng } from "./rng";
+import { Officials, type CallContext } from "./officials";
+import { coverage as coverShell, formation, PLAY_FLAGS as F, Recorder, spotText } from "./playlog";
 import { DEFENSE, OFFENSE, type DefenseStyle, type OffenseStyle, type Personnel, type RunType } from "./schemes";
 import { ability, schemeFit, staffEffects, teamSchemes, trait, type StaffEffects } from "./staff";
-import type { BoxScore, GameResult, GameState, Position, ScheduledGame, ScoringPlay, TeamBox } from "./types";
+import type { BoxScore, GameLog, GameResult, GameState, Position, ScheduledGame, ScoringPlay, TeamBox } from "./types";
 
 type Side = "away" | "home";
 type Depth = "screen" | "short" | "inter" | "deep";
@@ -26,6 +28,11 @@ type Package = "nickel" | "base" | "dime";
 export interface SimOutput {
   result: GameResult;
   box: BoxScore;
+  log: GameLog;
+}
+
+function yardsText(y: number): string {
+  return y === 0 ? "no gain" : y < 0 ? `a loss of ${-y}` : y === 1 ? "1 yard" : `${y} yards`;
 }
 
 const HOME_EDGE = 1.1; // rating points for the home team on every snap
@@ -33,6 +40,8 @@ const FIT_WEIGHT = 0.6; // rating points per point of average scheme fit
 const OFF_FIT: [Position, number, number][] = [["QB", 1, 3], ["RB", 1, 1], ["WR", 3, 1], ["TE", 1, 1], ["OT", 2, 0.8], ["OG", 2, 0.8], ["C", 1, 0.8], ["FB", 1, 0.3]];
 const DEF_FIT: [Position, number, number][] = [["EDGE", 2, 1], ["IDL", 2, 1], ["LB", 2, 1], ["CB", 3, 1], ["S", 2, 1]];
 const QUARTER = 900;
+/** The usual gap between a line's worst pass-rush pairing and its average one, in rating points. */
+const MISMATCH_TYPICAL = 8.7;
 
 function squeeze(rating: number): number {
   return 82 + (rating - 82) * 0.66;
@@ -122,9 +131,14 @@ class GameSim {
   over = false;
 
   cond: Conditions;
+  rec: Recorder;
+  refs: Officials;
+  quietTd = false;
 
   constructor(public state: GameState, public game: ScheduledGame, away: string, home: string) {
     this.rng = rngFor(state.seed, `game:${game.id}`);
+    this.rec = new Recorder(state.seed, game.id);
+    this.refs = new Officials(state.seed, game.id, away, home);
     this.pre = game.type === "PRE";
     this.cond = gameConditions(state, game, away, home);
     this.t = { away: this.makeTeam("away", away), home: this.makeTeam("home", home) };
@@ -340,6 +354,7 @@ class GameSim {
     this.kickoff(this.other(this.receivedFirst));
     let guard = 0;
     while (!this.over && guard++ < 400) this.snap();
+    this.rec.closeDrive(this, this.rec.why || "End of game");
 
     const result: GameResult = { away: away.id, home: home.id, awayScore: away.score, homeScore: home.score, overtime: this.ot.active };
     const players = { away: {} as Record<string, number[]>, home: {} as Record<string, number[]> };
@@ -353,9 +368,27 @@ class GameSim {
       scoring: this.scoring,
       inactives: { away: away.inactive, home: home.inactive },
       injuries: this.injuries,
+      ...(this.refs.calls.length ? { calls: this.refs.calls } : {}),
       ...(this.cond.weather.indoor ? {} : { weather: this.cond.weather }),
     };
-    return { result, box };
+    return { result, box, log: this.rec.log(this.game.date) };
+  }
+
+  /** What the officials need to weigh a ruling and a challenge. */
+  callContext(o: Team, d: Team, stake: number): CallContext {
+    return {
+      q: this.q, clock: Math.max(0, Math.round(this.clock)), offense: o.id, defense: d.id, stake,
+      timeouts: { [o.id]: o.timeouts, [d.id]: d.timeouts },
+      judgment: { [o.id]: o.fx.gameManagement, [d.id]: d.fx.gameManagement },
+      spendTimeout: (team) => {
+        const t = team === o.id ? o : d;
+        t.timeouts = Math.max(0, t.timeouts - 1);
+      },
+    };
+  }
+
+  spot(ydl: number, o: Team, d: Team): string {
+    return spotText(ydl, o.id, d.id);
   }
 
   /** Points scored: tracks quarter totals and the scoring summary. */
@@ -385,6 +418,7 @@ class GameSim {
       return;
     }
     if (this.q === 2) {
+      this.rec.closeDrive(this, "End of half");
       this.q = 3;
       this.clock = QUARTER;
       this.t.away.timeouts = 3;
@@ -397,6 +431,7 @@ class GameSim {
         this.over = true;
         return;
       }
+      this.rec.closeDrive(this, "End of regulation");
       this.startOvertime();
       return;
     }
@@ -427,6 +462,7 @@ class GameSim {
   }
 
   newPossession(side: Side, ydl: number): void {
+    this.rec.closeDrive(this);
     this.pos = side;
     this.ydl = clamp(ydl, 1, 99);
     this.down = 1;
@@ -434,6 +470,7 @@ class GameSim {
     this.driveStartClock = this.clock;
     this.driveReachedRz = false;
     this.t[side].drives++;
+    this.rec.openDrive(this, side);
   }
 
   turnover(newYdl: number): void {
@@ -458,9 +495,11 @@ class GameSim {
       this.tick(4);
       // The 4th-and-20 alternative, where it's allowed, keeps the ball more often than an onside kick.
       if (this.rng() < (LEAGUE_RULES.fourthAndTwenty ? 0.22 : 0.12)) {
+        this.rec.kick(this, kicking, LEAGUE_RULES.fourthAndTwenty ? `${k.id} converts the 4th-and-20 play and keeps the ball.` : `${this.name(kicker)} onside kick, recovered by ${k.id}!`, F.big);
         this.newPossession(kicking, LEAGUE_RULES.fourthAndTwenty ? 45 : 48);
         return;
       }
+      this.rec.kick(this, kicking, LEAGUE_RULES.fourthAndTwenty ? `${k.id} fails on 4th-and-20; ${r.id} takes over.` : `${this.name(kicker)} onside kick, recovered by ${r.id}.`);
       this.newPossession(r.side, 52);
       return;
     }
@@ -469,6 +508,7 @@ class GameSim {
     const power = this.tr(kicker, "kickPower");
     const tb = LEAGUE_RULES.touchback;
     if (this.rng() < 0.28 + (35 - tb) * 0.025 + (power - 80) * 0.006) {
+      this.rec.kick(this, kicking, `${this.name(kicker)} kicks off; touchback, ${r.id} ball at the ${spotText(tb, r.id, k.id)}.`);
       this.newPossession(r.side, tb);
       return;
     }
@@ -482,14 +522,21 @@ class GameSim {
     if (burst < 0.003 + skill * 0.0002 || yards >= 100) {
       this.add(r, ret, "krYds", 100);
       this.add(r, ret, "krTd");
+      const row = this.rec.kick(this, kicking, `${this.name(kicker)} kicks off; ${this.name(ret)} returns it all the way for a TOUCHDOWN.`, F.score | F.big);
       this.newPossession(r.side, 99);
+      this.quietTd = true;
       this.touchdown(r, `${this.name(ret)} kickoff return`, ret);
+      this.quietTd = false;
+      row[9] = this.t.away.score;
+      row[10] = this.t.home.score;
       return;
     }
     yards = clamp(yards, 5, 95);
     this.add(r, ret, "krYds", yards);
-    this.tackle(k, this.coverage(k), 0);
+    const kt = this.tackle(k, this.coverage(k), 0);
+    const kText = `${this.name(kicker)} kicks off; ${this.name(ret)} returns it to the ${spotText(yards, r.id, k.id)}${kt ? ` (${this.name(kt)})` : ""}.`;
     if (this.rng() < 0.006) {
+      this.rec.kick(this, kicking, `${kText} ${this.name(ret)} FUMBLES; ${k.id} recovers.`, F.turnover | F.big);
       // Muffed or fumbled return.
       this.add(r, ret, "fum");
       this.add(r, ret, "fumLost");
@@ -497,6 +544,7 @@ class GameSim {
       this.t[r.side].box.turnovers++;
       return;
     }
+    this.rec.kick(this, kicking, kText, yards >= 45 ? F.big : 0);
     this.newPossession(r.side, yards);
   }
 
@@ -509,6 +557,8 @@ class GameSim {
     this.tick(7);
     if (this.rng() < 0.006) {
       // Blocked.
+      this.rec.say(`${this.name(punter)} punt is BLOCKED; ${d.id} recovers.`, F.kick | F.turnover | F.big);
+      this.rec.why = "Blocked punt";
       this.possessionEnded(o.side);
       if (!this.over) this.newPossession(d.side, 100 - Math.max(1, this.ydl - 8));
       return;
@@ -521,8 +571,10 @@ class GameSim {
     if (room < 45) gross = Math.round(room - 5 - this.rng() * 8 + (placement - 80) * 0.1);
     gross = clamp(gross, 20, 75);
     this.add(o, punter, "punts");
+    this.rec.why = "Punt";
     let landing = this.ydl + gross;
     if (landing >= 100) {
+      this.rec.say(`${this.name(punter)} punts ${room} yards into the end zone; touchback.`, F.kick);
       this.add(o, punter, "puntYds", room);
       this.add(o, punter, "puntLong", room);
       this.add(o, punter, "puntTb");
@@ -545,13 +597,17 @@ class GameSim {
         this.add(d, returner, "prTd");
         this.possessionEnded(o.side);
         if (this.over) return;
+        this.rec.say(`${this.name(punter)} punts ${gross} yards; ${this.name(returner)} returns it ${landing} yards for a`, F.kick | F.big);
         this.newPossession(d.side, 99);
         this.touchdown(d, `${this.name(returner)} ${landing}-yard punt return`, returner);
         return;
       }
       this.add(d, returner, "prYds", ret);
-      this.tackle(o, this.coverage(o), 0);
+      const pt = this.tackle(o, this.coverage(o), 0);
+      this.rec.say(`${this.name(punter)} punts ${gross} yards; ${this.name(returner)} returns it ${yardsText(ret)}${pt ? ` (${this.name(pt)})` : ""}.`, F.kick | (ret >= 20 ? F.big : 0));
       if (this.rng() < 0.01) {
+        this.rec.say(`${this.name(punter)} punts ${gross} yards; ${this.name(returner)} MUFFS it and ${o.id} recovers!`, F.kick | F.turnover | F.big);
+
         // Muffed punt recovered by the kicking team.
         this.add(d, returner, "fum");
         this.add(d, returner, "fumLost");
@@ -561,7 +617,8 @@ class GameSim {
       }
     } else if (landing >= 95) {
       landing = 90 + Math.floor(this.rng() * 8);
-    }
+      this.rec.say(`${this.name(punter)} punts ${gross} yards, downed at the ${spotText(100 - landing, d.id, o.id)}.`, F.kick);
+    } else this.rec.say(`${this.name(punter)} punts ${gross} yards, ${this.rec.pick(["fair catch", "fair catch", "downed", "out of bounds"])} at the ${spotText(100 - landing, d.id, o.id)}.`, F.kick);
     landing -= ret;
     if (landing >= 80) this.add(o, punter, "puntIn20");
     this.possessionEnded(o.side);
@@ -594,11 +651,15 @@ class GameSim {
       if (distance >= 50) this.add(o, kicker, "fgm50");
       else if (distance >= 40) this.add(o, kicker, "fgm40");
       this.score(o, 3, `${this.name(kicker)} ${distance}-yard field goal`);
+      this.rec.say(`${this.name(kicker)} ${distance}-yard field goal is GOOD.`, F.kick | F.score);
+      this.rec.why = "Field goal";
       this.possessionEnded(o.side);
       if (this.over) return;
       this.kickoff(o.side);
       return;
     }
+    this.rec.say(`${this.name(kicker)} ${distance}-yard field goal is ${this.rec.pick(["wide left", "wide right", "short", "wide right", "wide left"])}.`, F.kick);
+    this.rec.why = "Missed field goal";
     this.possessionEnded(o.side);
     if (!this.over) this.newPossession(d.side, Math.max(20, 100 - (LEAGUE_RULES.missedFgAtLos ? this.ydl : this.ydl - 7)));
   }
@@ -606,6 +667,8 @@ class GameSim {
   touchdown(team: Team, text: string, scorer?: string): void {
     void scorer;
     this.score(team, 6, text);
+    if (this.rec.drive?.o === team.side) this.rec.why = "Touchdown";
+    this.tdNote(" TOUCHDOWN.", F.score);
     if (this.ot.active && this.ot.suddenDeath) {
       this.over = true;
       return;
@@ -631,6 +694,7 @@ class GameSim {
         this.add(team, scorer2, "twoPt");
         last.text += " (two-point conversion good)";
       } else last.text += " (two-point try failed)";
+      this.tdNote(ok ? " Two-point try is good." : " Two-point try fails.");
     } else {
       this.add(team, kicker, "xpa");
       const acc = this.tr(kicker, "kickAccuracy");
@@ -641,7 +705,10 @@ class GameSim {
         team.score += 1;
         team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 1;
         last.text += ` (${this.name(kicker)} kick)`;
-      } else last.text += " (kick failed)";
+      } else {
+        last.text += " (kick failed)";
+        this.tdNote(` ${this.name(kicker)} misses the extra point.`);
+      }
     }
     last.away = this.t.away.score;
     last.home = this.t.home.score;
@@ -651,10 +718,17 @@ class GameSim {
     this.kickoff(team.side);
   }
 
+  /** Adds to the play that scored; a kick return's own line already says it. */
+  tdNote(text: string, flags = 0): void {
+    if (this.rec.inPlay && !this.quietTd) this.rec.more(text, flags);
+  }
+
   safety(defense: Team): void {
     defense.score += 2;
     defense.quarters[Math.min(this.q, 5) - 1] = (defense.quarters[Math.min(this.q, 5) - 1] ?? 0) + 2;
     this.scoring.push({ q: this.q, clock: Math.max(0, Math.round(this.clock)), team: defense.id, text: "Safety", away: this.t.away.score, home: this.t.home.score });
+    this.rec.more(" SAFETY.", F.score | F.big);
+    this.rec.why = "Safety";
     if (this.ot.active) {
       this.over = true;
       return;
@@ -675,9 +749,10 @@ class GameSim {
     return id ? PLAYER_BY_ID[id].name : "Team";
   }
 
-  tackle(d: Team, candidates: (string | undefined)[], yards: number, weights?: number[]): void {
+  /** Credits the tackle and returns who made it. */
+  tackle(d: Team, candidates: (string | undefined)[], yards: number, weights?: number[]): string | undefined {
     const list = candidates.filter(Boolean) as string[];
-    if (!list.length) return;
+    if (!list.length) return undefined;
     const pickOne = () => {
       if (!weights) return list[Math.floor(this.rng() * list.length)];
       const total = weights.reduce((s, w) => s + w, 0);
@@ -696,12 +771,19 @@ class GameSim {
       this.add(d, b, "tklAst");
     } else this.add(d, a, "tklSolo");
     if (yards < 0) this.add(d, a, "tfl");
+    return a;
   }
 
   // ---- A snap ----
 
   snap(): void {
     if (this.over) return;
+    this.rec.begin(this);
+    this.playSnap();
+    this.rec.end(this);
+  }
+
+  playSnap(): void {
     const o = this.t[this.pos];
     const d = this.t[this.other(this.pos)];
     const lead = o.score - d.score;
@@ -805,6 +887,8 @@ class GameSim {
     this.down++;
     if (this.down > 4) {
       // Turnover on downs.
+      this.rec.more(" Turnover on downs.");
+      this.rec.why = "Downs";
       this.possessionEnded(o.side);
       if (!this.over) this.newPossession(d.side, 100 - this.ydl);
     }
@@ -842,6 +926,8 @@ class GameSim {
 
   kneel(o: Team, d: Team): void {
     const lineup = this.offenseLineup(o, "11");
+    this.rec.say(`${this.name(lineup.qb)} kneels.`);
+    this.rec.look = "Victory formation";
     this.snaps(o, [lineup.qb, ...lineup.rbs, ...lineup.wrs, ...lineup.tes, ...lineup.ol], "offSnaps");
     this.add(o, lineup.qb, "car");
     this.add(o, lineup.qb, "rushYds", -1);
@@ -855,6 +941,7 @@ class GameSim {
     const timeoutStop = d.timeouts > 0 && this.q === 4 && (d.timeouts--, true);
     this.tick(timeoutStop ? 2 : 40);
     if (this.down > 4) {
+      this.rec.why = "Downs";
       this.possessionEnded(o.side);
       if (!this.over) this.newPossession(d.side, 100 - this.ydl);
     }
@@ -940,28 +1027,41 @@ class GameSim {
     let yards: number;
     let autoFirst = false;
     let replay = true;
+    let what: string;
     if (offense) {
-      if (kind < 0.33) yards = 5; // false start, delay, illegal formation
-      else if (kind < 0.85) yards = 10; // holding
-      else yards = 15; // personal foul, offensive pass interference, illegal block
+      if (kind < 0.33) {
+        yards = 5; // false start, delay, illegal formation
+        what = this.rec.pick(["False start", "False start", "False start", "Delay of game", "Illegal formation", "Illegal shift"]);
+      } else if (kind < 0.85) {
+        yards = 10; // holding
+        what = "Offensive holding";
+      } else {
+        yards = 15; // personal foul, offensive pass interference, illegal block
+        what = this.rec.pick(["Offensive pass interference", "Unnecessary roughness", "Illegal block in the back", "Chop block"]);
+      }
       // Half the distance to the goal when inside it.
       yards = Math.min(yards, Math.floor(this.ydl / 2));
       this.ydl -= yards;
       this.dist += yards;
       if (kind >= 0.33) this.tick(6);
     } else {
-      if (kind < 0.35) yards = 5; // offside, neutral zone, encroachment
-      else if (kind < 0.55) {
+      if (kind < 0.35) {
+        yards = 5; // offside, neutral zone, encroachment
+        what = this.rec.pick(["Defensive offside", "Neutral zone infraction", "Encroachment", "Defensive offside"]);
+      } else if (kind < 0.55) {
         yards = 5; // defensive holding, illegal contact
         autoFirst = true;
+        what = this.rec.pick(["Defensive holding", "Defensive holding", "Illegal contact"]);
       } else if (kind < 0.8) {
         yards = Math.min(LEAGUE_RULES.dpiCap, Math.round(8 + this.rng() * 28)); // defensive pass interference: a spot foul
         autoFirst = true;
+        what = "Defensive pass interference";
       } else {
         // Roughing, unnecessary roughness, face mask; replay takes back some of the roughing calls.
         if (LEAGUE_RULES.roughingReview && this.rng() < 0.2) return false;
         yards = 15;
         autoFirst = true;
+        what = this.rec.pick(["Roughing the passer", "Unnecessary roughness", "Face mask", "Roughing the passer"]);
       }
       yards = Math.min(yards, Math.max(1, Math.floor((100 - this.ydl) / 2)));
       if (kind >= 0.55 && kind < 0.8) yards = Math.min(yards, 99 - this.ydl);
@@ -977,6 +1077,9 @@ class GameSim {
     void replay;
     team.box.penalties++;
     team.box.penYds += yards;
+    this.rec.say(`Penalty on ${team.id}: ${what}, ${yards} yards${!offense && autoFirst ? ", automatic first down" : ""}.`, F.penalty);
+    this.rec.look = "No play";
+    this.refs.flag(this.callContext(o, d, yards), team.id, what, yards);
     return true;
   }
 
@@ -1032,6 +1135,12 @@ class GameSim {
     const room = 100 - this.ydl;
     yards = Math.min(yards, room);
     const td = yards >= room;
+    const where = type === "qbRun" ? (this.dist <= 1 && this.down >= 3 ? "QB sneak" : this.rec.pick(["keeps it", "keeps it on the read option", "runs the QB draw"]))
+      : type === "outsideZone" ? this.rec.pick(["runs around left end", "runs around right end", "runs wide left", "runs wide right"])
+        : type === "gap" ? this.rec.pick(["runs off left tackle", "runs off right tackle", "runs behind the pulling guard", "runs up the middle"])
+          : this.rec.pick(["runs up the middle", "runs left guard", "runs right guard", "runs up the middle"]);
+    this.rec.look = `${formation(this.rec, { pass: false, playAction: false, hurry: false, short: this.dist <= 2 && this.down >= 3, personnel: lu.personnel, passRate: o.off.passRate, longYardage: false })}, ${lu.personnel} personnel vs ${def.pkg}`;
+    const runText = `${this.name(carrier)} ${where} for ${yardsText(yards)}`;
     this.add(o, carrier, "car");
     this.add(o, carrier, "rushYds", yards);
     this.add(o, carrier, "rushLong", yards);
@@ -1042,6 +1151,7 @@ class GameSim {
     const stops = this.clockStopsOnOutOfBounds(outOfBounds);
     if (td) {
       this.add(o, carrier, "rushTd");
+      this.rec.say(runText + ".", F.big);
       this.tick(6);
       this.redZoneTouchdown(o);
       this.touchdown(o, `${this.name(carrier)} ${yards}-yard run`, carrier);
@@ -1049,19 +1159,30 @@ class GameSim {
     }
     // Fumbles.
     const fumbleP = (0.011 - (tr(carrier, "power") - 80) * 0.0001) * this.cond.fumbleMult;
+    let fumbleNote = "";
     if (this.rng() < fumbleP) {
-      this.add(o, carrier, "fum");
       const forcer = front[Math.floor(this.rng() * front.length)];
-      this.add(d, forcer, "ff");
-      if (this.rng() < 0.55) {
+      const lost = this.rng() < 0.55;
+      // A fumble the defense recovered can be ruled down by contact; replay can fix that.
+      const ruling = lost ? this.refs.rule("fumble", this.callContext(o, d, 30)) : { stands: true, note: "" };
+      if (ruling.stands) {
+        this.add(o, carrier, "fum");
+        this.add(d, forcer, "ff");
+      }
+      if (lost && ruling.stands) {
         this.add(o, carrier, "fumLost");
         const recoverer = front[Math.floor(this.rng() * front.length)];
         this.add(d, recoverer, "fr");
         this.tackle(d, front, yards);
+        this.rec.say(`${runText}. ${this.name(carrier)} FUMBLES, forced by ${this.name(forcer)}; recovered by ${this.name(recoverer)} at the ${this.spot(this.ydl + yards, o, d)}.${ruling.note}`, F.turnover | (ruling.note ? F.review : 0));
+        this.rec.why = "Fumble";
         this.tick(6);
         this.turnover(100 - (this.ydl + yards));
         return { yards, ended: true, playTime: 0, clockStops: true, involved: [carrier, forcer] };
       }
+      if (!ruling.stands && ruling.note) this.rec.flags |= F.review;
+      fumbleNote = !ruling.stands ? ` The ball came loose and ${d.id} recovered, but ${this.name(carrier)} was ruled down by contact.${ruling.note}`
+        : ` ${this.name(carrier)} fumbles, forced by ${this.name(forcer)}, but ${o.id} recovers.`;
     }
     const tacklers = [...def.lb, ...def.idl, ...def.edge, ...def.s, ...def.cb];
     const long = yards >= 10;
@@ -1070,7 +1191,8 @@ class GameSim {
       if (long) return pos === "S" ? 1.5 : pos === "CB" ? 1.2 : pos === "LB" ? 1.3 : 0.3;
       return pos === "LB" ? 1.9 : pos === "IDL" ? 1.2 : pos === "EDGE" ? 1.2 : pos === "S" ? 1.0 : 0.8;
     });
-    this.tackle(d, tacklers, yards, weights);
+    const tk = this.tackle(d, tacklers, yards, weights);
+    this.rec.say(`${runText}${tk ? ` (${this.name(tk)})` : ""}.${fumbleNote}`, yards >= 20 ? F.big : 0);
     return { yards, ended: false, playTime: 5, clockStops: stops, involved: [carrier, tacklers[0]] };
   }
 
@@ -1104,6 +1226,8 @@ class GameSim {
     const man = this.rng() < d.def.man * (blitz ? 1.3 : 1);
     const twoHigh = !blitz && this.rng() < d.def.twoHigh;
     const base = this.baseEdge(o, d);
+    this.rec.look = `${formation(this.rec, { pass: true, playAction, hurry, short: false, personnel: lu.personnel, passRate: o.off.passRate, longYardage: this.down >= 3 && this.dist >= 7 })}, ${lu.personnel} personnel vs ${def.pkg}, ${coverShell(this.rec, blitz, man, twoHigh)}`;
+    const dir = depth === "screen" ? "screen pass" : `pass ${depth === "deep" ? "deep" : "short"} ${this.rec.pick(["left", "middle", "right", "left", "right"])}`;
 
     // Protection against the rush.
     const protect = this.avg(lu.ol, (id) => 0.75 * tr(id, "passBlock") + 0.25 * tr(id, "agility"));
@@ -1112,13 +1236,17 @@ class GameSim {
     const rushValue = this.avg(rushers, (id) => tr(id, "passRush")) + blitzers.length * 1.5 + (blitzers.length ? this.avg(blitzers, (id) => tr(id, "blitz") - 80) * 0.1 : 0);
     const holdTime = depth === "deep" ? 0.07 : depth === "inter" ? 0.02 : depth === "short" ? -0.07 : -0.25;
     const pocket = (tr(qb, "decisions") - 80) * 0.003 + (tr(qb, "mobility") - 80) * 0.001;
-    const pPressure = clamp(0.29 + (rushValue - protect) * 0.011 + (blitz ? 0.09 : 0) + holdTime - pocket - (playAction ? 0.0 : 0) - base * 0.004, 0.04, 0.65);
+    // One-on-ones up front: each edge rusher against a tackle, each interior rusher against a guard or
+    // the center. A line is only as good as its weakest pairing, so one bad mismatch adds pressure.
+    const pairs = this.rushPairs(lu, rushers);
+    const pPressure = clamp(0.29 + (rushValue - protect) * 0.011 + (blitz ? 0.09 : 0) + holdTime - pocket - (playAction ? 0.0 : 0) - base * 0.004
+      + (pairs.worst - MISMATCH_TYPICAL) * 0.004, 0.04, 0.65);
     const pressured = this.rng() < pPressure;
 
     if (pressured && depth !== "screen") {
       const pSack = clamp(0.23 - (tr(qb, "mobility") - 80) * 0.004 - (tr(qb, "decisions") - 80) * 0.002 + (depth === "deep" ? 0.06 : 0), 0.07, 0.42);
       const r = this.rng();
-      if (r < pSack) return this.sack(o, d, qb, [...rushers, ...blitzers]);
+      if (r < pSack) return this.sack(o, d, qb, [...rushers, ...blitzers], pairs.blocker);
       const pScramble = clamp(0.1 + (tr(qb, "mobility") - 80) * 0.007, 0.02, 0.32);
       if (r < pSack + pScramble) return this.scramble(o, d, qb, def);
       const hitter = [...rushers, ...blitzers][Math.floor(this.rng() * (rushers.length + blitzers.length))];
@@ -1127,6 +1255,7 @@ class GameSim {
         // Throwaway.
         this.add(o, qb, "att");
         o.box.passAtt++;
+        this.rec.say(`${this.name(qb)} throws it away under pressure from ${this.name(hitter)}.`);
         return { yards: 0, ended: false, playTime: 6, clockStops: true, involved: [qb] };
       }
     }
@@ -1180,6 +1309,8 @@ class GameSim {
         this.tick(8);
         o.box.turnovers++;
         this.possessionEnded(o.side);
+        this.rec.say(`${this.name(qb)} ${dir} intended for ${this.name(target)} is INTERCEPTED by ${this.name(picker)}, returned ${ret} yards for a`, F.turnover | F.big);
+        this.rec.why = "Interception";
         if (!this.over) {
           this.newPossession(d.side, 99);
           this.touchdown(d, `${this.name(picker)} ${ret}-yard interception return`, picker);
@@ -1187,12 +1318,25 @@ class GameSim {
         return { yards: 0, ended: true, playTime: 0, clockStops: true, involved: [picker, target] };
       }
       this.add(d, picker, "intYds", ret);
+      this.rec.say(`${this.name(qb)} ${dir} intended for ${this.name(target)} is INTERCEPTED by ${this.name(picker)} at the ${spotText(theirYdl, d.id, o.id)}, returned ${yardsText(ret)}.`, F.turnover);
+      this.rec.why = "Interception";
       this.tick(8);
       this.turnover(Math.min(99, theirYdl + ret));
       return { yards: 0, ended: true, playTime: 0, clockStops: true, involved: [picker, target] };
     }
     if (r < pInt + (1 - pComp)) {
-      if (cover && this.rng() < 0.28 + (coverSkill - recv) * 0.01) this.add(d, cover, "pd");
+      const broken = cover && this.rng() < 0.28 + (coverSkill - recv) * 0.01;
+      if (broken) this.add(d, cover, "pd");
+      // An incompletion can be ruled a catch; the booth or a challenge can take it back.
+      const ruling = this.refs.rule("drop", this.callContext(o, d, 8));
+      if (!ruling.stands) {
+        const caught = Math.min(100 - this.ydl - 1, { screen: 2, short: 5, inter: 11, deep: 22 }[depth]);
+        this.completionStats(o, qb, target, caught);
+        this.rec.say(`${this.name(qb)} ${dir} to ${this.name(target)} for ${yardsText(caught)}, ruled a catch.${ruling.note}`, ruling.note ? F.review : 0);
+        return { yards: caught, ended: false, playTime: 6, clockStops: false, involved: [target, cover] };
+      }
+      const missed = this.down >= 3 && cover && this.refs.noFlag(this.callContext(o, d, 15));
+      this.rec.say(`${this.name(qb)} ${dir} incomplete, intended for ${this.name(target)}${broken ? ` (broken up by ${this.name(cover)})` : ""}.${missed ? ` ${o.id} wanted a flag for interference; none was thrown.` : ""}${ruling.note}`, ruling.note ? F.review : 0);
       return { yards: 0, ended: false, playTime: 6, clockStops: true, involved: [target, cover] };
     }
 
@@ -1208,16 +1352,17 @@ class GameSim {
     if (this.rng() < 0.02 + (yacSkill - tackleSpeed) * 0.0015) yac += 10 + Math.round(this.rng() * 35);
     const room = 100 - this.ydl;
     const yards = Math.min(room, air + yac);
-    this.add(o, qb, "cmp");
-    this.add(o, qb, "passYds", yards);
-    this.add(o, qb, "passLong", yards);
-    this.add(o, target, "rec");
-    this.add(o, target, "recYds", yards);
-    this.add(o, target, "recLong", yards);
-    o.box.cmp++;
-    o.box.passYds += yards;
-    o.box.yards += yards;
+    // A catch can be ruled incomplete on the field; the booth or a challenge can fix it.
+    const ruling = this.refs.rule("catch", this.callContext(o, d, Math.max(5, yards)));
+    if (!ruling.stands) {
+      this.rec.say(`${this.name(qb)} ${dir} to ${this.name(target)}, ruled incomplete.${ruling.note}`, ruling.note ? F.review : 0);
+      return { yards: 0, ended: false, playTime: 6, clockStops: true, involved: [target, cover] };
+    }
+    if (ruling.note) this.rec.flags |= F.review;
+    this.completionStats(o, qb, target, yards);
+    const catchText = `${this.name(qb)} ${dir} to ${this.name(target)} for ${yardsText(yards)}`;
     if (yards >= room) {
+      this.rec.say(`${catchText}.${ruling.note}`, F.big);
       this.add(o, qb, "passTd");
       this.add(o, target, "recTd");
       this.tick(7);
@@ -1232,15 +1377,51 @@ class GameSim {
         this.add(o, target, "fumLost");
         if (cover) this.add(d, cover, "fr");
         this.tackle(d, [cover], 0);
+        this.rec.say(`${catchText}. ${this.name(target)} FUMBLES${cover ? `, forced and recovered by ${this.name(cover)}` : ""}.${ruling.note}`, F.turnover);
+        this.rec.why = "Fumble";
         this.tick(7);
         this.turnover(100 - (this.ydl + yards));
         return { yards, ended: true, playTime: 0, clockStops: true, involved: [target, cover] };
       }
     }
     const tacklers = [cover, ...def.lb, ...def.s, ...def.cb.filter((id) => id !== cover)].filter(Boolean) as string[];
-    this.tackle(d, tacklers, yards < 0 ? yards : 1, tacklers.map((id, i) => (i === 0 ? 2.5 : PLAYER_BY_ID[id].position === "CB" ? 0.5 : 1)));
+    const tk = this.tackle(d, tacklers, yards < 0 ? yards : 1, tacklers.map((id, i) => (i === 0 ? 2.5 : PLAYER_BY_ID[id].position === "CB" ? 0.5 : 1)));
+    this.rec.say(`${catchText}${tk ? ` (${this.name(tk)})` : ""}.${ruling.note}`, yards >= 20 ? F.big : 0);
     const oob = this.rng() < (hurry ? 0.4 : 0.18);
     return { yards, ended: false, playTime: 7, clockStops: this.clockStopsOnOutOfBounds(oob), involved: [target, cover] };
+  }
+
+  completionStats(o: Team, qb: string, target: string, yards: number): void {
+    this.add(o, qb, "cmp");
+    this.add(o, qb, "passYds", yards);
+    this.add(o, qb, "passLong", yards);
+    this.add(o, target, "rec");
+    this.add(o, target, "recYds", yards);
+    this.add(o, target, "recLong", yards);
+    o.box.cmp++;
+    o.box.passYds += yards;
+    o.box.yards += yards;
+  }
+
+  /**
+   * Who blocks whom in pass protection: edges against the tackles, interior rushers against the
+   * guards and center. Returns each rusher's blocker and how far the worst pairing is from the average.
+   */
+  rushPairs(lu: Lineup, rushers: string[]): { blocker: Record<string, string>; worst: number } {
+    const blocker: Record<string, string> = {};
+    const diffs: number[] = [];
+    let edges = 0;
+    let inside = 0;
+    for (const id of rushers) {
+      const edge = PLAYER_BY_ID[id].position === "EDGE";
+      const b = edge ? lu.ol[edges++] ?? lu.ol[0] : lu.ol[2 + inside++] ?? lu.ol[4] ?? lu.ol[0];
+      if (!b) continue;
+      blocker[id] = b;
+      diffs.push(this.tr(id, "passRush") - (0.75 * this.tr(b, "passBlock") + 0.25 * this.tr(b, "agility")));
+    }
+    if (!diffs.length) return { blocker, worst: MISMATCH_TYPICAL };
+    const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+    return { blocker, worst: Math.max(...diffs) - mean };
   }
 
   pickDepth(o: Team): Depth {
@@ -1306,8 +1487,10 @@ class GameSim {
     return def.lb[Math.floor(this.rng() * def.lb.length)] ?? def.s[1] ?? def.s[0];
   }
 
-  sack(o: Team, d: Team, qb: string, rushers: string[]): PlayOutcome {
-    const weights = rushers.map((id) => Math.max(0.3, 1 + (this.tr(id, "passRush") - 80) * 0.03) * (PLAYER_BY_ID[id].position === "EDGE" ? 1.25 : 1));
+  sack(o: Team, d: Team, qb: string, rushers: string[], blockers: Record<string, string> = {}): PlayOutcome {
+    // The rusher who wins his one-on-one most often gets there.
+    const edgeOver = (id: string) => (blockers[id] ? (this.tr(id, "passRush") - this.tr(blockers[id], "passBlock")) * 0.02 : 0);
+    const weights = rushers.map((id) => Math.max(0.3, 1 + (this.tr(id, "passRush") - 80) * 0.03 + edgeOver(id)) * (PLAYER_BY_ID[id].position === "EDGE" ? 1.25 : 1));
     const pick = () => {
       const total = weights.reduce((a, b) => a + b, 0);
       let r = this.rng() * total;
@@ -1319,9 +1502,11 @@ class GameSim {
     };
     const a = pick();
     const loss = Math.min(this.ydl, 4 + Math.round(this.rng() * 6));
+    let sackText = `${this.name(qb)} sacked by ${this.name(a)}`;
     if (this.rng() < 0.12) {
       let b = pick();
       if (b === a) b = rushers[(rushers.indexOf(a) + 1) % rushers.length];
+      sackText += ` and ${this.name(b)}`;
       this.add(d, a, "sacks", 0.5);
       this.add(d, b, "sacks", 0.5);
       this.add(d, a, "tklAst");
@@ -1337,13 +1522,18 @@ class GameSim {
     o.box.sacked++;
     o.box.sackYds += loss;
     o.box.yards -= loss;
+    sackText += ` for ${yardsText(-loss)}${blockers[a] ? `, beating ${PLAYER_BY_ID[blockers[a]].position} ${this.name(blockers[a])}` : ""}.`;
+    this.rec.say(sackText);
     // Strip sacks.
     if (this.rng() < 0.12) {
       this.add(o, qb, "fum");
       this.add(d, a, "ff");
       if (this.rng() < 0.55) {
         this.add(o, qb, "fumLost");
-        this.add(d, rushers[Math.floor(this.rng() * rushers.length)], "fr");
+        const recovered = rushers[Math.floor(this.rng() * rushers.length)];
+        this.add(d, recovered, "fr");
+        this.rec.more(` ${this.name(qb)} FUMBLES; ${this.name(recovered)} recovers${this.ydl - loss <= 0 ? " in the end zone" : ""}.`, F.turnover | F.big);
+        this.rec.why = "Fumble";
         this.tick(6);
         if (this.ydl - loss <= 0) {
           this.possessionEnded(o.side);
@@ -1367,6 +1557,7 @@ class GameSim {
     if (this.rng() < 0.08 + (mob - 80) * 0.004) yards += 10 + Math.round(this.rng() * 25);
     const room = 100 - this.ydl;
     yards = Math.min(yards, room);
+    this.rec.say(`${this.name(qb)} scrambles for ${yardsText(yards)}.`, yards >= 20 ? F.big : 0);
     this.add(o, qb, "car");
     this.add(o, qb, "rushYds", yards);
     this.add(o, qb, "rushLong", yards);

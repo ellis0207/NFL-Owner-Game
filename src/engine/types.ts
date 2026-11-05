@@ -603,6 +603,55 @@ export interface ScoringPlay {
   home: number;
 }
 
+/**
+ * One snap or kick in a game's play-by-play:
+ * [quarter (5+ is overtime), seconds left, offense (0 away, 1 home), down (0 for a kick), distance,
+ *  yards from the offense's own goal line, drive number, description, flags (PLAY_FLAGS), away score, home score, formation and look].
+ */
+export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string];
+
+/** One drive: [offense (0 away, 1 home), quarter, clock, start yard line, plays, yards, seconds of possession, how it ended]. */
+export type DriveRow = [0 | 1, number, number, number, number, number, number, string];
+
+export interface GameLog {
+  date: string;
+  plays: PlayRow[];
+  drives: DriveRow[];
+}
+
+/** A call the officials got wrong, or one a team disputed. Whether it was wrong is known only to the league office. */
+export interface DisputedCall {
+  q: number;
+  clock: number;
+  /** The team the call went against. */
+  team: string;
+  text: string;
+  /** Hidden: the league's later finding. */
+  wrong: boolean;
+}
+
+export interface GameOpsCheck {
+  gameId: string;
+  date: string;
+  /** Each area of the game-day check: area, "ready" / "minor" / "problem", and the staff's note. */
+  areas: [string, "ready" | "minor" | "problem", string][];
+  incidents: string[];
+  cost: number;
+}
+
+export interface OfficiatingInquiry {
+  gameId: string;
+  call: number;
+  asked: string;
+  answer?: string;
+  answered?: string;
+}
+
+export interface GameOpsState {
+  checks: GameOpsCheck[];
+  inquiries: OfficiatingInquiry[];
+}
+
 export interface BoxScore {
   quarters: { away: number[]; home: number[] };
   team: { away: TeamBox; home: TeamBox };
@@ -611,6 +660,8 @@ export interface BoxScore {
   scoring: ScoringPlay[];
   inactives: { away: string[]; home: string[] };
   injuries: { player: string; team: string; type: string }[];
+  /** Calls disputed or missed during the game (engine/officials.ts). */
+  calls?: DisputedCall[];
   /** Conditions at an open-air game (see engine/gameday.ts). */
   weather?: { indoor: boolean; temp: number; wind: number; precip: "none" | "rain" | "snow" };
 }
@@ -1454,6 +1505,10 @@ export interface GameState {
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
   office?: OfficeState;
   culture?: CultureState;
+  /** Play-by-play and drive charts by game id, kept through the week after each game (playlog.ts). */
+  pbp?: Record<string, GameLog>;
+  /** Game-day operations checks at the owner's home games, and officiating questions put to the league (gameops.ts). */
+  gameOps?: GameOpsState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];

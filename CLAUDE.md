@@ -40,7 +40,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   `carouselDaily`, `positionCoachesDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
   `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `hostingDaily`, `disciplineDaily`, `draftDaily`, `visitsDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `commerceDaily`,
-  `projectsDaily`, `leasesDaily`, `debtDaily`, `booksDaily`, `officeDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
+  `projectsDaily`, `leasesDaily`, `debtDaily`, `booksDaily`, `officeDaily`, `gameOpsDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
   the league over. A new system adds an `xxxDaily(state)` and one line here.
 - **Season context** lives in module globals in `league.ts`: `RULES`
   (`RULES.keyDates`, often aliased `K` or `KEY`), `SCHEDULE`, `GAMES_BY_DATE`.
@@ -61,7 +61,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 |---|---|---|
 | League data, dates, rng | `league.ts`, `dates.ts`, `rng.ts`, `types.ts` | |
 | Calendar and the day loop | `calendar.ts` (key dates, schedules for any season), `season.ts` (new game, events, `advanceDay`), `seasons.ts` (rollover, history) | `events.test.ts`, `season.test.ts`, `seasons-report.ts` |
-| Game sim | `sim.ts` (play by play), `gameday.ts` (weather, rest and travel), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts` (slow returns, lasting damage), `development.ts`, `careers.ts` (offseason growth, retirement) | `season.test.ts`, `gameday.test.ts`, `calibrate.ts` |
+| Game sim | `sim.ts` (play by play), `playlog.ts` (the feed: `Recorder`, drive chart, kept `KEEP_DAYS` in `state.pbp`; words use their own rng so results don't move), `officials.ts` (wrong rulings, challenges, booth review, disputed calls in `box.calls`; own rng), `gameops.ts` (home-game operations check, league inquiries, prunes play logs; `gameOpsDaily` after `officeDaily`), `gameday.ts` (weather, rest and travel), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts` (slow returns, lasting damage), `development.ts`, `careers.ts` (offseason growth, retirement) | `season.test.ts`, `gameday.test.ts`, `playlog.test.ts`, `calibrate.ts` |
 | Cap and contracts | `contracts.ts` (deal model, CBA rules), `cap.ts` (cap hits, dead money, rollover), `incentives.ts` (LTBE/NLTBE, settled after the Super Bowl), `capmoves.ts` (June 1, pay cuts), `capplan.ts` (`lockedSpace` for future-year gates, the league-year deadline), `market.ts` (prices, tags, tenders), `finance.ts` (cash) | `contracts.test.ts`, `incentives.test.ts`, `capdeadline.test.ts` |
 | Negotiation | `agents.ts`, `negotiation.ts`, `grades.ts`, `redo.ts` (early redo asks; camp hold-ins via `startHoldouts`) | `negotiation.test.ts`, `redo.test.ts` |
 | Rosters | `roster.ts` (cuts, 53, practice squad, IR returns, PUP/NFI), `waivers.ts` | `freeagency.test.ts` |

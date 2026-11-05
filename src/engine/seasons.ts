@@ -222,6 +222,7 @@ export function startNewSeason(state: GameState): void {
   // A clean slate for the new season.
   state.results = {};
   state.box = {};
+  state.pbp = {};
   state.playoffTeams = {};
   delete state.seeds;
   delete state.champion;

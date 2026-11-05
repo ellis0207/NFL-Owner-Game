@@ -49,6 +49,16 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Games and the play-by-play",
+    body: [
+      "Every game in the league has a play-by-play and a drive chart. Open any score and pick Play by play or Drives. Full plays are kept through the week after a game; after that a game keeps its box score and scoring plays.",
+      "When you play your own game from the Today page, it comes in a drive at a time. You can step ahead a drive or a quarter, or skip to the end. Settings turns this off.",
+      "Officials miss calls. Coaches can challenge (two a game, a third after winning both, and a failed one costs a timeout), and the replay booth reviews the last two minutes of each half and overtime. Replay only reverses a call when the video is clear.",
+      "After a game you can ask the league office about a call that went against you, from the Game day tab. It answers in a few days. The result never changes.",
+      "Your stadium operations staff checks the field, game balls, officials' rooms, chain crews, credentials, coach radios, broadcast setup and security before every home game. A better operations director and a bigger game-day budget mean fewer problems.",
+    ],
+  },
+  {
     title: "The league",
     body: [
       "Owners vote on rule changes at the March meeting; most need 24 of 32 votes. Relationships with other owners help with votes, trades and hosting bids.",

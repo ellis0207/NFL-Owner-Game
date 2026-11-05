@@ -6,13 +6,10 @@ import { gameTypeLabel } from "../engine/season";
 import { stat, type StatKey } from "../engine/stats";
 import type { GameState, TeamBox } from "../engine/types";
 import { useUi } from "./ui";
+import { DriveChart, FollowGame, GameDay, PlayByPlay } from "./GameFeed";
+import { clockText } from "../engine/playlog";
 
 type Side = "away" | "home";
-
-function clockText(q: number, sec: number): string {
-  const quarter = q <= 4 ? `Q${q}` : q === 5 ? "OT" : `${q - 4}OT`;
-  return `${quarter} ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
-}
 
 function top(sec: number): string {
   return `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
@@ -58,8 +55,13 @@ const SECTIONS: { title: string; has: StatKey; sort: StatKey; cols: Col[] }[] = 
     { label: "KR", value: g("kr") }, { label: "Yds", value: g("krYds") }, { label: "PR", value: g("pr") }, { label: "Yds", value: g("prYds") }, { label: "TD", value: (v) => stat(v, "krTd") + stat(v, "prTd") }] },
 ];
 
-export function BoxScore({ game, id, onClose }: { game: GameState; id: string; onClose: () => void }) {
+type View = "box" | "plays" | "drives" | "gameday";
+
+export function BoxScore({ game, id, onClose, follow, changed }: { game: GameState; id: string; onClose: () => void; follow?: boolean; changed: () => void }) {
   const ui = useUi();
+  const log = game.pbp?.[id];
+  const [following, setFollowing] = useState(!!follow && !!log);
+  const [view, setView] = useState<View>("box");
   const sched = GAME_BY_ID[id];
   const r = game.results[id];
   const box = game.box[id];
@@ -76,20 +78,30 @@ export function BoxScore({ game, id, onClose }: { game: GameState; id: string; o
   const periods = box ? Math.max(box.quarters.away.length, box.quarters.home.length) : 0;
 
   return (
-    <div className="drawer-backdrop" onClick={onClose}>
+    <div className={`drawer-backdrop${following ? " solid" : ""}`} onClick={onClose}>
       <aside className="drawer wide" role="dialog" aria-label="Box score" onClick={(e) => e.stopPropagation()}>
         <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
           <span className="label">{sched.label ?? gameTypeLabel(sched)} · {longDate(sched.date)} · {kickoff(sched.timeET)}</span>
           <button className="btn small" onClick={onClose}>Close</button>
         </div>
+        {following && log && r && <FollowGame r={r} log={log} onDone={() => setFollowing(false)} />}
+        {!following && <>
         <header className="box-head">
           <div className={r.awayScore > r.homeScore ? "win" : ""}><span className="label">{teams.away.city}</span><strong>{teams.away.name}</strong><span className="pts">{r.awayScore}</span></div>
           <span className="muted">{r.overtime ? "Final/OT" : "Final"}</span>
           <div className={r.homeScore > r.awayScore ? "win" : ""}><span className="label">{teams.home.city}</span><strong>{teams.home.name}</strong><span className="pts">{r.homeScore}</span></div>
         </header>
         <span className="muted">{sched.stadium ?? teams.home.stadium}{sched.city ? `, ${sched.city}` : ""}{box?.weather ? ` · ${weatherLine(box.weather)}` : ""}</span>
-        {!box && <p className="muted">This game was played before box scores were kept in this save.</p>}
-        {box && (
+        <div className="tabs" role="group" aria-label="View">
+          {([["box", "Box score"], ["plays", "Play by play"], ["drives", "Drives"], ...(r.home === game.userTeam || r.away === game.userTeam ? [["gameday", "Game day"]] : [])] as [View, string][])
+            .map(([k, label]) => <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>)}
+        </div>
+        {(view === "plays" || view === "drives") && !log && <p className="muted">Full play-by-play is kept through the week after a game. This one keeps its box score and scoring plays.</p>}
+        {view === "plays" && log && <PlayByPlay r={r} log={log} />}
+        {view === "drives" && log && <DriveChart r={r} log={log} />}
+        {view === "gameday" && <GameDay game={game} id={id} changed={changed} />}
+        {view === "box" && !box && <p className="muted">This game was played before box scores were kept in this save.</p>}
+        {view === "box" && box && (
           <>
             <div className="table-wrap">
               <table>
@@ -172,6 +184,7 @@ export function BoxScore({ game, id, onClose }: { game: GameState; id: string; o
             </section>
           </>
         )}
+        </>}
       </aside>
     </div>
   );
