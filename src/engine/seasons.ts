@@ -94,7 +94,7 @@ const LEADER_KEYS: [string, (l: Record<string, number>) => number][] = [
 
 const ROUND_LOST: Record<string, string> = { WC: "WC", DIV: "DIV", CONF: "CONF", SB: "SB" };
 
-function seasonRecord(state: GameState): SeasonRecord {
+export function seasonRecord(state: GameState): SeasonRecord {
   const table = standings(state);
   const records: SeasonRecord["records"] = {};
   for (const t of TEAMS) {
@@ -131,12 +131,8 @@ function seasonRecord(state: GameState): SeasonRecord {
   return { season: RULES.season, champion: champion ?? state.champion, runnerUp, records, place, seeds: state.seeds, playoffs, leaders };
 }
 
-/** The regular season's stat lines and snap counts go into each player's career record. */
-function archiveStats(state: GameState): void {
-  const hist = history(state);
-  const season = RULES.season;
-  const totals = seasonTotals(state, "REG");
-  // Each team's offensive, defensive and special teams plays, for snap shares.
+/** Each team's offensive, defensive and special teams plays this regular season, for snap shares. */
+export function teamSnapTotals(state: GameState): Record<string, [number, number, number]> {
   const teamSnaps: Record<string, [number, number, number]> = {};
   for (const [gameId, box] of Object.entries(state.box)) {
     if (GAME_BY_ID[gameId]?.type !== "REG") continue;
@@ -149,6 +145,15 @@ function archiveStats(state: GameState): void {
       for (let i = 0; i < 3; i++) t[i] += max[i];
     }
   }
+  return teamSnaps;
+}
+
+/** The regular season's stat lines and snap counts go into each player's career record. */
+function archiveStats(state: GameState): void {
+  const hist = history(state);
+  const season = RULES.season;
+  const totals = seasonTotals(state, "REG");
+  const teamSnaps = teamSnapTotals(state);
   for (const [id, row] of Object.entries(totals)) {
     const { offSnaps = 0, defSnaps = 0, stSnaps = 0, g = 0, ...line } = row.line;
     const stat: SeasonStats = { season, team: row.team, g };

@@ -37,6 +37,17 @@ hold in at camp, and three made-up outlets grade every deal. The market is
 built from live contracts, so a record deal resets its position and nudges
 neighboring positions. Cash is tracked apart from the cap.
 
+Veteran deals can carry incentives: playing-time tiers, position stats
+(passing yards, sacks, interceptions and so on) and playoff bonuses. They show
+up on about a quarter of real-money free-agent deals, mostly short "prove it"
+deals and deals for older players or players coming off a lost season, worth
+roughly a quarter of the salary. Following the CBA, an incentive the player
+reached last season is likely to be earned and counts on this year's cap, and
+the rest don't. Two days after the Super Bowl the books are squared: earned
+incentives are paid, and the difference lands on next year's adjusted cap as a
+credit or a charge. The owner can offer incentives in any negotiation, and
+agents value them well below guaranteed money.
+
 The offseason follows the real calendar. The 2027 cap is set in late
 February and unused space rolls over. Each team gets one franchise or
 transition tag, restricted and exclusive-rights players need tenders, and
@@ -258,7 +269,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 
 - `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim, standings and playoffs.
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
-  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts` and `finance.ts`.
+  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
   The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.

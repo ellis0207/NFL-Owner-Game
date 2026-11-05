@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { attachIncentives, incentiveWorth } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
 import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
 import {
@@ -158,7 +159,8 @@ export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "a
   const yearAdj = -yearGap * apy * 0.035;
   const bonusAdj = (t.signingBonus / Math.max(1, t.total)) * apy * 0.04 * (1 + ah.creativity);
   const voidAdj = t.voidYears * apy * (ah.creativity > 0.7 ? 0.01 : 0);
-  return apy + gAdj + yearAdj + bonusAdj + voidAdj;
+  const incentiveAdj = (t.incentives ?? 0) * incentiveWorth(ah.guaranteeFocus, ah.creativity);
+  return apy + gAdj + yearAdj + bonusAdj + voidAdj + incentiveAdj;
 }
 
 /** Terms written the way an agent would write a counter. */
@@ -527,7 +529,10 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   // Graded against the market as it stood before this deal.
   const grades = gradeDeal(state, { player: id, team: neg.team, date: state.date, years: t.years, apy: deal.apy, guaranteed: deal.guaranteedAtSigning, total: deal.total }, start, neg.kind === "extension");
   const valueAtSigning = teamValue(state, neg.team, id, start);
+  // Incentives go only on the new years an extension adds.
+  const oldLast = neg.kind === "extension" ? lastYear(dealOf(state, id)) : null;
   state.contracts[id] = deal;
+  attachIncentives(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1), t.incentives);
   invalidateMarket(state);
   neg.status = "agreed";
   neg.rounds.push({ date: state.date, from: "agent", terms: t, note: "Agreed." });

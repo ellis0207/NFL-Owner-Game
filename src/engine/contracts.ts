@@ -161,7 +161,8 @@ export function dealYear(deal: Deal | null, year: number): DealYear | undefined 
 export function yearCapHit(y: DealYear | undefined): number {
   if (!y) return 0;
   const weeks = y.weeks ?? REG_WEEKS;
-  return Math.round((y.base * weeks) / REG_WEEKS + y.proration + y.bonus);
+  const likely = y.incentives?.reduce((s, i) => s + (i.likely ? i.amount : 0), 0) ?? 0;
+  return Math.round((y.base * weeks) / REG_WEEKS + y.proration + y.bonus + likely);
 }
 
 export function dealCapHit(deal: Deal | null, year: number): number {

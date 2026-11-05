@@ -13,6 +13,7 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { attachIncentives } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
 import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
 import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, writeDeal, writeMinimumDeal } from "./contracts";
@@ -362,7 +363,7 @@ export function signFreeAgent(state: GameState, id: string, team: string, t: Off
   if (inWindow(state.date)) {
     fa.status = "agreed";
     fa.agreed = { team, terms: { ...t }, date: state.date };
-  } else install(state, id, team, deal);
+  } else install(state, id, team, deal, t.incentives);
   endOtherTalks(state, id, team);
 }
 
@@ -381,9 +382,10 @@ function endOtherTalks(state: GameState, id: string, team: string): void {
   }
 }
 
-function install(state: GameState, id: string, team: string, deal = dealOf(state, id)!): void {
+function install(state: GameState, id: string, team: string, deal = dealOf(state, id)!, incentives?: number): void {
   const fa = market(state)[id];
   state.contracts[id] = deal;
+  attachIncentives(state, id, deal, deal.years[0]?.year ?? NEXT, incentives);
   const ps = state.players[id];
   // After the regular season, deals for next year are reserve/future contracts until the offseason starts.
   const future = !isOffseason(state.date) && deal.years[0]?.year > leagueYear(state.date);
@@ -416,7 +418,7 @@ function signAgreed(state: GameState): void {
     if (fa.status !== "agreed" || !fa.agreed) continue;
     const { team, terms } = fa.agreed;
     const deal = writeDeal({ ...terms }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(fa.player, NEXT) });
-    install(state, fa.player, team, deal);
+    install(state, fa.player, team, deal, terms.incentives);
   }
   invalidateMarket(state);
 }
@@ -910,7 +912,7 @@ export function resolveSheet(state: GameState, player: string, match: boolean): 
   const team = match ? sheet.from : sheet.to;
   const p = PLAYER_BY_ID[player];
   const deal = writeDeal({ ...sheet.terms }, { team, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: yearsExpIn(player, NEXT) });
-  install(state, player, team, deal);
+  install(state, player, team, deal, sheet.terms.incentives);
   if (!match && sheet.compensation) {
     // The signing team's own pick in this year's draft goes to the old team.
     const round = sheet.compensation === "first" ? 1 : sheet.compensation === "second" ? 2 : Number(sheet.compensation.replace("round", ""));

@@ -481,6 +481,22 @@ export interface DealYear {
   void?: boolean;
   /** Regular-season weeks of base salary owed, when signed mid-season (default all 18). */
   weeks?: number;
+  /** Playing-time, statistical and playoff incentives for this year (see engine/incentives.ts). */
+  incentives?: Incentive[];
+}
+
+export type IncentiveKind =
+  | "snaps" | "passYds" | "passTd" | "rushYds" | "rushTd" | "rec" | "recYds" | "recTd" | "sacks" | "tackles" | "defInt" | "playoffs";
+
+export interface Incentive {
+  kind: IncentiveKind;
+  /** The number to reach; a snap share for playing time and playoff incentives. */
+  threshold: number;
+  amount: number;
+  /** Likely to be earned (he reached it last season): counts on this year's cap. */
+  likely: boolean;
+  /** Set once the season is over. */
+  earned?: boolean;
 }
 
 /** A player contract. Original contracts come from the data; the game writes new ones. */
@@ -602,6 +618,8 @@ export interface OfferTerms {
   injuryGuaranteed: number;
   voidYears: number;
   shape: "flat" | "rising" | "front";
+  /** Most per year in incentives offered on top (the owner's offers); left out, the front office decides. */
+  incentives?: number;
 }
 
 export interface NegotiationRound {
@@ -1164,6 +1182,8 @@ export interface LeagueState {
   linked?: Record<string, string[]>;
   /** Pay cuts asked for this year, with the player's answer. */
   payCuts?: Record<string, PayCutAsk>;
+  /** Incentive settlements by team and the league year they adjust: credits less charges. */
+  incentiveAdj?: Record<string, Record<number, number>>;
 }
 
 export interface June1Release {
