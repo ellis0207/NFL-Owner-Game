@@ -445,8 +445,14 @@ export interface RosterMove {
   text: string;
 }
 
-/** Days out that send a player to injured reserve (a four-game minimum stay). */
-const IR_THRESHOLD_DAYS = 28;
+/**
+ * Days out that send a player to injured reserve. A player on IR misses at
+ * least four games, so teams use it for anyone expected out about that long:
+ * the roster spot is worth more than the week or so he might have come back early.
+ */
+const IR_THRESHOLD_DAYS = 24;
+/** The four-game minimum stay before a player can be designated to return, in days. */
+const IR_MIN_STAY_DAYS = 28;
 /** Return designations each team gets a season (since 2024, playoffs included). */
 export const IR_RETURNS = 8;
 
@@ -577,7 +583,7 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
     const used = (state.irReturns ??= {});
     for (const id of teamPlayerIds(state, team)) {
       const p = state.players[id];
-      if (p.status !== "ir" || p.irDone || !p.irDate || addDays(p.irDate, IR_THRESHOLD_DAYS) > state.date) continue;
+      if (p.status !== "ir" || p.irDone || !p.irDate || addDays(p.irDate, IR_MIN_STAY_DAYS) > state.date) continue;
       if (p.injury?.seasonEnding) continue;
       const name = `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`;
       if (!p.irWindow) {

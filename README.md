@@ -32,7 +32,8 @@ good. Injured reserve follows the league's rules: four games minimum, eight
 return designations a season per team, and a 21-day practice window to
 activate a player or lose him for the year. Players still hurt from before camp
 go on PUP or the non-football injury list, and coming back from those doesn't
-use a designation. Play callers,
+use a designation. Teams put anyone expected to miss about four games on IR, so
+most use several designations a season. Play callers,
 trainers and scouts all change results: injuries and recovery time, player
 development, and how accurate the written staff reports are.
 
@@ -47,7 +48,10 @@ negotiate yourself or hand talks to the GM with a mandate and follow along.
 CPU teams extend their own players by the same rules, starters hold out or
 hold in at camp, and three made-up outlets grade every deal. The market is
 built from live contracts, so a record deal resets its position and nudges
-neighboring positions. Cash is tracked apart from the cap.
+neighboring positions. Cash is tracked apart from the cap. Every team has to be under the cap at 4 PM ET on the first day of the league
+year: the GM warns us a month and a week ahead, and makes the moves himself if
+we're still over on the day. CPU front offices don't take on next year's money
+they'd have no way to clear.
 
 Veteran deals can carry incentives: playing-time tiers, position stats
 (passing yards, sacks, interceptions and so on) and playoff bonuses. They show
@@ -297,7 +301,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 
 - `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim (`gameday.ts` adds weather, rest and travel), standings and playoffs.
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
-  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl).
+  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl) and `capplan.ts` (locked-in future cap money, the league-year compliance deadline).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
   The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.

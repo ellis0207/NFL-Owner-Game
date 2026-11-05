@@ -15,6 +15,7 @@ import { ageOn } from "./dates";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { invalidateMarket, marketPrice } from "./market";
+import { capDeadlineDaily } from "./capplan";
 import { comply, isOffseason, NEXT } from "./offseason";
 import { gaussian, rngFor } from "./rng";
 import { releasePlayer } from "./roster";
@@ -219,6 +220,7 @@ export function cpuPayCut(state: GameState, team: string, id: string, worth: num
 
 export function capMovesDaily(state: GameState): void {
   june1Daily(state);
+  capDeadlineDaily(state);
   // Outside the offseason, where the front offices do their cap work, a CPU team over the cap gets back under it.
   if (state.settings.capRules === "real" && !isOffseason(state.date)) {
     // In season only a real overage forces cuts, and never below a full 53.

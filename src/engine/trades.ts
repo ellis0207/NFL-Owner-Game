@@ -23,6 +23,7 @@
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
 import { changeRapport } from "./owners";
+import { lockedSpace } from "./capplan";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
 import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
@@ -419,6 +420,12 @@ export function tradeBalance(state: GameState, eye: Eye, deal: TradeDeal, side: 
   if (without.size) outValue += (0.5 * capAfter(state, deal, side).deadNext) / DOLLARS_PER_POINT;
   let inValue = 0;
   for (const a of inc) inValue += assetValue(state, eye, team, a, { without, date });
+  // A front office won't take on next year's money it would have no way to get under.
+  if (team !== state.userTeam && state.settings.capRules === "real") {
+    const y = leagueYear(date) + 1;
+    const added = playersIn(inc).reduce((sum, id) => sum + capHit(id, y, state), 0) - playersIn(out).reduce((sum, id) => sum + capHit(id, y, state), 0);
+    if (added > 0 && added > lockedSpace(state, team, y)) return { gain: -1000, inValue, outValue };
+  }
   return { gain: inValue - outValue, inValue, outValue };
 }
 

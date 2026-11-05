@@ -18,25 +18,28 @@ interface InjuryType {
 // Shares are loosely based on NFL injury report frequency.
 const TYPES: InjuryType[] = [
   { type: "Ankle sprain", days: [3, 14], weight: 13, practice: true },
-  { type: "High ankle sprain", days: [14, 42], weight: 5 },
-  { type: "Hamstring strain", days: [7, 28], weight: 12, practice: true },
+  { type: "High ankle sprain", days: [18, 56], weight: 5 },
+  { type: "Hamstring strain", days: [7, 42], weight: 12, practice: true },
   { type: "Concussion", days: [5, 16], weight: 8 },
-  { type: "Knee sprain (MCL)", days: [14, 42], weight: 6 },
+  { type: "Knee sprain (MCL)", days: [14, 49], weight: 6 },
   { type: "Torn ACL", days: [270, 330], weight: 2.2 },
   { type: "Torn Achilles", days: [280, 340], weight: 1.1, practice: true },
   { type: "Shoulder sprain", days: [5, 21], weight: 6 },
   { type: "Groin strain", days: [5, 21], weight: 5, practice: true },
-  { type: "Calf strain", days: [7, 21], weight: 4, practice: true },
-  { type: "Broken hand", days: [21, 42], weight: 1.8 },
+  { type: "Calf strain", days: [7, 35], weight: 4, practice: true },
+  { type: "Broken hand", days: [21, 45], weight: 1.8 },
   { type: "Broken forearm", days: [42, 77], weight: 0.6 },
   { type: "Rib injury", days: [7, 21], weight: 3 },
   { type: "Back spasms", days: [2, 10], weight: 3, practice: true },
   { type: "Knee bruise", days: [2, 10], weight: 6 },
-  { type: "Foot sprain", days: [7, 28], weight: 3, practice: true },
+  { type: "Foot sprain", days: [7, 35], weight: 3, practice: true },
   { type: "Lisfranc injury", days: [56, 98], weight: 0.7 },
-  { type: "Turf toe", days: [14, 42], weight: 1.8 },
+  { type: "Turf toe", days: [14, 56], weight: 1.8 },
   { type: "Torn pectoral", days: [120, 170], weight: 0.7 },
-  { type: "Torn meniscus", days: [21, 49], weight: 1.3 },
+  { type: "Torn meniscus", days: [21, 56], weight: 1.3 },
+  { type: "Broken ankle", days: [56, 112], weight: 0.8 },
+  { type: "Shoulder separation", days: [14, 42], weight: 2.5 },
+  { type: "Torn labrum", days: [150, 220], weight: 0.4 },
   { type: "Neck stinger", days: [2, 10], weight: 2 },
   { type: "Quad strain", days: [5, 21], weight: 3, practice: true },
   { type: "Elbow sprain", days: [7, 21], weight: 1.3 },
@@ -96,7 +99,7 @@ export function injure(state: GameState, id: string, team: string, rng: Rng, pra
   const t = pick(rng, practice ? PRACTICE_TYPES : TYPES);
   const recovery = staffEffects(team).injuryRecovery;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
-  const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.4);
+  const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.15);
   const days = Math.max(1, Math.round(base * (1.22 - recovery / 300) * (age >= 30 ? 1.1 : 1) * medical(state, team).days));
   const returnDate = addDays(state.date, days);
   const injury: Injury = {

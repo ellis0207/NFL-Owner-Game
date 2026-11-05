@@ -3,6 +3,7 @@
 // clear cap room, and the new league year turns expiring contracts into free
 // agents. Free agency itself is in freeagency.ts.
 import { cpuPayCut, june1Left, june1Preview, releaseJune1 } from "./capmoves";
+import { lockedSpace } from "./capplan";
 import { inAgreedTrade } from "./trades";
 import { agentFor, changeMorale, changeTrust, priorities } from "./agents";
 import { addDeadMoney, capHit, capSummary, invalidateRosters, releaseCost, teamPlayerIds, yearsExpIn } from "./cap";
@@ -49,7 +50,7 @@ export function off(state: GameState): OffseasonState {
   return (state.offseason ??= { tags: {}, tenders: {}, options: {}, sheets: [], picksOwed: [] });
 }
 
-function gmOf(team: string): string {
+export function gmOf(team: string): string {
   const gm = teamStaff(team).GM;
   return gm ? `${gm.name}, general manager` : "General Manager";
 }
@@ -412,7 +413,8 @@ function cpuOptions(state: GameState): void {
       if (!info.eligible || off(state).options[id]) continue;
       const v = teamValue(state, team, id, info.year);
       // The option is guaranteed once picked up: it has to fit that year's books unless the player is a star.
-      const fits = futureRoom(state, team, info.year) - info.amount > 0 || v >= info.amount * 1.4;
+      // The option is fully guaranteed: it can't be cut or restructured away if that year is already locked up.
+      const fits = (futureRoom(state, team, info.year) - info.amount > 0 || v >= info.amount * 1.4) && lockedSpace(state, team, info.year) > info.amount;
       decideOption(state, team, id, v >= info.amount * 0.9 && fits);
     }
   }
@@ -430,6 +432,12 @@ function cpuCapWork(state: GameState): void {
     if (state.date > KEY.newLeagueYear) complyAll(state);
     return;
   }
+  cpuCapWindow(state);
+  // 4 PM on the first day of the league year: every team has to be under.
+  if (state.date >= KEY.newLeagueYear) complyAll(state);
+}
+
+function cpuCapWindow(state: GameState): void {
   for (const team of cpuTeams(state)) {
     const rng = rngFor(state.seed, `capwork:${team}:${state.date}`);
     const deadline = state.date === addDays(KEY.newLeagueYear, -1) || state.date === KEY.newLeagueYear;
@@ -447,6 +455,8 @@ function cpuCapWork(state: GameState): void {
         // When next year is already full, spreading the money thinner (with void years) is the only way to restructure.
         const tight = futureRoom(state, team, NEXT + 1) < 0;
         if (tight && yearsLeft < 1) continue;
+        // Never push money into a year that already can't be cleared.
+        if (lockedSpace(state, team, NEXT + 1) < capHit(b.id, NEXT, state) * 0.3) continue;
         space += restructure(state, b.id, (tight || b.age <= 28 && rng() < 0.3) && yearsLeft >= 1 ? 2 : 0);
       }
     }
@@ -531,10 +541,33 @@ export function comply(state: GameState, team: string, floor = 60): void {
     .map((id) => ({ id, saved: releaseCost(id, state).savingsThisYear, v: teamValue(state, team, id, year) }))
     .filter((x) => x.saved >= Math.max(1_000_000, Math.min(short, 12_000_000) / 3) && !inAgreedTrade(state, x.id))
     .sort((a, b) => a.v / a.saved - b.v / b.saved);
+  const cut = (id: string) => {
+    const dead = releaseOffseason(state, id);
+    news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
+  };
   for (const c of cands.slice(0, 8)) {
-    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= floor) return;
-    const dead = releaseOffseason(state, c.id);
-    news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[c.id].position} ${PLAYER_BY_ID[c.id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
+    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= floor) break;
+    cut(c.id);
+  }
+  // Still over once the league year has opened: the league won't wait. Anyone whose release saves money
+  // can go, down to a bare offseason roster that gets filled back in at the minimum later.
+  if (!isOffseason(state.date) || state.date < KEY.newLeagueYear || capSummary(state, team).space >= 0) return;
+  // First every deal that can still be restructured, whoever it belongs to.
+  for (const id of teamPlayerIds(state, team)) {
+    if (capSummary(state, team).space >= 0) return;
+    const yearsLeft = (lastYear(dealOf(state, id)!) ?? 0) - year;
+    if (state.players[id].status !== "ps" && !inAgreedTrade(state, id)) restructure(state, id, yearsLeft >= 1 ? 2 : 0);
+  }
+  const rest = teamPlayerIds(state, team)
+    .map((id) => ({ id, saved: releaseCost(id, state).savingsThisYear, v: teamValue(state, team, id, year) }))
+    .filter((x) => x.saved > 0 && !inAgreedTrade(state, x.id))
+    .sort((a, b) => a.v / a.saved - b.v / b.saved);
+  for (const c of rest) {
+    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= Math.min(floor, 46)) break;
+    cut(c.id);
+  }
+  if (capSummary(state, team).space < 0 && team !== state.userTeam && state.date === KEY.newLeagueYear) {
+    news(state, `The ${teamLabel(team)} are still over the cap after the league year opened; the league won't approve a signing until they get under`);
   }
 }
 

@@ -1388,7 +1388,7 @@ class GameSim {
   // ---- Injuries ----
 
   maybeInjure(o: Team, d: Team, involved: (string | undefined)[], onField: (string | undefined)[]): void {
-    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.024 : 0.025)) return;
+    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.029 : 0.03)) return;
     const pool = this.rng() < 0.6 ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
     if (!pool.length) return;
     const id = pool[Math.floor(this.rng() * pool.length)];

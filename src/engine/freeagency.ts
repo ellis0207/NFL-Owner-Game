@@ -24,6 +24,7 @@ import { money, news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { capScale, invalidateMarket, marketCeiling, marketPrice, marketView, teamValue } from "./market";
 import { offerValue, STARTERS, teamQuality } from "./negotiation";
+import { lockedSpace } from "./capplan";
 import { faClass, futureRoom, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
 import { claimView, depthChart, logMove, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
@@ -687,7 +688,13 @@ function cpuBids(state: GameState, day: number): void {
     if (budget < least) continue;
     // Deals rise, so the year after has to fit as well.
     let later = futureRoom(state, team, NEXT + 1) - committedLater(state, team);
-    for (const fa of open) for (const o of fa.offers) if (o.team === team) later -= laterHit(state, fa.player, team, o.terms);
+    // And money already locked into that year (bonus proration, guarantees) has to leave a way to get under it.
+    let locked = lockedSpace(state, team, NEXT + 1) - committedLater(state, team);
+    for (const fa of open) for (const o of fa.offers) if (o.team === team) {
+      const h = laterHit(state, fa.player, team, o.terms);
+      later -= h;
+      locked -= h;
+    }
     const need = needs(state, team);
     const eye = staffEffects(team).gmEval;
     const aggr = Math.min(1, Math.max(0, budget / (40 * least))) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5;
@@ -743,7 +750,9 @@ function cpuBids(state: GameState, day: number): void {
       const hit2 = laterHit(state, fa.player, team, terms);
       const had2 = mine ? laterHit(state, fa.player, team, mine.terms) : 0;
       if (hit2 - had2 > later && hit2 > least) continue;
+      if (hit2 - had2 > locked) continue;
       later -= hit2 - had2;
+      locked -= hit2 - had2;
       fa.offers = fa.offers.filter((o) => o.team !== team);
       fa.offers.push({ team, terms, apy: terms.total / terms.years, hit, date: state.date });
       budget -= hit - (mine?.hit ?? 0);
