@@ -10,6 +10,7 @@ import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } f
 import {
   dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, minimumSalary, prorateFirstYear, salaryCap, writeDeal, writeExtension, type Terms,
 } from "./contracts";
+import { lockedSpace } from "./capplan";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
@@ -699,9 +700,11 @@ function cpuExtensions(state: GameState): void {
     const start = year + 1;
     // Front offices keep an eye on next year's cap: an extension has to fit, with some help from restructures.
     const room = state.settings.capRules === "real" ? capSummary(state, t.id, start).space + 0.04 * salaryCap(state, start) : Infinity;
+    // Locked-in money (proration and guarantees) can't be restructured away: the deal has to leave a way under in both years.
+    const locked = Math.min(lockedSpace(state, t.id, start), lockedSpace(state, t.id, start + 1));
     const scored = candidates.filter((id) => starters.has(id) || voids(id) >= 5_000_000).map((id) => ({ id, v: teamValue(state, t.id, id, start), voids: voids(id) }))
       // Big void money always gets the call: letting it land at once is worse than any extension.
-      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000) * capScale(state, start) && (x.v * 0.8 <= room + x.voids || x.voids >= 10_000_000))
+      .filter((x) => x.v >= (offseason ? 1_500_000 : 3_000_000) * capScale(state, start) && (x.v * 0.8 <= room + x.voids || x.voids >= 10_000_000) && x.v - x.voids <= Math.max(0, locked))
       .sort((a, b) => b.voids - a.voids || b.v - a.v);
     const pick = scored[0];
     if (!pick) continue;
