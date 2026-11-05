@@ -31,6 +31,7 @@ import { springDaily, springItem, springPracticeOutcome } from "./spring";
 import { proDayDaily } from "./prodays";
 import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
+import { incentivesDaily } from "./incentives";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
@@ -451,6 +452,7 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   carouselDaily(state);
   contractsDaily(state);
+  incentivesDaily(state);
   capMovesDaily(state);
   faDaily(state);
   tradesDaily(state);

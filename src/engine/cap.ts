@@ -89,10 +89,10 @@ export function rollover(state: GameState | undefined, team: string, year: numbe
   return state?.league?.rollover?.[team]?.[year] ?? 0;
 }
 
-/** A team's adjusted cap: the league cap plus rollover (2026 is the real adjusted figure). */
+/** A team's adjusted cap: the league cap plus rollover and last season's incentive settlement (2026 is the real adjusted figure). */
 export function capLimit(team: string, year = SEASON, state?: GameState): number {
   if (year === BASE_SEASON) return TEAM_BY_ID[team].cap2026.adjustedCap;
-  return salaryCap(state, year) + rollover(state, team, year);
+  return salaryCap(state, year) + rollover(state, team, year) + (state?.league?.incentiveAdj?.[team]?.[year] ?? 0);
 }
 
 /**

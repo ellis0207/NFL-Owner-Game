@@ -1,4 +1,5 @@
 import { yearCapHit } from "../engine/contracts";
+import { dealIncentiveMax, describeIncentive, incentiveMax, likelyIncentives } from "../engine/incentives";
 import type { Deal } from "../engine/types";
 import { money } from "./format";
 
@@ -14,7 +15,7 @@ export function ContractTable({ deal, from }: { deal: Deal; from?: number }) {
   return (
     <div className="table-wrap">
       <table>
-        <thead><tr><th>Year</th><th className="num">Base</th><th className="num">Bonus (prorated)</th><th className="num">Other</th><th className="num">Guaranteed</th><th className="num">Cap hit</th></tr></thead>
+        <thead><tr><th>Year</th><th className="num">Base</th><th className="num">Bonus (prorated)</th><th className="num">Other</th><th className="num">Guaranteed</th>{years.some((y) => y.incentives) && <th className="num">Incentives</th>}<th className="num">Cap hit</th></tr></thead>
         <tbody>
           {years.map((y) => (
             <tr key={y.year}>
@@ -26,11 +27,23 @@ export function ContractTable({ deal, from }: { deal: Deal; from?: number }) {
                 {y.guaranteed ? money(y.guaranteed) : ""}
                 {y.injuryGuaranteed ? <span className="muted">{y.guaranteed ? " + " : ""}{money(y.injuryGuaranteed)} injury</span> : ""}
               </td>
+              {years.some((x) => x.incentives) && (
+                <td className="num" title={y.incentives?.map((i) => `${describeIncentive(i)}: ${money(i.amount)}${i.likely ? " (likely, on the cap)" : ""}${i.earned === undefined ? "" : i.earned ? " (earned)" : " (missed)"}`).join("\n")}>
+                  {y.incentives ? <>up to {money(incentiveMax(y))}{likelyIncentives(y) ? <span className="muted"> ({money(likelyIncentives(y))} likely)</span> : ""}</> : ""}
+                </td>
+              )}
               <td className="num"><strong>{money(yearCapHit(y))}</strong></td>
             </tr>
           ))}
         </tbody>
       </table>
+      {years.some((y) => y.incentives) && (
+        <ul className="muted small">
+          {years.filter((y) => y.incentives).map((y) => (
+            <li key={y.year}>{y.year}: {y.incentives!.map((i) => `${describeIncentive(i)} ${money(i.amount)}${i.likely ? " (likely)" : ""}${i.earned === undefined ? "" : i.earned ? " ✓" : " ✗"}`).join(" · ")}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -42,5 +55,7 @@ export function dealSummary(deal: Deal): string {
   if (deal.guaranteedAtSigning) parts.push(`${money(deal.guaranteedAtSigning)} guaranteed at signing`);
   if (deal.signingBonus) parts.push(`${money(deal.signingBonus)} signing bonus`);
   if (voids) parts.push(`${voids} void year${voids === 1 ? "" : "s"}`);
+  const inc = dealIncentiveMax(deal);
+  if (inc) parts.push(`up to ${money(inc)} more in incentives`);
   return parts.join(" · ");
 }

@@ -13,6 +13,7 @@ import { advanceDay } from "../src/engine/season";
 import { compress, decompress } from "../src/save/codec";
 import type { GameState } from "../src/engine/types";
 import { reportStart } from "./fixtures";
+import { incentiveAdjustment } from "../src/engine/incentives";
 
 const seasons = Number(process.argv[2] ?? 10);
 const seed = Number(process.argv[3] ?? 7);
@@ -29,6 +30,8 @@ function capLine(label: string): void {
   const dead = TEAMS.map((t) => [t.id, deadMoney(state, t.id, yr)] as const).sort((a, b) => b[1] - a[1]);
   console.log(`  ${label} [${state.date}] cap ${M(salaryCap(state, yr))}: space min ${M(now[0][1])} median ${M(now[16][1])}, over ${now.filter((x) => x[1] < 0).length}; ` +
     `tightest ${now.slice(0, 3).map(([t, v]) => `${t} ${M(v)}`).join(", ")}`);
+  const adj = TEAMS.map((t) => incentiveAdjustment(state, t.id, yr));
+  console.log(`    incentive settlement on ${yr}: league net ${M(adj.reduce((a, b) => a + b, 0))}, worst ${M(Math.min(...adj))}, tightest team's ${M(incentiveAdjustment(state, now[0][0], yr))}`);
   console.log(`    ${yr + 1} (top 51): min ${M(next[0][1])} median ${M(next[16][1])}, below zero ${next.filter((x) => x[1] < 0).length}; ` +
     `tightest ${next.slice(0, 3).map(([t, v]) => `${t} ${M(v)}`).join(", ")}; most dead ${dead.slice(0, 3).map(([t, v]) => `${t} ${M(v)}`).join(", ")}`);
 }

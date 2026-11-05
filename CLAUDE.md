@@ -37,7 +37,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   re-render and autosave.
 - **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
   games, then the daily hooks in this order: `offseasonDaily`,
-  `carouselDaily`, `contractsDaily`, `capMovesDaily`, `faDaily`,
+  `carouselDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
   `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `commerceDaily`,
   `projectsDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
@@ -62,7 +62,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | League data, dates, rng | `league.ts`, `dates.ts`, `rng.ts`, `types.ts` | |
 | Calendar and the day loop | `calendar.ts` (key dates, schedules for any season), `season.ts` (new game, events, `advanceDay`), `seasons.ts` (rollover, history) | `events.test.ts`, `season.test.ts`, `seasons-report.ts` |
 | Game sim | `sim.ts` (play by play), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts`, `development.ts`, `careers.ts` (offseason growth, retirement) | `season.test.ts`, `calibrate.ts` |
-| Cap and contracts | `contracts.ts` (deal model, CBA rules), `cap.ts` (cap hits, dead money, rollover), `capmoves.ts` (June 1, pay cuts), `market.ts` (prices, tags, tenders), `finance.ts` (cash) | `contracts.test.ts` |
+| Cap and contracts | `contracts.ts` (deal model, CBA rules), `cap.ts` (cap hits, dead money, rollover), `incentives.ts` (LTBE/NLTBE, settled after the Super Bowl), `capmoves.ts` (June 1, pay cuts), `market.ts` (prices, tags, tenders), `finance.ts` (cash) | `contracts.test.ts`, `incentives.test.ts` |
 | Negotiation | `agents.ts`, `negotiation.ts`, `grades.ts` | `negotiation.test.ts` |
 | Rosters | `roster.ts` (cuts, 53, practice squad, IR), `waivers.ts` | `freeagency.test.ts` |
 | Offseason | `offseason.ts` (tags, tenders, options, league year, restructures) | `offseason.test.ts`, `rosterbuilding.test.ts` |

@@ -1,3 +1,4 @@
+import { incentiveAdjustment } from "../../engine/incentives";
 import { capHit, capSummary, deadMoney, practiceSquadCapHit, teamPlayerIds } from "../../engine/cap";
 import { leagueYear, salaryCap } from "../../engine/contracts";
 import { BASE_SEASON, PLAYER_BY_ID } from "../../engine/league";
@@ -25,6 +26,7 @@ export function CapScreen({ game }: { game: GameState }) {
         <div className="panel stack">
           <dl className="kv">
             <dt>{year} adjusted cap</dt><dd>{money(cap.limit)}</dd>
+            {incentiveAdjustment(game, team, year) !== 0 && <><dt>Incentive settlement</dt><dd className={incentiveAdjustment(game, team, year) < 0 ? "bad" : "good"}>{money(incentiveAdjustment(game, team, year))}</dd></>}
             <dt>Players</dt><dd>{money(cap.players)}</dd>
             <dt>Dead money</dt><dd>{money(cap.dead)}</dd>
             <dt>Cap space</dt><dd className={cap.space < 0 ? "bad" : "good"}>{money(cap.space)}</dd>
@@ -37,7 +39,7 @@ export function CapScreen({ game }: { game: GameState }) {
             {cap.rule === "top51"
               ? "Offseason accounting: only the 51 largest cap hits count until the regular season starts."
               : `Regular-season accounting: everyone on the 53 counts, and practice squad players count at ${money(practiceSquadCapHit())} each.`}
-            {" "}League cap: {money(salaryCap(game, year))}{set ? "" : " (projected; the league sets it in late February)"}. Your adjusted cap includes money carried over from {year - 1}.
+            {" "}League cap: {money(salaryCap(game, year))}{set ? "" : " (projected; the league sets it in late February)"}. Your adjusted cap includes money carried over from {year - 1}, and the credit or charge from {year - 1}'s incentives once the season is settled.
           </span>
         </div>
         <div className="panel stack">
