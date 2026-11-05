@@ -627,6 +627,8 @@ export interface InboxItem {
   read: boolean;
   /** A game this message is about, for a box score link. */
   gameId?: string;
+  /** How urgent: 3 needs a decision soon, 2 is worth reading today, 1 or absent is routine. */
+  priority?: number;
 }
 
 export interface Settings {
@@ -1441,6 +1443,10 @@ export interface GameState {
   debt?: DebtState;
   /** Who the owner is: wealth, style, goals and the scorecard of each season (ownership.ts). */
   owner?: OwnerState;
+  /** The business executives, their searches and the reporting chart (executives.ts). */
+  execs?: ExecState;
+  /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
+  office?: OfficeState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
@@ -1745,4 +1751,141 @@ export interface OwnerState {
   /** New priorities suggested by how things have gone, for the owner to take or leave. */
   suggestion?: { weights: Record<OwnerGoal, number>; why: string; date: string };
   log: { date: string; text: string }[];
+}
+
+// ---- Executives, delegation and decision memos (executives.ts, delegation.ts, memos.ts) ----
+
+export type ExecRole = "PRES" | "FOPS" | "CFO" | "CRO" | "COO" | "GC" | "SOD" | "MKT" | "CTO";
+
+/** A business or football-operations executive (made-up people). */
+export interface Exec {
+  id: string;
+  name: string;
+  born: number;
+  background: "sports" | "finance" | "consulting" | "tech" | "media" | "law" | "hospitality";
+  /** Earlier jobs, newest first, as a resume reads. */
+  resume: string[];
+  /** Years in senior jobs. */
+  years: number;
+  style: "cautious" | "steady" | "bold";
+  role: ExecRole | null;
+  /** The number two in a department, ready to step in. */
+  deputyOf?: ExecRole;
+  hired?: string;
+  contract?: { through: number; salary: number; guaranteed: boolean };
+  /** Engine only: ability, leadership and ambition, 0-100, and yearly growth. */
+  hidden: { skill: number; leadership: number; ambition: number; growth: number };
+  /** Engine only: how happy they are in the job, 0-100. */
+  satisfaction: number;
+  /** Season-by-season reviews, newest first. */
+  reviews: { year: number; score: number; text: string }[];
+}
+
+export interface ExecSearch {
+  role: ExecRole;
+  opened: string;
+  firm: string;
+  pool: string[];
+  /** What the owner learned in interviews, by candidate: the topics asked and the answers. */
+  asked: Record<string, { topic: string; answer: string }[]>;
+  /** The search firm's read on each candidate, 0-100. */
+  read: Record<string, number>;
+  /** Candidates who turned the job down. */
+  declined: string[];
+}
+
+export interface ExecState {
+  people: Record<string, Exec>;
+  chart: Partial<Record<ExecRole, string>>;
+  reportsTo: Record<ExecRole, ExecRole | "owner">;
+  searches: ExecSearch[];
+  /** Fired executives still being paid. */
+  owed: { id: string; salary: number; through: number }[];
+  /** How the job market sees the club as an employer, 0-100 (engine only; shown in words). */
+  reputation: number;
+  log: { date: string; text: string }[];
+  /** Departures and their cost: fees and severance. */
+  departures: { date: string; role: ExecRole; why: "fired" | "left" | "retired"; cost: number }[];
+  reorgs: number;
+}
+
+export type DecisionArea = "signings" | "trades" | "coaching" | "pricing" | "events" | "sponsors" | "financing";
+export type DecisionMode = "owner" | "approve" | "delegate";
+
+export interface MemoOption {
+  label: string;
+  effect: string;
+  evidence?: "confirmed" | "estimate" | "opinion";
+}
+
+/** A decision memo: the proposal, who's responsible, the case, the money and the deadline. */
+export interface Memo {
+  id: string;
+  kind: "signing" | "street" | "trade" | "pricing" | "retain" | "overrun" | "refinance" | "coachReview" | "execReview" | "general";
+  date: string;
+  area?: DecisionArea;
+  from: string;
+  title: string;
+  problem: string;
+  proposal: string;
+  amount?: number;
+  /** When the money actually goes out. */
+  cash?: { when: string; amount: number }[];
+  cap?: string;
+  comparables?: string[];
+  options: MemoOption[];
+  risks: string[];
+  budget: string;
+  /** The option the executive recommends, and the conditions on it. */
+  recommend: number;
+  conditions?: string;
+  deadline: string;
+  ifLate: string;
+  status: "open" | "researching" | "decided" | "lapsed";
+  /** Back on the desk on this date after more research. */
+  until?: string;
+  choice?: number;
+  decided?: string;
+  notes: string[];
+  payload?: Record<string, unknown>;
+}
+
+export interface OfficeTask {
+  id: string;
+  title: string;
+  kind: string;
+  who: ExecRole | "GM";
+  set: string;
+  due: string;
+  status: "open" | "done";
+  result?: string;
+}
+
+export interface OfficeState {
+  modes: Record<DecisionArea, DecisionMode>;
+  /** Deals above these need the owner's sign-off even when delegated. */
+  limits: { contractApy: number; debt: number };
+  /** How each area reports what it did: every action, a weekly summary, or only exceptions. */
+  alerts: Record<DecisionArea, "every" | "weekly" | "exceptions">;
+  /** Every consequential decision: who proposed it, who approved it and why. */
+  trail: { date: string; area: string; what: string; by: string; approved: "owner" | "delegated" | "policy"; amount?: number; why?: string }[];
+  /** Delegated actions waiting for the weekly summary. */
+  digest: { date: string; area: DecisionArea; text: string }[];
+  memos: Memo[];
+  meetings: { date: string; topics: string[]; minutes: string[]; tasks: string[] }[];
+  tasks: OfficeTask[];
+  /** Compliance and operations incidents. */
+  incidents: { date: string; kind: "compliance" | "operations" | "systems"; text: string; cost: number }[];
+  /** Month by month: fans, press, head coach and staff confidence. */
+  trends: { month: string; fans: number; media: number; coach: number; staff: number }[];
+  /** A cost-savings drive running to the end of the league year. */
+  savings?: { year: number; rate: number };
+  /** Extra stadium bookings the operations staff is chasing, until a date. */
+  bookingPush?: string;
+  /** A compliance review that lowers the chance of trouble, until a date. */
+  compliance?: string;
+  /** The league year the office last closed out (reviews run when it changes). */
+  year?: number;
+  /** Trade offers the GM has already written up. */
+  seen?: string[];
 }

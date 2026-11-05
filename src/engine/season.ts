@@ -1,6 +1,9 @@
 // The game clock: starting a new game and moving the league forward one day.
 import { approvePlan, books, booksDaily } from "./books";
 import { debt, debtDaily } from "./debt";
+import { ensureOffice } from "./delegation";
+import { ensureExecs } from "./executives";
+import { officeDaily } from "./memos";
 import { leagueYear } from "./contracts";
 import { DEFAULT_SETUP, setupOwner, type OwnerSetup } from "./ownership";
 import { bindLeases, ensureLeases, leasesDaily } from "./leases";
@@ -110,6 +113,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   business(state);
   debt(state);
   books(state);
+  ensureExecs(state);
+  ensureOffice(state);
   setupOwner(state, profile);
   approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
@@ -529,6 +534,7 @@ export function advanceDay(state: GameState): void {
   leasesDaily(state);
   debtDaily(state);
   booksDaily(state);
+  officeDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);

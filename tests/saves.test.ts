@@ -34,7 +34,20 @@ describe("saves from older versions", () => {
     expect(state.debt!.loans[0].balance).toBeLessThanOrEqual(balance);
     const back = await decompress(await compress(state));
     expect(back.owner?.purchase).toBe(state.owner?.purchase);
+    // Saves from before the front office get a staffed executive team and the old ways of deciding.
+    expect(state.execs?.chart.CFO).toBeDefined();
+    expect(state.office?.modes.trades).toBe("owner");
   }, 60_000);
+
+  it("a save with an executive search, delegated bookings and a task keeps them", async () => {
+    const state = load("pr31-2026-11-15");
+    expect(state.execs?.searches[0]?.role).toBe("FOPS");
+    expect(state.office?.modes.events).toBe("delegate");
+    for (let i = 0; i < 50; i++) advanceDay(state);
+    expect(state.office?.tasks[0].status).toBe("done");
+    const back = await decompress(await compress(state));
+    expect(back.office?.trail.length).toBe(state.office?.trail.length);
+  }, 90_000);
 
   it("a save from when the game ended with the draft moves on to the next season", () => {
     const state = load("pr12-2027-05-02");

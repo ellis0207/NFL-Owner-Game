@@ -14,6 +14,7 @@ import { BASE_SEASON, TEAM_BY_ID } from "./league";
 import { projectEffects } from "./projects";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { standings, winPct } from "./standings";
+import { execBoost } from "./executives";
 import type { GameState, LocalDeal, LocalDeals, LocalOffer } from "./types";
 
 interface Category {
@@ -97,6 +98,8 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
   }
   const mood = 0.9 + state.pressure.fans / 500;
   sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.94, 1, 1.03, 1.05][b.budget.marketing] * mood;
+  // The revenue chief's sales staff works the small partners harder (or not).
+  sponsors *= 1 + 0.04 * execBoost(state, "CRO");
   return { sponsors, media };
 }
 

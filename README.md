@@ -331,6 +331,25 @@ repayment and covenants, a market rate that moves month to month, quarterly
 covenant tests (a waiver the first time, a called loan the second),
 refinancing offers before a loan comes due, and the league's debt limit.
 
+The Front office page is the owner's executive team: a president and CEO, an
+optional president of football operations, and chiefs for finance, revenue,
+operations, legal, the stadium, marketing and technology (all made up). Their
+ability is hidden and shows in their departments' results: borrowing costs,
+sponsorship, business office costs, incidents, fan mood. You set the reporting
+chart, hire through a search firm (resumes, the firm's read, three interview
+questions, and terms that include whether they get to run their area), let
+people go at the cost of severance and your name as an employer, and promote
+deputies. For each kind of decision (signings, trades, coaching hires, ticket
+prices, stadium bookings, local sponsors, borrowing) you decide yourself, have
+the staff propose, or delegate within limits on contract size and debt, with
+reports each time, weekly or only on surprises. Proposals come as decision
+memos with the case, the money, the risks, a recommendation and a deadline;
+you can send one back for research. The executives meet monthly, take tasks
+(a savings drive, a sponsor push, a compliance review and more), are reviewed
+each league year, and get calls from other clubs. A record tab keeps every
+decision, incidents, monthly trends and whether your choices match the
+priorities you set.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -368,6 +387,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
+  Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

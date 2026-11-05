@@ -7,6 +7,8 @@ import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
 import { ensureBooks } from "../engine/books";
 import { ensureDebt } from "../engine/debt";
+import { ensureOffice } from "../engine/delegation";
+import { ensureExecs } from "../engine/executives";
 import { ensureOwner } from "../engine/ownership";
 import { BASE_SEASON, PLAYERS, RULES } from "../engine/league";
 import { applySeason, patchPlayers, startNewSeason } from "../engine/seasons";
@@ -94,6 +96,8 @@ export function migrate(state: GameState): GameState {
   // Saves from before the business side open their books today.
   ensureBusiness(state);
   // Saves from before the club's books, loans and owner profile get them today.
+  ensureExecs(state);
+  ensureOffice(state);
   ensureDebt(state);
   ensureOwner(state);
   ensureBooks(state);
