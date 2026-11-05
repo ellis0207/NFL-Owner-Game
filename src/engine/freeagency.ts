@@ -19,6 +19,7 @@ import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from
 import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, writeDeal, writeMinimumDeal } from "./contracts";
 import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
+import { addMemo, apyLimit, mode, openMemos, report } from "./delegation";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
@@ -536,7 +537,7 @@ function cpuStreetSignings(state: GameState): void {
   const board = open.map((fa) => ({ fa, v: marketView(state, fa.player) })).sort((a, b) => b.v - a.v).slice(0, 80);
   for (const t of TEAMS) {
     const team = t.id;
-    if (team === state.userTeam) continue;
+    if (team === state.userTeam && mode(state, "signings") === "owner") continue;
     const rng = rngFor(state.seed, `street:${team}:${state.date}`);
     if (rng() > 0.35) continue;
     const space = state.settings.capRules === "real" ? capSummary(state, team).space - 2_000_000 : Infinity;
@@ -559,13 +560,89 @@ function cpuStreetSignings(state: GameState): void {
       if (!best || gain > best.gain) best = { id, gain, price };
     }
     if (!best) continue;
+    if (team === state.userTeam && !gmMayStreet(state, best.id, best.price)) continue;
+    let cut: string | null = null;
     if (rosterRoom(state, team) <= 0) {
-      const cut = weakestOnRoster(state, team, PLAYER_BY_ID[best.id].position);
+      cut = weakestOnRoster(state, team, PLAYER_BY_ID[best.id].position) ?? null;
       if (!cut) continue;
       releasePlayer(state, cut);
     }
     signStreetFreeAgent(state, team, best.id);
+    if (team === state.userTeam) {
+      report(state, "signings", gmName(state), `Signed ${PLAYER_BY_ID[best.id].position} ${PLAYER_BY_ID[best.id].name}`,
+        `Off the street for ${money(best.price)}${cut ? `; released ${PLAYER_BY_ID[cut].name} to make room` : ""}.`, { amount: best.price });
+    }
   }
+}
+
+/**
+ * Before the GM's offer goes out: in approve mode, or over the owner's limit,
+ * it becomes a memo instead. One memo per player at a time, and never for a
+ * player the owner is negotiating with personally.
+ */
+function gmMayOffer(state: GameState, fa: FreeAgent, terms: OfferTerms, hit: number): boolean {
+  if (state.negotiations[fa.player]?.status === "open") return false;
+  const apy = terms.total / terms.years;
+  if (mode(state, "signings") === "delegate" && apy <= apyLimit(state)) {
+    const p = PLAYER_BY_ID[fa.player];
+    report(state, "signings", gmName(state), `Offer to ${p.position} ${p.name}`, `${terms.years} years, ${money(terms.total)} (${money(apy)} a year, ${money(terms.guaranteed)} guaranteed).`, { amount: apy });
+    return true;
+  }
+  if (openMemos(state).some((m) => m.payload?.player === fa.player)) return false;
+  const p = PLAYER_BY_ID[fa.player];
+  const rivals = fa.offers.filter((o) => o.team !== state.userTeam);
+  addMemo(state, {
+    kind: "signing", area: "signings", from: gmName(state),
+    title: `Offer ${p.position} ${p.name}`,
+    problem: `${p.name} (${p.position}, ${p.yearsExp} years in the league) is on the market and would fill a need. ${rivals.length ? `${rivals.length} other team${rivals.length > 1 ? "s have" : " has"} made offers.` : "Nobody else has made an offer yet."}`,
+    proposal: `${terms.years} years, ${money(terms.total)} total, ${money(terms.guaranteed)} guaranteed (${money(terms.signingBonus)} signing bonus)`,
+    amount: apy, cap: `${money(hit)} against next year's cap.`,
+    cash: [{ when: "at signing", amount: terms.signingBonus }],
+    comparables: rivals.length ? [`Best rival offer: about ${money(Math.max(...rivals.map((o) => o.apy)))} a year`] : undefined,
+    options: [
+      { label: "Make the offer", effect: "The GM sends these terms to the agent today.", evidence: "estimate" },
+      { label: "Pass", effect: "We let the player go elsewhere." },
+    ],
+    risks: [apy > apyLimit(state) ? `Above your ${money(apyLimit(state))} limit for the GM.` : "Other teams can still outbid us.", "Guaranteed money is owed even if he's cut."],
+    budget: `Fits the cap plan for next year by the GM's count.`,
+    recommend: 0, deadline: addDays(state.date, 2), ifLate: "The player signs elsewhere.",
+    payload: { player: fa.player, terms, hit },
+  });
+  return false;
+}
+
+function gmMayStreet(state: GameState, id: string, price: number): boolean {
+  if (mode(state, "signings") === "delegate") return true;
+  if (openMemos(state).some((m) => m.payload?.player === id)) return false;
+  const p = PLAYER_BY_ID[id];
+  addMemo(state, {
+    kind: "street", area: "signings", from: gmName(state), title: `Sign ${p.position} ${p.name} off the street`,
+    problem: `${p.name} is a free agent and would be an upgrade at ${p.position}.`, proposal: `A one-year deal at ${money(price)}`, amount: price,
+    options: [{ label: "Sign him", effect: "He joins today; the weakest player at the position is released if we need the spot." }, { label: "Pass", effect: "We keep the roster as it is." }],
+    risks: ["Another team may sign him first."], budget: "Fits under this year's cap.", recommend: 0,
+    deadline: addDays(state.date, 2), ifLate: "Another team signs him.", payload: { player: id, price },
+  });
+  return false;
+}
+
+/** The owner approved a GM's signing memo. */
+export function approveSigning(state: GameState, id: string, terms: OfferTerms | null, price?: number): string | null {
+  const fa = market(state)[id];
+  if (!fa || fa.status !== "open") return "He's already signed somewhere.";
+  const team = state.userTeam;
+  if (!terms) {
+    if (state.players[id]?.status !== "fa") return "He's no longer available.";
+    if (rosterRoom(state, team) <= 0) {
+      const cut = weakestOnRoster(state, team, PLAYER_BY_ID[id].position);
+      if (!cut) return "There's no room on the roster.";
+      releasePlayer(state, cut);
+    }
+    signStreetFreeAgent(state, team, id, price ? { salary: price } : {});
+    return null;
+  }
+  fa.offers = fa.offers.filter((o) => o.team !== team);
+  fa.offers.push({ team, terms, apy: terms.total / terms.years, hit: firstYearHit(state, id, team, terms), date: state.date });
+  return null;
 }
 
 /**
@@ -679,7 +756,8 @@ function cpuBids(state: GameState, day: number): void {
   const least = 1_500_000 * capScale(state, NEXT);
   for (const t of TEAMS) {
     const team = t.id;
-    if (team === state.userTeam) continue;
+    // The owner's GM bids too once signings are delegated or come as memos.
+    if (team === state.userTeam && mode(state, "signings") === "owner") continue;
     const rng = rngFor(state.seed, `fa-bid:${team}:${state.date}`);
     if (rng() > active) continue;
     // Offers already out count against the budget.
@@ -751,6 +829,7 @@ function cpuBids(state: GameState, day: number): void {
       const had2 = mine ? laterHit(state, fa.player, team, mine.terms) : 0;
       if (hit2 - had2 > later && hit2 > least) continue;
       if (hit2 - had2 > locked) continue;
+      if (team === state.userTeam && !gmMayOffer(state, fa, terms, hit)) continue;
       later -= hit2 - had2;
       locked -= hit2 - had2;
       fa.offers = fa.offers.filter((o) => o.team !== team);

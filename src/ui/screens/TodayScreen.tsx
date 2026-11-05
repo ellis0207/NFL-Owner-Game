@@ -14,6 +14,7 @@ import { Score } from "../Score";
 import { gamesOn, latestPoll } from "../../engine/college";
 import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
+import { briefing } from "../../engine/memos";
 import { CollegeScore } from "./CollegeScreen";
 import { openQuestions } from "../../engine/press";
 import { MEDIA_BY_ID } from "../../engine/outlets";
@@ -42,7 +43,8 @@ export function TodayScreen({ game, go, busy, play }: Props) {
   const yesterday = addDays(game.date, -1);
   const played = (GAMES_BY_DATE[yesterday] ?? []).filter((g) => game.results[g.id]);
   const todays = (GAMES_BY_DATE[game.date] ?? []).filter((g) => matchup(game, g));
-  const unread = game.inbox.filter((i) => !i.read).slice(0, 3);
+  // Urgent messages first, then the newest.
+  const unread = game.inbox.filter((i) => !i.read).sort((a, b) => (b.priority ?? 1) - (a.priority ?? 1)).slice(0, 3);
   const summer = isSummer(game);
   const lastSeason = summer ? game.history?.seasons.at(-1) : undefined;
   const next = SCHEDULE.find((g) => g.date >= game.date && !game.results[g.id] && (() => {
@@ -165,6 +167,15 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
+      {briefing(game).length > 0 && (
+        <section className="panel stack tight">
+          <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <h2>Your desk</h2>
+            <button className="btn small" onClick={() => go("Front office")}>Open front office</button>
+          </div>
+          {briefing(game).map((l, i) => <span key={i}>{l}</span>)}
+        </section>
+      )}
       <StaffToday game={game} go={go} />
       <BusinessToday game={game} go={go} />
       <MediaToday game={game} go={go} />

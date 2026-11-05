@@ -33,6 +33,7 @@ import { projectEffects } from "./projects";
 import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
+import { execBoost, execPayrollOver, signer } from "./executives";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
 const KEY = RULES.keyDates;
@@ -226,6 +227,7 @@ export function ensureBusiness(state: GameState): void {
 
 /** The made-up head of the business side. */
 export function businessChief(state: GameState): string {
+  if (state.execs) return signer(state, "PRES");
   const rng = rngFor(state.seed, `bizchief:${state.userTeam}`);
   const first = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
   const last = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
@@ -411,7 +413,7 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
   return {
     mood: ours ? 0.8 + state.pressure.fans / 250 : 1,
     win,
-    marketing: ours && b ? [0.95, 1, 1.04, 1.07][b.budget.marketing] * [0.98, 1, 1.01, 1.02][b.budget.gameday] : 1,
+    marketing: ours && b ? [0.95, 1, 1.04, 1.07][b.budget.marketing] * [0.98, 1, 1.01, 1.02][b.budget.gameday] * (1 + 0.02 * execBoost(state, "MKT")) : 1,
     price: ours && b ? b.prices.single : 1,
     concessions: ours && b ? (controlOf(STADIUM_BY_TEAM[team]).concessions ? b.prices.concessions : "standard") : team === "ATL" ? "value" : "standard",
     parking: ours && b && controlOf(STADIUM_BY_TEAM[team]).parking ? b.prices.parking : 1,
@@ -869,6 +871,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   add("staff", -m(FOOTBALL_STAFF * grow + top));
   if (pay.owed) add("staffOwed", -m(pay.owed), "Fired staff still under contract");
   add("businessOps", -m(businessOps(us) * grow * opsFactor(state)));
+  // The executives' pay above what the budget assumes, and anyone let go but still being paid.
+  const execOver = execPayrollOver(state);
+  if (execOver) add("businessOps", -m(execOver), "Executive pay above budget and severance");
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));
@@ -881,7 +886,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
 
 /** An owner who built a company runs a tighter business office. */
 function opsFactor(state: GameState): number {
-  return state.owner?.background === "industry" ? 0.95 : 1;
+  // A good operations chief runs leaner, and a savings drive trims more for the rest of the year.
+  const savings = state.office?.savings?.year === leagueYear(state.date) ? 1 - state.office.savings.rate : 1;
+  return (state.owner?.background === "industry" ? 0.95 : 1) * (1 - 0.03 * execBoost(state, "COO")) * savings;
 }
 
 /**
