@@ -304,6 +304,33 @@ season ends, the record is measured against those expectations. The
 Business page has Sponsors and Projects tabs; the Media page has the
 storylines and grades.
 
+The owner's office runs like a real club's. At the start you set up who
+you are: a background (finance, real estate, a company you built, an old
+football family or a former player, each with its own edge), how much money
+you have outside the team, how hands-on you'll be, how freely you spend, how
+many seasons you'll give a rebuild, and how much each of six goals matters
+(championships, profit, franchise value, community, reputation and a stable
+club). You can also take over a cash-strapped club or one bought with
+$450 million of floating-rate debt. Every season is scored on all six goals,
+whatever your weights, and goes on your record as owner, with your return on
+the club against the stock market. Your own money is real: capital calls come
+out of your cash (then outside holdings sold at a discount), and you pay the
+income tax on the club, less the write-off of the purchase price. Priorities
+shift with what happens, and you can set the head coach a target each season.
+
+The Business page keeps proper books: an accrual income statement (bonuses
+spread over contracts the way the cap counts them, season tickets counted as
+the games are played, buildings depreciated), a balance sheet, a cash-flow
+statement that ties to the bank, ratios against the league, and a drilldown
+from any line to its payments. Each league year opens with an approved
+budget and closes with an audit; the Plan tab shows budget against actual,
+a cash reserve policy and a 5-, 10- or 20-year forecast with a range. The
+Financing tab has the credit line, term loans from three lenders (a bank, a
+sports lender and a private credit fund) with their own rates, fees,
+repayment and covenants, a market rate that moves month to month, quarterly
+covenant tests (a waiver the first time, a called loan the second),
+refinancing offers before a loan comes due, and the league's debt limit.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -340,6 +367,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
+  The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

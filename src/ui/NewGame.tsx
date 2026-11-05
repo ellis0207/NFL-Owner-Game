@@ -6,6 +6,7 @@ import { newGame, openingGame, veteranReportDate } from "../engine/season";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../engine/stadiums";
 import type { GameState, Settings } from "../engine/types";
+import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYLES, WEALTH, type OwnerSetup, type Scenario } from "../engine/ownership";
 import { money, onColor } from "./format";
 
 export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; onBack: () => void }) {
@@ -13,6 +14,8 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const [owner, setOwner] = useState("");
   const [capRules, setCapRules] = useState<Settings["capRules"]>("real");
   const [finances, setFinances] = useState<NonNullable<Settings["finances"]>>("real");
+  const [profile, setProfile] = useState<OwnerSetup>(DEFAULT_SETUP);
+  const set = (p: Partial<OwnerSetup>) => setProfile({ ...profile, ...p });
 
   const preview = useMemo(() => {
     const s = newGame(team, "preview", { capRules }, 1);
@@ -48,6 +51,54 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
         </div>
         <div className="split">
           <div className="panel stack">
+            <h2>Who you are</h2>
+            <label className="field"><span className="label">Background</span>
+              <select value={profile.background} onChange={(e) => set({ background: e.target.value as OwnerSetup["background"] })}>
+                {Object.entries(BACKGROUNDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </label>
+            <span className="muted">{BACKGROUNDS[profile.background].what}</span>
+            <label className="field"><span className="label">Your money outside the team</span>
+              <select value={profile.wealth} onChange={(e) => set({ wealth: Number(e.target.value) as OwnerSetup["wealth"] })}>
+                {WEALTH.map((w, i) => <option key={w.label} value={i}>{w.label}: {w.what}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="label">How involved you'll be</span>
+              <select value={profile.style} onChange={(e) => set({ style: e.target.value as OwnerSetup["style"] })}>
+                {Object.entries(STYLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="label">Spending</span>
+              <select value={profile.spending} onChange={(e) => set({ spending: e.target.value as OwnerSetup["spending"] })}>
+                {Object.entries(SPENDING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="label">Patience for a rebuild</span>
+              <select value={profile.patience} onChange={(e) => set({ patience: Number(e.target.value) })}>
+                {[1, 2, 3, 4, 5, 6].map((y) => <option key={y} value={y}>{y} season{y > 1 ? "s" : ""}</option>)}
+              </select>
+            </label>
+            <label className="field"><span className="label">The club's finances when you take over</span>
+              <select value={profile.scenario} onChange={(e) => set({ scenario: e.target.value as Scenario })}>
+                {Object.entries(SCENARIOS).map(([k, v]) => <option key={k} value={k}>{v.label}: {v.what}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="panel stack">
+            <h2>What you want</h2>
+            <span className="muted">How much each matters to you, 0 to 5. Every season is scored on all six; these weights make your overall grade. You can change them later.</span>
+            {GOAL_KEYS.map((g) => (
+              <div key={g} className="btn-row" style={{ justifyContent: "space-between" }}>
+                <span title={GOALS[g].what}>{GOALS[g].label}</span>
+                <div className="tabs" role="group" aria-label={GOALS[g].label}>
+                  {[0, 1, 2, 3, 4, 5].map((v) => <button key={v} aria-pressed={profile.weights[g] === v} onClick={() => set({ weights: { ...profile.weights, [g]: v } })}>{v}</button>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="split">
+          <div className="panel stack">
             <h2>{selected.city} {selected.name}</h2>
             <dl className="kv">
               <dt>Stadium</dt><dd>{selected.stadium}</dd>
@@ -57,6 +108,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <dt>Cap space</dt><dd>{capRules === "off" ? "No cap" : money(preview.cap.space)}</dd>
               <dt>Dead money</dt><dd>{money(preview.cap.dead)}</dd>
             </dl>
+            <span className="muted">{STADIUM_BY_TEAM[team].note}</span>
           </div>
           <div className="panel stack">
             <label className="field">
@@ -71,7 +123,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="finances" type="checkbox" checked={finances === "real"} onChange={(e) => setFinances(e.target.checked ? "real" : "relaxed")} />
               <span><strong>Real owner finances</strong><br /><span className="muted">The team can run short of cash, and you cover it from your own pocket. Turn off to have the team's cash topped up automatically.</span></span>
             </label>
-            <button className="btn primary" onClick={() => onStart(newGame(team, owner.trim() || "Owner", { capRules, finances }))}>
+            <button className="btn primary" onClick={() => onStart(newGame(team, owner.trim() || "Owner", { capRules, finances }, undefined, profile))}>
               Take over the {selected.name}
             </button>
           </div>

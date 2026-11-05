@@ -30,6 +30,9 @@ import { teamStaff } from "./staff";
 import { BUDGETED_TOP_STAFF, payroll } from "./coaches";
 import { localIncome } from "./commerce";
 import { projectEffects } from "./projects";
+import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
+import { reserveTarget } from "./books";
+import { fundCapitalCall, ownerMoney } from "./ownership";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
 const KEY = RULES.keyDates;
@@ -56,9 +59,6 @@ const GATE_SHARE = 0.34 * 0.85;
 /** Share of seats that are suites and club seats. */
 const PREMIUM_SEATS = 0.12;
 const OPENING_CASH = 100 * M;
-/** How far the team can draw on its credit line before the owner has to put money in. */
-export const CREDIT_LINE = 300 * M;
-const INTEREST = 0.075;
 /** The stadium calendar runs a season at a time, to the eve of the draft. */
 let CALENDAR_END = "";
 /** The window to set next season's season-ticket and premium prices: after the regular season, before renewals. */
@@ -140,7 +140,11 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   benefits: { label: "Player benefits (league plans)", side: "out" },
   league: { label: "League dues and assessments", side: "out" },
   fines: { label: "League fines", side: "out" },
-  interest: { label: "Interest on the credit line", side: "out" },
+  interest: { label: "Interest on loans and the credit line", side: "out" },
+  loanFees: { label: "Loan, waiver and credit-line fees", side: "out" },
+  loanIn: { label: "Loan proceeds", side: "in" },
+  principal: { label: "Loan principal repaid", side: "out" },
+  professional: { label: "Auditors, lawyers and advisers", side: "out" },
   distribution: { label: "Distributions to the owner", side: "out" },
   projects: { label: "Stadium and facility projects", side: "out" },
   hosting: { label: "Hosting the Super Bowl or the draft", side: "in" },
@@ -148,7 +152,9 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
-const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects"];
+export const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects", "loanIn", "principal"];
+/** The cost of borrowing: shown below operating income. */
+const BORROWING: LedgerCat[] = ["interest", "loanFees"];
 
 // ---- Setup ----
 
@@ -246,6 +252,10 @@ export interface PnL {
   totalRevenue: number;
   totalExpenses: number;
   operating: number;
+  /** Interest and loan fees (negative), below operating income. */
+  interest: number;
+  /** Operating income less the cost of borrowing. */
+  net: number;
 }
 
 export function pnl(state: GameState, year: number): PnL {
@@ -254,14 +264,15 @@ export function pnl(state: GameState, year: number): PnL {
   const order = Object.keys(CATEGORY) as LedgerCat[];
   const rows = order.filter((c) => sums.has(c)).map((cat) => ({ cat, amount: sums.get(cat)! }));
   const revenue = rows.filter((r) => !FINANCING.includes(r.cat) && CATEGORY[r.cat].side === "in");
-  const expenses = rows.filter((r) => !FINANCING.includes(r.cat) && CATEGORY[r.cat].side === "out" && r.cat !== "gateShare");
+  const expenses = rows.filter((r) => !FINANCING.includes(r.cat) && !BORROWING.includes(r.cat) && CATEGORY[r.cat].side === "out" && r.cat !== "gateShare");
+  const interest = BORROWING.reduce((t, c) => t + (sums.get(c) ?? 0), 0);
   // Gate shared out reduces ticket revenue rather than counting as an expense.
   const shared = sums.get("gateShare") ?? 0;
   if (shared) revenue.push({ cat: "gateShare", amount: shared });
   const financing = rows.filter((r) => FINANCING.includes(r.cat));
   const totalRevenue = revenue.reduce((s, r) => s + r.amount, 0);
   const totalExpenses = -expenses.reduce((s, r) => s + r.amount, 0);
-  return { year, revenue, expenses, financing, totalRevenue, totalExpenses, operating: totalRevenue - totalExpenses };
+  return { year, revenue, expenses, financing, totalRevenue, totalExpenses, operating: totalRevenue - totalExpenses, interest, net: totalRevenue - totalExpenses + interest };
 }
 
 // ---- Public estimates for every team ----
@@ -502,6 +513,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const o = opp(g, us);
   const what = `${label(g)} vs ${teamLabel(o)}`;
   post(state, "tickets", gr.tickets, what);
+  applyDeposit(state, g, what);
   post(state, "premium", gr.premium, what);
   post(state, "concessions", gr.concessions, what);
   post(state, "parking", gr.parking, what);
@@ -552,6 +564,27 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
       b.ask = { kind: "attendance", date: state.date, context: `We sold ${Math.round(pct * 100)}% of the seats against the ${TEAM_BY_ID[o].name}.` };
     }
   }
+}
+
+/**
+ * Season-ticket deposits came in during the spring: the tickets they paid
+ * for are earned game by game, so each home game takes its share of the
+ * deposit off the cash it brings in.
+ */
+function applyDeposit(state: GameState, g: ScheduledGame, what: string): void {
+  const d = business(state).deferred;
+  if (!d || d.season !== RULES.season || d.applied >= d.amount) return;
+  const us = state.userTeam;
+  const left = SCHEDULE.filter((x) => x.home === us && !x.neutral && (x.type === "PRE" || x.type === "REG") && x.date >= g.date).length;
+  const part = left <= 1 ? d.amount - d.applied : Math.round((d.amount - d.applied) / left);
+  post(state, "deposits", -part, `${what}: paid for in the spring deposits`);
+  d.applied += part;
+}
+
+/** Deposits already collected for games not yet played: a liability until the games are played. */
+export function deferredRevenue(state: GameState): number {
+  const d = business(state).deferred;
+  return d ? d.amount - d.applied : 0;
 }
 
 // ---- The stadium calendar ----
@@ -807,37 +840,99 @@ function monthly(state: GameState): void {
   if (state.date.slice(8) !== "01" || b.months.includes(month)) return;
   b.months.push(month);
   monthItems(state);
-  const bal = cashBalance(state);
-  if (bal < 0) post(state, "interest", bal * INTEREST / 12, `${money(-bal)} drawn on the credit line`);
+  serviceDebt(state);
   creditCheck(state);
 }
 
 /** One month of the steady items: league money, sponsors, staff, departments and the building. */
 function monthItems(state: GameState, note?: string): void {
+  for (const it of monthAmounts(state, leagueYear(state.date))) post(state, it.cat, it.amount, note ?? it.note);
+}
+
+/** The steady monthly items at today's budgets and contracts, for a league year. */
+function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount: number; note?: string }[] {
   const b = business(state);
   const us = state.userTeam;
   const s = STADIUM_BY_TEAM[us];
-  const year = leagueYear(state.date);
   const grow = inflation(year, 0.05);
   const m = (x: number) => x / 12;
-  post(state, "national", m(nationalRevenue(year)), note ?? "Monthly distribution from the league");
+  const out: { cat: LedgerCat; amount: number; note?: string }[] = [];
+  const add = (cat: LedgerCat, amount: number, note?: string) => out.push({ cat, amount, note });
+  add("national", m(nationalRevenue(year)), "Monthly distribution from the league");
   const local = localIncome(state, year);
-  post(state, "sponsorship", m(local.sponsors), note);
-  post(state, "localMedia", m(local.media), note);
-  if (s.naming && s.namingShare) post(state, "naming", m(s.naming * s.namingShare), note ?? `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
+  add("sponsorship", m(local.sponsors));
+  add("localMedia", m(local.media));
+  if (s.naming && s.namingShare) add("naming", m(s.naming * s.namingShare), `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
   // The base budget covers the coaching staff at going rates; the top jobs and anyone fired but still paid are on top of it.
   const pay = payroll(state, us);
   const top = state.staff ? pay.staff - BUDGETED_TOP_STAFF * grow : 0;
-  post(state, "staff", -m(FOOTBALL_STAFF * grow + top), note);
-  if (pay.owed) post(state, "staffOwed", -m(pay.owed), note ?? "Fired staff still under contract");
-  post(state, "businessOps", -m(businessOps(us) * grow), note);
-  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) post(state, d, -m(deptCost(d, b.budget[d], year)), note ?? BUDGET_LEVELS[b.budget[d]]);
-  post(state, "benefits", -m(BENEFITS * grow), note);
-  post(state, "league", -m(LEAGUE_DUES * inflation(year)), note);
+  add("staff", -m(FOOTBALL_STAFF * grow + top));
+  if (pay.owed) add("staffOwed", -m(pay.owed), "Fired staff still under contract");
+  add("businessOps", -m(businessOps(us) * grow * opsFactor(state)));
+  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
+  add("benefits", -m(BENEFITS * grow));
+  add("league", -m(LEAGUE_DUES * inflation(year)));
   // Upkeep rises with costs; rent and debt service are fixed by their leases and loans.
-  if (s.upkeep) post(state, "stadium", -m(s.upkeep * inflation(year)), note ?? (s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs"));
-  if (s.rent >= 100) post(state, "rent", -m(s.rent), note ?? `To ${s.owner}`);
-  if (s.debt) post(state, "debt", -m(s.debt), note);
+  if (s.upkeep) add("stadium", -m(s.upkeep * inflation(year)), s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs");
+  if (s.rent >= 100) add("rent", -m(s.rent), `To ${s.owner}`);
+  if (s.debt) add("debt", -m(s.debt));
+  return out;
+}
+
+/** An owner who built a company runs a tighter business office. */
+function opsFactor(state: GameState): number {
+  return state.owner?.background === "industry" ? 0.95 : 1;
+}
+
+/**
+ * A full league year at today's prices, budgets and schedule, by ledger
+ * category: the steady monthly items, a typical gate at every home game,
+ * road trips and the stadium's usual events. Player cash and borrowing are
+ * left to the caller (books.ts), which knows the contracts and loans.
+ */
+export function yearPlan(state: GameState, year: number): Partial<Record<LedgerCat, number>> {
+  const out: Partial<Record<LedgerCat, number>> = {};
+  const add = (cat: LedgerCat, v: number) => { out[cat] = (out[cat] ?? 0) + v; };
+  for (const it of monthAmounts(state, year)) add(it.cat, it.amount * 12);
+  // Local deals that run out before then are assumed renewed at about what they pay now, plus 4% a year.
+  const now = leagueYear(state.date);
+  if (year > now) {
+    const today = localIncome(state, now);
+    const g = Math.pow(1.04, year - now);
+    out.sponsorship = Math.max(out.sponsorship ?? 0, today.sponsors * g);
+    out.localMedia = Math.max(out.localMedia ?? 0, today.media * g);
+  }
+  const us = state.userTeam;
+  const s = STADIUM_BY_TEAM[us];
+  // The schedule in place is this season's; later years look like it.
+  const games = SCHEDULE.filter((g) => (g.home === us || g.away === us) && (g.type === "PRE" || g.type === "REG"));
+  const x = inputs(state, us);
+  const grow = inflation(year) / inflation(RULES.season);
+  let home = 0;
+  let homeGames = 0;
+  for (const g of games) {
+    if (g.home === us && !g.neutral) {
+      const r = gateModel(us, g, x, business(state).holders);
+      add("tickets", r.tickets * grow);
+      add("premium", r.premium * grow);
+      add("concessions", r.concessions * grow);
+      add("parking", r.parking * grow);
+      add("merch", r.merch * grow);
+      add("gateShare", -r.tickets * GATE_SHARE * grow);
+      // The visiting-team pool comes back about even for a typical team.
+      add("gatePool", r.tickets * GATE_SHARE * grow);
+      add("gameday", -deptCost("gameday", business(state).budget.gameday, year));
+      home += r.tickets * (1 - GATE_SHARE) + r.premium + r.concessions + r.parking + r.merch;
+      homeGames++;
+    } else {
+      add("travel", -(g.neutral ? 1.4 * M : g.type === "PRE" ? 0.35 * M : 0.45 * M) * inflation(year));
+    }
+  }
+  // A home game given up to play abroad is made whole by the league.
+  const abroad = games.filter((g) => g.home === us && g.neutral && g.type === "REG").length;
+  if (abroad && homeGames) add("intl", abroad * home / homeGames * grow);
+  add("events", typicalEvents(s) * s.eventShare * inflation(year));
+  return out;
 }
 
 /**
@@ -873,14 +968,17 @@ function addMonth(d: string): string {
 
 function creditCheck(state: GameState): void {
   const bal = cashBalance(state);
-  if (bal >= -CREDIT_LINE) return;
+  const limit = creditLimit(state);
+  if (bal >= -limit) return;
   // Past the credit line, the owner covers it.
-  const need = Math.ceil((-bal - CREDIT_LINE * 0.5) / (5 * M)) * 5 * M;
+  const need = Math.ceil((-bal - limit * 0.5) / (5 * M)) * 5 * M;
   post(state, "capital", need, state.settings.finances === "relaxed" ? "Automatic top-up" : "Capital call to stay inside the credit line");
   if (state.settings.finances === "relaxed") return;
+  const how = fundCapitalCall(state, need);
+  noteCapitalCall(state);
   send(state, "business", businessChief(state), "We had to call capital",
-    `We ran through our ${money(CREDIT_LINE)} credit line, so ${money(need)} of your own money went into the team to keep the bills paid. ` +
-    "The league watches club debt closely. Big signing bonuses are paid in cash up front, so that's usually where the money goes.");
+    `We ran through our ${money(limit)} credit line, so ${money(need)} of your own money went into the team to keep the bills paid. ${how} ` +
+    "The league and our lenders watch club debt closely. Big signing bonuses are paid in cash up front, so that's usually where the money goes.");
   fans(state, -1);
   addStory(state, {
     outlet: "capspace", by: MEDIA_BY_ID.capspace.insider, kind: "owner", teams: [state.userTeam],
@@ -956,7 +1054,9 @@ function renewals(state: GameState): void {
     const idx = b.index ?? { season: 1, premium: 1 };
     const season = b.renewal.holders * mk.ticket * idx.season * (b.next?.season ?? 1.03) * games;
     const premium = mk.premium * idx.premium * (b.next?.premium ?? 1.03) * (b.renewal.rate + 0.03);
-    post(state, "deposits", (season + premium) * 0.35, `${RULES.season + 1} season tickets and suites: 35% deposits`);
+    const amount = Math.round((season + premium) * 0.35);
+    post(state, "deposits", amount, `${RULES.season + 1} season tickets and suites: 35% deposits`);
+    b.deferred = { season: RULES.season + 1, amount, applied: 0 };
   }
 }
 
@@ -1057,9 +1157,22 @@ export function setBudget(state: GameState, dept: Dept, level: number): void {
   }
 }
 
-/** The owner moves money in or out of the team. */
+/**
+ * The owner moves money in or out of the team. Money in comes from the
+ * owner's own cash; money out is held back while a lender's covenant is
+ * broken or when it would leave less than the reserve policy keeps on hand.
+ */
 export function ownerCash(state: GameState, amount: number): string | null {
-  if (amount < 0 && cashBalance(state) + amount < 0) return "The team doesn't have that much cash.";
+  const real = state.settings.finances !== "relaxed";
+  if (amount < 0) {
+    if (cashBalance(state) + amount < 0) return "The team doesn't have that much cash.";
+    if (distributionsBlocked(state)) return "A lender's covenant is broken: nothing can go out to the owner until we pass a test again.";
+    const reserve = reserveTarget(state);
+    if (cashBalance(state) + amount < reserve) return `That would leave less than the ${money(reserve)} our reserve policy keeps on hand.`;
+  } else if (real && amount > (state.owner?.liquid ?? Infinity)) {
+    return "You don't have that much cash on hand. Sell some outside holdings first (Owner page).";
+  }
   post(state, amount > 0 ? "capital" : "distribution", amount, amount > 0 ? "From the owner" : "To the owner");
+  ownerMoney(state, -amount, real);
   return null;
 }

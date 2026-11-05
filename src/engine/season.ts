@@ -1,4 +1,8 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { approvePlan, books, booksDaily } from "./books";
+import { debt, debtDaily } from "./debt";
+import { leagueYear } from "./contracts";
+import { DEFAULT_SETUP, setupOwner, type OwnerSetup } from "./ownership";
 import { bindLeases, ensureLeases, leasesDaily } from "./leases";
 import { ensurePositionCoaches, positionCoachesDaily } from "./positionCoaches";
 import { capSummary } from "./cap";
@@ -62,7 +66,7 @@ export function veteranReportDate(team: string): string {
   return addDays(opener.date, -days);
 }
 
-export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31): GameState {
+export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31, profile: OwnerSetup = DEFAULT_SETUP): GameState {
   clearDraftees();
   applySeason({ season: BASE_SEASON } as GameState);
   const players: GameState["players"] = {};
@@ -104,6 +108,10 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   ensurePositionCoaches(state);
   state.college = newCollege(state);
   business(state);
+  debt(state);
+  books(state);
+  setupOwner(state, profile);
+  approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
   startHoldouts(state);
   const cap = capSummary(state, userTeam);
@@ -519,6 +527,8 @@ export function advanceDay(state: GameState): void {
   commerceDaily(state);
   projectsDaily(state);
   leasesDaily(state);
+  debtDaily(state);
+  booksDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);

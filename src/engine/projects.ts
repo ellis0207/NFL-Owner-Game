@@ -5,7 +5,8 @@
 // stadium authority has to sign off. Costs are rough 2026 figures from recent
 // NFL renovations, scaled for later years. Relocation and new stadiums are not
 // part of the game yet.
-import { business, businessChief, cashBalance, CREDIT_LINE, inflation, post } from "./business";
+import { business, businessChief, cashBalance, inflation, post } from "./business";
+import { creditLimit } from "./debt";
 import { shortDate } from "./dates";
 import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
@@ -84,7 +85,8 @@ export function buildSeason(date: string): boolean {
 export function projectTerms(state: GameState, id: string): { cost: number; ours: number; payer?: string; blocked?: string; fund: number } {
   const def = PROJECT_BY_ID[id];
   const s = STADIUM_BY_TEAM[state.userTeam];
-  const cost = Math.round(def.cost * inflation(Number(state.date.slice(0, 4)), 0.04));
+  // An owner from real estate knows how to buy construction.
+  const cost = Math.round(def.cost * inflation(Number(state.date.slice(0, 4)), 0.04) * (state.owner?.background === "realEstate" ? 0.94 : 1));
   let share = 1;
   let payer: string | undefined;
   let blocked: string | undefined;
@@ -108,7 +110,7 @@ export function startProject(state: GameState, id: string): string {
   const def = PROJECT_BY_ID[id];
   const t = projectTerms(state, id);
   if (t.blocked) return t.blocked;
-  if (cashBalance(state) + CREDIT_LINE < t.ours) return "We can't cover that, even with the credit line.";
+  if (cashBalance(state) + creditLimit(state) < t.ours) return "We can't cover that, even with the credit line.";
   const s = STADIUM_BY_TEAM[state.userTeam];
   if (def.stadium && s.structure === "publicAuthority" && rngFor(state.seed, `authority:${id}:${state.date.slice(0, 4)}`)() >= 0.6) {
     // The authority answers once a year: asking again this spring gets the same no.

@@ -24,6 +24,18 @@ describe("saves from older versions", () => {
     expect(back.date).toBe(state.date);
   }, 60_000);
 
+  it("a mid-season save with club books, a term loan and an owner profile keeps playing to the next paydays", async () => {
+    const state = load("pr30-2026-11-15");
+    expect(state.debt?.loans.length).toBeGreaterThan(0);
+    const balance = state.debt!.loans[0].balance;
+    for (let i = 0; i < 17; i++) advanceDay(state);
+    expect(state.date).toBe("2026-12-02");
+    expect(state.business?.ledger.some((e) => e.cat === "interest" && e.date === "2026-12-01")).toBe(true);
+    expect(state.debt!.loans[0].balance).toBeLessThanOrEqual(balance);
+    const back = await decompress(await compress(state));
+    expect(back.owner?.purchase).toBe(state.owner?.purchase);
+  }, 60_000);
+
   it("a save from when the game ended with the draft moves on to the next season", () => {
     const state = load("pr12-2027-05-02");
     expect(state.season).toBe(2027);
