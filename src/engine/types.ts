@@ -794,7 +794,30 @@ export interface Transaction {
 }
 
 /** Something a team can put in a trade: a player under contract, or a draft pick (by pick id, see engine/trades.ts). */
-export type TradeAsset = { kind: "player"; id: string } | { kind: "pick"; pick: string };
+export type TradeAsset = { kind: "player"; id: string } | { kind: "pick"; pick: string; cond?: PickCondition };
+
+/** A condition on a traded pick (see engine/conditions.ts). */
+export interface PickCondition {
+  kind: "snaps" | "passYds" | "rushYds" | "recYds" | "sacks" | "playoffs" | "extend" | "protect";
+  /** The player it turns on, for playing time, stats and extensions. */
+  player?: string;
+  /** Share of snaps, a stat total, or (for protection) the top-N slots protected. */
+  threshold: number;
+}
+
+/** A conditional pick still to be settled, or settled. */
+export interface ConditionalPick {
+  pick: string;
+  from: string;
+  to: string;
+  cond: PickCondition;
+  /** The season the condition turns on. */
+  season: number;
+  traded: string;
+  status: "open" | "met" | "missed";
+  settled?: string;
+  note?: string;
+}
 
 /** A trade between two teams: what each one sends. */
 export interface TradeDeal {
@@ -840,6 +863,8 @@ export interface TradeState {
   talks: Record<string, { strikes: number; coolingUntil?: string }>;
   /** A matched offer sheet: the player can't be traded to the team that made it until the date. */
   noTradeTo?: Record<string, { team: string; until: string }>;
+  /** Picks traded with conditions, open and settled. */
+  conditional?: ConditionalPick[];
 }
 
 // ---- The draft (see engine/draft.ts) ----

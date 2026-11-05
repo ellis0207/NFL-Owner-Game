@@ -25,6 +25,7 @@
 import { changeRapport } from "./owners";
 import { lockedSpace } from "./capplan";
 import { redoStandoff } from "./redo";
+import { conditionalValue, conditionProblem, conditionsDaily, describeCondition, maybeAddCondition, openCondition, recordConditions } from "./conditions";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
 import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
@@ -396,7 +397,8 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
 }
 
 export function assetValue(state: GameState, eye: Eye, team: string, a: TradeAsset, opts: { without?: Set<string>; date?: string } = {}): number {
-  return a.kind === "pick" ? pickValue(state, team, a.pick) : playerValue(state, eye, team, a.id, opts).points;
+  if (a.kind === "pick") return a.cond ? conditionalValue(state, team, a.pick, a.cond) : pickValue(state, team, a.pick);
+  return playerValue(state, eye, team, a.id, opts).points;
 }
 
 function playersIn(assets: TradeAsset[]): string[] {
@@ -584,6 +586,9 @@ export function checkTrade(state: GameState, deal: TradeDeal): Legality {
         if (pickOwner(state, a.pick) !== team) problems.push(`The ${teamLabel(team)} don't own the ${pickLabel(state, a.pick, team)} pick.`);
         if (!PICK_YEARS.includes(year)) problems.push("Only picks in the next three drafts can be traded.");
         if (pickUsed(state, a.pick)) problems.push(`The ${pickLabel(state, a.pick, team)} pick has already been used.`);
+        if (openCondition(state, a.pick)) problems.push(`The ${pickLabel(state, a.pick, team)} pick can't be traded until its condition settles.`);
+        const bad = conditionProblem(state, deal, side, a);
+        if (bad) problems.push(bad);
       }
     }
   }
@@ -769,7 +774,8 @@ export function describe(state: GameState, assets: TradeAsset[], holder: string)
       return `${p.position} ${p.name}`;
     }
     const m = pickLabel(state, a.pick, holder).match(/^(\d+ \d\w\w)(?: \((.+)\))?$/)!;
-    return `a ${m[1]}-round pick${m[2] ? ` (${m[2]})` : ""}`;
+    const notes = [m[2], a.cond ? describeCondition(state, a.pick, a.cond) : undefined].filter(Boolean);
+    return `a ${m[1]}-round pick${notes.length ? ` (${notes.join("; ")})` : ""}`;
   });
   if (parts.length <= 1) return parts[0] ?? "nothing";
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
@@ -830,6 +836,7 @@ function execute(state: GameState, deal: TradeDeal): void {
       logMove(state, to, id, "traded", `acquired ${p.position} ${p.name} from the ${teamLabel(from)}`);
     }
   }
+  recordConditions(state, deal);
   invalidateRosters(state);
   // CPU teams over the roster limit release their least valuable player.
   for (const team of deal.teams) {
@@ -1092,6 +1099,7 @@ function cpuTry(state: GameState, rng: () => number): TradeRecord | null {
     const to = best.deal.teams[playersIn(best.deal.send[0]).includes(id) ? 1 : 0];
     if (!waivesNoTrade(state, id, to)) return null;
   }
+  maybeAddCondition(state, best.deal, rng);
   return completeTrade(state, best.deal);
 }
 
@@ -1187,6 +1195,7 @@ function callsToOwner(state: GameState): void {
 export function tradesDaily(state: GameState): void {
   const ts = trades(state);
   if (state.date === KEY.newLeagueYear) processAgreed(state);
+  conditionsDaily(state);
   tradeRequests(state);
   callsToOwner(state);
   const w = tradeWindow(state);
