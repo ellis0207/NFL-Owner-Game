@@ -1,3 +1,4 @@
+import { weatherLine } from "../engine/gameday";
 import { useEffect, useState } from "react";
 import { kickoff, longDate } from "../engine/dates";
 import { GAME_BY_ID, PLAYER_BY_ID, TEAM_BY_ID } from "../engine/league";
@@ -86,7 +87,7 @@ export function BoxScore({ game, id, onClose }: { game: GameState; id: string; o
           <span className="muted">{r.overtime ? "Final/OT" : "Final"}</span>
           <div className={r.homeScore > r.awayScore ? "win" : ""}><span className="label">{teams.home.city}</span><strong>{teams.home.name}</strong><span className="pts">{r.homeScore}</span></div>
         </header>
-        <span className="muted">{sched.stadium ?? teams.home.stadium}{sched.city ? `, ${sched.city}` : ""}</span>
+        <span className="muted">{sched.stadium ?? teams.home.stadium}{sched.city ? `, ${sched.city}` : ""}{box?.weather ? ` · ${weatherLine(box.weather)}` : ""}</span>
         {!box && <p className="muted">This game was played before box scores were kept in this save.</p>}
         {box && (
           <>

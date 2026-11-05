@@ -554,6 +554,7 @@ function startOffseason(state: GameState): void {
   const o = off(state);
   o.draftOrder = draftOrder(state);
   const league = (state.league ??= { caps: {} });
+  delete state.irReturns;
   league.rollover ??= {};
   for (const t of TEAMS) {
     // The season's books are closed: what's left rolls over (adjusted for moves made before the league year).
@@ -565,6 +566,9 @@ function startOffseason(state: GameState): void {
       const p = state.players[id];
       delete p.holdout;
       delete p.irDate;
+      delete p.irWindow;
+      delete p.irDone;
+      delete p.reserve;
       delete p.elevations;
       delete p.elevatedFor;
       delete p.keepUntil;

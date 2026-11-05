@@ -189,8 +189,8 @@ function practiceDay(state: GameState, minicamp: boolean): void {
   }
 }
 
-function hurt(state: GameState, team: string, id: string, rng: () => number, where: string): void {
-  const { injury } = injure(state, id, team, rng, true);
+function hurt(state: GameState, team: string, id: string, rng: () => number, where: string, nonFootball = false): void {
+  const { injury } = injure(state, id, team, rng, true, nonFootball);
   if (team !== state.userTeam) return;
   const p = PLAYER_BY_ID[id];
   const trn = teamStaff(team).TRN?.name ?? "Head athletic trainer";
@@ -273,7 +273,7 @@ function summerInjuries(state: GameState): void {
     if (rng() > 0.0025) continue;
     const ids = rostered(state, team).filter((id) => !isHurt(state, id));
     const id = ids[Math.floor(rng() * ids.length)];
-    if (id) hurt(state, team, id, rng, "working out on his own");
+    if (id) hurt(state, team, id, rng, "working out on his own", true);
   }
 }
 

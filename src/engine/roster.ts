@@ -447,6 +447,13 @@ export interface RosterMove {
 
 /** Days out that send a player to injured reserve (a four-game minimum stay). */
 const IR_THRESHOLD_DAYS = 28;
+/** Return designations each team gets a season (since 2024, playoffs included). */
+export const IR_RETURNS = 8;
+
+/** About when veterans report to camp (five weeks before the cutdown): injuries from before it are PUP or NFI cases. */
+function campOpens(): string {
+  return addDays(RULES.keyDates.rosterCutdown, -35);
+}
 
 function bestAvailable(state: GameState, team: string, pos: Position, pool: string[]): string | undefined {
   const gm = staffEffects(team).gmEval;
@@ -551,25 +558,55 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
     if (!after && !p.injury.seasonEnding) continue;
     p.status = "ir";
     p.irDate = state.date;
+    // Hurt before camp opened: reserve/PUP, or reserve/non-football injury if it happened away from football.
+    // Either way he misses the first four games, and coming back doesn't use one of the eight IR returns.
+    if (p.injury.nonFootball || p.injury.date < campOpens()) p.reserve = p.injury.nonFootball ? "nfi" : "pup";
     const pos = PLAYER_BY_ID[id].position;
-    moves.push({ team, text: `placed ${pos} ${PLAYER_BY_ID[id].name} on injured reserve (${p.injury.type.toLowerCase()})` });
+    const list = p.reserve === "nfi" ? "the non-football injury list" : p.reserve === "pup" ? "the physically unable to perform list" : "injured reserve";
+    moves.push({ team, text: `placed ${pos} ${PLAYER_BY_ID[id].name} on ${list} (${p.injury.type.toLowerCase()})` });
     if (after) {
       const signed = signReplacement(state, team, pos);
       if (signed) moves.push(signed);
     }
   }
-  // Activate healed players whose four-game minimum is up, releasing the weakest player to make room.
-  if (after) {
+  // Returns from reserve, under the league's rules: after the four-game minimum a team designates a
+  // player to return, which opens a 21-day practice window. He has to be activated before it closes or
+  // he stays on reserve for the season. Each team gets eight IR return designations a season; players
+  // coming off PUP or NFI don't use one.
+  if (after && stillPlaying(state, team)) {
+    const used = (state.irReturns ??= {});
     for (const id of teamPlayerIds(state, team)) {
       const p = state.players[id];
-      if (p.status !== "ir" || isHurt(state, id) || !p.irDate || addDays(p.irDate, IR_THRESHOLD_DAYS) > state.date) continue;
+      if (p.status !== "ir" || p.irDone || !p.irDate || addDays(p.irDate, IR_THRESHOLD_DAYS) > state.date) continue;
       if (p.injury?.seasonEnding) continue;
-      const cutId = weakestCuttable(state, team, PLAYER_BY_ID[id].position);
-      if (!cutId) continue;
-      releasePlayer(state, cutId);
-      p.status = "active";
-      delete p.irDate;
-      moves.push({ team, text: `activated ${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} from injured reserve and released ${PLAYER_BY_ID[cutId].name}` });
+      const name = `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`;
+      if (!p.irWindow) {
+        // Teams open the window when he's within about ten days of being ready to play.
+        if (p.injury && p.injury.returnDate > addDays(state.date, 10)) continue;
+        if (!p.reserve) {
+          if ((used[team] ?? 0) >= IR_RETURNS) continue;
+          used[team] = (used[team] ?? 0) + 1;
+        }
+        p.irWindow = state.date;
+        moves.push({ team, text: `designated ${name} to return to practice${p.reserve ? "" : ` (IR return ${used[team]} of ${IR_RETURNS})`}` });
+        continue;
+      }
+      if (!isHurt(state, id)) {
+        const cutId = weakestCuttable(state, team, PLAYER_BY_ID[id].position);
+        if (cutId) {
+          releasePlayer(state, cutId);
+          p.status = "active";
+          delete p.irDate;
+          delete p.irWindow;
+          delete p.reserve;
+          moves.push({ team, text: `activated ${name} and released ${PLAYER_BY_ID[cutId].name}` });
+          continue;
+        }
+      }
+      if (addDays(p.irWindow, 21) < state.date) {
+        p.irDone = true;
+        moves.push({ team, text: `kept ${name} on reserve for the rest of the season: his 21-day practice window closed` });
+      }
     }
   }
   return moves;

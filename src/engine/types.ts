@@ -429,6 +429,8 @@ export interface Injury {
   /** First day the player is expected to be able to play again. */
   returnDate: string;
   seasonEnding: boolean;
+  /** Hurt away from football (working out on his own): reserve/non-football injury if it lingers into the season. */
+  nonFootball?: boolean;
 }
 
 export interface PlayerState {
@@ -443,6 +445,14 @@ export interface PlayerState {
   exp?: number;
   /** Date placed on injured reserve (eligible to return after four games). */
   irDate?: string;
+  /** On reserve/physically unable to perform or reserve/non-football injury rather than IR (returns don't use a designation). */
+  reserve?: "pup" | "nfi";
+  /** Designated to return: the day his 21-day practice window opened. */
+  irWindow?: string;
+  /** The window closed without an activation: he stays on reserve for the season. */
+  irDone?: boolean;
+  /** Back from an injury and not yet himself: plays below his level until `until`, fading (engine only). */
+  rust?: { until: string; days: number; amount: number };
   /** 0-100, how the player feels about the team; absent means content (70). Never shown as a number. */
   morale?: number;
   /** The team that last held the player's rights, for a free agent. */
@@ -575,6 +585,8 @@ export interface BoxScore {
   scoring: ScoringPlay[];
   inactives: { away: string[]; home: string[] };
   injuries: { player: string; team: string; type: string }[];
+  /** Conditions at an open-air game (see engine/gameday.ts). */
+  weather?: { indoor: boolean; temp: number; wind: number; precip: "none" | "rain" | "snow" };
 }
 
 export type InboxKind = "staff" | "league" | "game" | "media" | "transaction" | "system" | "business";
@@ -1263,6 +1275,8 @@ export interface GameState {
   schedule?: ScheduledGame[];
   /** Waiver priority until the standings take over: the last draft's order. */
   waiverOrder?: string[];
+  /** Return designations from injured reserve used this season, by team (eight allowed). */
+  irReturns?: Record<string, number>;
   /** Players on a 53 or injured reserve when the regular season ended: they earn a credited season. */
   credited?: string[];
   /** Seasons gone by: final standings, champions, drafts, and every player's stats. */
