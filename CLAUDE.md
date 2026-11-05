@@ -63,7 +63,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Calendar and the day loop | `calendar.ts` (key dates, schedules for any season), `season.ts` (new game, events, `advanceDay`), `seasons.ts` (rollover, history) | `events.test.ts`, `season.test.ts`, `seasons-report.ts` |
 | Game sim | `sim.ts` (play by play), `gameday.ts` (weather, rest and travel), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts` (slow returns, lasting damage), `development.ts`, `careers.ts` (offseason growth, retirement) | `season.test.ts`, `gameday.test.ts`, `calibrate.ts` |
 | Cap and contracts | `contracts.ts` (deal model, CBA rules), `cap.ts` (cap hits, dead money, rollover), `incentives.ts` (LTBE/NLTBE, settled after the Super Bowl), `capmoves.ts` (June 1, pay cuts), `capplan.ts` (`lockedSpace` for future-year gates, the league-year deadline), `market.ts` (prices, tags, tenders), `finance.ts` (cash) | `contracts.test.ts`, `incentives.test.ts`, `capdeadline.test.ts` |
-| Negotiation | `agents.ts`, `negotiation.ts`, `grades.ts` | `negotiation.test.ts` |
+| Negotiation | `agents.ts`, `negotiation.ts`, `grades.ts`, `redo.ts` (early redo asks; camp hold-ins via `startHoldouts`) | `negotiation.test.ts`, `redo.test.ts` |
 | Rosters | `roster.ts` (cuts, 53, practice squad, IR returns, PUP/NFI), `waivers.ts` | `freeagency.test.ts` |
 | Offseason | `offseason.ts` (tags, tenders, options, league year, restructures) | `offseason.test.ts`, `rosterbuilding.test.ts` |
 | Free agency | `freeagency.ts` (market, bids, visits, street FAs) | `freeagency.test.ts`, `rosterbuilding.test.ts`, `fa-report.ts` |

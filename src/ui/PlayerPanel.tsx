@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { askLine, openAsk, promiseTalks, refuseAsk } from "../engine/redo";
 import { releaseCost } from "../engine/cap";
 import { dealOf, leagueYear } from "../engine/contracts";
 import { ageOn, longDate, shortDate } from "../engine/dates";
@@ -32,6 +33,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   const [confirming, setConfirming] = useState<false | "now" | "june1">(false);
   const [cutTo, setCutTo] = useState<number | null>(null);
   const [cutReply, setCutReply] = useState<string | null>(null);
+  const [askReply, setAskReply] = useState<string | null>(null);
   const ui = useUi();
   const cost = releaseCost(id, game);
   const year = leagueYear(game.date);
@@ -186,6 +188,21 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
             const elig = talksFor(game, game.userTeam, id);
             if (!talking && !elig.ok) return <span className="muted">{elig.reason}</span>;
             return <div><button className="btn" onClick={() => ui.openTalks(id)}>{talking ? "Go to contract talks" : "Contract talks"}</button></div>;
+          })()}
+          {mine && askLine(game, id) && (() => {
+            const ask = openAsk(game, id)!;
+            return (
+              <div className="confirm">
+                <strong>Wants a new deal</strong>
+                <span>{askLine(game, id)}</span>
+                {askReply ? <span>{askReply}</span> : !ask.answer && (
+                  <div className="btn-row">
+                    <button className="btn" onClick={() => { setAskReply(promiseTalks(game, id)); changed(); }}>Promise talks after the season</button>
+                    <button className="btn" onClick={() => { setAskReply(refuseAsk(game, id)); changed(); }}>Tell his agent no</button>
+                  </div>
+                )}
+              </div>
+            );
           })()}
           {mine && restructurePreview(game, id) && (() => {
             const r = restructurePreview(game, id)!;
