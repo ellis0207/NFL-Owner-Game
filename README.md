@@ -98,7 +98,11 @@ Trades follow the league's rules too. The window runs from the new league
 year to the trade deadline (4 PM ET, November 10); nothing moves from then
 until the Super Bowl, and deals agreed after it become official when the new
 league year opens. Teams trade players and picks in the next three drafts
-(three 2027 first-rounders start out already traded, as in real life). The
+(three 2027 first-rounders start out already traded, as in real life). A pick can carry a
+condition: it moves up a round if the player traded plays half the snaps, reaches a stat
+mark or is extended, or if the team makes the playoffs, and a 1st can be top-3, 5 or 10
+protected (next year's 1st goes instead). Conditions settle the day after the Super Bowl,
+at the new league year for extensions, or when the draft order is set for protection. The
 team that acquires a player takes on the rest of his salary and its
 guarantees for the weeks left; his signing bonus stays behind, with later
 years' proration accelerating as dead money (onto next year after June 1).
@@ -305,7 +309,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 
 - `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim (`gameday.ts` adds weather, rest and travel), standings and playoffs.
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
-  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl) `capplan.ts` (locked-in future cap money, the league-year compliance deadline) and `redo.ts` (early redo asks, hold-ins and holdouts).
+  `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl) `capplan.ts` (locked-in future cap money, the league-year compliance deadline) `redo.ts` (early redo asks, hold-ins and holdouts) and `conditions.ts` (conditional picks).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
   The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.

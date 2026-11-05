@@ -77,7 +77,7 @@ export function dealIncentiveMax(deal: Deal | null): number {
 
 // ---- What a player did ----
 
-interface Season {
+export interface Season {
   line: Record<string, number>;
   share: number;
   team: string | null;
@@ -88,7 +88,7 @@ function shareOf(pos: Position, off: number, def: number): number {
 }
 
 /** A season's stats and snap share. The season just played once its regular season is over, otherwise the one before. */
-function seasonOf(state: GameState, id: string, season: number): Season | null {
+export function seasonOf(state: GameState, id: string, season: number): Season | null {
   const pos = PLAYER_BY_ID[id].position;
   if (season === RULES.season) {
     const row = seasonTotals(state, "REG")[id];
@@ -112,7 +112,7 @@ function value(kind: IncentiveKind, s: Season): number {
   return s.line[kind] ?? 0;
 }
 
-function madePlayoffs(state: GameState, team: string, season: number): boolean {
+export function madePlayoffs(state: GameState, team: string, season: number): boolean {
   if (season === RULES.season) return Object.values(state.seeds ?? {}).some((teams) => teams.includes(team));
   if (season === 2025) return PLAYOFFS_2025.has(team);
   return state.history?.seasons.find((s) => s.season === season)?.playoffs[team] !== undefined;

@@ -9,7 +9,8 @@ import {
   acceptOffer, askPrice, canTradePlayer, checkTrade, declineOffer, describe, gmRead, hasNoTradeClause, headline,
   parsePick, PICK_YEARS, pickLabel, pickOwner, picksOf, projectedSlot, proposeTrade, toggleBlock, trades, tradeWindow, type Answer,
 } from "../../engine/trades";
-import type { GameState, TradeAsset, TradeDeal } from "../../engine/types";
+import type { GameState, PickCondition, TradeAsset, TradeDeal } from "../../engine/types";
+import { conditionNote, statMark } from "../../engine/conditions";
 import { money, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
 
@@ -67,6 +68,31 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
   function toggle(list: TradeAsset[], set: (l: TradeAsset[]) => void, a: TradeAsset) {
     set(list.some((x) => key(x) === key(a)) ? list.filter((x) => key(x) !== key(a)) : [...list, a]);
     setAnswer(null);
+  }
+
+  function setCond(side: 0 | 1, pick: string, cond: PickCondition | undefined) {
+    const [list, set] = side === 0 ? [give, setGive] : [get, setGet];
+    set(list.map((x) => (x.kind === "pick" && x.pick === pick ? (cond ? { kind: "pick", pick, cond } : { kind: "pick", pick }) : x)));
+    setAnswer(null);
+  }
+
+  /** The conditions a pick can carry: about the players its sender gets in this deal, its team, or protection for a 1st. */
+  function condOptions(side: 0 | 1, pick: string): { label: string; cond?: PickCondition }[] {
+    const opts: { label: string; cond?: PickCondition }[] = [{ label: "No condition" }];
+    if (parsePick(pick).round === 1) {
+      for (const n of [3, 5, 10]) opts.push({ label: `Top-${n} protected`, cond: { kind: "protect", threshold: n } });
+      return opts;
+    }
+    for (const x of deal.send[1 - side]) {
+      if (x.kind !== "player") continue;
+      const p = PLAYER_BY_ID[x.id];
+      opts.push({ label: `Up a round if ${p.name} plays 50% of snaps`, cond: { kind: "snaps", threshold: 0.5, player: x.id } });
+      const m = statMark(p.position);
+      if (m) opts.push({ label: `Up a round if ${p.name} reaches ${m.threshold} ${m.kind === "sacks" ? "sacks" : "yards"}`, cond: { ...m, player: x.id } });
+      opts.push({ label: `Up a round if ${p.name} is extended`, cond: { kind: "extend", threshold: 0, player: x.id } });
+    }
+    opts.push({ label: "Up a round if they make the playoffs", cond: { kind: "playoffs", threshold: 0 } });
+    return opts;
   }
 
   function propose() {
@@ -127,6 +153,23 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
               <dt>Our roster after</dt>
               <dd>{check.roster[0].count} of {check.roster[0].limit}</dd>
             </dl>
+            {([0, 1] as const).some((side) => deal.send[side].some((x) => x.kind === "pick")) && (
+              <div className="stack tight">
+                <span className="label">Pick conditions</span>
+                {([0, 1] as const).flatMap((side) => deal.send[side].filter((x): x is Extract<TradeAsset, { kind: "pick" }> => x.kind === "pick").map((x) => {
+                  const opts = condOptions(side, x.pick);
+                  const current = Math.max(0, opts.findIndex((o) => JSON.stringify(o.cond) === JSON.stringify(x.cond)));
+                  return (
+                    <label key={x.pick} className="field">
+                      <span className="label">{side === 0 ? "Our" : "Their"} {pickLabel(game, x.pick, deal.teams[side])}</span>
+                      <select value={current} onChange={(e) => setCond(side, x.pick, opts[Number(e.target.value)].cond)}>
+                        {opts.map((o, i) => <option key={i} value={i}>{o.label}</option>)}
+                      </select>
+                    </label>
+                  );
+                }))}
+              </div>
+            )}
             {ready && <p><span className="label">GM's read</span><br />{gmRead(game, deal)}</p>}
             {ready && !check.ok && <div className="notice error">{check.problems.join(" ")}</div>}
           </>
@@ -222,7 +265,7 @@ function AssetList({ game, team, chosen, toggle, title, other }: { game: GameSta
                 return (
                   <tr key={pick}>
                     <td><input type="checkbox" aria-label={`Include ${pickLabel(game, pick, team)}`} checked={picked.has(pick)} onChange={() => toggle({ kind: "pick", pick })} /></td>
-                    <td>{pickLabel(game, pick, team)}</td>
+                    <td>{pickLabel(game, pick, team)}{conditionNote(game, pick) && <span className="muted"> · {conditionNote(game, pick)}</span>}</td>
                     <td className="muted">{y === PICK_YEARS[0] ? `about #${(round - 1) * 32 + slot} overall` : "mid-round"}</td>
                   </tr>
                 );

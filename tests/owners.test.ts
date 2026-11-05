@@ -87,7 +87,8 @@ describe("owners and the league meeting", () => {
 
   it("changes how games are played under the new rules", () => {
     const state = stateAt(TEAM, 5);
-    const games = SCHEDULE.filter((g) => g.type === "REG").slice(0, 48);
+    // Enough games that the rule, not the bounce of a few kicks, decides the comparison.
+    const games = SCHEDULE.filter((g) => g.type === "REG").slice(0, 144);
     const play = () => {
       let plays = 0, xpAtt = 0;
       for (const g of games) {

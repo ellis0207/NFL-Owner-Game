@@ -67,7 +67,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Rosters | `roster.ts` (cuts, 53, practice squad, IR returns, PUP/NFI), `waivers.ts` | `freeagency.test.ts` |
 | Offseason | `offseason.ts` (tags, tenders, options, league year, restructures) | `offseason.test.ts`, `rosterbuilding.test.ts` |
 | Free agency | `freeagency.ts` (market, bids, visits, street FAs) | `freeagency.test.ts`, `rosterbuilding.test.ts`, `fa-report.ts` |
-| Trades | `trades.ts` (rules, picks, CPU valuation) | `trades.test.ts`, `trade-report.ts` |
+| Trades | `trades.ts` (rules, picks, CPU valuation), `conditions.ts` (conditional picks, settled in `tradesDaily`) | `trades.test.ts`, `conditions.test.ts`, `trade-report.ts` |
 | Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires), `hiring.ts` (interview rules for playoff teams) | `carousel.test.ts`, `carousel-report.ts` |
 | College and draft | `collegeData.ts`, `college.ts`, `prospects.ts`, `scouting.ts`, `prodays.ts`, `draft.ts`, `names.ts` | `college.test.ts`, `college-report.ts`, `draft-report.ts` |
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects), `review.ts` (offseason grades, fan expectations, storylines; `reviewDaily` after `mediaDaily`) | `media.test.ts`, `commerce.test.ts`, `media-report.ts` |
