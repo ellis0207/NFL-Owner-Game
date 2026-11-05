@@ -24,6 +24,7 @@
 // worth less than this year's.
 import { changeRapport } from "./owners";
 import { lockedSpace } from "./capplan";
+import { redoStandoff } from "./redo";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
 import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
@@ -1103,7 +1104,7 @@ function tradeRequests(state: GameState): void {
     if (!ps.team || ps.status === "fa" || ps.status === "ps" || ts.requests[id]) continue;
     const m = ps.morale ?? 70;
     // Unhappy players, and stars stuck in a long contract standoff, ask out.
-    const standoff = ps.holdout && daysBetween(ps.holdout.since, state.date) >= 21 && marketView(state, id) >= 90;
+    const standoff = ps.holdout && daysBetween(ps.holdout.since, state.date) >= 21 && marketView(state, id) >= 90 || redoStandoff(state, id);
     if (m >= 35 && !standoff) continue;
     if (marketView(state, id) < 84 || rng() > (standoff ? 0.03 : 0.04)) continue;
     ts.requests[id] = state.date;

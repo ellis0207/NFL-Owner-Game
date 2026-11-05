@@ -11,6 +11,7 @@ import {
   dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear, minimumSalary, prorateFirstYear, salaryCap, writeDeal, writeExtension, type Terms,
 } from "./contracts";
 import { lockedSpace } from "./capplan";
+import { openAsk, redoCamp, redoDaily, settleAsk } from "./redo";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { payCash } from "./finance";
 import { gradeDeal } from "./grades";
@@ -49,7 +50,8 @@ export function extensionEligibility(state: GameState, id: string): Eligibility 
   }
   if (isPendingFreeAgent(state, id) && state.date >= RULES.keyDates.newLeagueYear) return { ok: false, reason: "The contract has expired." };
   const left = dealYearsLeft(deal, year);
-  if (left > 2) return { ok: false, reason: `Under contract through ${lastYear(deal)}. Too early to extend.` };
+  // A player who has asked to redo his deal can be extended with more years left (see redo.ts).
+  if (left > 2 && !openAsk(state, id)) return { ok: false, reason: `Under contract through ${lastYear(deal)}. Too early to extend.` };
   if (deal.kind === "rookie" && p.yearsExp < 3) return { ok: false, reason: "Drafted players can't extend until after their third season." };
   return { ok: true };
 }
@@ -542,6 +544,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   changeMorale(state, id, 8 + 6 * pr.money);
   changeTrust(state, agentFor(id).id, neg.team, 6);
   if (state.players[id].holdout) delete state.players[id].holdout;
+  settleAsk(state, id);
   const signing: Signing = {
     id: `${state.date}-${id}`, player: id, team: neg.team, date: state.date, kind: neg.kind,
     years: t.years, total: deal.total, apy: deal.apy, guaranteed: deal.guaranteedAtSigning,
@@ -726,6 +729,12 @@ export function startHoldouts(state: GameState): void {
     if (!ps.team || ps.status === "fa" || !starters.has(id)) continue;
     const deal = dealOf(state, id);
     if (!deal || deal.kind === "minimum" || !extensionEligibility(state, id).ok) continue;
+    // A player who threatened camp in his spring ask follows through, mostly by holding in.
+    const redo = redoCamp(state, id);
+    if (redo) {
+      startHoldout(state, id, redo);
+      continue;
+    }
     // A deal signed this league year was the player's own choice; nobody holds out over it.
     if (leagueYear(deal.signed) >= year) continue;
     const left = dealYearsLeft(deal, year);
@@ -740,21 +749,32 @@ export function startHoldouts(state: GameState): void {
     const spring = state.program?.season === RULES.season ? state.program.spring[id] : undefined;
     const skipped = spring?.reason === "contract" && spring.plan === "away";
     if (score < (skipped ? 0.55 : 0.7) || rng() > (skipped ? 0.6 : 0.3)) continue;
-    ps.holdout = { kind: rng() < 0.15 ? "holdout" : "holdin", since: state.date };
+    startHoldout(state, id, rng() < 0.15 ? "holdout" : "holdin");
+  }
+}
+
+function startHoldout(state: GameState, id: string, kind: "holdout" | "holdin"): void {
+  const ps = state.players[id];
+  const year = leagueYear(state.date);
+  const deal = dealOf(state, id)!;
+  const left = dealYearsLeft(deal, year);
+  const team = ps.team!;
+  {
+    ps.holdout = { kind, since: state.date };
     changeMorale(state, id, -10);
     const p = PLAYER_BY_ID[id];
     const word = ps.holdout.kind === "holdout" ? "is holding out of camp" : "reported to camp but isn't practicing";
-    news(state, `${p.name} ${word} while seeking a new contract with the ${teamLabel(ps.team)}`);
-    if (ps.team === state.userTeam) {
-      openTalks(state, ps.team, id, "extension", "owner");
+    news(state, `${p.name} ${word} while seeking a new contract with the ${teamLabel(team)}`);
+    if (team === state.userTeam) {
+      openTalks(state, team, id, "extension", "owner");
       send(state, "staff", gmName(state), `${p.name} ${ps.holdout.kind === "holdout" ? "is holding out" : "is holding in"}`,
         `${p.name} ${word} until there's a new deal. ${agentFor(id).name} has sent over their number; talks are open on the Contracts page.` +
-        (ps.holdout.kind === "holdout" ? " Under the CBA we fine a veteran $50K for every day of camp missed." : ""));
+        (ps.holdout.kind === "holdout" ? ` Under the CBA we fine him $50K for every day of camp missed${deal.kind === "rookie" ? ", and on a rookie deal we can't waive those fines" : ""}.` : ""));
     } else {
       // A front office with no room next year lets him sit rather than break its cap.
-      const v = teamValue(state, ps.team, id, year + left);
-      if (state.settings.capRules === "real" && capSummary(state, ps.team, year + 1).space + 0.04 * salaryCap(state, year + 1) < v * 0.8) continue;
-      openTalks(state, ps.team, id, "extension", "gm", { goal: "sign" });
+      const v = teamValue(state, team, id, year + left);
+      if (state.settings.capRules === "real" && capSummary(state, team, year + 1).space + 0.04 * salaryCap(state, year + 1) < v * 0.8) return;
+      openTalks(state, team, id, "extension", "gm", { goal: "sign" });
     }
   }
 }
@@ -765,7 +785,8 @@ function resolveHoldouts(state: GameState): void {
     if (!ps.holdout) continue;
     const pr = priorities(id);
     const rng = rngFor(state.seed, `holdout-end:${id}`);
-    if (rng() < 0.85 - 0.3 * pr.ego) {
+    // Since the 2020 CBA's fines, almost everyone reports by Week 1.
+    if (rng() < 0.97 - 0.1 * pr.ego) {
       delete ps.holdout;
       changeMorale(state, id, -5);
       const p = PLAYER_BY_ID[id];
@@ -796,6 +817,7 @@ export function contractsDaily(state: GameState): void {
   }
   publicMood(state);
   if (state.date === RULES.keyDates.regularSeasonStart) resolveHoldouts(state);
+  redoDaily(state);
   if (state.date < RULES.keyDates.regularSeasonEnd || isOffseason(state.date)) cpuExtensions(state);
 }
 

@@ -459,6 +459,8 @@ export interface PlayerState {
   lastTeam?: string;
   /** Staying away from camp, or showing up and not practicing, until a new deal is done. */
   holdout?: { kind: "holdout" | "holdin"; since: string };
+  /** An ask to redo his contract with years still left (see engine/redo.ts). */
+  redo?: RedoAsk;
   /** Practice squad: times elevated to the game-day roster this season (three is the limit). */
   elevations?: number;
   /** Practice squad: the game day the player is elevated for. */
@@ -1489,4 +1491,18 @@ export interface OwnersState {
   meeting?: LeagueMeeting;
   /** Every proposal voted on, newest last. */
   history: { year: number; rule: string; sponsor: string; yes: number; passed: boolean; ours?: boolean }[];
+}
+
+/** A player's ask to redo his contract early: when, how hard his camp pushes, and the answer. */
+export interface RedoAsk {
+  /** The league year it was asked in. */
+  year: number;
+  asked: string;
+  /** Patient; skipping the voluntary spring program; or threatening to stay off the field at camp. */
+  stance: "patient" | "spring" | "camp";
+  /** The average per year his camp is after. */
+  apy: number;
+  answer?: "promised" | "refused";
+  /** The day a new deal settled it. */
+  settled?: string;
 }

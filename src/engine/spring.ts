@@ -3,6 +3,7 @@
  * shows up and why, and the injuries of the offseason (in practice and away
  * from the building).
  */
+import { redoSpring } from "./redo";
 import { changeMorale, priorities } from "./agents";
 import { addReps, program } from "./camp";
 import { teamPlayerIds, yearsExpIn } from "./cap";
@@ -108,6 +109,7 @@ function planFor(state: GameState, id: string): SpringPlan {
   const exp = yearsExpIn(id, leagueYear(state.date));
   if (exp === 0) return { plan: "full" };
   const pr = priorities(id);
+  if (redoSpring(state, id)) return { plan: "away", reason: "contract" };
   const gripe = contractGripe(state, id);
   if (gripe > 0 && 0.5 * pr.money + 0.5 * pr.ego + gripe - 0.3 * pr.loyalty > 0.75 && rng() < 0.5) return { plan: "away", reason: "contract" };
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 25;
