@@ -11,6 +11,7 @@ import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
 import { addStory, MEDIA_BY_ID } from "./outlets";
 import { rngFor } from "./rng";
+import { drawFund, leaseFund } from "./leases";
 import { STADIUM_BY_TEAM } from "./stadiums";
 import type { GameState, Project } from "./types";
 
@@ -80,7 +81,7 @@ export function buildSeason(date: string): boolean {
 }
 
 /** What a project would cost us now, and whether we can do it. */
-export function projectTerms(state: GameState, id: string): { cost: number; ours: number; payer?: string; blocked?: string } {
+export function projectTerms(state: GameState, id: string): { cost: number; ours: number; payer?: string; blocked?: string; fund: number } {
   const def = PROJECT_BY_ID[id];
   const s = STADIUM_BY_TEAM[state.userTeam];
   const cost = Math.round(def.cost * inflation(Number(state.date.slice(0, 4)), 0.04));
@@ -97,7 +98,10 @@ export function projectTerms(state: GameState, id: string): { cost: number; ours
   if (p) blocked = p.opened ? "Done." : `Under way; opens ${shortDate(p.opens)}.`;
   else if (!buildSeason(state.date)) blocked ??= "Construction starts between February and May, so the work is done before the preseason.";
   else if (projects(state).filter((x) => !x.opened).length >= 2) blocked ??= "Two projects at a time is all the construction staff can run.";
-  return { cost, ours: Math.round(cost * share), payer, blocked };
+  // Public renovation money from the lease pays for stadium work before our own does.
+  const fund = def.stadium ? Math.min(leaseFund(state), cost * share) : 0;
+  if (fund > 0) payer = `${payer ? `${payer}; ` : ""}${money(fund)} from the lease's renovation fund`;
+  return { cost, ours: Math.round(cost * share - fund), payer, blocked, fund };
 }
 
 export function startProject(state: GameState, id: string): string {
@@ -112,6 +116,7 @@ export function startProject(state: GameState, id: string): string {
   }
   const y = Number(state.date.slice(0, 4));
   const opens = `${y + def.build - 1}-08-01`;
+  if (t.fund) drawFund(state, t.fund);
   const deposit = Math.round(t.ours * 0.2);
   projects(state).push({ id, started: state.date, opens, cost: t.ours, paid: deposit });
   post(state, "projects", -deposit, `${def.title}: deposit`);

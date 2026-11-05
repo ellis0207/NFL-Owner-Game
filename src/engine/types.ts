@@ -1129,6 +1129,30 @@ export interface StadiumEvent {
   note?: string;
 }
 
+/** A lease offer from the public side: the length, the yearly rent and upkeep, and public money for renovations. */
+export interface LeaseOffer {
+  years: number;
+  rent: number;
+  upkeep: number;
+  publicMoney: number;
+  eventShare: number;
+}
+
+export interface LeaseState {
+  /** Last season the lease covers. */
+  through: number;
+  rent: number;
+  upkeep: number;
+  eventShare: number;
+  /** Public renovation money from the lease, not yet spent. */
+  fund: number;
+  /** Playing year to year after the lease ran out. */
+  holdover?: boolean;
+  signed?: string;
+  talks?: { opened: string; round: number; offer: LeaseOffer; patience: number; waiting?: { ask: "money" | "rent"; date: string } };
+  log: { date: string; text: string }[];
+}
+
 export interface BusinessState {
   /** Cash in the bank when the owner took over. */
   opening: number;
@@ -1401,6 +1425,8 @@ export interface GameState {
   staff?: StaffState;
   /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
   business?: BusinessState;
+  /** Stadium leases with the city or stadium authority, by team (publicly owned buildings only). */
+  leases?: Record<string, LeaseState>;
   /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */
   program?: ProgramState;
   /** The other owners, the league meeting and the rule changes adopted (owners.ts, rules.ts). */

@@ -1,4 +1,5 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { bindLeases, ensureLeases, leasesDaily } from "./leases";
 import { ensurePositionCoaches, positionCoachesDaily } from "./positionCoaches";
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
@@ -98,6 +99,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   };
   applySeason(state);
   ensureStaff(state);
+  ensureLeases(state);
+  bindLeases(state);
   ensurePositionCoaches(state);
   state.college = newCollege(state);
   business(state);
@@ -515,6 +518,7 @@ export function advanceDay(state: GameState): void {
   businessDaily(state);
   commerceDaily(state);
   projectsDaily(state);
+  leasesDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);

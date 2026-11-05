@@ -8,6 +8,7 @@ import { leagueYear } from "../../engine/contracts";
 import { shortDate, weekday } from "../../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/league";
 import { controlOf, MARKETS, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
+import { acceptLease, counterLease, lease, leaseSummary, walkAway } from "../../engine/leases";
 import type { ConcessionTier, Dept, GameState, StadiumEvent } from "../../engine/types";
 import { money } from "../format";
 import { Projects, Sponsors } from "./BusinessDeals";
@@ -288,6 +289,7 @@ function Stadium({ game, changed }: { game: GameState; changed: () => void }) {
             {s.leaseThrough && <><dt>Lease runs through</dt><dd>{s.leaseThrough} season</dd></>}
             <dt>Seats</dt><dd>{s.capacity.toLocaleString("en-US")} · {s.roof === "open" ? "open air" : s.roof === "dome" ? "dome" : "retractable roof"} · opened {s.opened}</dd>
           </dl>
+          <Lease game={game} changed={changed} />
         </div>
         <div className="panel stack tight">
           <h3>What we control</h3>
@@ -389,6 +391,37 @@ function League({ game }: { game: GameState }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function Lease({ game, changed }: { game: GameState; changed: () => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const l = lease(game);
+  const summary = leaseSummary(game);
+  if (!l || !summary) return null;
+  const act = (r: { ok: boolean; text: string }) => { setMsg(r.text); changed(); };
+  const t = l.talks;
+  return (
+    <div className="stack tight">
+      <h4 style={{ margin: 0 }}>Our lease</h4>
+      <span>{summary}</span>
+      {t && (
+        <div className="report">
+          <strong>Their offer: {t.offer.years} years, {money(t.offer.rent)} a year in rent, {money(t.offer.publicMoney)} in public money for renovations</strong>
+          {t.waiting ? <span className="muted">We asked for {t.waiting.ask === "money" ? "more public money" : "a lower rent"}; waiting on their answer.</span> : (
+            <div className="btn-row">
+              <button className="btn primary small" onClick={() => act(acceptLease(game))}>Sign it</button>
+              <button className="btn small" onClick={() => act(counterLease(game, "money"))}>Ask for more public money</button>
+              <button className="btn small" onClick={() => act(counterLease(game, "rent"))}>Ask for a lower rent</button>
+              <button className="btn small" onClick={() => act(walkAway(game))}>Walk away for this year</button>
+            </div>
+          )}
+          <span className="muted">Pushing can get more, but each push wears on their patience; if they break off, talks wait until next spring.</span>
+        </div>
+      )}
+      {msg && <span className="muted">{msg}</span>}
+      {l.log.slice(0, 3).map((x, i) => <span key={i} className="muted">{x.date}: {x.text}</span>)}
     </div>
   );
 }
