@@ -28,6 +28,7 @@ import { LeagueScreen } from "./screens/LeagueScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
+import { AnalyticsScreen } from "./screens/AnalyticsScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { SearchBox } from "./Search";
@@ -43,7 +44,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -171,7 +172,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             {offseason
               ? <button className="btn" disabled={busy || over || waiting} onClick={() => step(advanceToNextEvent)}
                 title={waiting ? "The draft is on: run it from the draft room, or use Sim rest of day to let the GM finish today's rounds." : undefined}>Advance to next event</button>
-              : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Play to next game</button>}
+              : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Sim to game day</button>}
             <button className="btn" disabled={busy || over || waiting} onClick={() => step(simWeek)} title="Seven days, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">Sim a week</button>
           </div>
         </header>
@@ -202,6 +203,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
+          {screen === "Analytics" && <AnalyticsScreen game={game} changed={changed} />}
           {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
           {screen === "Guide" && <GuideScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}

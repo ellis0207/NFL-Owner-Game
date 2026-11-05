@@ -1,3 +1,5 @@
+import type { Adv } from "./analytics";
+import type { AnalyticsState } from "./strategy";
 // Shapes of the generated league data (data/league-2026) and of a saved game.
 
 export type Position =
@@ -606,9 +608,10 @@ export interface ScoringPlay {
 /**
  * One snap or kick in a game's play-by-play:
  * [quarter (5+ is overtime), seconds left, offense (0 away, 1 home), down (0 for a kick), distance,
- *  yards from the offense's own goal line, drive number, description, flags (PLAY_FLAGS), away score, home score, formation and look].
+ *  yards from the offense's own goal line, drive number, description, flags (PLAY_FLAGS), away score, home score, formation and look,
+ *  EPA for the offense (scrimmage plays), the home team's win probability after the play].
  */
-export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string];
+export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string, number?, number?];
 
 /** One drive: [offense (0 away, 1 home), quarter, clock, start yard line, plays, yards, seconds of possession, how it ended]. */
 export type DriveRow = [0 | 1, number, number, number, number, number, number, string];
@@ -660,6 +663,10 @@ export interface BoxScore {
   scoring: ScoringPlay[];
   inactives: { away: string[]; home: string[] };
   injuries: { player: string; team: string; type: string }[];
+  /** Play value by team (offense) and by player, from the play-by-play (engine/analytics.ts). */
+  adv?: { away: Adv; home: Adv };
+  /** Per-player [plays, EPA, successes], keyed "q:" passer, "r:" rusher, "t:" target, then the player id. */
+  pe?: Record<string, [number, number, number]>;
   /** Calls disputed or missed during the game (engine/officials.ts). */
   calls?: DisputedCall[];
   /** Conditions at an open-air game (see engine/gameday.ts). */
@@ -1507,6 +1514,8 @@ export interface GameState {
   culture?: CultureState;
   /** Play-by-play and drive charts by game id, kept through the week after each game (playlog.ts). */
   pbp?: Record<string, GameLog>;
+  /** The analytics department, game plans and league strategy trends (strategy.ts). */
+  analytics?: AnalyticsState;
   /** Game-day operations checks at the owner's home games, and officiating questions put to the league (gameops.ts). */
   gameOps?: GameOpsState;
   inbox: InboxItem[];

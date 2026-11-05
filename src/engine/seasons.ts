@@ -18,6 +18,7 @@ import { newCollege } from "./college";
 import { addDays, shortDate, weekday } from "./dates";
 import { FIRST_MOCK } from "./draft";
 import { money, news, send } from "./inbox";
+import { updateTrends } from "./strategy";
 import { BASE_SCHEDULE, BASE_SEASON, bindCaps, GAME_BY_ID, PLAYER_BY_ID, PLAYERS, RULES, setLeagueSeason, TEAMS, teamLabel } from "./league";
 import { invalidateMarket } from "./market";
 import { setCarry } from "./prospects";
@@ -219,6 +220,8 @@ export function startNewSeason(state: GameState): void {
   const knew = state.college?.scouting.know ?? {};
   const returned = state.draft?.returned ?? [];
 
+  // The league copies what worked this season.
+  updateTrends(state);
   // A clean slate for the new season.
   state.results = {};
   state.box = {};

@@ -179,3 +179,65 @@ export function FollowGame({ r, log, onDone }: { r: GameResult; log: GameLog; on
     </section>
   );
 }
+
+/** Home win probability across the game, with the quarter breaks. */
+export function WinChart({ r, log }: { r: GameResult; log: GameLog }) {
+  const pts = log.plays.filter((p) => p[13] !== undefined);
+  if (pts.length < 10) return null;
+  const W = 600, H = 120;
+  const total = (p: PlayRow) => (p[0] <= 4 ? (p[0] - 1) * 900 + (900 - p[1]) : 3600 + (600 - Math.min(600, p[1])));
+  const end = Math.max(3600, total(pts[pts.length - 1]));
+  const path = pts.map((p, i) => `${i ? "L" : "M"}${((total(p) / end) * W).toFixed(1)},${((1 - p[13]!) * H).toFixed(1)}`).join(" ");
+  return (
+    <figure className="stack tight" style={{ margin: 0 }}>
+      <svg className="wp-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Win probability: ${r.home} at the top, ${r.away} at the bottom`}>
+        <line className="mid" x1={0} x2={W} y1={H / 2} y2={H / 2} />
+        {[900, 1800, 2700].map((x) => <line key={x} className="mid" x1={(x / end) * W} x2={(x / end) * W} y1={0} y2={H} />)}
+        <path className="line" d={path} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <figcaption className="muted">Win probability: {r.home} wins at the top, {r.away} at the bottom; dashed lines mark the quarters.</figcaption>
+    </figure>
+  );
+}
+
+/** Why a play turned the game, in the words a film session would use. */
+function filmNote(p: PlayRow): string {
+  const t = p[7];
+  const look = p[11] ?? "";
+  if (t.includes("analysts said")) return "A fourth-down call.";
+  if (t.includes("INTERCEPTED")) return look.includes("blitz") ? "The blitz got home fast enough to hurry the throw." : look.includes("Cover 2") || look.includes("Cover 4") ? "Two deep safeties were waiting on the throw." : "A throw into coverage the defense read.";
+  if (t.includes("sacked")) return t.includes("beating") ? "A lost one-on-one up front." : "Coverage held long enough for the rush to arrive.";
+  if (t.includes("FUMBLE")) return "Ball security.";
+  if (t.includes(" pass ") && !t.includes("incomplete")) return look.includes("Cover 1") || look.includes("2-man") || look.includes("Cover 0") ? "Won one-on-one against man coverage." : look.includes("Cover 3") ? "Found the soft spot between the zones." : "Beat the coverage.";
+  if (t.includes(" runs ") || t.includes("keeps it")) return look.includes("nickel") || look.includes("dime") ? "Ran against a light box." : "Blocked up well.";
+  if (p[8] & F.kick) return "Special teams swing.";
+  if (p[8] & F.penalty) return "A penalty that moved the game.";
+  return "";
+}
+
+/** The plays that moved win probability the most, with a film note on each. */
+export function KeyPlays({ r, log }: { r: GameResult; log: GameLog }) {
+  const swings: { p: PlayRow; d: number }[] = [];
+  let prev = 0.5;
+  for (const p of log.plays) {
+    if (p[13] === undefined) continue;
+    swings.push({ p, d: p[13] - prev });
+    prev = p[13];
+  }
+  const top = swings.sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 5);
+  if (!top.length) return null;
+  return (
+    <section className="stack tight">
+      <h3>Plays that turned it</h3>
+      <ol className="plays feed">
+        {top.map(({ p, d }, i) => (
+          <li key={i}>
+            <span className="num muted">{clockText(p[0], p[1])}</span>
+            <span>{p[7]}<br /><span className="muted small">{filmNote(p)} {Math.abs(Math.round(d * 100))} points of win probability toward {d > 0 ? r.home : r.away}.{p[12] !== undefined ? ` EPA ${p[12] >= 0 ? "+" : ""}${p[12].toFixed(2)}.` : ""}</span></span>
+            <span />
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}

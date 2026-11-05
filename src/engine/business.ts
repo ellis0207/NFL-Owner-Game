@@ -34,6 +34,7 @@ import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from 
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
 import { developmentCost } from "./culture";
+import { analyticsCost } from "./strategy";
 import { execBoost, execPayrollOver, signer } from "./executives";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
@@ -877,6 +878,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   if (execOver) add("businessOps", -m(execOver), "Executive pay above budget and severance");
   const dev = developmentCost(state);
   if (dev) add("businessOps", -m(dev * inflation(year, 0.03)), "Staff development");
+  // The analytics department, above the one-analyst shop the football budget already assumes.
+  const anl = analyticsCost(state);
+  if (anl) add("staff", -m(anl * inflation(year, 0.03)), "Analytics department");
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));

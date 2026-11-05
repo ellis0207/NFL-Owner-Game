@@ -385,6 +385,19 @@ officials' rooms, chain crews, credentials, coach radios, broadcast setup and
 security; a stronger operations director and game-day budget mean fewer
 problems, and the rare incident costs money or draws a fine.
 
+Every play has a value: expected points added (EPA), success rate and the
+home team's win probability, with a win-probability chart and the plays that
+turned each game (with a film note on why). The Analytics page has team and
+player EPA, adjusted for opponents, and an analytics department you staff
+and point at a research focus. Its fourth-down advice changes calls only when
+the head coach takes it; credibility grows when advice works. Every club
+builds a weekly game plan from the opponent's numbers (better coaches,
+analysts and a full week make better plans), coordinators adjust at
+halftime, and the league's play calling drifts toward what worked last
+season. The Outlook tab explains the record (point margin, close games,
+turnovers, schedule, injuries) and lists starters aging out or near the end
+of their deals. "Sim to game day" stops the morning of your game.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -423,6 +436,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
+  Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.

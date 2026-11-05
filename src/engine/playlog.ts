@@ -5,12 +5,13 @@
 //
 // The words come from their own random stream (formation names, which side a
 // run went), so writing the feed never changes a result.
+import { emptyAdv, expectedPoints, winProbHome, type Adv } from "./analytics";
 import { addDays } from "./dates";
 import { rngFor, type Rng } from "./rng";
 import type { DriveRow, GameLog, GameState, PlayRow } from "./types";
 
 /** Bit flags on a play row. */
-export const PLAY_FLAGS = { score: 1, turnover: 2, penalty: 4, review: 8, kick: 16, big: 32 } as const;
+export const PLAY_FLAGS = { score: 1, turnover: 2, penalty: 4, review: 8, kick: 16, big: 32, note: 64 } as const;
 
 /** Full play-by-play is dropped this many days after a game: through the following week's games. */
 export const KEEP_DAYS = 9;
@@ -25,6 +26,7 @@ export interface LiveGame {
   down: number;
   dist: number;
   ydl: number;
+  over: boolean;
   t: Record<Side, { id: string; score: number; box: { top: number } }>;
 }
 
@@ -62,10 +64,19 @@ export class Recorder {
   drive: OpenDrive | null = null;
   driveNo = 0;
   inPlay = false;
-  pre = { q: 1, c: 900, o: 0 as 0 | 1, dn: 1, ds: 10, y: 25, dr: 0 };
+  pre = { q: 1, c: 900, o: 0 as 0 | 1, dn: 1, ds: 10, y: 25, dr: 0, sa: 0, sh: 0 };
+  /** What kind of snap this was, and who had the ball, for EPA by team and player. */
+  kind: "pass" | "rush" | "" = "";
+  actors: { q?: string; r?: string; t?: string } = {};
+  adv: Record<Side, Adv> = { away: emptyAdv(), home: emptyAdv() };
+  pe: Record<string, [number, number, number]> = {};
+  /** EPA by play type in each half, for halftime adjustments: [half][side] offense. */
+  halves: Record<Side, Adv>[] = [{ away: emptyAdv(), home: emptyAdv() }, { away: emptyAdv(), home: emptyAdv() }];
   text = "";
   flags = 0;
   look = "";
+  /** Words added after the play: the analysts' fourth-down advice. */
+  tail = "";
   /** How the open drive is ending, set by the play that ends it. */
   why = "";
 
@@ -79,7 +90,12 @@ export class Recorder {
 
   begin(g: LiveGame): void {
     this.inPlay = true;
-    this.pre = { q: g.q, c: Math.max(0, Math.round(g.clock)), o: g.pos === "away" ? 0 : 1, dn: g.down, ds: g.dist, y: g.ydl, dr: this.driveNo };
+    this.pre = { q: g.q, c: Math.max(0, Math.round(g.clock)), o: g.pos === "away" ? 0 : 1, dn: g.down, ds: g.dist, y: g.ydl, dr: this.driveNo, sa: g.t.away.score, sh: g.t.home.score };
+    this.kind = "";
+    this.actors = {};
+    this.tail = "";
+    const last = this.plays.at(-1);
+    if (last && last[13] === undefined) last[13] = this.wp(g);
     this.text = "";
     this.flags = 0;
     this.look = "";
@@ -99,11 +115,77 @@ export class Recorder {
     this.inPlay = false;
     if (this.text) {
       const p = this.pre;
-      this.plays.push([p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text, this.flags, g.t.away.score, g.t.home.score, this.look]);
+      const epa = p.dn > 0 ? this.value(g) : undefined;
+      this.plays.push([p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
+        epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g)]);
       if (this.drive && p.dn > 0 && this.drive.o === (p.o === 0 ? "away" : "home")) this.drive.plays++;
     }
+    for (const row of this.queue) row[13] ??= this.wp(g);
     this.plays.push(...this.queue);
     this.queue = [];
+  }
+
+  /** The home team's win probability as things stand. */
+  wp(g: LiveGame): number {
+    const margin = g.t.home.score - g.t.away.score;
+    const ep = expectedPoints(g.down, g.dist, g.ydl);
+    return Math.round(winProbHome(g.q, g.clock, margin, g.pos === "home", ep, g.over) * 1000) / 1000;
+  }
+
+  /**
+   * The snap's EPA for the offense: expected points after it (or the points it
+   * produced) less expected points before. Credits team and player totals.
+   */
+  value(g: LiveGame): number {
+    const p = this.pre;
+    const off: Side = p.o === 0 ? "away" : "home";
+    const def: Side = off === "away" ? "home" : "away";
+    const before = expectedPoints(p.dn, p.ds, p.y);
+    const offPts = g.t[off].score - (off === "away" ? p.sa : p.sh);
+    const defPts = g.t[def].score - (def === "away" ? p.sa : p.sh);
+    let after: number;
+    if (offPts > 0) after = offPts;
+    else if (defPts > 0) after = -defPts;
+    else if (g.over || (p.q === 2 && g.q === 3) || (p.q === 4 && g.q === 5)) after = 0;
+    else if (g.pos !== off) after = -expectedPoints(g.down, g.dist, g.ydl);
+    else after = expectedPoints(g.down, g.dist, g.ydl);
+    const epa = after - before;
+    if (this.kind) {
+      const ok = epa > 0 ? 1 : 0;
+      const gain = g.pos === off && !offPts ? g.ydl - p.y : 0;
+      for (const a of [this.adv[off], this.halves[p.q <= 2 ? 0 : 1][off]]) {
+        a.n++;
+        a.epa += epa;
+        a.s += ok;
+        if (this.kind === "pass") {
+          a.pn++;
+          a.pe += epa;
+          a.ps += ok;
+        } else {
+          a.rn++;
+          a.re += epa;
+          a.rs += ok;
+        }
+        if (gain >= 20 || (offPts >= 6 && (100 - p.y) >= 20)) a.x++;
+      }
+      const credit = (key: string) => {
+        const line = (this.pe[key] ??= [0, 0, 0]);
+        line[0]++;
+        line[1] = Math.round((line[1] + epa) * 100) / 100 || 0;
+        line[2] += ok;
+      };
+      if (this.actors.q) credit(`q:${this.actors.q}`);
+      if (this.actors.r) credit(`r:${this.actors.r}`);
+      if (this.actors.t) credit(`t:${this.actors.t}`);
+    }
+    return epa;
+  }
+
+  /** A line in the feed that isn't a play: halftime adjustments. */
+  note(g: LiveGame, text: string): void {
+    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, PLAY_FLAGS.note, g.t.away.score, g.t.home.score, ""];
+    if (this.inPlay) this.queue.push(row);
+    else this.plays.push(row);
   }
 
   /** A kick: written after the play it follows (a kickoff after a touchdown), or now. */

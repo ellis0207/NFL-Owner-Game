@@ -59,6 +59,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Analytics and game plans",
+    body: [
+      "EPA (expected points added) is how much a play changed the offense's expected score, from the down, distance and spot. A success is a play with positive EPA. Win probability comes from the score, the time left and the drive in progress. These numbers are public: every club can compute them.",
+      "Your analytics department is a budget line on the Analytics page. A bigger staff gives sharper advice, and you choose what they research. Advice only helps when the coaches use it: the head coach's openness and the staff's credibility decide how often fourth-down advice is taken.",
+      "Every week the coaches build a plan for the next opponent: what to attack and what to take away. Better coaches, a stronger analytics staff and a full week of preparation make better plans. At halftime coordinators adjust to what worked. You can read the plan, but you don't call it.",
+      "After each season the league copies what worked: if passing pays more than usual, teams throw more and defenses play more two-deep coverage.",
+    ],
+  },
+  {
     title: "The league",
     body: [
       "Owners vote on rule changes at the March meeting; most need 24 of 32 votes. Relationships with other owners help with votes, trades and hosting bids.",
