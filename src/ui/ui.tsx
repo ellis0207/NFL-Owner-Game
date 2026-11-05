@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 
 /** App-wide drawers: any screen can open a box score or a player. */
 export interface UiActions {
-  openBox: (gameId: string) => void;
+  /** Opens a game; `follow` steps through it a drive at a time before showing the result. */
+  openBox: (gameId: string, follow?: boolean) => void;
   openPlayer: (playerId: string) => void;
   openTalks: (playerId: string) => void;
   /** The Trades page, set up to trade for (or shop) a player. */

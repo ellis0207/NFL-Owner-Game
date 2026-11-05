@@ -369,6 +369,22 @@ front office's quality). The sidebar search finds any player, coach,
 executive, team or message, and the Owner's guide explains the cap, the
 club's money, borrowing and how the league is run.
 
+Every game in the league has a play-by-play feed and a drive chart: each
+snap with the down, distance, spot, formation, personnel and coverage, who
+made the tackle, and every flag, review and score. Full plays are kept through
+the week after a game; after that a game keeps its box score and scoring
+plays. Your own game, played from the Today page, comes in a drive at a time,
+with a skip to the next quarter or the end. Pass rushers win or lose against
+the blocker in front of them, so one weak tackle shows. Officials miss
+calls; coaches challenge (two a game, a third after winning both, a timeout
+lost on each failure), the booth reviews the last two minutes of each half
+and overtime, and replay only reverses what the video shows clearly. After a
+game you can ask the league office about a call that went against you. Before
+each home game the stadium operations staff checks the field, game balls,
+officials' rooms, chain crews, credentials, coach radios, broadcast setup and
+security; a stronger operations director and game-day budget mean fewer
+problems, and the rare incident costs money or draws a fine.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -407,6 +423,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
+  The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

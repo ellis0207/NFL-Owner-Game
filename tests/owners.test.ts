@@ -91,8 +91,10 @@ describe("owners and the league meeting", () => {
     const games = SCHEDULE.filter((g) => g.type === "REG").slice(0, 144);
     const play = () => {
       let plays = 0, xpAtt = 0;
+      // Each run starts from the same rosters: games played here leave injuries behind.
+      const copy = structuredClone(state);
       for (const g of games) {
-        const { box } = simulateGame(state, g, g.away, g.home);
+        const { box } = simulateGame(copy, g, g.away, g.home);
         plays += box.team.away.plays + box.team.home.plays;
         xpAtt += [...Object.values(box.players.away), ...Object.values(box.players.home)].reduce((s, l) => s + stat(l, "xpa"), 0);
       }

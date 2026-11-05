@@ -4,10 +4,12 @@ export interface Prefs {
   textSize: number;
   contrast: "normal" | "high";
   hidden: string[];
+  /** Step through your own games a drive at a time when you play them from the Today page. */
+  followGames: boolean;
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [] };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true };
 
 export function readPrefs(): Prefs {
   try {

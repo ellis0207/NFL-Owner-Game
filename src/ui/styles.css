@@ -321,3 +321,18 @@ tr.ours td { background: color-mix(in srgb, var(--team) 8%, transparent); }
 .btn.answer { text-align: left; white-space: normal; }
 .said { border-bottom: 1px solid var(--rule); padding-bottom: 0.5rem; display: grid; gap: 0.15rem; }
 .said:last-child { border-bottom: 0; }
+
+/* Play-by-play feed and drive chart */
+.plays.feed li { align-items: start; }
+.plays.feed li.score { background: color-mix(in srgb, var(--good) 8%, transparent); }
+.plays.feed li.turnover { background: color-mix(in srgb, var(--bad) 8%, transparent); }
+.small { font-size: 0.8em; }
+.drive-col { min-width: 7rem; }
+.drive-bar { position: relative; height: 0.6rem; background: color-mix(in srgb, var(--good) 14%, var(--panel)); border: 1px solid var(--rule); border-radius: 2px; }
+.drive-bar span { position: absolute; top: 0; bottom: 0; background: var(--muted); }
+.drive-bar span.scored { background: var(--good); }
+.follow-score { display: flex; justify-content: space-between; align-items: baseline; font-size: 1.4rem; padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+.drawer-backdrop.solid { background: var(--paper); }
+.follow-score { position: sticky; top: -1px; z-index: 1; background: var(--paper); }
+.follow-controls { position: sticky; bottom: -2rem; background: var(--paper); padding: 0.5rem 0 2rem; border-top: 1px solid var(--rule); }
+.plays.feed li { scroll-margin-top: 4rem; }

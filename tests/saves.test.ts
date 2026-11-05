@@ -61,6 +61,25 @@ describe("saves from older versions", () => {
     expect(back.settings.scouting).toBe("foggy");
   }, 90_000);
 
+  it("a save with play-by-play, game-day checks and a question to the league keeps them", async () => {
+    const state = load("pr33-2026-11-15");
+    expect(Object.keys(state.pbp ?? {}).length).toBeGreaterThan(0);
+    expect(state.gameOps?.inquiries.length).toBe(1);
+    for (let i = 0; i < 12; i++) advanceDay(state);
+    expect(state.gameOps?.inquiries[0].answer).toBeDefined();
+    // Week-old play-by-play is gone; the newest games have theirs.
+    for (const log of Object.values(state.pbp!)) expect(log.date >= "2026-11-17").toBe(true);
+    const back = await decompress(await compress(state));
+    expect(Object.keys(back.pbp ?? {}).length).toBe(Object.keys(state.pbp!).length);
+  }, 90_000);
+
+  it("an older save starts keeping play-by-play with its next games", () => {
+    const state = load("pr32-2026-11-15");
+    expect(state.pbp).toBeUndefined();
+    for (let i = 0; i < 8; i++) advanceDay(state);
+    expect(Object.keys(state.pbp ?? {}).length).toBeGreaterThan(0);
+  }, 90_000);
+
   it("a save from when the game ended with the draft moves on to the next season", () => {
     const state = load("pr12-2027-05-02");
     expect(state.season).toBe(2027);
