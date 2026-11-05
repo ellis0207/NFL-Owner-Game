@@ -27,7 +27,10 @@ import { openQuestions } from "../engine/press";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
+<<<<<<< HEAD
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
+=======
+>>>>>>> origin/claude/project-thread-hjxueq
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
 import { SaveScreen } from "./screens/SaveScreen";
@@ -39,7 +42,11 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
+<<<<<<< HEAD
 const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Staff", "Cap", "League", "Owners", "Save"] as const;
+=======
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Staff", "Cap", "League", "Owners", "Save"] as const;
+>>>>>>> origin/claude/project-thread-hjxueq
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -188,7 +195,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
+<<<<<<< HEAD
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
+=======
+>>>>>>> origin/claude/project-thread-hjxueq
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>
       </div>
