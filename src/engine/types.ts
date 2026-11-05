@@ -134,7 +134,11 @@ export interface Coach {
   team: string | null;
   role: StaffRole | null;
   /** Any other job: an NFL assistant job, a college job, or a front-office job under the GM. */
-  job?: { kind: "assistant" | "college" | "front"; title: string; team: string };
+  job?: { kind: "assistant" | "college" | "front"; title: string; team: string; room?: CoachRoom; lead?: boolean };
+  /** The position room this coach teaches, kept between jobs. */
+  room?: CoachRoom;
+  /** NFL teams the person played for, by today's team id. */
+  playedFor?: string[];
   retired?: number;
   hiredYear: number;
   callsPlays: ("offense" | "defense")[];
@@ -197,6 +201,22 @@ export interface StaffSearch {
 }
 
 /** A head coach (or GM) asking the owner to approve a hire for his staff. */
+/** A position coach's room: the players he teaches. ST is the assistant special teams coach. */
+export type CoachRoom = "QB" | "RB" | "WR" | "TE" | "OL" | "DL" | "LB" | "DB" | "ST";
+
+/** The head coach's pick for a position coach job, waiting on the owner. */
+export interface RoomProposal {
+  id: string;
+  team: string;
+  room: CoachRoom;
+  candidate: string;
+  date: string;
+  reason: string;
+  status: "open" | "approved" | "rejected" | "withdrawn";
+  /** The lead coach the hire would replace. */
+  replaces?: string;
+}
+
 export interface StaffProposal {
   id: string;
   team: string;
@@ -226,6 +246,10 @@ export interface StaffState {
   log: { date: string; team: string; text: string }[];
   /** The season each team's year ended, once its staff decisions are made. */
   ended?: Record<string, number>;
+  /** Position coach hires waiting on the owner. */
+  roomProposals?: RoomProposal[];
+  /** The head coach each team's position rooms were last set under. */
+  roomsBy?: Record<string, string>;
 }
 
 export interface StaffData {

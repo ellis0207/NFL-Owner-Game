@@ -18,6 +18,7 @@ import { news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, teamLabel } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { logMove } from "./roster";
+import { roomBoost } from "./positionCoaches";
 import { staffEffects, teamStaff } from "./staff";
 import { seasonTotals } from "./stats";
 import type { GameState, Position } from "./types";
@@ -69,7 +70,7 @@ export function progressPlayers(state: GameState, season: number): void {
     let ceiling = Math.max(now, r.potential + (p.pot ?? 0));
     const fx = p.team ? staffEffects(p.team) : null;
     const side = SIDE[data.position];
-    const coachRating = fx ? (side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial) : 50;
+    const coachRating = fx ? (side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial) + roomBoost(state, p.team!, data.position) : 50;
     const coach = 0.85 + (coachRating - 60) / 100;
     const field = 0.85 + 0.35 * (played[id] ?? 0);
 

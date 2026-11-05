@@ -264,6 +264,14 @@ offer for a head coach or GM job, has to wait until their team is out or the
 week before the Super Bowl. A hire from a team still playing becomes official
 when its season ends.
 
+Every staff has its real 2026 position coaches: a coach for each room
+(quarterbacks through defensive backs) and an assistant special teams coach,
+most with an assistant under them. They teach their rooms, so a good one helps
+young players grow (about a third as much as the head coach does). The head
+coach hires them and you approve or turn down his pick; a new head coach brings
+some of his own people. Coaches remember whom they worked under, and teams
+looking for a coordinator or head coach lean toward branches of winning trees.
+
 The business has an offseason too. Local sponsors (the jersey patch, the
 official bank, beer, airline and the rest) and the flagship radio and
 preseason TV partners are named deals with their own terms; when one runs
@@ -316,7 +324,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
-  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
@@ -387,7 +395,10 @@ rosters on the same scale, without changing anyone else's rating.
   real league averages (`npx vite-node tests/calibrate.ts 4`).
 - Staff (`pipeline/staff_2026.py`) is hand-entered: real HCs, OCs, DCs, STCs and
   GMs with their schemes and play callers. Some birth years are estimates.
-  Trainers and scouting directors are generated.
+  Trainers and scouting directors are generated. Position coaches
+  (`pipeline/position_coaches_2026.py`, from the team sites and staff
+  announcements) are real for all but about a dozen rooms; former players among
+  them record the teams they played for.
 
 Real names and teams are used for a private game. A public release would need
 NFL and NFLPA licensing or a fictional league.

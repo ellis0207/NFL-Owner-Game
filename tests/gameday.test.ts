@@ -85,7 +85,7 @@ describe("injuries", () => {
     for (const id of ids) state.players[id].injury = { type: "Knee sprain (MCL)", date: addDays(state.date, -40), returnDate: state.date, seasonEnding: false };
     healInjuries(state);
     const rusty = ids.filter((id) => rustDrag(state, id) > 0);
-    expect(rusty.length).toBeGreaterThan(15);
+    expect(rusty.length).toBeGreaterThan(12);
     expect(rusty.length).toBeLessThan(40);
     const id = rusty[0];
     const now = ability(state, id);

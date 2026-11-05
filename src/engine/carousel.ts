@@ -171,7 +171,18 @@ function teamView(state: GameState, team: string, id: string, role: StaffRole): 
   const view = quality(c, role) + z * sd;
   // NFL front offices lean toward people who've done it in the league.
   const college = c.job?.kind === "college" ? -4 : 0;
-  return 0.55 * view + 0.45 * reputation(state, c) + networkBonus(state, team, c, role) + college;
+  return 0.55 * view + 0.45 * reputation(state, c) + networkBonus(state, team, c, role) + treeBonus(state, c) + college;
+}
+
+/** Owners and GMs chase the next branch of a winning tree: a coach whose mentor won a lot, or won it all, gets a look. */
+function treeBonus(state: GameState, c: Coach): number {
+  const m = c.mentor ? staff(state).people[c.mentor] : undefined;
+  const hc = m?.record.filter((r) => r.role === "HC") ?? [];
+  if (hc.length < 2) return 0;
+  const w = hc.reduce((n, r) => n + r.w + r.t / 2, 0) / Math.max(1, hc.reduce((n, r) => n + r.w + r.l + r.t, 0));
+  // Three playoff wins means at least a Super Bowl trip.
+  const deepRun = hc.some((r) => r.playoffs >= 3);
+  return (w >= 0.6 ? 2 : w >= 0.55 ? 1 : 0) + (deepRun ? 1.5 : 0);
 }
 
 /** Coaches hire people they know: their own tree, and people who share their scheme. */

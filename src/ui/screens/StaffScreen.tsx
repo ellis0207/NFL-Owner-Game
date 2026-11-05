@@ -8,6 +8,7 @@ import { shortDate } from "../../engine/dates";
 import { money } from "../../engine/inbox";
 import { RULES, STAFF, TEAMS, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { DEFENSE_LABEL, OFFENSE_LABEL } from "../../engine/schemes";
+import { decideRoom, ROOM_TITLE, ROOMS, roomLine, roomProposals, roomSalary, roomStaff } from "../../engine/positionCoaches";
 import { playCaller, teamSchemes, teamStaff } from "../../engine/staff";
 import type { Coach, CoachSeason, DefenseScheme, GameState, OffenseScheme, StaffRole, StaffSearch } from "../../engine/types";
 
@@ -77,6 +78,7 @@ export function StaffScreen({ game, changed }: { game: GameState; changed: () =>
       </div>
       {msg && <p className="notice">{msg}</p>}
       <Proposals game={game} act={act} />
+      <RoomProposals game={game} act={act} />
       {view === "ours" && <OurStaff game={game} act={act} searches={searches} />}
       {view === "search" && (top.length
         ? top.map((s) => <Search key={s.role} game={game} search={s} act={act} />)
@@ -113,6 +115,63 @@ function Proposals({ game, act }: { game: GameState; act: (r: { ok: boolean; tex
           </div>
         );
       })}
+    </section>
+  );
+}
+
+function RoomProposals({ game, act }: { game: GameState; act: (r: { ok: boolean; text: string }) => void }) {
+  const list = roomProposals(game);
+  if (!list.length) return null;
+  return (
+    <section className="panel stack tight">
+      <h3>Position coaches waiting on your approval</h3>
+      {list.map((p) => {
+        const c = game.staff!.people[p.candidate];
+        const old = p.replaces ? game.staff!.people[p.replaces] : null;
+        return (
+          <div key={p.id} className="report">
+            <strong>The head coach wants {c.name} as {ROOM_TITLE[p.room]}</strong>
+            <span>{c.background ?? "Assistant"} · age {ageText(c)}{c.playedFor?.length ? ` · played for ${c.playedFor.join(", ")}` : ""}</span>
+            <span className="muted">"{p.reason}."</span>
+            {old && <span className="muted">This would replace {old.name}.</span>}
+            <span className="muted">About {money(roomSalary(c, true))} a year. Proposed {shortDate(p.date)}; approved automatically after four days.</span>
+            <div className="btn-row">
+              <button className="btn primary" onClick={() => act(decideRoom(game, p.id, "approve"))}>Approve</button>
+              <button className="btn" onClick={() => act(decideRoom(game, p.id, "reject"))}>Ask for someone else</button>
+              {old && <button className="btn" onClick={() => act(decideRoom(game, p.id, "keep"))}>Keep {old.name}</button>}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function PositionCoaches({ game }: { game: GameState }) {
+  const rooms = roomStaff(game, game.userTeam);
+  return (
+    <section className="panel stack tight">
+      <h3>Position coaches</h3>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Room</th><th>Coach</th><th>Age</th><th>Under contract through</th><th>Salary</th></tr></thead>
+          <tbody>
+            {ROOMS.flatMap((r) => rooms[r].map((c, i) => (
+              <tr key={c.id}>
+                <td>{i === 0 ? ROOM_TITLE[r].replace(/ coach$/, "") : ""}</td>
+                <td>{c.name}<div className="muted">{roomLine(c)}</div></td>
+                <td>{ageText(c)}</td>
+                <td>{c.contract?.through ?? "-"}</td>
+                <td>{c.contract ? money(c.contract.salary) : "-"}</td>
+              </tr>
+            )))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted">
+        Position coaches teach their rooms day to day, so a good one helps young players grow. The head coach hires them and
+        you can approve or turn down his pick. A new head coach usually brings some of his own people.
+      </p>
     </section>
   );
 }
@@ -192,6 +251,7 @@ function OurStaff({ game, act, searches }: { game: GameState; act: (r: { ok: boo
           );
         })}
       </div>
+      <PositionCoaches game={game} />
       {owed.length > 0 && (
         <p className="muted">
           Still being paid: {owed.map((o) => `${s.people[o.id]?.name ?? "a former coach"} (${money(o.salary)} a year through ${o.through})`).join(", ")}.
