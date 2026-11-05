@@ -5,7 +5,7 @@ import { ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { OFFENSE_LABEL, DEFENSE_LABEL } from "./schemes";
-import { ability, perceivedAbility, schemeFit, staffEffects, teamSchemes, teamStaff, trait, upside as upsideOf } from "./staff";
+import { ability, fogOf, perceivedAbility, schemeFit, staffEffects, teamSchemes, teamStaff, trait, upside as upsideOf } from "./staff";
 import type { GameState } from "./types";
 
 export interface PlayerReport {
@@ -77,7 +77,7 @@ export function playerReport(state: GameState, id: string): PlayerReport {
   const skill = ours ? fx.coachEval : fx.proScouting;
   const key = ours ? `coach:${us}` : `pro:${us}`;
   const view = perceivedAbility(state, id, key, skill);
-  const sd = Math.max(0.8, (100 - skill) / 7);
+  const sd = Math.max(0.8, (100 - skill) / 7) * fogOf(state);
   const rng = rngFor(state.seed, `report:${key}:${id}`);
 
   // Trait reads: each relative to the player's overall, each with the evaluator's error.

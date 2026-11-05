@@ -2,6 +2,7 @@
 import { approvePlan, books, booksDaily } from "./books";
 import { debt, debtDaily } from "./debt";
 import { ensureOffice } from "./delegation";
+import { ensureCulture } from "./culture";
 import { ensureExecs } from "./executives";
 import { officeDaily } from "./memos";
 import { leagueYear } from "./contracts";
@@ -115,6 +116,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   books(state);
   ensureExecs(state);
   ensureOffice(state);
+  ensureCulture(state);
   setupOwner(state, profile);
   approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
@@ -759,8 +761,10 @@ export function draftWaiting(state: GameState): boolean {
 export function advanceToNextEvent(state: GameState): void {
   if (draftWaiting(state)) return;
   const start = state.date;
+  const seen = state.inbox.length;
   for (let i = 0; i < 7; i++) {
     advanceDay(state);
+    if (shouldPause(state, seen)) return;
     if (offseasonStops(state).includes(state.date) && state.date !== start) return;
     if (!isSeasonOver(state) && !isSummer(state)) return;
   }
@@ -770,13 +774,32 @@ export function advanceToNextEvent(state: GameState): void {
 export function simToNextGame(state: GameState): void {
   const start = state.date;
   if (isSeasonOver(state) || isSummer(state)) return advanceToNextEvent(state);
+  const seen = state.inbox.length;
   for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
     const hadGame = agenda(state).some((a) => a.kind === "game");
     const isStop = state.date !== start && state.date === KEY.rosterCutdown;
     if (isStop) return;
     advanceDay(state);
     if (hadGame) return;
+    if (shouldPause(state, seen)) return;
   }
+}
+
+/** A week at a time: seven days, or less if the draft is waiting on us or something urgent arrives. */
+export function simWeek(state: GameState): void {
+  const seen = state.inbox.length;
+  for (let i = 0; i < 7 && !isGameOver(state); i++) {
+    if (draftWaiting(state)) return;
+    advanceDay(state);
+    if (shouldPause(state, seen)) return;
+  }
+}
+
+/** With pauses on, a multi-day sim stops the day an urgent message lands (a memo due soon, a resignation, an incident). */
+function shouldPause(state: GameState, seen: number): boolean {
+  if (state.settings.pause !== "urgent") return false;
+  const fresh = state.inbox.length - seen;
+  return state.inbox.slice(0, Math.max(0, fresh)).some((m) => !m.read && (m.priority ?? 1) >= 3);
 }
 
 export { money } from "./inbox";

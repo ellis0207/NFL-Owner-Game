@@ -15,7 +15,7 @@
 // needs. Candidates negotiate pay, years, a guarantee, and whether they
 // actually get to run their department. A club that fires people often finds
 // the market wary of it.
-import { addDays } from "./dates";
+import { addDays, daysBetween } from "./dates";
 import { money, news } from "./inbox";
 import { RULES, TEAM_BY_ID, TEAMS } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
@@ -164,6 +164,8 @@ export function execBoost(state: GameState, role: ExecRole): number {
   const e = execRole(state, role) ?? deputy(state, role);
   if (!e) return role === "FOPS" ? 0 : -0.6;
   let b = (e.hidden.skill - (e.role ? 50 : 55)) / 45;
+  // A new hire spends the first six months learning the building: their strengths show only partly.
+  if (e.role && e.hired && b > 0 && daysBetween(e.hired, state.date) < 180) b *= 0.75;
   const boss = execs(state).reportsTo[role];
   if (role !== "PRES" && boss !== "owner") {
     const top = execRole(state, boss);
@@ -425,8 +427,10 @@ export function bindExecs(fee: typeof postFee, note: typeof noteDecision): void 
 /** Each new league year: people grow or slip, and contracts that ran out are renewed or end. */
 export function execsNewYear(state: GameState): void {
   const x = execs(state);
+  // Mentoring, courses and credentials add to everyone's growth, deputies most of all.
+  const dev = state.culture?.development ?? 0;
   for (const e of Object.values(x.people)) {
-    e.hidden.skill = clamp(e.hidden.skill + e.hidden.growth);
+    e.hidden.skill = clamp(e.hidden.skill + e.hidden.growth + dev * (e.deputyOf ? 0.6 : 0.3));
     e.hidden.growth = Math.round((e.hidden.growth * 0.8 - 0.15) * 10) / 10;
     e.years++;
   }

@@ -8,6 +8,7 @@ import { ensureBusiness } from "../engine/business";
 import { ensureBooks } from "../engine/books";
 import { ensureDebt } from "../engine/debt";
 import { ensureOffice } from "../engine/delegation";
+import { ensureCulture } from "../engine/culture";
 import { ensureExecs } from "../engine/executives";
 import { ensureOwner } from "../engine/ownership";
 import { BASE_SEASON, PLAYERS, RULES } from "../engine/league";
@@ -98,6 +99,7 @@ export function migrate(state: GameState): GameState {
   // Saves from before the club's books, loans and owner profile get them today.
   ensureExecs(state);
   ensureOffice(state);
+  ensureCulture(state);
   ensureDebt(state);
   ensureOwner(state);
   ensureBooks(state);

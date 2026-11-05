@@ -47,6 +47,18 @@ describe("saves from older versions", () => {
     expect(state.office?.tasks[0].status).toBe("done");
     const back = await decompress(await compress(state));
     expect(back.office?.trail.length).toBe(state.office?.trail.length);
+    // Saves from before the culture model start with ordinary readings.
+    expect(state.culture?.history.length).toBeGreaterThan(0);
+  }, 90_000);
+
+  it("a save with culture, foggy scouting and ironman keeps them", async () => {
+    const state = load("pr32-2026-11-15");
+    expect(state.culture?.development).toBe(3);
+    expect(state.settings.ironman).toBe(true);
+    for (let i = 0; i < 20; i++) advanceDay(state);
+    expect(state.culture?.history.at(-1)?.month).toBe("2026-12");
+    const back = await decompress(await compress(state));
+    expect(back.settings.scouting).toBe("foggy");
   }, 90_000);
 
   it("a save from when the game ended with the draft moves on to the next season", () => {

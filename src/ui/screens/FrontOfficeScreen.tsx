@@ -9,8 +9,9 @@ import { RULES } from "../../engine/league";
 import type { DecisionMode, Exec, ExecRole, GameState, OfficeState } from "../../engine/types";
 import { money } from "../format";
 import { Desk, Meetings, Record } from "./FrontOfficeDesk";
+import { Culture } from "./FrontOfficeCulture";
 
-const TABS = ["Executives", "Decision rights", "Memos", "Meetings", "Record"] as const;
+const TABS = ["Executives", "Decision rights", "Memos", "Meetings", "Culture", "Record"] as const;
 type Tab = (typeof TABS)[number];
 
 export function FrontOfficeScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -28,6 +29,7 @@ export function FrontOfficeScreen({ game, changed }: { game: GameState; changed:
       {tab === "Decision rights" && <Rights game={game} changed={changed} />}
       {tab === "Memos" && <Desk game={game} changed={changed} />}
       {tab === "Meetings" && <Meetings game={game} changed={changed} />}
+      {tab === "Culture" && <Culture game={game} changed={changed} />}
       {tab === "Record" && <Record game={game} />}
     </section>
   );
@@ -99,6 +101,10 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
           <dt>Pay over the business budget</dt><dd>{money(execPayrollOver(game))} a year</dd>
         </dl>
         <span className="muted">Nobody's ability is on paper. You see it in their department's results, their reviews and what other clubs think of them. A vacant job is covered by the deputy.</span>
+      </div>
+      <div className="panel stack tight">
+        <h3>Organization chart</h3>
+        <OrgChart game={game} />
       </div>
       {x.searches.map((s) => (
         <div key={s.role} className="panel stack tight">
@@ -208,5 +214,37 @@ function Rights({ game, changed }: { game: GameState; changed: () => void }) {
         <span className="muted">Anything over a limit comes to you as a memo even when the area is delegated.</span>
       </div>
     </div>
+  );
+}
+
+/** Who reports to whom, drawn from the owner down, with each person's decision areas. */
+function OrgChart({ game }: { game: GameState }) {
+  const x = execs(game);
+  const filled = (r: ExecRole) => !!execRole(game, r) || !EXEC_ROLES[r].optional;
+  const node = (r: ExecRole): JSX.Element => {
+    const e = execRole(game, r);
+    const d = deputy(game, r);
+    const kids = EXEC_KEYS.filter((k) => x.reportsTo[k] === r && filled(k));
+    const area = EXEC_ROLES[r].area;
+    return (
+      <li key={r}>
+        <strong>{EXEC_ROLES[r].label}</strong>: {e ? e.name : <span className="muted">vacant{d ? `, ${d.name} acting` : ""}</span>}
+        {area && <span className="muted"> · {AREAS[area].label.toLowerCase()}: {mode(game, area) === "delegate" ? "decides" : mode(game, area) === "approve" ? "proposes" : "advises"}</span>}
+        {r === "FOPS" && <span className="muted"> · the GM and head coach report here</span>}
+        {kids.length > 0 && <ul className="org">{kids.map(node)}</ul>}
+      </li>
+    );
+  };
+  const top = EXEC_KEYS.filter((k) => x.reportsTo[k] === "owner" && filled(k));
+  return (
+    <ul className="org org-root">
+      <li>
+        <strong>You, the owner</strong>
+        <ul className="org">
+          {top.map(node)}
+          {!execRole(game, "FOPS") && <li><strong>General manager and head coach</strong> <span className="muted">· report to you</span></li>}
+        </ul>
+      </li>
+    </ul>
   );
 }

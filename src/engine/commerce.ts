@@ -100,6 +100,8 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
   sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.94, 1, 1.03, 1.05][b.budget.marketing] * mood;
   // The revenue chief's sales staff works the small partners harder (or not).
   sponsors *= 1 + 0.04 * execBoost(state, "CRO");
+  // Partners who've lost confidence in the club spend less with it.
+  sponsors *= 1 + ((state.culture?.rel.sponsors ?? 60) - 60) / 1000;
   return { sponsors, media };
 }
 

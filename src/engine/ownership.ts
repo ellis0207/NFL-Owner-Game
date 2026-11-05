@@ -63,7 +63,17 @@ export const SCENARIOS = {
   healthy: { label: "Sound finances", what: "$100 million in the bank and a $300 million credit line." },
   tight: { label: "Cash-strapped", what: "$15 million in the bank and a $150 million credit line: every bonus counts." },
   leveraged: { label: "Bought with debt", what: "$50 million in the bank and $450 million of floating-rate acquisition debt due in seven years." },
+  custom: { label: "Custom", what: "Set the club's cash, its acquisition debt, your own cash and the quality of the front office yourself." },
 } as const;
+
+/** A made-up starting position for the custom scenario. */
+export interface CustomStart {
+  cash: number;
+  debt: number;
+  liquid: number;
+  staff: "weak" | "average" | "strong";
+}
+export const DEFAULT_CUSTOM: CustomStart = { cash: 100 * M, debt: 0, liquid: 300 * M, staff: "average" };
 export type Scenario = keyof typeof SCENARIOS;
 
 export interface OwnerSetup {
@@ -74,6 +84,7 @@ export interface OwnerSetup {
   patience: number;
   weights: Record<OwnerGoal, number>;
   scenario: Scenario;
+  custom?: CustomStart;
 }
 
 export const DEFAULT_SETUP: OwnerSetup = {
@@ -117,6 +128,14 @@ export function setupOwner(state: GameState, s: OwnerSetup): void {
   } else if (s.scenario === "leveraged") {
     b.opening -= 50 * M;
     acquisitionLoan(state, 450 * M);
+  } else if (s.scenario === "custom") {
+    const c = s.custom ?? DEFAULT_CUSTOM;
+    b.opening += c.cash - 100 * M;
+    if (c.debt > 0) acquisitionLoan(state, Math.min(c.debt, 1000 * M));
+    o.liquid = c.liquid;
+    // A weak or strong front office: every executive and deputy starts ten points off the ordinary.
+    const shift = { weak: -10, average: 0, strong: 10 }[c.staff];
+    if (shift && state.execs) for (const e of Object.values(state.execs.people)) e.hidden.skill = Math.max(5, Math.min(99, e.hidden.skill + shift));
   }
   // Spending philosophy sets the first budgets and the cash cushion.
   if (s.spending === "aggressive") Object.assign(b.budget, { marketing: 2, medical: 2, facilities: 2, scouts: 2 });

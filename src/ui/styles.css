@@ -35,9 +35,24 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 14px;
+  /* 14px at the browser's default size; the text-size setting scales the root. */
+  font-size: 0.875rem;
   line-height: 1.45;
 }
+/* High contrast: darker secondary text and rules, for readability. */
+:root[data-contrast="high"] { --muted: #2f3840; --rule: #8a949d; }
+@media (prefers-color-scheme: dark) {
+  :root[data-contrast="high"]:not([data-theme="light"]) { --muted: #c9d2da; --rule: #5c6873; }
+}
+:root[data-theme="dark"][data-contrast="high"] { --muted: #c9d2da; --rule: #5c6873; }
+.search-box { position: relative; }
+.search-box input { width: 100%; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 4px 8px; font: inherit; }
+.search-results { position: absolute; z-index: 30; left: 0; right: 0; top: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--radius); max-height: 60vh; overflow: auto; box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
+.search-results button { display: block; width: 100%; text-align: left; padding: 6px 10px; background: none; border: 0; color: inherit; cursor: pointer; font: inherit; }
+.search-results button:hover, .search-results button:focus-visible { background: var(--sunk); }
+.org { list-style: none; padding-left: 1.2rem; border-left: 2px solid var(--rule); margin: 0.2rem 0; }
+.org-root { padding-left: 0; border-left: 0; }
+.org li { margin: 0.25rem 0; }
 * { box-sizing: border-box; }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.01em; text-wrap: balance; margin: 0; }
 h1 { font-size: 2.1rem; line-height: 1.05; }

@@ -207,8 +207,13 @@ export function perceivedAbility(state: GameState, id: string, evaluatorKey: str
     z = gaussian(rngFor(state.seed, `eval:${evaluatorKey}:${id}`));
     errorCache.set(key, z);
   }
-  const sd = Math.max(0.8, (100 - skill) / 7);
+  const sd = Math.max(0.8, (100 - skill) / 7) * (evaluatorKey.endsWith(`:${state.userTeam}`) ? fogOf(state) : 1);
   return ability(state, id) + z * sd;
+}
+
+/** The owner's chosen scouting precision: it widens or narrows our own staff's reads, never anyone else's. */
+export function fogOf(state: GameState): number {
+  return { sharp: 0.6, real: 1, foggy: 1.5 }[state.settings.scouting ?? "real"];
 }
 
 /** A team's coaching staff's view of its own player, including how well the player fits the scheme. */
