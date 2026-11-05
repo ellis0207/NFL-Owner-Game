@@ -115,8 +115,16 @@ function moraleDrag(state: GameState, id: string): number {
   return m === undefined || m >= 50 ? 0 : (50 - m) * 0.06;
 }
 
+/** Back from an injury, a player can take a few weeks to look like himself; the drag fades to nothing. */
+export function rustDrag(state: GameState, id: string): number {
+  const r = state.players[id]?.rust;
+  if (!r || state.date >= r.until) return 0;
+  const left = (Date.parse(r.until) - Date.parse(state.date)) / 86_400_000;
+  return r.amount * Math.min(1, left / r.days);
+}
+
 export function ability(state: GameState, id: string): number {
-  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id);
+  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id);
 }
 
 /** Room a player still has to grow: his ceiling (as it has moved) over where he is now. Engine only. */
@@ -130,7 +138,7 @@ export function upside(state: GameState, id: string): number {
 export function trait(state: GameState, id: string, name: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r) return 45;
-  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id);
+  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id);
 }
 
 /** How well a player's traits match what a scheme asks for at the position, in rating points around zero. */

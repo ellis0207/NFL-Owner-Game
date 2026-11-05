@@ -17,10 +17,22 @@ season day by day through Super Bowl LXI, then run the 2027 offseason and the
 go to the cloud on claude.ai, and export to a file.
 
 Every game is simulated play by play, with box scores and per-game stats for
-preseason, regular season and playoffs, plus season totals and league leaders.
+preseason, regular season and playoffs, plus season totals and league leaders. Open-air games have weather
+from each city's climate: wind takes away deep passes and long field goals,
+cold and rain make the ball harder to hold, snow does both, and kicks carry in
+Denver. Domes and retractable roofs play indoors. Teams on a short week, on a
+long trip or playing a 1 PM East Coast game on a West Coast body clock play a
+little flat, and teams off a bye are a little fresher. The box score shows the
+conditions.
 Each team has its real 2026 head coach, coordinators, special teams coach and
 GM, running their real-life schemes. How well a player's traits fit those
-schemes changes how that player performs (in the engine, not on screen). Play callers,
+schemes changes how that player performs (in the engine, not on screen). Players back from a long injury often start
+slow for a few weeks, and a torn Achilles or ACL can take something away for
+good. Injured reserve follows the league's rules: four games minimum, eight
+return designations a season per team, and a 21-day practice window to
+activate a player or lose him for the year. Players still hurt from before camp
+go on PUP or the non-football injury list, and coming back from those doesn't
+use a designation. Play callers,
 trainers and scouts all change results: injuries and recovery time, player
 development, and how accurate the written staff reports are.
 
@@ -267,7 +279,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
 
 ## Code layout
 
-- `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim, standings and playoffs.
+- `src/engine/` game rules with no UI: cap math, roster moves, calendar, game sim (`gameday.ts` adds weather, rest and travel), standings and playoffs.
   `HIDDEN_RATINGS` is only read here. Contracts live in `contracts.ts` (deal model and cap rules),
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free

@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from "react";
 import { campNote } from "../../engine/camp";
 import { capHit, contractYearsLeft, teamPlayerIds } from "../../engine/cap";
@@ -6,11 +7,17 @@ import { isHurt } from "../../engine/injuries";
 import { PLAYER_BY_ID, RULES, SEASON } from "../../engine/league";
 import { faClass, isOffseason, isPendingFreeAgent, NEXT, off } from "../../engine/offseason";
 import { gradeShort } from "../../engine/reports";
-import { depthChart, POSITION_ORDER, proposeFinal53 } from "../../engine/roster";
+import { depthChart, IR_RETURNS, POSITION_ORDER, proposeFinal53 } from "../../engine/roster";
 import { outLabel } from "../../engine/season";
-import type { GameState, Position } from "../../engine/types";
+import type { GameState, PlayerState, Position } from "../../engine/types";
 import { money, POSITION_NAMES, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
+
+/** Which reserve list, and whether his practice window is open. */
+function reserveLabel(p: PlayerState): string {
+  const list = p.reserve === "pup" ? "PUP" : p.reserve === "nfi" ? "NFI" : "IR";
+  return p.irWindow && !p.irDone ? `${list} (practicing)` : list;
+}
 
 type Filter = "all" | "active" | "ps" | "ir" | "future";
 
@@ -68,6 +75,9 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
           </span>
           {edited && <div><button className="btn small" onClick={resetPlan}>Go back to the GM's plan</button></div>}
         </div>
+      )}
+      {!beforeCutdown && (
+        <p className="muted">IR return designations used this season: {game.irReturns?.[game.userTeam] ?? 0} of {IR_RETURNS}. Players coming back from PUP or NFI don't use one.</p>
       )}
       {!beforeCutdown && (
         <div className="tabs" role="group" aria-label="Show">
@@ -138,7 +148,7 @@ function PositionGroup(props: {
           <tr key={id} className="clickable" onClick={() => onOpen(id)}>
             <td className="num">{p.jersey ?? ""}</td>
             <td className="name">{p.name}{note && <span className="muted"> · {note}</span>}</td>
-            <td>{status === "ps" ? "PS" : status === "ir" ? "IR" : injured ? <span className="bad">Inj</span> : `${pos}${depthIndex[id] ?? ""}`}</td>
+            <td>{status === "ps" ? "PS" : status === "ir" ? reserveLabel(game.players[id]) : injured ? <span className="bad">Inj</span> : `${pos}${depthIndex[id] ?? ""}`}</td>
             <td className="muted">{gradeShort(game, id)}</td>
             <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
             <td className="num">{p.yearsExp === 0 ? "R" : p.yearsExp}</td>

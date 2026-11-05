@@ -7,6 +7,7 @@
 // fast receiver, the quarterback's arm and the time the line buys against
 // the rush. Rosters that fit their coaches' schemes play better, good
 // play-callers make better calls, and luck still decides plenty of Sundays.
+import { gameConditions, type Conditions } from "./gameday";
 import { addLine, pack, type StatKey, type StatLine } from "./stats";
 import { teamPlayerIds } from "./cap";
 import { injure, injuryRisk, isHurt } from "./injuries";
@@ -120,10 +121,14 @@ class GameSim {
   ot = { active: false, possessions: { away: 0, home: 0 }, suddenDeath: false };
   over = false;
 
+  cond: Conditions;
+
   constructor(public state: GameState, public game: ScheduledGame, away: string, home: string) {
     this.rng = rngFor(state.seed, `game:${game.id}`);
     this.pre = game.type === "PRE";
+    this.cond = gameConditions(state, game, away, home);
     this.t = { away: this.makeTeam("away", away), home: this.makeTeam("home", home) };
+    for (const side of ["away", "home"] as const) this.t[side].form += this.cond.edge[side];
     for (const side of ["away", "home"] as const) this.t[side].passLean = this.estimatePassLean(side);
   }
 
@@ -348,6 +353,7 @@ class GameSim {
       scoring: this.scoring,
       inactives: { away: away.inactive, home: home.inactive },
       injuries: this.injuries,
+      ...(this.cond.weather.indoor ? {} : { weather: this.cond.weather }),
     };
     return { result, box };
   }
@@ -565,9 +571,9 @@ class GameSim {
   fgMakeChance(kicker: string | undefined, distance: number): number {
     const power = this.tr(kicker, "kickPower");
     const acc = this.tr(kicker, "kickAccuracy");
-    const l50 = 62.5 + (power - 80) * 0.25;
+    const l50 = 62.5 + (power - 80) * 0.25 - this.cond.kickRange;
     const p = 1 / (1 + Math.exp((distance - l50) / 6));
-    return clamp(p * (0.985 + (acc - 80) * 0.002), 0.02, 0.995);
+    return clamp(p * (0.985 + (acc - 80) * 0.002 - this.cond.kickAcc), 0.02, 0.995);
   }
 
   fieldGoal(): void {
@@ -1042,7 +1048,7 @@ class GameSim {
       return { yards, ended: true, playTime: 0, clockStops: true, involved: [carrier, ...front.slice(0, 2)] };
     }
     // Fumbles.
-    const fumbleP = 0.011 - (tr(carrier, "power") - 80) * 0.0001;
+    const fumbleP = (0.011 - (tr(carrier, "power") - 80) * 0.0001) * this.cond.fumbleMult;
     if (this.rng() < fumbleP) {
       this.add(o, carrier, "fum");
       const forcer = front[Math.floor(this.rng() * front.length)];
@@ -1147,7 +1153,7 @@ class GameSim {
     const accuracy = depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy");
     const baseComp = { screen: 0.88, short: 0.79, inter: 0.61, deep: 0.39 }[depth];
     const compressed = this.ydl >= 80 ? 0.11 : 0;
-    let pComp = baseComp - compressed + sep * 0.008 + (accuracy - 80) * 0.006 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
+    let pComp = baseComp - compressed - this.cond.comp[depth] + sep * 0.008 + (accuracy - 80) * 0.006 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
     pComp = clamp(pComp, 0.1, 0.93);
     const decisions = tr(qb, "decisions") - d.def.disguise * 5;
     const baseInt = { screen: 0.004, short: 0.012, inter: 0.024, deep: 0.039 }[depth];
@@ -1248,6 +1254,7 @@ class GameSim {
       short *= 1.4;
       deep *= 0.6;
     }
+    deep *= this.cond.deepMult;
     const room = 100 - this.ydl;
     if (room < 20) deep = 0;
     const inter = Math.max(0.05, 1 - o.off.screen - o.off.short - o.off.deep);

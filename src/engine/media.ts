@@ -2,6 +2,7 @@
 // injuries, signings and releases, trades and trade rumors, interviews,
 // weekly trends, college football and the draft. Reporters only know what the
 // public knows, plus what leaks: rumors are sometimes true and sometimes not.
+import { notableWeather } from "./gameday";
 import { capSummary, contractYearsLeft, teamPlayerIds } from "./cap";
 import { AWARDS, awardRace, gamesOn, latestPoll, mediaBoard, mediaRank, prospectLine, prospectTotals, rankedName } from "./college";
 import { schoolName } from "./collegeData";
@@ -218,6 +219,8 @@ function recap(state: GameState, g: ScheduledGame, table: Record<string, Record_
     const inj = state.players[i.player]?.injury;
     return inj && inj.date === state.date && (inj.seasonEnding || daysBetween(state.date, inj.returnDate) >= 7);
   });
+  const wx = box.weather && notableWeather(box.weather);
+  if (wx) lines.splice(1, 0, wx);
   if (hurt.length) lines.push(`Injuries: ${hurt.slice(0, 3).map((i) => `${nick(i.team)} ${ppos(i.player)} ${pname(i.player)} (${i.type.toLowerCase()})`).join("; ")}.`);
   story(state, outlet, by, {
     kind: "recap", headline: head, body: lines.join(" "), teams: [r.away, r.home],

@@ -23,6 +23,11 @@ for (let s = 0; s < n; s++) {
     add("ties", r.homeScore === r.awayScore ? 1 : 0);
     add("ot", r.overtime ? 1 : 0);
     add("margin7", Math.abs(r.homeScore - r.awayScore) <= 7 ? 1 : 0);
+    // Scoring by conditions (gameday.ts).
+    const w = box.weather;
+    const bucket = !w ? "indoor" : w.precip === "snow" ? "snow" : w.wind >= 20 ? "wind20" : w.precip === "rain" ? "rain" : w.temp <= 25 ? "cold" : "fair";
+    add(`wx:${bucket}:n`, 1);
+    add(`wx:${bucket}:pts`, r.awayScore + r.homeScore);
     for (const side of ["away", "home"] as const) {
       teamGames++;
       const t = box.team[side];
@@ -64,3 +69,4 @@ console.log(`rushAtt ${per("rushAtt")} (~27)  ypc ${(agg.rushYds / agg.rushAtt).
 console.log(`3rd ${(agg.thirdConv / agg.thirdAtt).toFixed(3)} (~0.39) 3rdAtt ${per("thirdAtt")} (~13)  4th ${(agg.fourthConv / agg.fourthAtt).toFixed(3)} (~0.53) 4thAtt ${per("fourthAtt")} (~1.4)  RZ TD ${(agg.redZoneTd / agg.redZoneAtt).toFixed(3)} (~0.56) RZ att ${per("redZoneAtt")} (~3.3)`);
 console.log(`FG ${(agg.fgm / agg.fga).toFixed(3)} (~0.85) FGA ${per("fga")} (~1.8)  XP ${(agg.xpm / agg.xpa).toFixed(3)} (~0.95)  punts ${per("punts")} (~3.8) avg ${(agg.puntYds / agg.punts).toFixed(1)} (~47)  KR avg ${(agg.krYds / agg.kr).toFixed(1)}  penalties ${per("penalties")} (~6.5) yds ${per("penYds")} (~55)`);
 console.log(`TOP ${(agg.top / teamGames / 60).toFixed(1)} min  injuries/team-game ${per("injuries")}  IR at season end (league) ${injuriesOut.join(",")}`);
+console.log(`points by conditions (real: wind 20+ and snow run a few points under fair weather): ${["indoor", "fair", "rain", "wind20", "snow", "cold"].map((b) => `${b} ${(agg[`wx:${b}:pts`] / Math.max(1, agg[`wx:${b}:n`])).toFixed(1)} (${agg[`wx:${b}:n`] ?? 0})`).join("  ")}`);
