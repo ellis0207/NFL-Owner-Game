@@ -40,7 +40,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   `carouselDaily`, `positionCoachesDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
   `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `hostingDaily`, `disciplineDaily`, `draftDaily`, `visitsDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `commerceDaily`,
-  `projectsDaily`, `leasesDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
+  `projectsDaily`, `leasesDaily`, `debtDaily`, `booksDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
   the league over. A new system adds an `xxxDaily(state)` and one line here.
 - **Season context** lives in module globals in `league.ts`: `RULES`
   (`RULES.keyDates`, often aliased `K` or `KEY`), `SCHEDULE`, `GAMES_BY_DATE`.
@@ -71,7 +71,8 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires), `hiring.ts` (interview rules for playoff teams), `positionCoaches.ts` (position rooms, teaching, HC hires with owner approval) | `carousel.test.ts`, `positioncoaches.test.ts`, `carousel-report.ts` |
 | College and draft | `collegeData.ts`, `college.ts`, `prospects.ts`, `scouting.ts`, `prodays.ts`, `draft.ts`, `names.ts`, `visits.ts` (combine medicals and interviews, top-30 visits, private workouts; `visitsDaily` after `draftDaily`) | `college.test.ts`, `visits.test.ts`, `college-report.ts`, `draft-report.ts` |
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects), `review.ts` (offseason grades, fan expectations, storylines; `reviewDaily` after `mediaDaily`) | `media.test.ts`, `commerce.test.ts`, `media-report.ts` |
-| Business | `business.ts` (books, gate, budgets), `stadiums.ts`, `commerce.ts` (named sponsors, local radio/TV, February offers), `projects.ts` (stadium and facility projects), `leases.ts` (lease renewals with the city, laid over `STADIUM_BY_TEAM` by `bindLeases`); `commerceDaily`, `projectsDaily` and `leasesDaily` run after `businessDaily` | `business.test.ts`, `commerce.test.ts`, `leases.test.ts`, `business-report.ts` |
+| Club finance | `books.ts` (accrual statements, balance sheet, cash flow, budget vs actual, forecast, year close and audit; `booksDaily`), `debt.ts` (credit facility, term loans, covenants, market rate, league debt limit; `debtDaily`), `ownership.ts` (owner profile and money, goals, scorecard, legacy, taxes) | `finance.test.ts` |
+| Business | `business.ts` (ledger, gate, budgets), `stadiums.ts`, `commerce.ts` (named sponsors, local radio/TV, February offers), `projects.ts` (stadium and facility projects), `leases.ts` (lease renewals with the city, laid over `STADIUM_BY_TEAM` by `bindLeases`); `commerceDaily`, `projectsDaily` and `leasesDaily` run after `businessDaily` | `business.test.ts`, `commerce.test.ts`, `leases.test.ts`, `business-report.ts` |
 | Spring and camp | `spring.ts` (OTAs, minicamp, offseason injuries), `camp.ts` (practice reps, camp battles, `program(state)`), `discipline.ts` (suspensions, fines, owner decisions) | `camp.test.ts` |
 | Owners and rules | `rules.ts` (rule catalog, `LEAGUE_RULES` read by the sim, `bindRules` in `applySeason`), `owners.ts` (relations, the March meeting, lobbying, votes, alliances), `hosting.ts` (Super Bowl and draft bids, host effects) | `owners.test.ts`, `hosting.test.ts` |
 

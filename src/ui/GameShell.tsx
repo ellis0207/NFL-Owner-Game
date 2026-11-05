@@ -26,6 +26,7 @@ import { MediaScreen } from "./screens/MediaScreen";
 import { openQuestions } from "../engine/press";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
+import { OwnerScreen } from "./screens/OwnerScreen";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
 import { SaveScreen } from "./screens/SaveScreen";
@@ -37,7 +38,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Staff", "Cap", "League", "Owners", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Staff", "Cap", "League", "Owners", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -183,6 +184,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Business" && <BusinessScreen game={game} changed={changed} />}
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
+          {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
         </main>
       </div>

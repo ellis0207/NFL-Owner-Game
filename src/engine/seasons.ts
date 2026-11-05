@@ -10,6 +10,7 @@ import { bindHosts } from "./hosting";
 import { newStaffSeason } from "./carousel";
 import { ageStaff, bindStaff } from "./coaches";
 import { newBusinessSeason } from "./business";
+import { recordOwnerSeason } from "./ownership";
 import { buildSchedule, keyDatesFor, superBowlName } from "./calendar";
 import { capSummary, invalidateRosters } from "./cap";
 import { progressPlayers, retireUnsigned } from "./careers";
@@ -207,6 +208,7 @@ export function startNewSeason(state: GameState): void {
   const hist = history(state);
   const record = seasonRecord(state);
   hist.seasons.push(record);
+  recordOwnerSeason(state, record);
   archiveStats(state);
   creditSeasons(state);
   const retired = retireUnsigned(state);

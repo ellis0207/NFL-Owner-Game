@@ -5,6 +5,9 @@ import { ensurePositionCoaches } from "../engine/positionCoaches";
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
+import { ensureBooks } from "../engine/books";
+import { ensureDebt } from "../engine/debt";
+import { ensureOwner } from "../engine/ownership";
 import { BASE_SEASON, PLAYERS, RULES } from "../engine/league";
 import { applySeason, patchPlayers, startNewSeason } from "../engine/seasons";
 import { ensureStaff } from "../engine/coaches";
@@ -90,6 +93,10 @@ export function migrate(state: GameState): GameState {
   patchPlayers(state);
   // Saves from before the business side open their books today.
   ensureBusiness(state);
+  // Saves from before the club's books, loans and owner profile get them today.
+  ensureDebt(state);
+  ensureOwner(state);
+  ensureBooks(state);
   // Saves from when the game ended with the draft sit on the day after it, where the next season now starts.
   if (state.date >= DRAFT_OVER && (state.season ?? BASE_SEASON) === RULES.season) startNewSeason(state);
   return state;

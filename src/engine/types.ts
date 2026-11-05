@@ -1076,7 +1076,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional";
 
 export interface LedgerEntry {
   date: string;
@@ -1184,6 +1184,8 @@ export interface BusinessState {
   local?: LocalDeals;
   /** Stadium and facility projects, built or under way. */
   projects?: Project[];
+  /** Season-ticket deposits collected for a season not yet played: they count toward the tickets as the home games are played. */
+  deferred?: { season: number; amount: number; applied: number };
 }
 
 /** A local partner's deal: the value is the first year's fee, and it rises 3% a year. */
@@ -1433,6 +1435,12 @@ export interface GameState {
   owners?: OwnersState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;
+  /** The club's accounting: approved budgets, closed years and the reserve policy (books.ts). */
+  books?: BooksState;
+  /** The club's borrowing: the credit facility, term loans, offers and market rates (debt.ts). */
+  debt?: DebtState;
+  /** Who the owner is: wealth, style, goals and the scorecard of each season (ownership.ts). */
+  owner?: OwnerState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
@@ -1593,4 +1601,148 @@ export interface RedoAsk {
   answer?: "promised" | "refused";
   /** The day a new deal settled it. */
   settled?: string;
+}
+
+// ---- Club books, borrowing and the owner (books.ts, debt.ts, ownership.ts) ----
+
+/** A league year once it is over: what was planned and what happened. */
+export interface YearClose {
+  year: number;
+  revenue: number;
+  /** Operating income before depreciation, interest and owner taxes (cash basis by category). */
+  operating: number;
+  depreciation: number;
+  interest: number;
+  /** Net income on the accrual basis. */
+  net: number;
+  cashEnd: number;
+  debtEnd: number;
+  /** What the budget approved at the start of the year expected. */
+  planRevenue: number;
+  planOperating: number;
+  /** The outside auditors' opinion. */
+  audit: "clean" | "qualified";
+}
+
+export interface BooksState {
+  /** The league year the books are open for. */
+  year: number;
+  /** Approved budgets by league year: each ledger category's planned amount (signed like the ledger). */
+  plan: Record<number, Partial<Record<LedgerCat, number>>>;
+  closed: YearClose[];
+  /** Months of operating costs and debt service the club keeps on hand before paying the owner anything. */
+  reserveMonths: number;
+}
+
+export type LoanKind = "fixed" | "floating";
+
+export interface LoanTerms {
+  lender: string;
+  amount: number;
+  years: number;
+  kind: LoanKind;
+  /** Fixed loans: the all-in rate. Floating loans: the margin over the market rate. */
+  rate: number;
+  /** Paid down monthly over the term, or all at the end. */
+  amort: "amortizing" | "bullet";
+  /** Arrangement fee, a share of the amount. */
+  fee: number;
+  /** Lowest allowed debt-service coverage (trailing operating income over debt service). */
+  minCoverage: number;
+  /** Most debt allowed against trailing operating income. */
+  maxLeverage: number;
+  security: string;
+}
+
+export interface LoanOffer extends LoanTerms {
+  id: string;
+  date: string;
+  expires: string;
+  purpose: "general" | "refinance" | "projects";
+  /** The loan this offer would pay off. */
+  refinances?: string;
+  /** The owner already pushed this lender once. */
+  pushed?: boolean;
+}
+
+export interface Loan extends LoanTerms {
+  id: string;
+  start: string;
+  maturity: string;
+  balance: number;
+  /** Extra margin after a covenant waiver. */
+  stepUp: number;
+  /** Covenant tests failed in a row. */
+  breaches: number;
+  /** The lender demanded repayment by this date. */
+  accelerated?: string;
+  repaid?: string;
+  purpose: string;
+}
+
+export interface CreditFacility {
+  lender: string;
+  limit: number;
+  /** Margin over the market rate on what's drawn. */
+  spread: number;
+  /** Yearly fee on the unused part. */
+  commitment: number;
+  matures: string;
+}
+
+export interface DebtState {
+  /** The market's base lending rate by month, "2026-08". */
+  rates: Record<string, number>;
+  facility: CreditFacility;
+  loans: Loan[];
+  offers: LoanOffer[];
+  /** How lenders see the club and its owner, 0-100 (engine only; shown in words). */
+  trust: number;
+  /** Covenant tests: the date, the loan, the coverage and leverage seen, and whether it passed. */
+  tests: { date: string; loan: string; coverage: number; leverage: number; ok: boolean }[];
+  /** Lenders' warnings and actions, newest first. */
+  log: { date: string; text: string }[];
+}
+
+export type OwnerGoal = "titles" | "profit" | "value" | "community" | "reputation" | "stability";
+export type OwnerBackground = "finance" | "realEstate" | "industry" | "family" | "exPlayer";
+
+export interface ScoreSeason {
+  season: number;
+  record: string;
+  playoffs?: string;
+  revenue: number;
+  operating: number;
+  value: number;
+  equity: number;
+  scores: Record<OwnerGoal, number>;
+  overall: number;
+  coachTarget?: { goal: string; met: boolean };
+}
+
+export interface OwnerState {
+  background: OwnerBackground;
+  /** The owner's money outside the team: cash on hand, other holdings and personal debt. */
+  liquid: number;
+  outside: number;
+  personalDebt: number;
+  style: "handsOff" | "collaborative" | "handsOn";
+  spending: "aggressive" | "moderate" | "conservative";
+  /** Seasons the owner gives a rebuild before expecting to contend. */
+  patience: number;
+  weights: Record<OwnerGoal, number>;
+  /** What the owner paid for the team and when. */
+  purchase: number;
+  since: string;
+  /** Capital put in and distributions taken since the purchase. */
+  putIn: number;
+  takenOut: number;
+  /** Pass-through taxes the owner paid on the club's income, and losses carried forward. */
+  taxesPaid: number;
+  carryforward: number;
+  coachTarget?: { season: number; goal: "playoffs" | "winning" | "develop" | "none"; set: string };
+  legacy: ScoreSeason[];
+  /** New priorities suggested by how things have gone, for the owner to take or leave. */
+  suggestion?: { weights: Record<OwnerGoal, number>; why: string; date: string };
+  log: { date: string; text: string }[];
 }

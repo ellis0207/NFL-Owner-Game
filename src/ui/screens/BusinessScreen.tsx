@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
-  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, CONCESSION_LABEL, CREDIT_LINE, deptCost, DEPTS, gateForecast, nationalRevenue,
+  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, CONCESSION_LABEL, deptCost, DEPTS, gateForecast, nationalRevenue,
   operatingEstimate, ownerCash, pnl, PRICING_OPENS, RENEWAL_DEADLINE, revenueEstimate, setBudget, setConcessions, setNextSeasonPrices,
   setParking, setSinglePrice, valuation,
 } from "../../engine/business";
 import { leagueYear } from "../../engine/contracts";
+import { creditLimit, openLoans } from "../../engine/debt";
+import { projectedYear } from "../../engine/books";
 import { shortDate, weekday } from "../../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/league";
 import { controlOf, MARKETS, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
@@ -12,9 +14,11 @@ import { acceptLease, counterLease, lease, leaseSummary, walkAway } from "../../
 import type { ConcessionTier, Dept, GameState, StadiumEvent } from "../../engine/types";
 import { money } from "../format";
 import { Projects, Sponsors } from "./BusinessDeals";
+import { Books, Plan } from "./BusinessBooks";
+import { Financing } from "./BusinessFinancing";
 import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Tickets", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
+const TABS = ["Overview", "Books", "Plan", "Financing", "Tickets", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -32,6 +36,9 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
         </div>
       </div>
       {tab === "Overview" && <Overview game={game} changed={changed} />}
+      {tab === "Books" && <Books game={game} />}
+      {tab === "Plan" && <Plan game={game} changed={changed} />}
+      {tab === "Financing" && <Financing game={game} changed={changed} />}
       {tab === "Tickets" && <Tickets game={game} changed={changed} />}
       {tab === "Stadium" && <Stadium game={game} changed={changed} />}
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
@@ -65,7 +72,9 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
           <h3>The bank</h3>
           <dl className="kv">
             <dt>Cash</dt><dd className={cash < 0 ? "bad" : undefined}>{money(cash)}{cash < 0 ? " (on the credit line)" : ""}</dd>
-            <dt>Credit line</dt><dd>{money(CREDIT_LINE)}</dd>
+            <dt>Credit line</dt><dd>{money(creditLimit(game))}</dd>
+            <dt>Loans</dt><dd>{money(openLoans(game).reduce((t, l) => t + l.balance, 0))}{(() => { const n = openLoans(game).slice().sort((x, y) => (x.accelerated ?? x.maturity).localeCompare(y.accelerated ?? y.maturity))[0]; return n ? <span className="muted"> (next due {shortDate(n.accelerated ?? n.maturity)} {(n.accelerated ?? n.maturity).slice(0, 4)})</span> : null; })()}</dd>
+            <dt>This year</dt><dd>{(() => { const p = projectedYear(game); return `${money(p.operating)} operating income on ${money(p.revenue)} of revenue, on the current pace`; })()}</dd>
             <dt>Franchise value</dt><dd>{billions(valuation(game, us))} <span className="muted">(Gridiron Ledger estimate)</span></dd>
             <dt>Fans</dt><dd>{fanMood(game.pressure.fans)}</dd>
             {game.review?.expect && game.review.season === RULES.season && <><dt>They expect</dt><dd>About {game.review.expect.wins} wins. {expectLabel(game.review.expect.wins)}.</dd></>}
