@@ -279,6 +279,14 @@ coaches to run 10 private workouts. Every read is only as good as the people
 making it: the medical staff for the physicals, the head coach and GM for the
 interviews and visits, and the position coach for workouts.
 
+Teams in publicly owned stadiums have real leases that run out. About three
+seasons before yours ends, the city or stadium authority opens talks with an
+offer: the length, the rent and public money for renovations. You can sign,
+push for more money or a lower rent (each push wears on their patience), or
+walk away for the year; an expired lease rolls over a year at a time at a
+higher rent. Public money from a new lease pays for stadium projects first.
+Relocation is not in the game yet.
+
 The business has an offseason too. Local sponsors (the jersey patch, the
 official bank, beer, airline and the rest) and the flagship radio and
 preseason TV partners are named deals with their own terms; when one runs
@@ -331,7 +339,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
-  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

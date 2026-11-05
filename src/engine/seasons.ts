@@ -4,6 +4,7 @@
 // goes into the record books, players get a year older (better or worse),
 // the unsigned drift away, and the next season's schedule comes out of last
 // season's standings.
+import { bindLeases } from "./leases";
 import { bindRules } from "./rules";
 import { bindHosts } from "./hosting";
 import { newStaffSeason } from "./carousel";
@@ -65,6 +66,7 @@ export function applySeason(state: GameState): void {
   bindCaps(state.league?.caps ?? {});
   bindRules(state);
   bindHosts(state);
+  bindLeases(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
   patchPlayers(state);
 }
