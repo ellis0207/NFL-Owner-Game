@@ -22,6 +22,7 @@ import { applyTerminationPay } from "./roster";
 import { rngFor } from "./rng";
 import { simulateGame } from "./sim";
 import { gameDayOps, gameOpsDaily } from "./gameops";
+import { analyticsDaily, ensureAnalytics } from "./strategy";
 import { stat } from "./stats";
 import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
 import { playCaller, teamSchemes, teamStaff } from "./staff";
@@ -118,6 +119,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   ensureExecs(state);
   ensureOffice(state);
   ensureCulture(state);
+  ensureAnalytics(state);
   setupOwner(state, profile);
   approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
@@ -541,6 +543,7 @@ export function advanceDay(state: GameState): void {
   booksDaily(state);
   officeDaily(state);
   gameOpsDaily(state);
+  analyticsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);
@@ -774,17 +777,19 @@ export function advanceToNextEvent(state: GameState): void {
   }
 }
 
-/** Advances until the user's next game has been played, or a stop day. */
+/**
+ * Advances to the morning of the user's next game and stops there, so the owner
+ * plays it from the Today page. Stops early on the cutdown day or anything urgent.
+ */
 export function simToNextGame(state: GameState): void {
   const start = state.date;
   if (isSeasonOver(state) || isSummer(state)) return advanceToNextEvent(state);
   const seen = state.inbox.length;
+  const gameToday = () => pendingEvents(state).some((a) => a.action === "game");
   for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
-    const hadGame = agenda(state).some((a) => a.kind === "game");
-    const isStop = state.date !== start && state.date === KEY.rosterCutdown;
-    if (isStop) return;
+    if (gameToday()) return;
+    if (state.date !== start && state.date === KEY.rosterCutdown) return;
     advanceDay(state);
-    if (hadGame) return;
     if (shouldPause(state, seen)) return;
   }
 }

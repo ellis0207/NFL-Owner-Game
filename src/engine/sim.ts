@@ -16,6 +16,8 @@ import { depthChart, isHoldingOut, isSuspended } from "./roster";
 import { LEAGUE_RULES } from "./rules";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { Officials, type CallContext } from "./officials";
+import { fourthDownAdvice, gamePlan, leagueTrend, type GamePlan } from "./strategy";
+import { perPlay } from "./analytics";
 import { coverage as coverShell, formation, PLAY_FLAGS as F, Recorder, spotText } from "./playlog";
 import { DEFENSE, OFFENSE, type DefenseStyle, type OffenseStyle, type Personnel, type RunType } from "./schemes";
 import { ability, schemeFit, staffEffects, teamSchemes, trait, type StaffEffects } from "./staff";
@@ -81,6 +83,11 @@ interface Team {
   /** How well the starters fit the coaches' schemes, in rating points (offense, defense). */
   offFit: number;
   defFit: number;
+  /** The week's game plan: its overall edge, and the defense's tilt against runs and passes (rating points). */
+  plan?: GamePlan;
+  planEdge: number;
+  adjRun: number;
+  adjPass: number;
 }
 
 interface Lineup {
@@ -134,6 +141,8 @@ class GameSim {
   rec: Recorder;
   refs: Officials;
   quietTd = false;
+  trend = { pass: 0, twoHigh: 0 };
+  advice: Rng;
 
   constructor(public state: GameState, public game: ScheduledGame, away: string, home: string) {
     this.rng = rngFor(state.seed, `game:${game.id}`);
@@ -144,6 +153,51 @@ class GameSim {
     this.t = { away: this.makeTeam("away", away), home: this.makeTeam("home", home) };
     for (const side of ["away", "home"] as const) this.t[side].form += this.cond.edge[side];
     for (const side of ["away", "home"] as const) this.t[side].passLean = this.estimatePassLean(side);
+    // League trends move every team's play calling and coverage a little.
+    this.trend = leagueTrend(state);
+    this.advice = rngFor(state.seed, `advice:${game.id}`);
+    if (!this.pre) for (const side of ["away", "home"] as const) this.applyPlan(this.t[side], this.t[this.other(side)]);
+  }
+
+  /** The week's plan: a better plan is a small edge, and it tilts what the offense calls and what the defense sells out to stop. */
+  applyPlan(t: Team, opp: Team): void {
+    const plan = gamePlan(this.state, t.id, opp.id, this.game);
+    t.plan = plan;
+    t.planEdge = 0.6 * plan.quality;
+    t.passLean += plan.attack === "pass" ? 0.03 : -0.03;
+    t.adjRun = plan.stop === "run" ? 0.5 : -0.5;
+    t.adjPass = -t.adjRun;
+  }
+
+  /** Halftime: coordinators look at what worked in the first half and adjust. */
+  halftime(): void {
+    const first = this.rec.halves[0];
+    for (const side of ["away", "home"] as const) {
+      const t = this.t[side];
+      const opp = this.t[this.other(side)];
+      const them = first[opp.side];
+      const us = first[side];
+      if (them.pn + them.rn < 15) continue;
+      const sense = 0.35 + (t.fx.defCalling - 60) * 0.012;
+      const gap = perPlay(them.re, them.rn) - perPlay(them.pe, them.pn);
+      if (Math.abs(gap) > 0.2 && this.advice() < sense) {
+        const stopRun = gap > 0;
+        if ((t.adjRun > 0) !== stopRun) {
+          t.adjRun = stopRun ? 0.5 : -0.5;
+          t.adjPass = -t.adjRun;
+          const text = `Halftime: the ${t.id} defense adjusts to ${stopRun ? "stop the run" : "take away the pass"}.`;
+          this.rec.note(this, text);
+          t.plan?.adjust.push(text);
+        }
+      }
+      const mine = perPlay(us.pe, us.pn) - perPlay(us.re, us.rn);
+      if (us.pn + us.rn >= 15 && Math.abs(mine) > 0.25 && this.advice() < 0.3 + (t.fx.offCalling - 60) * 0.012) {
+        t.passLean += mine > 0 ? 0.04 : -0.04;
+        const text = `Halftime: the ${t.id} offense leans ${mine > 0 ? "on the pass" : "on the run"}, which worked in the first half.`;
+        this.rec.note(this, text);
+        t.plan?.adjust.push(text);
+      }
+    }
   }
 
   makeTeam(side: Side, id: string): Team {
@@ -164,6 +218,7 @@ class GameSim {
       out: new Set(), form: gaussian(this.rng) * leadershipSd, timeouts: 3, stats: {}, box: emptyTeamBox(),
       score: 0, quarters: [0, 0, 0, 0], drives: 0, starterSeries, passLean: 0,
       offFit: this.unitFit(id, chart, OFF_FIT), defFit: this.unitFit(id, chart, DEF_FIT),
+      planEdge: 0, adjRun: 0, adjPass: 0,
     };
   }
 
@@ -328,7 +383,7 @@ class GameSim {
     const script = this.q >= 3 || (this.q === 2 && this.clock < 300) ? -clamp(lead, -21, 21) * 0.16 : 0;
     // Scheme fit: players who suit what their coaches ask of them play faster.
     const fit = (o.offFit - d.defFit) * FIT_WEIGHT;
-    return calling + fit + o.form - d.form + this.homeEdge(o.side) - this.homeEdge(d.side) + script;
+    return calling + fit + o.form - d.form + this.homeEdge(o.side) - this.homeEdge(d.side) + script + o.planEdge - d.planEdge;
   }
 
   estimatePassLean(side: Side): number {
@@ -369,6 +424,8 @@ class GameSim {
       inactives: { away: away.inactive, home: home.inactive },
       injuries: this.injuries,
       ...(this.refs.calls.length ? { calls: this.refs.calls } : {}),
+      adv: this.rec.adv,
+      pe: this.rec.pe,
       ...(this.cond.weather.indoor ? {} : { weather: this.cond.weather }),
     };
     return { result, box, log: this.rec.log(this.game.date) };
@@ -419,6 +476,7 @@ class GameSim {
     }
     if (this.q === 2) {
       this.rec.closeDrive(this, "End of half");
+      if (!this.pre) this.halftime();
       this.q = 3;
       this.clock = QUARTER;
       this.t.away.timeouts = 3;
@@ -809,7 +867,14 @@ class GameSim {
       return;
     }
     if (this.down === 4) {
-      const choice = this.fourthDown(o, fgChance, lead);
+      let choice = this.fourthDown(o, fgChance, lead);
+      // The owner's analysts weigh in on fourth downs outside the late-game scramble.
+      if (o.id === this.state.userTeam && !this.pre && !this.ot.active && !(this.q === 4 && this.clock < 300) && o.plan) {
+        const before = o.plan.fourth.length;
+        choice = fourthDownAdvice(this.state, this.game.id, this.dist, this.ydl, fgChance, choice, this.advice());
+        const call = o.plan.fourth[before];
+        if (call) this.rec.tail = call[2] ? ` (The analysts said ${call[0]}; the coach agreed.)` : ` (The analysts said ${call[0]}; the coach chose to ${call[1]}.)`;
+      }
       if (choice === "punt") {
         this.punt();
         this.afterPlay(0, false);
@@ -982,7 +1047,7 @@ class GameSim {
   }
 
   passProbability(o: Team, lead: number, hurry: boolean, milk: boolean): number {
-    let p = o.off.passRate + o.passLean;
+    let p = o.off.passRate + o.passLean + this.trend.pass;
     if (this.down === 1) p -= 0.06;
     if (this.down === 2 && this.dist >= 8) p += 0.08;
     if (this.down === 2 && this.dist <= 3) p -= 0.12;
@@ -1107,6 +1172,7 @@ class GameSim {
     if (boxSafety) stop = (stop * front.length + tr(boxSafety, "box")) / (front.length + 1) + 1.2;
     if (def.pkg === "nickel") stop -= 1.2 * (0.5 + d.def.lightBox);
     if (def.pkg === "dime") stop -= 3;
+    stop += d.adjRun;
     const runner = type === "outsideZone" ? 0.5 * tr(carrier, "vision") + 0.3 * tr(carrier, "burst") + 0.2 * tr(carrier, "agility")
       : type === "gap" ? 0.5 * tr(carrier, "power") + 0.3 * tr(carrier, "vision") + 0.2 * tr(carrier, "strength")
         : type === "qbRun" ? 0.6 * tr(carrier, "mobility") + 0.4 * tr(carrier, "speed")
@@ -1141,6 +1207,8 @@ class GameSim {
           : this.rec.pick(["runs up the middle", "runs left guard", "runs right guard", "runs up the middle"]);
     this.rec.look = `${formation(this.rec, { pass: false, playAction: false, hurry: false, short: this.dist <= 2 && this.down >= 3, personnel: lu.personnel, passRate: o.off.passRate, longYardage: false })}, ${lu.personnel} personnel vs ${def.pkg}`;
     const runText = `${this.name(carrier)} ${where} for ${yardsText(yards)}`;
+    this.rec.kind = "rush";
+    this.rec.actors = { r: carrier };
     this.add(o, carrier, "car");
     this.add(o, carrier, "rushYds", yards);
     this.add(o, carrier, "rushLong", yards);
@@ -1224,9 +1292,11 @@ class GameSim {
     const playAction = depth !== "screen" && this.down <= 2 && !hurry && this.rng() < o.off.playAction * 1.6;
     const blitz = this.rng() < d.def.blitz * (this.down === 3 ? 1.35 : 1);
     const man = this.rng() < d.def.man * (blitz ? 1.3 : 1);
-    const twoHigh = !blitz && this.rng() < d.def.twoHigh;
+    const twoHigh = !blitz && this.rng() < d.def.twoHigh + this.trend.twoHigh;
     const base = this.baseEdge(o, d);
     this.rec.look = `${formation(this.rec, { pass: true, playAction, hurry, short: false, personnel: lu.personnel, passRate: o.off.passRate, longYardage: this.down >= 3 && this.dist >= 7 })}, ${lu.personnel} personnel vs ${def.pkg}, ${coverShell(this.rec, blitz, man, twoHigh)}`;
+    this.rec.kind = "pass";
+    this.rec.actors = { q: qb };
     const dir = depth === "screen" ? "screen pass" : `pass ${depth === "deep" ? "deep" : "short"} ${this.rec.pick(["left", "middle", "right", "left", "right"])}`;
 
     // Protection against the rush.
@@ -1263,6 +1333,7 @@ class GameSim {
     // Who gets the ball.
     const target = this.pickTarget(o, d, lu, depth);
     const pos = PLAYER_BY_ID[target].position;
+    this.rec.actors.t = target;
     const cover = this.coverFor(def, lu, target, man);
     const recv = depth === "deep" ? 0.45 * tr(target, "deep") + 0.35 * tr(target, "speed") + 0.2 * tr(target, "routes")
       : depth === "screen" ? 0.5 * tr(target, "yac") + 0.5 * tr(target, "agility")
@@ -1278,7 +1349,7 @@ class GameSim {
     if (playAction) sep += 2.5 + (o.passLean < 0 ? 1.5 : 0);
     if (depth === "deep") sep += twoHigh ? -4 : 2;
     if (depth === "short" && twoHigh) sep += 1.5;
-    sep += base;
+    sep += base - d.adjPass;
     const accuracy = depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy");
     const baseComp = { screen: 0.88, short: 0.79, inter: 0.61, deep: 0.39 }[depth];
     const compressed = this.ydl >= 80 ? 0.11 : 0;

@@ -73,6 +73,20 @@ describe("saves from older versions", () => {
     expect(Object.keys(back.pbp ?? {}).length).toBe(Object.keys(state.pbp!).length);
   }, 90_000);
 
+  it("a save with an analytics staff and game plans keeps them, and older saves get a small staff", async () => {
+    const state = load("pr34-2026-11-15");
+    expect(state.analytics?.level).toBe(3);
+    expect(state.analytics?.priority).toBe("players");
+    const plans = Object.keys(state.analytics!.plans).length;
+    expect(plans).toBeGreaterThan(0);
+    for (let i = 0; i < 9; i++) advanceDay(state);
+    expect(Object.keys(state.analytics!.plans).length).toBeGreaterThan(plans);
+    const old = load("pr33-2026-11-15");
+    expect(old.analytics?.level).toBe(1);
+    const back = await decompress(await compress(state));
+    expect(back.analytics?.credibility).toBe(state.analytics!.credibility);
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

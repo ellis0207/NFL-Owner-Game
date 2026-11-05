@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
-import { advanceDay, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent } from "../src/engine/season";
+import { advanceDay, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent, simToNextGame } from "../src/engine/season";
 import { stateAt } from "./fixtures";
 
 const opener = SCHEDULE.find((g) => g.type === "REG" && (g.home === "DET" || g.away === "DET"))!;
@@ -47,6 +47,24 @@ describe("today's events", () => {
     expect(playEvent(state, "practice")).toBeTruthy();
     expect(pendingEvents(state).some((a) => a.id === "practice")).toBe(false);
   });
+});
+
+describe("sim to game day", () => {
+  it("stops the morning of our game, before it's played", () => {
+    const s = newGame("DET", "Owner", { capRules: "real" }, 5);
+    simToNextGame(s);
+    const game = pendingEvents(s).find((a) => a.action === "game");
+    expect(game).toBeDefined();
+    expect(s.results[game!.gameId!]).toBeUndefined();
+    // Pressing it again on game day stays put until the game is played.
+    const day = s.date;
+    simToNextGame(s);
+    expect(s.date).toBe(day);
+    playEvent(s, game!.id);
+    simToNextGame(s);
+    expect(s.date > day).toBe(true);
+    expect(pendingEvents(s).some((a) => a.action === "game")).toBe(true);
+  }, 120_000);
 });
 
 describe("calendar", () => {

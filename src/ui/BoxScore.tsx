@@ -6,7 +6,8 @@ import { gameTypeLabel } from "../engine/season";
 import { stat, type StatKey } from "../engine/stats";
 import type { GameState, TeamBox } from "../engine/types";
 import { useUi } from "./ui";
-import { DriveChart, FollowGame, GameDay, PlayByPlay } from "./GameFeed";
+import { DriveChart, FollowGame, GameDay, KeyPlays, PlayByPlay, WinChart } from "./GameFeed";
+import { perPlay } from "../engine/analytics";
 import { clockText } from "../engine/playlog";
 
 type Side = "away" | "home";
@@ -97,7 +98,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
             .map(([k, label]) => <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>)}
         </div>
         {(view === "plays" || view === "drives") && !log && <p className="muted">Full play-by-play is kept through the week after a game. This one keeps its box score and scoring plays.</p>}
-        {view === "plays" && log && <PlayByPlay r={r} log={log} />}
+        {view === "plays" && log && <><WinChart r={r} log={log} /><KeyPlays r={r} log={log} /><PlayByPlay r={r} log={log} /></>}
         {view === "drives" && log && <DriveChart r={r} log={log} />}
         {view === "gameday" && <GameDay game={game} id={id} changed={changed} />}
         {view === "box" && !box && <p className="muted">This game was played before box scores were kept in this save.</p>}
@@ -137,6 +138,12 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
                     {TEAM_ROWS.map(([label, f]) => (
                       <tr key={label}><td>{label}</td><td className="num">{f(box.team.away)}</td><td className="num">{f(box.team.home)}</td></tr>
                     ))}
+                    {box.adv && (
+                      <>
+                        <tr><td>EPA a play</td><td className="num">{perPlay(box.adv.away.epa, box.adv.away.n).toFixed(2)}</td><td className="num">{perPlay(box.adv.home.epa, box.adv.home.n).toFixed(2)}</td></tr>
+                        <tr><td>Success rate</td><td className="num">{Math.round((box.adv.away.s / Math.max(1, box.adv.away.n)) * 100)}%</td><td className="num">{Math.round((box.adv.home.s / Math.max(1, box.adv.home.n)) * 100)}%</td></tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>

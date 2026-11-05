@@ -9,6 +9,7 @@ import { ensureBooks } from "../engine/books";
 import { ensureDebt } from "../engine/debt";
 import { ensureOffice } from "../engine/delegation";
 import { ensureCulture } from "../engine/culture";
+import { ensureAnalytics } from "../engine/strategy";
 import { ensureExecs } from "../engine/executives";
 import { ensureOwner } from "../engine/ownership";
 import { BASE_SEASON, PLAYERS, RULES } from "../engine/league";
@@ -100,6 +101,7 @@ export function migrate(state: GameState): GameState {
   ensureExecs(state);
   ensureOffice(state);
   ensureCulture(state);
+  ensureAnalytics(state);
   ensureDebt(state);
   ensureOwner(state);
   ensureBooks(state);
