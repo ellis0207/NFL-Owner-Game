@@ -272,6 +272,13 @@ coach hires them and you approve or turn down his pick; a new head coach brings
 some of his own people. Coaches remember whom they worked under, and teams
 looking for a coordinator or head coach lean toward branches of winning trees.
 
+Before the draft, the doctors examine every combine invitee and you pick the
+45 prospects for formal interviews (the GM fills any you leave open). After
+the combine you can bring in 30 prospects for top-30 visits and send position
+coaches to run 10 private workouts. Every read is only as good as the people
+making it: the medical staff for the physicals, the head coach and GM for the
+interviews and visits, and the position coach for workouts.
+
 The business has an offseason too. Local sponsors (the jersey patch, the
 official bank, beer, airline and the rest) and the flagship radio and
 preseason TV partners are named deals with their own terms; when one runs
@@ -324,7 +331,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
-  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
