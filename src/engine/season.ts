@@ -30,6 +30,7 @@ import { ownersDaily } from "./owners";
 import { disciplineDaily } from "./discipline";
 import { springDaily, springItem, springPracticeOutcome } from "./spring";
 import { proDayDaily } from "./prodays";
+import { visitsDaily } from "./visits";
 import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
 import { incentivesDaily } from "./incentives";
@@ -466,6 +467,7 @@ export function advanceDay(state: GameState): void {
   hostingDaily(state);
   disciplineDaily(state);
   draftDaily(state);
+  visitsDaily(state);
   proDayDaily(state);
   collegeDaily(state);
   scoutingDaily(state);

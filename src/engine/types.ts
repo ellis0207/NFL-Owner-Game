@@ -936,6 +936,18 @@ export interface CombineResult {
 /** Who goes to a pro day: an area scout, the scouting director, or the GM and head coach. */
 export type ProDayCrew = "scout" | "director" | "brass";
 
+/** Our pre-draft work beyond scouting: combine interviews, top-30 visits and private workouts. */
+export interface PreDraft {
+  /** Prospects on our combine interview list (45 at most). */
+  interviews: string[];
+  /** The notes from each interview. */
+  interviewed: Record<string, string[]>;
+  visits: Record<string, { date: string; notes: string[] }>;
+  workouts: Record<string, { date: string; by: string; notes: string[] }>;
+  /** The combine interviews have been held. */
+  ran?: boolean;
+}
+
 export interface DraftState {
   /** Every pick in the draft in order (pick ids), once the order is set after the Super Bowl. */
   order?: string[];
@@ -951,6 +963,7 @@ export interface DraftState {
   combine?: Record<string, CombineResult>;
   /** Pro day workouts: prospects the combine didn't invite, and invitees making up drills they skipped. */
   proDay?: Record<string, CombineResult & { date: string }>;
+  pre?: PreDraft;
   /** Who we're sending to each school's pro day. */
   proDayCrews?: Record<string, ProDayCrew>;
   /** Undrafted free agents: prospect id to team. */

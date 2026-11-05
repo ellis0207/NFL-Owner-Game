@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { COLLEGE_STATS, injuryNote, mediaRank, prospectLog, prospectTotals, rankedName, STAT_LABEL } from "../engine/college";
 import { COLLEGE_TEAM, conferenceName, schoolName } from "../engine/collegeData";
 import { shortDate } from "../engine/dates";
@@ -9,6 +9,8 @@ import { mockSpot, selectionOf } from "../engine/draft";
 import { teamLabel } from "../engine/league";
 import { COLLEGE_SEASON } from "../engine/college";
 import { height } from "./format";
+import { canVisit, canWorkOut, inviteVisit, INTERVIEWS, preDraftNotes, privateWorkout, toggleInterview, VISITS, WORKOUTS } from "../engine/visits";
+import { COMBINE_DATE } from "../engine/draft";
 import { useUi } from "./ui";
 
 export function ProspectPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
@@ -34,6 +36,11 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const [preMsg, setPreMsg] = useState<string | null>(null);
+  const pre = game.draft?.pre;
+  const notes = preDraftNotes(game, id);
+  const preAct = (r: { ok: boolean; text: string }) => { setPreMsg(r.text); changed(); };
+  const onList = !!pre?.interviews.includes(id);
   const scout = (d: ScoutDepth) => { unscoutPlayer(game, id); scoutPlayer(game, id, d); changed(); };
 
   return (
@@ -113,6 +120,32 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
             {listed && <button className="btn small" onClick={() => { unscoutPlayer(game, id); changed(); }}>Take off the list</button>}
           </div>
         </section>
+
+        {!picked && !udfa && (game.date < COMBINE_DATE ? !!game.college : true) && (
+          <section className="panel stack tight">
+            <h3 style={{ margin: 0 }}>Pre-draft work</h3>
+            {notes.map((n) => (
+              <div key={n.label}><span className="muted">{n.label}:</span> {n.lines.join(" ")}</div>
+            ))}
+            <div className="btn-row">
+              {game.date < COMBINE_DATE && (
+                <button className={`btn small${onList ? " primary" : ""}`} onClick={() => preAct(toggleInterview(game, id))}>
+                  {onList ? "On our combine interview list" : `Interview at the combine (${pre?.interviews.length ?? 0} of ${INTERVIEWS})`}
+                </button>
+              )}
+              {!canVisit(game) && !pre?.visits[id] && (
+                <button className="btn small" onClick={() => preAct(inviteVisit(game, id))}>Bring in for a visit ({Object.keys(pre?.visits ?? {}).length} of {VISITS})</button>
+              )}
+              {!canWorkOut(game) && !pre?.workouts[id] && (
+                <button className="btn small" onClick={() => preAct(privateWorkout(game, id))}>Private workout ({Object.keys(pre?.workouts ?? {}).length} of {WORKOUTS})</button>
+              )}
+            </div>
+            {preMsg && <span className="muted">{preMsg}</span>}
+            <span className="muted">
+              The doctors examine every combine invitee, and our head coach and GM run the interviews and visits; how much we can trust the reads depends on how good they are.
+            </span>
+          </section>
+        )}
 
         <section className="stack tight">
           <h3>{COLLEGE_SEASON} season</h3>
