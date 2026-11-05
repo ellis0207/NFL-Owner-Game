@@ -128,7 +128,15 @@ const SB_SITES: [stadium: string, city: string, team: string][] = [
   ["Lucas Oil Stadium", "Indianapolis, IN", "IND"],
 ];
 
+// Super Bowls the owners have awarded in the current save (hosting.ts binds them).
+let AWARDED: Record<number, { stadium: string; city: string }> = {};
+
+export function bindSuperBowlAwards(awards: Record<number, { stadium: string; city: string }>): void {
+  AWARDED = awards;
+}
+
 export function superBowlSite(season: number): { stadium: string; city: string } {
+  if (AWARDED[season]) return AWARDED[season];
   if (season === BASE_SEASON) {
     const sb = BASE_SCHEDULE.find((g) => g.round === "SB")!;
     return { stadium: sb.stadium!, city: sb.city! };

@@ -5,6 +5,7 @@
 // the unsigned drift away, and the next season's schedule comes out of last
 // season's standings.
 import { bindRules } from "./rules";
+import { bindHosts } from "./hosting";
 import { newStaffSeason } from "./carousel";
 import { ageStaff, bindStaff } from "./coaches";
 import { newBusinessSeason } from "./business";
@@ -63,6 +64,7 @@ export function applySeason(state: GameState): void {
   setLeagueSeason(season, keyDatesFor(season), schedule, season === BASE_SEASON ? undefined : state.waiverOrder);
   bindCaps(state.league?.caps ?? {});
   bindRules(state);
+  bindHosts(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
   patchPlayers(state);
 }

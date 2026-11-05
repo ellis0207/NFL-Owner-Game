@@ -16,6 +16,7 @@ import {
 import { COLLEGE_TEAM } from "./collegeData";
 import { addDays, daysBetween, weekday } from "./dates";
 import { stillPlaying } from "./freeagency";
+import { inPersonOk, inPersonRule } from "./hiring";
 import { money, news, send } from "./inbox";
 import { RULES, TEAMS, teamLabel } from "./league";
 import { gaussian, rngFor } from "./rng";
@@ -255,6 +256,7 @@ export function requestInterview(state: GameState, role: StaffRole, id: string):
     search.interviews[id] = { date: state.date, declined: true };
     return { ok: false, text: `${c.name}'s representatives say ${c.name.split(" ")[0]} will pass on interviewing for this job.` };
   }
+  if (prev?.report && !inPersonOk(state, employerOf(c))) return { ok: false, text: `A second interview has to be in person. ${inPersonRule()}` };
   const days = a.pending ? 1 : 1 + Math.floor(rngFor(state.seed, `int-day:${id}:${state.date}`)() * 2);
   search.interviews[id] = { date: addDays(state.date, days), ...(prev?.report ? { report: prev.report } : {}) };
   if (prev?.report) (search.interviews[id] as { second?: boolean } & typeof prev).second = true;
@@ -290,6 +292,7 @@ export function makeOffer(state: GameState, role: StaffRole, id: string, years: 
   if (!a.ok) return { ok: false, text: a.why! };
   if (search.interviews[id]?.declined) return { ok: false, text: `${person(state, id).name} isn't interested in the job.` };
   if ((role === "HC" || role === "GM") && !search.interviews[id]?.report) return { ok: false, text: "Interview the candidate first." };
+  if (TOP.includes(role) && !inPersonOk(state, employerOf(person(state, id)))) return { ok: false, text: `Teams meet a candidate in person before offering a top job. ${inPersonRule()}` };
   const s = staff(state);
   s.offers = s.offers.filter((o) => !(o.team === team && o.role === role));
   s.offers.push({ team, role, id, years, salary, date: state.date });
@@ -853,7 +856,7 @@ function cpuSearches(state: GameState): void {
     }
     // An offer once they've seen enough, sooner if a rival is closing in.
     const seen = Object.entries(search.interviews).filter(([, iv]) => iv.report && !iv.declined).map(([id]) => id)
-      .filter((id) => available(state, search.team, id, search.role).ok);
+      .filter((id) => available(state, search.team, id, search.role).ok && inPersonOk(state, employerOf(person(state, id))));
     const rival = s.offers.some((o) => o.role === search.role && seen.includes(o.id));
     if (seen.length && (days >= 12 || held >= 6 || (rival && days >= 5) || state.date >= addDays(OFFSEASON_GUESS(), 10))) {
       const best = seen.map((id) => ({ id, v: teamView(state, search.team, id, search.role) + (search.interviews[id].report!.impression - 3) * 1.5 }))
@@ -862,6 +865,11 @@ function cpuSearches(state: GameState): void {
       s.offers.push({ team: search.team, role: search.role, id: best.id, years: search.role === "HC" ? 4 + Math.floor(rng() * 2) : 4, salary: Math.round(ask * (0.97 + 0.15 * rng()) / 50_000) * 50_000, date: state.date });
     }
   }
+}
+
+/** The team a person works for, if any (college jobs don't count: no NFL interview rules there). */
+function employerOf(c: Coach): string | null {
+  return c.team ?? (c.job && c.job.kind !== "college" ? c.job.team : null);
 }
 
 function OFFSEASON_GUESS(): string {

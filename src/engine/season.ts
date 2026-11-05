@@ -32,6 +32,7 @@ import { proDayDaily } from "./prodays";
 import { ensureStaff } from "./coaches";
 import { contractsDaily, startHoldouts } from "./negotiation";
 import { incentivesDaily } from "./incentives";
+import { hostingDaily } from "./hosting";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
 import { money, news, send } from "./inbox";
@@ -459,6 +460,7 @@ export function advanceDay(state: GameState): void {
   springDaily(state);
   campDaily(state);
   ownersDaily(state);
+  hostingDaily(state);
   disciplineDaily(state);
   draftDaily(state);
   proDayDaily(state);

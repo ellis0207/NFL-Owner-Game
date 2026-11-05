@@ -5,6 +5,9 @@ import {
   currentMeeting, endAlliance, LOBBY_CALLS, lobby, owners, proposable, proposeAlliance, relationWord, setOurVote, sponsorName, submitProposal, VOTES_TO_PASS, whipCount,
 } from "../../engine/owners";
 import { RULE_BY_ID } from "../../engine/rules";
+import { BID_LEVELS, bidWindow, canHostSuperBowl, hosting, submitBid, upcomingVotes } from "../../engine/hosting";
+import { inflation } from "../../engine/business";
+import { money } from "../format";
 import type { GameState, RuleProposal } from "../../engine/types";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
@@ -31,6 +34,8 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.
       </p>
       {said && <p className="notice">{said}</p>}
+
+      <Hosting game={game} say={say} />
 
       {m && (
         <section className="panel stack tight">
@@ -142,5 +147,41 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
         </div>
       )}
     </div>
+  );
+}
+
+/** Bids to host the Super Bowl and the draft, and what the owners have awarded. */
+function Hosting({ game, say }: { game: GameState; say: (t: string | null) => void }) {
+  const h = hosting(game);
+  const w = bidWindow(game);
+  const v = upcomingVotes(game);
+  const x = inflation(RULES.season + 1, 0.03);
+  const awards = [
+    ...Object.entries(h.sb).map(([k, a]) => `Super Bowl after the ${k} season: ${a.city}`),
+    ...Object.entries(h.draft).map(([k, a]) => `${k} draft: ${a.city}`),
+  ];
+  const bid = (kind: "sb" | "draft", level: number) => say(submitBid(game, kind, level) ?? "Our bid is in. The owners vote at the annual league meeting.");
+  return (
+    <section className="panel stack tight">
+      <h3>Hosting the Super Bowl and the draft</h3>
+      <span className="muted">
+        At the annual meeting the owners award the Super Bowl after the {v.sbSeason} season and the {v.draftYear} draft. Bids are open the six weeks before, until {shortDate(w.closes)}.
+        Hosting lifts the team store, ticket demand and sponsor interest for that season; a Super Bowl takes over the stadium for the four weeks before the game.
+      </span>
+      {w.open && (
+        <div className="row wrap">
+          {canHostSuperBowl(game.userTeam) && !h.bids.sb && BID_LEVELS.map((l, i) => (
+            <button key={`sb${i}`} className="btn small" onClick={() => bid("sb", i)}>Super Bowl: {l.label.split(" (")[0]} ({money(l.sb * x)})</button>
+          ))}
+          {!h.bids.draft && BID_LEVELS.map((l, i) => (
+            <button key={`d${i}`} className="btn small" onClick={() => bid("draft", i)}>Draft: {l.label.split(" (")[0]} ({money(l.draft * x)})</button>
+          ))}
+          {h.bids.sb && <span className="pill keep">Super Bowl bid in</span>}
+          {h.bids.draft && <span className="pill keep">Draft bid in</span>}
+        </div>
+      )}
+      {!canHostSuperBowl(game.userTeam) && <span className="muted">Our stadium doesn't qualify for a Super Bowl (they go to domes and warm-weather stadiums a team controls). Any city can host the draft.</span>}
+      {awards.length > 0 && <span className="muted">Awarded in this save: {awards.join(" · ")}</span>}
+    </section>
   );
 }

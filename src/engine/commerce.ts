@@ -5,6 +5,7 @@
 // the incumbent and rival companies make offers; what they'll pay depends on
 // how the team is doing, how fans feel and what the building offers. The
 // partner companies and stations are made up.
+import { hostEffects } from "./hosting";
 import { inflation, business, businessChief, sponsorship } from "./business";
 import { leagueYear, leagueYearStart } from "./contracts";
 import { addDays, shortDate } from "./dates";
@@ -110,7 +111,7 @@ export function sponsorHeat(state: GameState): number {
   const played = r ? r.w + r.l + r.t : 0;
   const wp = played >= 4 ? winPct(r.w, r.l, r.t) : 0.5;
   const playoff = state.seeds && [...state.seeds.AFC, ...state.seeds.NFC].includes(state.userTeam) ? 0.04 : 0;
-  return 0.78 + state.pressure.fans / 400 + 0.2 * wp + playoff + [-0.03, 0, 0.02, 0.04][business(state).budget.marketing] + projectEffects(state).sponsor;
+  return 0.78 + state.pressure.fans / 400 + 0.2 * wp + playoff + [-0.03, 0, 0.02, 0.04][business(state).budget.marketing] + projectEffects(state).sponsor + hostEffects(state, state.userTeam).sponsor;
 }
 
 /** Renewal season opens February 1 for every deal that ends with the league year. */

@@ -1011,7 +1011,8 @@ export type LedgerCat =
   | "national" | "tickets" | "premium" | "concessions" | "parking" | "merch" | "sponsorship" | "localMedia" | "naming" | "events"
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
-  | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution";
+  | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
+  | "hosting" | "bids";
 
 export interface LedgerEntry {
   date: string;
@@ -1275,6 +1276,8 @@ export interface GameState {
   schedule?: ScheduledGame[];
   /** Waiver priority until the standings take over: the last draft's order. */
   waiverOrder?: string[];
+  /** Super Bowl and draft hosting: awards made in this save and our open bids. */
+  hosting?: HostingState;
   /** Return designations from injured reserve used this season, by team (eight allowed). */
   irReturns?: Record<string, number>;
   /** Players on a 53 or injured reserve when the regular season ended: they earn a credited season. */
@@ -1457,6 +1460,27 @@ export interface AdoptedRule {
   year: number;
   yes: number;
   sponsor: string;
+}
+
+/** A Super Bowl or draft the owners awarded in this save (see engine/hosting.ts). */
+export interface HostAward {
+  team: string;
+  city: string;
+  /** Every team that bid, best bid first. */
+  bidders: string[];
+  votes: number;
+  ballots: number;
+  /** We were in the running. */
+  ours?: boolean;
+}
+
+export interface HostingState {
+  /** Super Bowls by the season they end. */
+  sb: Record<number, HostAward>;
+  /** Drafts by year. */
+  draft: Record<number, HostAward>;
+  /** Our bids for this spring's votes: the package level and the day it went in. */
+  bids: { sb?: { level: number; date: string }; draft?: { level: number; date: string } };
 }
 
 export interface OwnersState {

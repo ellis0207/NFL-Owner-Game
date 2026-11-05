@@ -15,6 +15,7 @@
 // 32 teams. Suites and the premium part of club seats aren't shared. Playoff
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
+import { hostBlackout, hostEffects } from "./hosting";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { dealOf, dealYear, leagueYear, leagueYearStart, salaryCap } from "./contracts";
 import { cfbDate, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS } from "./collegeData";
@@ -142,6 +143,8 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   interest: { label: "Interest on the credit line", side: "out" },
   distribution: { label: "Distributions to the owner", side: "out" },
   projects: { label: "Stadium and facility projects", side: "out" },
+  hosting: { label: "Hosting the Super Bowl or the draft", side: "in" },
+  bids: { label: "Bids to host the Super Bowl or the draft", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -336,6 +339,8 @@ interface GateInputs {
   demand?: number;
   premiumMult?: number;
   perCap?: number;
+  /** Hosting the Super Bowl or the draft: more sold in the team store. */
+  merchMult?: number;
 }
 
 interface GateResult {
@@ -379,7 +384,7 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const premium = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
   const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
-  const merch = attendance * 11 * 0.45;
+  const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1);
   return {
     sold, attendance, holders, singleSeats, singleSold, singlePrice: Math.round(singlePrice), heat: singleSeats ? singleWant / singleSeats : 2,
     tickets: Math.round(tickets), premium: Math.round(premium), concessions: Math.round(concessions), parking: Math.round(parking), merch: Math.round(merch),
@@ -403,7 +408,15 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
     ticketIdx: ours && b?.index ? b.index.season : inflation(RULES.season, 0.035),
     premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
     ...(ours ? projectEffects(state).gate : {}),
+    ...hostGate(state, team),
   };
+}
+
+function hostGate(state: GameState, team: string): Partial<GateInputs> {
+  const h = hostEffects(state, team);
+  if (h.merch === 1 && h.demand === 1) return {};
+  const ours = team === state.userTeam ? projectEffects(state).gate.demand ?? 1 : 1;
+  return { merchMult: h.merch, demand: ours * h.demand };
 }
 
 /** What the business staff expects at a home game, for the Business page. */
@@ -610,7 +623,7 @@ function dateFree(state: GameState, team: string, date: string, events: StadiumE
   // Playoff weekends stay open, as every lease requires.
   if (date >= KEY.wildCardWeekend && date <= addDays(KEY.conferenceChampionships, 1)) return false;
   const s = STADIUM_BY_TEAM[team];
-  if (s.blackout?.some((x) => date >= x.from && date <= x.to)) return false;
+  if (s.blackout?.some((x) => date >= x.from && date <= x.to) || hostBlackout(state, team, date)) return false;
   return !events.some((e) => (e.status === "booked" || e.status === "offered") && Math.abs(daysBetween(e.date, date)) <= 1);
 }
 
