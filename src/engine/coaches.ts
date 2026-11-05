@@ -134,18 +134,21 @@ function randomScheme(rng: Rng, side: "offense" | "defense"): OffenseScheme | De
   return side === "offense" ? pick(rng, OFFENSE_SCHEMES) : pick(rng, DEFENSE_SCHEMES);
 }
 
-function newPerson(state: GameState, rng: Rng, taken: Set<string>, o: {
+export function newPerson(state: GameState, rng: Rng, taken: Set<string>, o: {
   track: StaffTrack; side: "offense" | "defense" | null; age: number; salt: string; mean: number; sd: number;
   job?: Coach["job"]; background: string; scheme?: OffenseScheme | DefenseScheme | null; mentor?: string;
+  /** A real person's name; without it the person is made up. */
+  name?: string;
 }): Coach {
-  const name = uniqueName(state, rng, taken);
+  const name = o.name ?? uniqueName(state, rng, taken);
+  if (o.name) taken.add(o.name);
   const birthYear = RULES.season - o.age;
   const hidden: StaffHidden = {};
   for (const k of KEYS[o.track]) hidden[k] = clamp(o.mean + gaussian(rng) * o.sd);
   return {
     id: slug(name, birthYear, o.salt), name, birthYear, track: o.track, side: o.side,
     scheme: o.scheme ?? (o.side ? randomScheme(rng, o.side) : null), background: o.background,
-    team: null, role: null, job: o.job, hiredYear: RULES.season, callsPlays: [], generated: true,
+    team: null, role: null, job: o.job, hiredYear: RULES.season, callsPlays: [], ...(o.name ? { birthYearEstimated: true } : { generated: true }),
     hidden, growth: growthFor(rng, o.age), record: [], ...(o.mentor ? { mentor: o.mentor } : {}),
   };
 }
@@ -177,29 +180,8 @@ export function initStaff(state: GameState): StaffState {
       hidden, growth: growthFor(rng, season - p.birthYear), record: [],
     };
   }
-  // NFL assistants: the next coordinators and head coaches.
+  // Position coaches are added by ensurePositionCoaches (positionCoaches.ts). Front-office lieutenants:
   for (const t of TEAMS) {
-    const hc = Object.values(people).find((c) => c.team === t.id && c.role === "HC");
-    for (const [i, job] of ASSISTANT_JOBS.entries()) {
-      const rng = rngFor(state.seed, `staff-asst:${t.id}:${i}`);
-      if (rng() < 0.35) continue;
-      const age = job.age[0] + Math.floor(rng() * (job.age[1] - job.age[0]));
-      const c = newPerson(state, rng, taken, {
-        track: "coach", side: job.side, age, salt: `a${t.id}${i}`, mean: 63, sd: 6,
-        job: { kind: "assistant", title: job.title, team: t.id }, background: `${t.name} ${job.title}`,
-        scheme: job.side === "offense" ? STAFF.teamSchemes[t.id].offense : STAFF.teamSchemes[t.id].defense, mentor: hc?.id,
-      });
-      people[c.id] = c;
-    }
-    // Special teams assistants and front-office lieutenants.
-    const rng = rngFor(state.seed, `staff-asst:${t.id}:st`);
-    if (rng() < 0.5) {
-      const c = newPerson(state, rng, taken, {
-        track: "st", side: null, age: 33 + Math.floor(rng() * 14), salt: `s${t.id}`, mean: 62, sd: 6,
-        job: { kind: "assistant", title: "assistant special teams coach", team: t.id }, background: `${t.name} assistant special teams coach`,
-      });
-      people[c.id] = c;
-    }
     const gm = Object.values(people).find((c) => c.team === t.id && c.role === "GM");
     const r2 = rngFor(state.seed, `staff-front:${t.id}`);
     const c = newPerson(state, r2, taken, {
@@ -409,14 +391,14 @@ export function payroll(state: GameState, team: string): { staff: number; owed: 
   const s = state.staff;
   if (!s) return { staff: 0, owed: 0 };
   let pay = 0;
-  for (const c of Object.values(s.people)) if (c.team === team && c.role && c.contract) pay += c.contract.salary;
+  for (const c of Object.values(s.people)) if (((c.team === team && c.role) || (c.job?.room && c.job.team === team && !c.retired)) && c.contract) pay += c.contract.salary;
   const year = RULES.season;
   const owed = s.owed.filter((o) => o.team === team && o.through >= year).reduce((sum, o) => sum + o.salary, 0);
   return { staff: pay, owed };
 }
 
-/** What the business books assume the eight top jobs cost; the rest of the coaching staff is in the base budget. */
-export const BUDGETED_TOP_STAFF = 24 * M;
+/** What the business books assume the eight top jobs and the position coaches cost; the rest of the staff is in the base budget. */
+export const BUDGETED_TOP_STAFF = 35 * M;
 
 // ---- The season on the record ----
 

@@ -5,6 +5,7 @@
 import { ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
+import { roomBoost } from "./positionCoaches";
 import { staffEffects } from "./staff";
 import type { GameState } from "./types";
 
@@ -23,7 +24,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     if (!r || !player) continue;
     const fx = staffEffects(p.team);
     const side = SIDE[player.position];
-    const coach = side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial;
+    const coach = (side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial) + roomBoost(state, p.team, player.position);
     const age = ageOn(player.birthDate, state.date) ?? 26;
     const dev = p.dev ?? 0;
     const room = r.potential + (p.pot ?? 0) - (r.overall + dev);

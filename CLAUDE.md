@@ -37,7 +37,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   re-render and autosave.
 - **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
   games, then the daily hooks in this order: `offseasonDaily`,
-  `carouselDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
+  `carouselDaily`, `positionCoachesDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
   `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `hostingDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `commerceDaily`,
   `projectsDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
@@ -68,7 +68,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Offseason | `offseason.ts` (tags, tenders, options, league year, restructures) | `offseason.test.ts`, `rosterbuilding.test.ts` |
 | Free agency | `freeagency.ts` (market, bids, visits, street FAs) | `freeagency.test.ts`, `rosterbuilding.test.ts`, `fa-report.ts` |
 | Trades | `trades.ts` (rules, picks, CPU valuation), `conditions.ts` (conditional picks, settled in `tradesDaily`) | `trades.test.ts`, `conditions.test.ts`, `trade-report.ts` |
-| Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires), `hiring.ts` (interview rules for playoff teams) | `carousel.test.ts`, `carousel-report.ts` |
+| Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires), `hiring.ts` (interview rules for playoff teams), `positionCoaches.ts` (position rooms, teaching, HC hires with owner approval) | `carousel.test.ts`, `positioncoaches.test.ts`, `carousel-report.ts` |
 | College and draft | `collegeData.ts`, `college.ts`, `prospects.ts`, `scouting.ts`, `prodays.ts`, `draft.ts`, `names.ts` | `college.test.ts`, `college-report.ts`, `draft-report.ts` |
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects), `review.ts` (offseason grades, fan expectations, storylines; `reviewDaily` after `mediaDaily`) | `media.test.ts`, `commerce.test.ts`, `media-report.ts` |
 | Business | `business.ts` (books, gate, budgets), `stadiums.ts`, `commerce.ts` (named sponsors, local radio/TV, February offers), `projects.ts` (stadium and facility projects); `commerceDaily` and `projectsDaily` run after `businessDaily` | `business.test.ts`, `commerce.test.ts`, `business-report.ts` |
@@ -116,7 +116,7 @@ Calibration targets (what "healthy" looked like when each system shipped):
   talent steady year to year; ~32 comp picks a year; 85+ players drift slowly
   (446 to ~420 over four seasons); every team near or under the cap by year 4.
 - Carousel (`carousel-report.ts 3 11`): 2 to 10 HC changes a year, no search
-  left open, ~600 to 630 people tracked.
+  left open, ~880 people tracked (with position coaches).
 - Trades (`trade-report.ts`): ~30 to 50 a year with a deadline rush.
 - Long careers (`longrun-report.ts 11 7`, about 1.5 min a season): 3 to 7
   CPU tags a year; market tops steady (QB top deal at most ~25% of the cap,

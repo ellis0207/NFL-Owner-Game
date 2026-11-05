@@ -1,0 +1,1418 @@
+{
+ "teams": {
+  "DET": {
+   "QB": [
+    "Mark Brunell"
+   ],
+   "RB": [
+    "Tashard Choice"
+   ],
+   "WR": [
+    "Scottie Montgomery"
+   ],
+   "TE": [
+    "Steve Oliver"
+   ],
+   "OL": [
+    "Hank Fraley"
+   ],
+   "DL": [
+    "Kacy Rodgers"
+   ],
+   "LB": [
+    "Shaun Dion Hamilton"
+   ],
+   "DB": [
+    "Deshea Townsend",
+    "Jim O'Neil"
+   ],
+   "STA": [
+    "Jett Modkins"
+   ]
+  },
+  "CHI": {
+   "QB": [
+    "J.T. Barrett"
+   ],
+   "RB": [
+    "Eric Studesville"
+   ],
+   "WR": [
+    "Antwaan Randle El"
+   ],
+   "TE": [
+    "Jim Dray"
+   ],
+   "OL": [
+    "Dan Roushar",
+    "Kyle DeVan"
+   ],
+   "DL": [
+    "Jeremy Garrett"
+   ],
+   "LB": [
+    "Richard Smith",
+    "Kevin Koch"
+   ],
+   "DB": [
+    "Al Harris",
+    "Matt Giordano"
+   ],
+   "STA": [
+    "Anthony Blevins"
+   ]
+  },
+  "ARI": {
+   "QB": [
+    "Matt Schaub"
+   ],
+   "RB": [
+    "Matt Merritt"
+   ],
+   "WR": [
+    "Tony Sorrentino"
+   ],
+   "TE": [
+    "Jake Moreland"
+   ],
+   "OL": [
+    "Justin Frye"
+   ],
+   "DL": [
+    "Pete Kwiatkowski"
+   ],
+   "LB": [
+    "Rod Wilson",
+    "Matt Feeney"
+   ],
+   "DB": [
+    "Cristian Garcia",
+    "Zac Etheridge"
+   ],
+   "STA": [
+    "Sam Sewell"
+   ]
+  },
+  "BAL": {
+   "QB": [
+    "Israel Woolfork"
+   ],
+   "RB": [
+    "Eddie Faulkner"
+   ],
+   "WR": [
+    "Keary Colbert"
+   ],
+   "TE": [
+    "Zack Grossi"
+   ],
+   "OL": [
+    "Dwayne Ledford"
+   ],
+   "DL": [
+    "Lou Esposito"
+   ],
+   "LB": [
+    "Tyler Santucci",
+    "Harland Bower"
+   ],
+   "DB": [
+    "Mike Mickens"
+   ],
+   "STA": [
+    "Ben Kotwica"
+   ]
+  },
+  "BUF": {
+   "QB": [
+    "Bo Hardegree"
+   ],
+   "RB": [
+    "Kelly Skipper"
+   ],
+   "WR": [
+    "Drew Terrell"
+   ],
+   "TE": [
+    "Rob Boras"
+   ],
+   "OL": [
+    "Pat Meyer"
+   ],
+   "DL": [
+    "Terrance Jamison"
+   ],
+   "LB": [
+    "Bobby April III",
+    "John Egorugwu"
+   ],
+   "DB": [
+    "Joe Danna",
+    "Jay Valai"
+   ],
+   "STA": [
+    "Turner West"
+   ]
+  },
+  "CAR": {
+   "QB": [
+    "Will Harriger"
+   ],
+   "RB": [
+    "Bernie Parmalee"
+   ],
+   "WR": [
+    "Rob Moore"
+   ],
+   "TE": [
+    "Pat McPherson"
+   ],
+   "OL": [
+    "Joe Gilbert"
+   ],
+   "DL": [],
+   "LB": [
+    "Peter Hansen",
+    "AC Carter"
+   ],
+   "DB": [
+    "Renaldo Hill",
+    "DeAngelo Hall"
+   ],
+   "STA": [
+    "Daren Bates"
+   ]
+  },
+  "CLE": {
+   "QB": [
+    "Mike Bajakian",
+    "Matt Baker"
+   ],
+   "RB": [
+    "Duce Staley"
+   ],
+   "WR": [
+    "Christian Jones",
+    "John Wozniak"
+   ],
+   "TE": [
+    "Jeff Blasko"
+   ],
+   "OL": [
+    "George Warhop",
+    "Sanders Davis"
+   ],
+   "DL": [
+    "Jacques Cesaire",
+    "Ralph Street"
+   ],
+   "LB": [
+    "Jason Tarver"
+   ],
+   "DB": [
+    "Brandon Lynch"
+   ],
+   "STA": [
+    "Keith Tandy"
+   ]
+  },
+  "DAL": {
+   "QB": [
+    "Steve Shimko"
+   ],
+   "RB": [
+    "Derrick Foster",
+    "Jamel Mutunga"
+   ],
+   "WR": [
+    "Junior Adams",
+    "Stephen Bravo-Brown"
+   ],
+   "TE": [
+    "Lunda Wells"
+   ],
+   "OL": [
+    "Conor Riley",
+    "Kyle Fuller"
+   ],
+   "DL": [
+    "Marcus Dixon",
+    "Demeitre Brim"
+   ],
+   "LB": [
+    "Chidera Uzo-Diribe",
+    "Scott Symons"
+   ],
+   "DB": [
+    "Derrick Ansley",
+    "Ryan Smith"
+   ],
+   "STA": [
+    "Carlos Polk"
+   ]
+  },
+  "GB": {
+   "QB": [
+    "Luke Getsy"
+   ],
+   "RB": [
+    "Ben Sirmans"
+   ],
+   "WR": [
+    "Noah Pauley",
+    "Rob Grosso"
+   ],
+   "TE": [
+    "John Dunn"
+   ],
+   "OL": [
+    "Luke Butkus",
+    "Eddie Gordon"
+   ],
+   "DL": [
+    "Vince Oghobaase"
+   ],
+   "LB": [
+    "Sam Siefkes",
+    "DeMarcus Covington"
+   ],
+   "DB": [
+    "Bobby Babich",
+    "Daniel Bullocks"
+   ],
+   "STA": [
+    "Cory Harkey"
+   ]
+  },
+  "JAX": {
+   "QB": [
+    "Spencer Whipple"
+   ],
+   "RB": [
+    "Chad Morton"
+   ],
+   "WR": [
+    "Edgar Bennett",
+    "Tyler Tettleton"
+   ],
+   "TE": [
+    "Richard Angulo"
+   ],
+   "OL": [
+    "Shaun Sarrett",
+    "Trevor Mendelson"
+   ],
+   "DL": [
+    "Matt Edwards",
+    "Derrick LeBlanc"
+   ],
+   "LB": [
+    "Tem Lukabu",
+    "Kevin Wilkins"
+   ],
+   "DB": [
+    "Anthony Perkins",
+    "Drew Lascari"
+   ],
+   "STA": [
+    "Luke Thompson"
+   ]
+  },
+  "LAC": {
+   "QB": [
+    "Shane Day"
+   ],
+   "RB": [
+    "Max McCaffrey"
+   ],
+   "WR": [
+    "Sanjay Lal",
+    "Josh Hammond"
+   ],
+   "TE": [
+    "Chandler Henley"
+   ],
+   "OL": [
+    "Butch Barry",
+    "Nick Hardwick"
+   ],
+   "DL": [
+    "Mike Elston",
+    "Julian Campenni"
+   ],
+   "LB": [
+    "Sean Spence",
+    "Dylan Roney"
+   ],
+   "DB": [
+    "Steve Clinkscale",
+    "Adam Fuller"
+   ],
+   "STA": [
+    "Chris Gould"
+   ]
+  },
+  "MIN": {
+   "QB": [
+    "Josh McCown",
+    "Jordan Traylor"
+   ],
+   "RB": [
+    "Curtis Modkins"
+   ],
+   "WR": [
+    "Keenan McCardell",
+    "Derron Montgomery"
+   ],
+   "TE": [
+    "Ryan Cordell"
+   ],
+   "OL": [
+    "Keith Carter",
+    "Derek Warehime"
+   ],
+   "DL": [
+    "Patrick Hill"
+   ],
+   "LB": [
+    "Thad Bogardus",
+    "Mike Siravo"
+   ],
+   "DB": [
+    "Gerald Alexander",
+    "Chenzo Funari"
+   ],
+   "STA": [
+    "Chili Davis"
+   ]
+  },
+  "NE": {
+   "QB": [
+    "Ashton Grant"
+   ],
+   "RB": [
+    "Tony Dews"
+   ],
+   "WR": [
+    "Todd Downing"
+   ],
+   "TE": [
+    "Thomas Brown"
+   ],
+   "OL": [
+    "Doug Marrone",
+    "Jonathan Decoster"
+   ],
+   "DL": [
+    "Clinton McMillan"
+   ],
+   "LB": [
+    "Vinny DePalma",
+    "Mike Smith"
+   ],
+   "DB": [
+    "Scott Booker",
+    "Justin Hamilton"
+   ],
+   "STA": [
+    "Tom Quinn"
+   ]
+  },
+  "NO": {
+   "QB": [
+    "Scott Tolzien"
+   ],
+   "RB": [
+    "Joel Thomas"
+   ],
+   "WR": [
+    "Keith Williams",
+    "Kyle Valero"
+   ],
+   "TE": [
+    "Chase Haslett",
+    "Josh Hill"
+   ],
+   "OL": [
+    "Brendan Nugent",
+    "Tobijah Hughley"
+   ],
+   "DL": [
+    "Bo Davis",
+    "Jay Rodgers"
+   ],
+   "LB": [
+    "Peter Sirmon",
+    "Adam Gristick"
+   ],
+   "DB": [
+    "Terry Joseph",
+    "Grady Brown"
+   ],
+   "STA": [
+    "Kyle Wilber"
+   ]
+  },
+  "NYG": {
+   "QB": [
+    "Brian Callahan"
+   ],
+   "RB": [
+    "Willie Taggart"
+   ],
+   "WR": [
+    "Chad Hall"
+   ],
+   "TE": [
+    "Tim Kelly"
+   ],
+   "OL": [
+    "Mike Bloomgren",
+    "Grant Newsome"
+   ],
+   "DL": [
+    "Dennis Johnson"
+   ],
+   "LB": [
+    "Charlie Bullen",
+    "Frank Bush"
+   ],
+   "DB": [
+    "Donald D'Alesio",
+    "Addison Lynch"
+   ],
+   "STA": [
+    "T.J. Weist"
+   ]
+  },
+  "NYJ": {
+   "QB": [
+    "Bill Musgrave",
+    "Thomas Merkle"
+   ],
+   "RB": [
+    "Nic McKissic-Luke"
+   ],
+   "WR": [
+    "Shawn Jefferson",
+    "Junior Taylor"
+   ],
+   "TE": [
+    "Alfredo Roberts"
+   ],
+   "OL": [
+    "Steve Heiden",
+    "Brian Natkin"
+   ],
+   "DL": [
+    "Karl Dunbar",
+    "Cameron Davis"
+   ],
+   "LB": [
+    "Ben Bolling",
+    "Nathaniel Willingham"
+   ],
+   "DB": [
+    "Chris Harris",
+    "Ryan Slowik"
+   ],
+   "STA": [
+    "Randall Jette"
+   ]
+  },
+  "PHI": {
+   "QB": [
+    "Parks Frazier",
+    "Montgomery VanGorder"
+   ],
+   "RB": [
+    "Jemal Singleton"
+   ],
+   "WR": [
+    "Aaron Moorehead"
+   ],
+   "TE": [
+    "Ryan Mahaffey"
+   ],
+   "OL": [
+    "Chris Kuper",
+    "Greg Austin"
+   ],
+   "DL": [
+    "Clint Hurtt",
+    "Jeremiah Washburn"
+   ],
+   "LB": [
+    "Bobby King",
+    "Tyler Scudder"
+   ],
+   "DB": [
+    "Mike Pellegrino",
+    "Roy Anderson"
+   ],
+   "STA": [
+    "Joe Pannunzio"
+   ]
+  },
+  "PIT": {
+   "QB": [
+    "Tom Arth",
+    "Tim Berbenich"
+   ],
+   "RB": [
+    "Ramon Chinyoung Sr."
+   ],
+   "WR": [
+    "Adam Henry"
+   ],
+   "TE": [
+    "Robert Kugler"
+   ],
+   "OL": [
+    "James Campen",
+    "Jahri Evans"
+   ],
+   "DL": [
+    "Domata Peko"
+   ],
+   "LB": [
+    "C.J. Ah You",
+    "Scott McCurley"
+   ],
+   "DB": [
+    "Joe Whitt Jr.",
+    "Jason Simmons"
+   ],
+   "STA": [
+    "Darian Thompson"
+   ]
+  },
+  "SEA": {
+   "QB": [
+    "Tyson Prince",
+    "Jake Peetz"
+   ],
+   "RB": [
+    "Thomas Hammock"
+   ],
+   "WR": [
+    "Frisman Jackson"
+   ],
+   "TE": [
+    "Mack Brown"
+   ],
+   "OL": [
+    "John Benton",
+    "Quinshon Odom"
+   ],
+   "DL": [
+    "Justin Hinds"
+   ],
+   "LB": [
+    "Zach Orr",
+    "Josh Bynes"
+   ],
+   "DB": [
+    "Karl Scott",
+    "Jeff Howard"
+   ],
+   "STA": [
+    "Devin Fitzsimmons"
+   ]
+  },
+  "WAS": {
+   "QB": [
+    "D.J. Williams",
+    "Danny Etling"
+   ],
+   "RB": [
+    "Anthony Lynn",
+    "Jesse Madden"
+   ],
+   "WR": [
+    "Bobby Engram",
+    "Andre Coleman"
+   ],
+   "TE": [],
+   "OL": [
+    "Darnell Stapleton",
+    "Shane Toub"
+   ],
+   "DL": [
+    "Eric Henderson",
+    "Darryl Tapp"
+   ],
+   "LB": [
+    "Ken Norton Jr.",
+    "George Banko"
+   ],
+   "DB": [
+    "Tommy Donatell",
+    "William Gay"
+   ],
+   "STA": [
+    "Brian Schneider"
+   ]
+  },
+  "HOU": {
+   "QB": [
+    "Jerry Schuplinski"
+   ],
+   "RB": [
+    "Danny Barrett"
+   ],
+   "WR": [
+    "Ben McDaniels",
+    "Tiquan Underwood"
+   ],
+   "TE": [
+    "James Ferentz"
+   ],
+   "OL": [
+    "Cole Popovich"
+   ],
+   "DL": [
+    "Rod Wright",
+    "Frank Okam"
+   ],
+   "LB": [
+    "Bill Davis"
+   ],
+   "DB": [
+    "Dino Vasso",
+    "Stephen Adegoke"
+   ],
+   "STA": [
+    "Will Burnham"
+   ]
+  },
+  "DEN": {
+   "QB": [
+    "Logan Kilgore",
+    "Evan Rothstein"
+   ],
+   "RB": [
+    "Lou Ayeni"
+   ],
+   "WR": [
+    "Ronald Curry"
+   ],
+   "TE": [
+    "Austin King"
+   ],
+   "OL": [
+    "Chris Morgan"
+   ],
+   "DL": [
+    "Jamar Cain"
+   ],
+   "LB": [
+    "Jeff Schmedding",
+    "Isaac Shewmaker"
+   ],
+   "DB": [
+    "Doug Belk"
+   ],
+   "STA": [
+    "Marwan Maalouf"
+   ]
+  },
+  "CIN": {
+   "QB": [
+    "Brad Kragthorpe",
+    "Jordan Salkin"
+   ],
+   "RB": [
+    "Justin Hill"
+   ],
+   "WR": [
+    "Troy Walters",
+    "Davis Koetter"
+   ],
+   "TE": [
+    "James Casey"
+   ],
+   "OL": [
+    "Scott Peters",
+    "Michael McCarthy"
+   ],
+   "DL": [
+    "Jerry Montgomery",
+    "Mike Moon"
+   ],
+   "LB": [
+    "Mike Hodges",
+    "Ronnie Regula"
+   ],
+   "DB": [
+    "Charles Burks"
+   ],
+   "STA": [
+    "Ben Jacobs"
+   ]
+  },
+  "ATL": {
+   "QB": [
+    "Alex Van Pelt",
+    "Jordan Reid"
+   ],
+   "RB": [
+    "Michael Pitre"
+   ],
+   "WR": [
+    "Robert Prince"
+   ],
+   "TE": [
+    "Kevin Koger"
+   ],
+   "OL": [
+    "Bill Callahan",
+    "Matt Jones",
+    "Nick Jones"
+   ],
+   "DL": [
+    "Nate Ollie"
+   ],
+   "LB": [
+    "Barrett Ruud",
+    "John Timu"
+   ],
+   "DB": [
+    "Justin Hood",
+    "Ricky Manning",
+    "Patrick Toney"
+   ],
+   "STA": [
+    "Chase Blackburn"
+   ]
+  },
+  "IND": {
+   "QB": [
+    "Cam Turner"
+   ],
+   "RB": [
+    "DeAndre Smith"
+   ],
+   "WR": [
+    "Reggie Wayne"
+   ],
+   "TE": [
+    "Tom Manning"
+   ],
+   "OL": [
+    "Tony Sparano Jr.",
+    "Chris Watt"
+   ],
+   "DL": [
+    "Marion Hobby",
+    "Kalon Humphries"
+   ],
+   "LB": [
+    "James Bettcher",
+    "Cato June"
+   ],
+   "DB": [
+    "Jerome Henderson",
+    "Chris Hewitt"
+   ],
+   "STA": [
+    "Joe Hastings"
+   ]
+  },
+  "LV": {
+   "QB": [],
+   "RB": [
+    "Omar Young"
+   ],
+   "WR": [
+    "Zach Azzanni"
+   ],
+   "TE": [
+    "Luke Steckel"
+   ],
+   "OL": [
+    "Rick Dennison",
+    "Ben Wilkerson"
+   ],
+   "DL": [
+    "Travis Smith",
+    "Kenyon Jackson"
+   ],
+   "LB": [
+    "Ronnell Williams"
+   ],
+   "DB": [
+    "Joe Woods",
+    "Matt Robinson"
+   ],
+   "STA": [
+    "Marquice Williams",
+    "Tim McConnell"
+   ]
+  },
+  "LA": {
+   "QB": [
+    "Dave Ragone"
+   ],
+   "RB": [
+    "Ron Gould"
+   ],
+   "WR": [
+    "Rob Calabrese",
+    "Eric Yarber",
+    "Robert Woods"
+   ],
+   "TE": [
+    "Scott Huff",
+    "Dan Shamash"
+   ],
+   "OL": [
+    "Ryan Wendell",
+    "Zak Kromer",
+    "Brian Allen"
+   ],
+   "DL": [
+    "Giff Smith",
+    "Drew Wilkins"
+   ],
+   "LB": [
+    "Greg Williams",
+    "Joe Coniglio"
+   ],
+   "DB": [
+    "Jimmy Lake",
+    "Chris Beake",
+    "Michael Hunter"
+   ],
+   "STA": [
+    "Kyle Hoke"
+   ]
+  },
+  "KC": {
+   "QB": [],
+   "RB": [
+    "DeMarco Murray"
+   ],
+   "WR": [
+    "Chad O'Shea"
+   ],
+   "TE": [
+    "Tom Melvin"
+   ],
+   "OL": [
+    "Andy Heck"
+   ],
+   "DL": [
+    "Joe Cullen",
+    "Terry Bradden Jr."
+   ],
+   "LB": [
+    "Brendan Daly"
+   ],
+   "DB": [
+    "Dave Merritt"
+   ],
+   "STA": []
+  },
+  "MIA": {
+   "QB": [
+    "Bush Hamdan"
+   ],
+   "RB": [
+    "Ladell Betts"
+   ],
+   "WR": [
+    "Tyke Tolbert",
+    "Jonathan Krause"
+   ],
+   "TE": [
+    "Ron Middleton",
+    "Lemuel Jeanpierre"
+   ],
+   "OL": [
+    "Zach Yenser",
+    "Matt Applebaum"
+   ],
+   "DL": [
+    "Austin Clark",
+    "Chuka Ndulue"
+   ],
+   "LB": [
+    "Al Washington",
+    "Wendel Davis"
+   ],
+   "DB": [
+    "Jahmile Addae",
+    "Ryan Downard",
+    "DeShawn Shead"
+   ],
+   "STA": [
+    "Brock Olivo",
+    "Darius Eubanks"
+   ]
+  },
+  "SF": {
+   "QB": [],
+   "RB": [],
+   "WR": [],
+   "TE": [
+    "Deuce Schwartz"
+   ],
+   "OL": [
+    "Chris Foerster",
+    "Roman Sapolu"
+   ],
+   "DL": [],
+   "LB": [
+    "K.J. Wright"
+   ],
+   "DB": [
+    "Jerry Gray",
+    "Ray Brown"
+   ],
+   "STA": []
+  },
+  "TB": {
+   "QB": [
+    "Chandler Whitmer"
+   ],
+   "RB": [
+    "Skip Peete"
+   ],
+   "WR": [
+    "Bryan McClendon"
+   ],
+   "TE": [
+    "Justin Peelle",
+    "Jeff Kastl"
+   ],
+   "OL": [
+    "Kevin Carberry",
+    "Andrew Mitchell"
+   ],
+   "DL": [
+    "Marcus West"
+   ],
+   "LB": [
+    "Larry Foote",
+    "Mike Caldwell"
+   ],
+   "DB": [
+    "Rashad Johnson",
+    "Tim Atkins"
+   ],
+   "STA": [
+    "Luke Smith"
+   ]
+  },
+  "TEN": {
+   "QB": [
+    "Shea Tierney"
+   ],
+   "RB": [
+    "Randy Jordan"
+   ],
+   "WR": [
+    "Greg Lewis"
+   ],
+   "TE": [
+    "Luke Stocker"
+   ],
+   "OL": [
+    "Carmen Bricillo",
+    "Isaac Williams"
+   ],
+   "DL": [
+    "Aaron Whitecotton",
+    "Tanzel Smart"
+   ],
+   "LB": [
+    "Dave Borgonzi"
+   ],
+   "DB": [
+    "Tony Oden",
+    "Marquand Manuel",
+    "Dalton Hilliard"
+   ],
+   "STA": [
+    "Rayna Stewart"
+   ]
+  }
+ },
+ "playedFor": {
+  "Mark Brunell": [
+   "GB",
+   "JAX",
+   "WAS",
+   "NYJ",
+   "NO"
+  ],
+  "Tashard Choice": [
+   "DAL",
+   "BUF"
+  ],
+  "Hank Fraley": [
+   "PHI",
+   "CLE"
+  ],
+  "Shaun Dion Hamilton": [
+   "WAS",
+   "DET"
+  ],
+  "Deshea Townsend": [
+   "PIT",
+   "IND"
+  ],
+  "Antwaan Randle El": [
+   "PIT",
+   "WAS"
+  ],
+  "Jim Dray": [
+   "ARI",
+   "CLE",
+   "SF"
+  ],
+  "Kyle DeVan": [
+   "IND"
+  ],
+  "Al Harris": [
+   "PHI",
+   "GB",
+   "MIA",
+   "LA"
+  ],
+  "Matt Giordano": [
+   "IND",
+   "GB",
+   "LV",
+   "LA"
+  ],
+  "Matt Schaub": [
+   "ATL",
+   "HOU",
+   "LV",
+   "BAL"
+  ],
+  "Keary Colbert": [
+   "CAR"
+  ],
+  "Bernie Parmalee": [
+   "MIA",
+   "NYJ"
+  ],
+  "Rob Moore": [
+   "NYJ",
+   "ARI"
+  ],
+  "Renaldo Hill": [
+   "ARI",
+   "MIA",
+   "DEN"
+  ],
+  "DeAngelo Hall": [
+   "ATL",
+   "LV",
+   "WAS"
+  ],
+  "Daren Bates": [
+   "LA",
+   "TEN",
+   "LV"
+  ],
+  "Duce Staley": [
+   "PHI",
+   "PIT"
+  ],
+  "Jacques Cesaire": [
+   "LAC"
+  ],
+  "Keith Tandy": [
+   "TB"
+  ],
+  "Cory Harkey": [
+   "LA"
+  ],
+  "Daniel Bullocks": [
+   "DET"
+  ],
+  "Chad Morton": [
+   "NO",
+   "NYJ",
+   "WAS",
+   "NYG"
+  ],
+  "Edgar Bennett": [
+   "GB",
+   "CHI"
+  ],
+  "Nick Hardwick": [
+   "LAC"
+  ],
+  "Sean Spence": [
+   "PIT",
+   "TEN"
+  ],
+  "Josh McCown": [
+   "ARI",
+   "DET",
+   "LV",
+   "CAR",
+   "CHI",
+   "TB",
+   "CLE",
+   "NYJ",
+   "PHI",
+   "HOU"
+  ],
+  "Keenan McCardell": [
+   "CLE",
+   "JAX",
+   "TB",
+   "LAC",
+   "WAS"
+  ],
+  "Gerald Alexander": [
+   "DET",
+   "JAX",
+   "CAR",
+   "MIA"
+  ],
+  "Scott Tolzien": [
+   "SF",
+   "GB",
+   "IND"
+  ],
+  "Josh Hill": [
+   "NO"
+  ],
+  "Kyle Wilber": [
+   "DAL",
+   "LV"
+  ],
+  "Chad Hall": [
+   "PHI"
+  ],
+  "Shawn Jefferson": [
+   "LAC",
+   "NE",
+   "ATL",
+   "DET"
+  ],
+  "Alfredo Roberts": [
+   "KC",
+   "DAL"
+  ],
+  "Steve Heiden": [
+   "LAC",
+   "CLE"
+  ],
+  "Karl Dunbar": [
+   "NO",
+   "ARI"
+  ],
+  "Aaron Moorehead": [
+   "IND"
+  ],
+  "Chris Kuper": [
+   "DEN"
+  ],
+  "Domata Peko": [
+   "CIN",
+   "DEN",
+   "BAL",
+   "ARI"
+  ],
+  "Jahri Evans": [
+   "NO",
+   "GB"
+  ],
+  "Jason Simmons": [
+   "PIT",
+   "HOU"
+  ],
+  "Darian Thompson": [
+   "NYG",
+   "DAL"
+  ],
+  "Josh Bynes": [
+   "BAL",
+   "DET",
+   "ARI",
+   "CIN"
+  ],
+  "Zach Orr": [
+   "BAL"
+  ],
+  "Anthony Lynn": [
+   "DEN",
+   "SF"
+  ],
+  "Bobby Engram": [
+   "CHI",
+   "SEA",
+   "KC"
+  ],
+  "Darnell Stapleton": [
+   "PIT"
+  ],
+  "Darryl Tapp": [
+   "SEA",
+   "PHI",
+   "WAS",
+   "DET"
+  ],
+  "Ken Norton Jr.": [
+   "DAL",
+   "SF"
+  ],
+  "William Gay": [
+   "PIT",
+   "ARI",
+   "NYG"
+  ],
+  "Tiquan Underwood": [
+   "JAX",
+   "NE",
+   "TB",
+   "CAR"
+  ],
+  "Frank Okam": [
+   "HOU"
+  ],
+  "James Ferentz": [
+   "DEN",
+   "NE"
+  ],
+  "Ronald Curry": [
+   "LV"
+  ],
+  "Troy Walters": [
+   "MIN",
+   "IND",
+   "ARI"
+  ],
+  "James Casey": [
+   "HOU",
+   "PHI",
+   "DEN"
+  ],
+  "Alex Van Pelt": [
+   "BUF",
+   "PIT"
+  ],
+  "Barrett Ruud": [
+   "TB",
+   "TEN",
+   "SEA",
+   "NO"
+  ],
+  "John Timu": [
+   "CHI"
+  ],
+  "Ricky Manning": [
+   "CAR",
+   "CHI"
+  ],
+  "Chase Blackburn": [
+   "NYG",
+   "CAR"
+  ],
+  "Reggie Wayne": [
+   "IND"
+  ],
+  "Cato June": [
+   "IND",
+   "TB"
+  ],
+  "Chris Watt": [
+   "LAC"
+  ],
+  "Brian Allen": [
+   "LA"
+  ],
+  "Robert Woods": [
+   "BUF",
+   "LA",
+   "TEN",
+   "HOU"
+  ],
+  "Ryan Wendell": [
+   "NE"
+  ],
+  "DeMarco Murray": [
+   "DAL",
+   "PHI",
+   "TEN"
+  ],
+  "Ladell Betts": [
+   "WAS",
+   "NO"
+  ],
+  "DeShawn Shead": [
+   "SEA",
+   "DET"
+  ],
+  "K.J. Wright": [
+   "SEA",
+   "LV"
+  ],
+  "Jerry Gray": [
+   "LA",
+   "HOU",
+   "TB"
+  ],
+  "Larry Foote": [
+   "PIT",
+   "DET",
+   "ARI"
+  ],
+  "Rashad Johnson": [
+   "ARI",
+   "TEN"
+  ],
+  "Justin Peelle": [
+   "NO",
+   "LAC",
+   "MIA",
+   "ATL",
+   "SF"
+  ],
+  "Mike Caldwell": [
+   "CLE",
+   "ARI",
+   "PHI",
+   "CHI"
+  ],
+  "Luke Stocker": [
+   "TB",
+   "TEN",
+   "ATL"
+  ],
+  "Greg Lewis": [
+   "PHI",
+   "MIN"
+  ],
+  "Marquand Manuel": [
+   "SEA",
+   "CIN",
+   "GB",
+   "CAR",
+   "DEN"
+  ],
+  "Tanzel Smart": [
+   "LA"
+  ],
+  "Randy Jordan": [
+   "LV",
+   "JAX"
+  ],
+  "Rick Dennison": [
+   "DEN"
+  ],
+  "Andy Heck": [
+   "SEA",
+   "CHI",
+   "WAS"
+  ]
+ }
+}

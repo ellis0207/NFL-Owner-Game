@@ -1,5 +1,6 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
+import { ensurePositionCoaches } from "../engine/positionCoaches";
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
@@ -69,6 +70,7 @@ export function migrate(state: GameState): GameState {
   applySeason(state);
   // Everyone on a staff or looking for a job (saves from before the carousel start from the data).
   ensureStaff(state);
+  ensurePositionCoaches(state);
   // In-season moves used to leak into next year's rollover; rollover only exists from the Super Bowl on.
   if (state.date <= RULES.keyDates.superBowl) {
     for (const r of Object.values(state.league?.rollover ?? {})) delete r[RULES.season + 1];

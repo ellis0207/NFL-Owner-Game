@@ -1,4 +1,5 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { ensurePositionCoaches, positionCoachesDaily } from "./positionCoaches";
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
 import { BASE_SEASON, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
@@ -96,6 +97,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   };
   applySeason(state);
   ensureStaff(state);
+  ensurePositionCoaches(state);
   state.college = newCollege(state);
   business(state);
   const team = TEAM_BY_ID[userTeam];
@@ -452,6 +454,7 @@ export function advanceDay(state: GameState): void {
   if (!offseason) rosterUpkeep(state);
   offseasonDaily(state);
   carouselDaily(state);
+  positionCoachesDaily(state);
   contractsDaily(state);
   incentivesDaily(state);
   capMovesDaily(state);
