@@ -236,6 +236,22 @@ you in the room and make their front offices a little easier to deal with,
 and bad ones become rivalries. The Owners page has the agenda, the other
 owners and the rulebook.
 
+The same meeting awards the Super Bowl about four seasons out and the draft
+about two years out. Super Bowls go to domed and warm-weather stadiums a team
+controls; any city can host the draft. You can enter a standard or a major
+bid in the six weeks before the meeting. A newer building, a bigger market,
+finished stadium upgrades, the size of the bid and your standing with the
+other owners all count. A host's season brings more team store sales, a little
+more ticket demand, warmer sponsors and a big week for the fans, and the league
+takes over a Super Bowl stadium for the four weeks before the game.
+
+Coaching searches follow the league's interview rules. Nobody interviews
+another team's staff during the season. Staff on playoff teams can be
+interviewed by video after the wild card round, but a second interview, and an
+offer for a head coach or GM job, has to wait until their team is out or the
+week before the Super Bowl. A hire from a team still playing becomes official
+when its season ends.
+
 The business has an offseason too. Local sponsors (the jersey patch, the
 official bank, beer, airline and the rest) and the flagship radio and
 preseason TV partners are named deals with their own terms; when one runs
@@ -288,7 +304,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
-  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

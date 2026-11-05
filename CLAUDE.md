@@ -38,7 +38,7 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 - **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
   games, then the daily hooks in this order: `offseasonDaily`,
   `carouselDaily`, `contractsDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
-  `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
+  `tradesDaily`, `springDaily`, `campDaily`, `ownersDaily`, `hostingDaily`, `disciplineDaily`, `draftDaily`, `proDayDaily`, `collegeDaily`,
   `scoutingDaily`, weekly upkeep and playoffs, `businessDaily`, `commerceDaily`,
   `projectsDaily`, `mediaDaily`, `reviewDaily`, `pressDaily`. The day after the draft, `startNewSeason` (`seasons.ts`) rolls
   the league over. A new system adds an `xxxDaily(state)` and one line here.
@@ -68,12 +68,12 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Offseason | `offseason.ts` (tags, tenders, options, league year, restructures) | `offseason.test.ts`, `rosterbuilding.test.ts` |
 | Free agency | `freeagency.ts` (market, bids, visits, street FAs) | `freeagency.test.ts`, `rosterbuilding.test.ts`, `fa-report.ts` |
 | Trades | `trades.ts` (rules, picks, CPU valuation) | `trades.test.ts`, `trade-report.ts` |
-| Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires) | `carousel.test.ts`, `carousel-report.ts` |
+| Staff | `coaches.ts` (people, contracts, aging), `carousel.ts` (firings, searches, hires), `hiring.ts` (interview rules for playoff teams) | `carousel.test.ts`, `carousel-report.ts` |
 | College and draft | `collegeData.ts`, `college.ts`, `prospects.ts`, `scouting.ts`, `prodays.ts`, `draft.ts`, `names.ts` | `college.test.ts`, `college-report.ts`, `draft-report.ts` |
 | Media | `outlets.ts`, `media.ts` (daily coverage), `press.ts` (questions, hidden effects), `review.ts` (offseason grades, fan expectations, storylines; `reviewDaily` after `mediaDaily`) | `media.test.ts`, `commerce.test.ts`, `media-report.ts` |
 | Business | `business.ts` (books, gate, budgets), `stadiums.ts`, `commerce.ts` (named sponsors, local radio/TV, February offers), `projects.ts` (stadium and facility projects); `commerceDaily` and `projectsDaily` run after `businessDaily` | `business.test.ts`, `commerce.test.ts`, `business-report.ts` |
 | Spring and camp | `spring.ts` (OTAs, minicamp, offseason injuries), `camp.ts` (practice reps, camp battles, `program(state)`), `discipline.ts` (suspensions, fines, owner decisions) | `camp.test.ts` |
-| Owners and rules | `rules.ts` (rule catalog, `LEAGUE_RULES` read by the sim, `bindRules` in `applySeason`), `owners.ts` (relations, the March meeting, lobbying, votes, alliances) | `owners.test.ts` |
+| Owners and rules | `rules.ts` (rule catalog, `LEAGUE_RULES` read by the sim, `bindRules` in `applySeason`), `owners.ts` (relations, the March meeting, lobbying, votes, alliances), `hosting.ts` (Super Bowl and draft bids, host effects) | `owners.test.ts`, `hosting.test.ts` |
 
 UI: `src/ui/GameShell.tsx` holds the nav (`SCREENS`) and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,
