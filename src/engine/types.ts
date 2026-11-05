@@ -1443,13 +1443,10 @@ export interface GameState {
   debt?: DebtState;
   /** Who the owner is: wealth, style, goals and the scorecard of each season (ownership.ts). */
   owner?: OwnerState;
-<<<<<<< HEAD
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
   office?: OfficeState;
-=======
->>>>>>> origin/claude/project-thread-hjxueq
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
@@ -1755,7 +1752,6 @@ export interface OwnerState {
   suggestion?: { weights: Record<OwnerGoal, number>; why: string; date: string };
   log: { date: string; text: string }[];
 }
-<<<<<<< HEAD
 
 // ---- Executives, delegation and decision memos (executives.ts, delegation.ts, memos.ts) ----
 
@@ -1893,5 +1889,3 @@ export interface OfficeState {
   /** Trade offers the GM has already written up. */
   seen?: string[];
 }
-=======
->>>>>>> origin/claude/project-thread-hjxueq

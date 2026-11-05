@@ -33,10 +33,7 @@ import { projectEffects } from "./projects";
 import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
-<<<<<<< HEAD
 import { execBoost, execPayrollOver, signer } from "./executives";
-=======
->>>>>>> origin/claude/project-thread-hjxueq
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
 const KEY = RULES.keyDates;
@@ -874,12 +871,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   add("staff", -m(FOOTBALL_STAFF * grow + top));
   if (pay.owed) add("staffOwed", -m(pay.owed), "Fired staff still under contract");
   add("businessOps", -m(businessOps(us) * grow * opsFactor(state)));
-<<<<<<< HEAD
   // The executives' pay above what the budget assumes, and anyone let go but still being paid.
   const execOver = execPayrollOver(state);
   if (execOver) add("businessOps", -m(execOver), "Executive pay above budget and severance");
-=======
->>>>>>> origin/claude/project-thread-hjxueq
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));
@@ -892,13 +886,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
 
 /** An owner who built a company runs a tighter business office. */
 function opsFactor(state: GameState): number {
-<<<<<<< HEAD
   // A good operations chief runs leaner, and a savings drive trims more for the rest of the year.
   const savings = state.office?.savings?.year === leagueYear(state.date) ? 1 - state.office.savings.rate : 1;
   return (state.owner?.background === "industry" ? 0.95 : 1) * (1 - 0.03 * execBoost(state, "COO")) * savings;
-=======
-  return state.owner?.background === "industry" ? 0.95 : 1;
->>>>>>> origin/claude/project-thread-hjxueq
 }
 
 /**

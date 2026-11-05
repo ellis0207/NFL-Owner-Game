@@ -17,10 +17,7 @@ import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
 import { addStory, MEDIA_BY_ID } from "./outlets";
 import { gaussian, rngFor } from "./rng";
-<<<<<<< HEAD
 import { execBoost } from "./executives";
-=======
->>>>>>> origin/claude/project-thread-hjxueq
 import type { CreditFacility, DebtState, GameState, LedgerCat, Loan, LoanKind, LoanOffer, LoanTerms } from "./types";
 
 const M = 1_000_000;
@@ -222,11 +219,8 @@ function pricedMargin(state: GameState, lender: Lender, req: LoanRequest, lev: n
   let m = 0.015 + 0.0035 * Math.max(0, lev - 1) + (50 - debt(state).trust) * 0.0002 + lender.margin + (rng() - 0.5) * 0.003;
   // Longer money costs a little more.
   m += Math.max(0, req.years - 5) * 0.0005;
-<<<<<<< HEAD
   // A good CFO shops the deal harder and presents the club better.
   m -= execBoost(state, "CFO") * 0.002;
-=======
->>>>>>> origin/claude/project-thread-hjxueq
   return Math.max(0.006, Math.round(m * 10000) / 10000);
 }
 
