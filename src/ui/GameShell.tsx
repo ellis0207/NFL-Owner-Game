@@ -25,6 +25,7 @@ import { InboxScreen } from "./screens/InboxScreen";
 import { MediaScreen } from "./screens/MediaScreen";
 import { openQuestions } from "../engine/press";
 import { LeagueScreen } from "./screens/LeagueScreen";
+import { HistoryScreen } from "./screens/HistoryScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
@@ -46,7 +47,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "History", "Owners", "Settings", "Guide", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -202,6 +203,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Cap" && <CapScreen game={game} />}
           {screen === "Business" && <BusinessScreen game={game} changed={changed} />}
           {screen === "League" && <LeagueScreen game={game} />}
+          {screen === "History" && <HistoryScreen game={game} />}
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}

@@ -4,7 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
-import { attachBonuses } from "./bonuses";
+import { asksBonuses, attachBonuses, bonusTermsValue, missRisk } from "./bonuses";
 import { attachIncentives, incentiveWorth } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
 import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
@@ -152,7 +152,7 @@ function stance(state: GameState, team: string, id: string, startYear: number): 
 }
 
 /** What an offer is worth to the player, as an APY-equivalent: money, guarantees, length and structure. */
-export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "askYears">, t: OfferTerms): number {
+export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "askYears" | "missRisk">, t: OfferTerms): number {
   const ah = agentHidden(agentFor(neg.player).id);
   const years = Math.max(1, t.years);
   const apy = t.total / years;
@@ -164,7 +164,19 @@ export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "a
   const bonusAdj = (t.signingBonus / Math.max(1, t.total)) * apy * 0.04 * (1 + ah.creativity);
   const voidAdj = t.voidYears * apy * (ah.creativity > 0.7 ? 0.01 : 0);
   const incentiveAdj = (t.incentives ?? 0) * incentiveWorth(ah.guaranteeFocus, ah.creativity);
-  return apy + gAdj + yearAdj + bonusAdj + voidAdj + incentiveAdj;
+  return apy + gAdj + yearAdj + bonusAdj + voidAdj + incentiveAdj + bonusTermsValue(t, neg.missRisk ?? 0.12);
+}
+
+/**
+ * An agent's counter keeps the bonus terms we wrote, and asks for enough
+ * more in total to make up what they cost his client.
+ */
+function carryBonuses(neg: Pick<Negotiation, "missRisk">, counter: OfferTerms, t: OfferTerms): OfferTerms {
+  if (!asksBonuses(t)) return counter;
+  const out: OfferTerms = { ...counter, perGame: t.perGame, workout: t.workout, escalator: t.escalator };
+  const gap = -bonusTermsValue(out, neg.missRisk ?? 0.12);
+  if (gap > 0) out.total = Math.round((out.total + gap * out.years) / 50_000) * 50_000;
+  return out;
 }
 
 /** Terms written the way an agent would write a counter. */
@@ -192,6 +204,7 @@ export function openTalks(state: GameState, team: string, id: string, kind: Nego
     floor: s.floor, ask: s.ask, askYears: s.askYears, askGuarantee: s.askGuarantee,
     patience: 3 + Math.round(ah.patience * 5),
     base: s.base,
+    missRisk: missRisk(state, id),
   };
   // A free agent who has sat on the market has already come down.
   const fa = kind === "free-agent" ? market(state)[id] : undefined;
@@ -293,11 +306,16 @@ export function draftDeal(state: GameState, neg: Negotiation, t: OfferTerms) {
       if (y) y.proration += v.proration;
     }
     deal.years = [...current.years.filter((y) => y.year < NEXT && !y.void).map((y) => ({ ...y })), ...deal.years];
+    if (asksBonuses(t)) attachBonuses(state, neg.player, deal, NEXT, t);
     return deal;
   }
-  if (neg.kind === "extension" && current) return writeExtension(current, terms, state.date, p.yearsExp);
   const first = startYearFor(state, neg.player, neg.kind);
-  return prorateFirstYear(writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: first, yearsExp: yearsExpIn(neg.player, first) }), state.date);
+  const deal = neg.kind === "extension" && current
+    ? writeExtension(current, terms, state.date, p.yearsExp)
+    : prorateFirstYear(writeDeal(terms, { team: neg.team, date: state.date, kind: "veteran", firstYear: first, yearsExp: yearsExpIn(neg.player, first) }), state.date);
+  // The owner's bonus terms go only on the new years.
+  if (asksBonuses(t)) attachBonuses(state, neg.player, deal, Math.max(first, (neg.kind === "extension" ? lastYear(current) ?? first - 1 : first - 1) + 1), t);
+  return deal;
 }
 
 /** Sends an offer. The agent answers in a day or a few. */
@@ -427,7 +445,7 @@ function respond(state: GameState, neg: Negotiation): void {
       breakOff(state, neg, `${agent.name} says they're too far apart and ${name} will play out the contract.`);
       return;
     }
-    const counter = agentTerms(ah, neg.ask, neg.askYears, neg.askGuarantee);
+    const counter = carryBonuses(neg, agentTerms(ah, neg.ask, neg.askYears, neg.askGuarantee), t);
     const close = v >= neg.floor;
     neg.rounds.push({
       date: state.date, from: "agent", terms: counter,
@@ -537,7 +555,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   const oldLast = neg.kind === "extension" ? lastYear(dealOf(state, id)) : null;
   state.contracts[id] = deal;
   attachIncentives(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1), t.incentives);
-  attachBonuses(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1));
+  if (!asksBonuses(t)) attachBonuses(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1));
   invalidateMarket(state);
   neg.status = "agreed";
   neg.rounds.push({ date: state.date, from: "agent", terms: t, note: "Agreed." });

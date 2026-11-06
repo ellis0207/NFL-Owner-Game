@@ -26,6 +26,7 @@ export function ContractTable({ deal, from }: { deal: Deal; from?: number }) {
                 {y.void || !y.bonus ? "" : money(y.bonus)}
                 {y.perGame ? <span className="muted" title="Per-game roster bonus: paid for each game on the game-day roster">{y.bonus ? " + " : ""}{money(y.perGame)}/game</span> : ""}
                 {y.workout ? <span className="muted" title="Workout bonus for the offseason program">{y.bonus || y.perGame ? " + " : ""}{money(y.workout)} workout</span> : ""}
+                {y.escalator ? <span className="muted" title={`Escalator: the next year's salary rises by this much if he plays ${Math.round(y.escalator.share * 100)}% of the snaps`}>{y.bonus || y.perGame || y.workout ? " + " : ""}{money(y.escalator.amount)} escalator{y.escalator.met === undefined ? "" : y.escalator.met ? " ✓" : " ✗"}</span> : ""}
               </td>
               <td className="num">
                 {y.guaranteed ? money(y.guaranteed) : ""}

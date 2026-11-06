@@ -14,6 +14,7 @@ import { setPrograms } from "../../engine/training";
 import type { GameState } from "../../engine/types";
 import { claimOdds, claimOddsWord, subjectToWaivers } from "../../engine/waivers";
 import { useUi } from "../ui";
+import { rivalryHeat, rivalryWord } from "../../engine/records";
 
 export function GameWeekScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
@@ -26,7 +27,7 @@ export function GameWeekScreen({ game, changed }: { game: GameState; changed: ()
   return (
     <section className="stack">
       <h2>Game week</h2>
-      <p className="muted">{g && opp ? `Next: ${m!.home === us ? "vs" : "at"} the ${TEAM_BY_ID[opp].name}, ${weekday(g.date)} ${shortDate(g.date)}.` : "No game in the next ten days."} Anyone signed or claimed on game day can't play until the next game.</p>
+      <p className="muted">{g && opp ? `Next: ${m!.home === us ? "vs" : "at"} the ${TEAM_BY_ID[opp].name}, ${weekday(g.date)} ${shortDate(g.date)}.${rivalryWord(rivalryHeat(game, us, opp)) !== "Quiet" ? ` A ${rivalryWord(rivalryHeat(game, us, opp)).toLowerCase()} rivalry.` : ""}` : "No game in the next ten days."} Anyone signed or claimed on game day can't play until the next game.</p>
       <div className="panel stack tight">
         <h3>This week's practice plan</h3>
         <div className="tabs" role="group" aria-label="Practice emphasis">

@@ -26,6 +26,8 @@ import { analyticsDaily, ensureAnalytics } from "./strategy";
 import { ensureClubhouse, lockerDaily } from "./clubhouse";
 import { knownReturn, medicalDaily } from "./medical";
 import { gameWeekDaily } from "./gameweek";
+import { honorsDaily } from "./honors";
+import { recordsDaily } from "./records";
 import { bonusesDaily } from "./bonuses";
 import { ensureScouts } from "./scouts";
 import { trainingDaily } from "./training";
@@ -557,6 +559,8 @@ export function advanceDay(state: GameState): void {
   medicalDaily(state);
   gameWeekDaily(state);
   bonusesDaily(state);
+  honorsDaily(state);
+  recordsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);
