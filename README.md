@@ -431,7 +431,24 @@ down to four in the seventh. On contracts, many veteran deals now pay part of
 the salary as per-game roster bonuses and workout bonuses, settled after the
 season and the minicamp; mid-round rookies who play enough earn the proven
 performance escalator; and every club must pay 89% of the caps in cash over
-each four-year period (from 2027) or pay the shortfall to its players.
+each four-year period (from 2027) or pay the shortfall to its players. In
+contract talks you can write per-game bonuses (a share of the salary paid for
+each game on the game-day roster), workout bonuses and escalators (a raise
+the next year for playing 65% of the snaps); agents price per-game money by
+how often their client misses games, and CPU teams write the same terms.
+
+The league remembers. Pro Bowl rosters come out in late December, the
+All-Pro teams the week after the regular season, and the awards (MVP,
+offensive and defensive player and rookie of the year, comeback player and
+coach of the year) at NFL Honors the week of the Super Bowl, voted on the
+stats, the team's record, the film and reputation. Pro Bowls set the
+fifth-year option's top tiers. Players become eligible for the Hall of Fame
+five seasons after they retire. The History page keeps the honors, the Hall
+of Fame classes, single-game and single-season marks against the real NFL
+records, rivalries built from division games, playoff meetings and close
+finishes, how every trade turned out, the club's eras under each head coach
+and GM, contracts that set a new high at their position, and the club's
+books and valuation by year. Title anniversaries make the news.
 
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
@@ -473,6 +490,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
   Practice reports, the practice plan, the emergency list and game-day eligibility are `gameweek.ts`; the scouting staff and its leans `scouts.ts`; per-game and workout bonuses, the rookie escalator and the cash floor `bonuses.ts`.
+  Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.

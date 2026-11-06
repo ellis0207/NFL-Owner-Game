@@ -360,7 +360,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
                   return (
                     <tr key={id}>
                       <td className="name">{PLAYER_BY_ID[id].name}</td><td>{PLAYER_BY_ID[id].position}</td>
-                      <td className="num">{money(info.amount)}</td><td>{info.tier === "playingTime" ? "Playing time" : "Basic"}</td>
+                      <td className="num">{money(info.amount)}</td><td>{({ twoProBowls: "Two Pro Bowls", oneProBowl: "One Pro Bowl", playingTime: "Playing time", basic: "Basic" } as const)[info.tier]}</td>
                       <td className="num">{money(Math.round(teamValue(game, us, id, info.year) / 500_000) * 500_000)}</td>
                       <td>{done ? (done === "exercised" ? "Exercised" : "Declined") : (
                         <div className="btn-row">

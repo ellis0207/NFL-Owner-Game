@@ -118,6 +118,19 @@ describe("saves from older versions", () => {
     expect(back.scouts?.staff).toEqual(state.scouts!.staff);
   }, 90_000);
 
+  it("an end-of-season save with honors and records keeps them and moves into the offseason", async () => {
+    const state = load("pr37-2027-02-15");
+    const season = 2026;
+    expect(state.honors?.awards[season].length).toBe(7);
+    expect(Object.keys(state.records?.h2h ?? {}).length).toBeGreaterThan(100);
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    expect(state.records?.values[season]).toBeDefined();
+    const back = await decompress(await compress(state));
+    expect(back.honors?.allPro[season]).toEqual(state.honors!.allPro[season]);
+    const old = load("pr36-2026-11-15");
+    expect(old.honors).toBeUndefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

@@ -196,7 +196,7 @@ function archiveDraft(state: GameState): void {
     const data = PLAYER_BY_ID[m.player];
     return [m.player, m.team, parsePick(m.pick).round, m.overall, data?.heightIn ?? 0, data?.weightLb ?? 0];
   });
-  history(state).drafts.push({ year, picks, udfa: Object.entries(d.udfa ?? {}), returned: d.returned ?? [] });
+  history(state).drafts.push({ year, picks, udfa: Object.entries(d.udfa ?? {}), returned: d.returned ?? [], pickIds: d.made.map((m) => m.pick) });
   setCarry(state.seed, year, d.returned ?? []);
 }
 

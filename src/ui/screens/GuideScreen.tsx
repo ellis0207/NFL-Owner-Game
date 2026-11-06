@@ -72,7 +72,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "Every team files a practice report on the three practice days before a game: did not practice, limited or full, with the reason, and a game status with the last report. The practice plan on the Game week page trades a sharper game plan against growth for young players and a lighter load. A player signed or claimed on game day can't play until the next game, and a third quarterback is inactive but can come in if both active ones go out.",
       "Your five college scouts each cover a group of positions. Each has a lean, such as trusting the stopwatch or the stat sheet, that colors his grades; the prospect report says when it does. The department's emphasis (tape, testing or production) moves the board too. In the draft you can hand our picks to the GM from any round on.",
-      "Many veteran deals pay part of the salary per game on the game-day roster and part for the spring workouts. The cap counts last season's games; the difference is settled after the season. Over each four-year period the club must pay players at least 89% of the salary caps in cash, or pay the shortfall to them.",
+      "Many veteran deals pay part of the salary per game on the game-day roster and part for the spring workouts. The cap counts last season's games; the difference is settled after the season. Over each four-year period the club must pay players at least 89% of the salary caps in cash, or pay the shortfall to them. In talks you can write these yourself, along with escalators; an agent whose client misses games wants more for per-game money.",
+    ],
+  },
+  {
+    title: "History and honors",
+    body: [
+      "Pro Bowl rosters come out in late December, the All-Pro teams after the regular season, and the awards at NFL Honors the week of the Super Bowl. Voters look at the stats, the team's record and the film, and a player with Pro Bowls behind him gets the benefit of the doubt. Pro Bowls also set the fifth-year option price for first-round picks.",
+      "Players reach the Hall of Fame ballot five seasons after they retire; at most five go in each year. The History page keeps the record book against the real NFL records, your rivalries, how each trade turned out, the club's eras under each coach and GM, and its books and value by year.",
     ],
   },
   {

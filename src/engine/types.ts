@@ -547,6 +547,8 @@ export interface DealYear {
   /** Workout bonus for taking part in the offseason program, and whether he earned it. */
   workout?: number;
   workoutEarned?: boolean;
+  /** Escalator: next year's salary rises by the amount if he plays the share of snaps this year (bonuses.ts). */
+  escalator?: { amount: number; share: number; met?: boolean };
 }
 
 export type IncentiveKind =
@@ -752,6 +754,12 @@ export interface OfferTerms {
   shape: "flat" | "rising" | "front";
   /** Most per year in incentives offered on top (the owner's offers); left out, the front office decides. */
   incentives?: number;
+  /** Share of each year's salary paid as per-game roster bonuses (0 to 0.25); left out, the front office decides. */
+  perGame?: number;
+  /** Workout bonus each year; left out, the front office decides. */
+  workout?: number;
+  /** Raise to the next year's salary when he plays 65% of the snaps, each year but the last. */
+  escalator?: number;
 }
 
 export interface NegotiationRound {
@@ -774,6 +782,8 @@ export interface Mandate {
 
 export interface Negotiation {
   player: string;
+  /** The agent's read of the share of games his client might miss, which prices per-game money (bonuses.ts). */
+  missRisk?: number;
   team: string;
   kind: NegotiationKind;
   opened: string;
@@ -1432,6 +1442,8 @@ export interface DraftArchive {
   udfa: [string, string][];
   /** Underclassmen who went back to school (they join the next class). */
   returned: string[];
+  /** The pick id of each selection, in the same order (drafts archived since the history batch), for trade outcomes. */
+  pickIds?: string[];
 }
 
 export interface History {
@@ -1470,6 +1482,10 @@ export interface GameState {
   credited?: string[];
   /** Seasons gone by: final standings, champions, drafts, and every player's stats. */
   history?: History;
+  /** Pro Bowls, All-Pro teams, awards and the Hall of Fame (honors.ts). */
+  honors?: HonorsState;
+  /** League records, rivalries, anniversaries and yearly valuations (records.ts). */
+  records?: RecordsState;
   /** Dead money a team carries, by team then season. */
   deadMoney: Record<string, Record<string, number>>;
   results: Record<string, GameResult>;
@@ -2019,4 +2035,34 @@ export interface CultureState {
   log: { date: string; text: string }[];
   /** Authority the owner took back from someone who wants it, waiting to be raised. */
   disputes?: { who: ExecRole; area: DecisionArea; from: DecisionMode; date: string }[];
+}
+
+// ---- Honors and records (see engine/honors.ts, engine/records.ts) ----
+
+export type Award = "MVP" | "OPOY" | "DPOY" | "OROY" | "DROY" | "CPOY" | "COY";
+
+export interface AwardResult { award: Award; winner: string; team: string; name: string; finalists: string[] }
+
+export interface HonorsState {
+  /** Pro Bowl selections by season (the original ballot, which is what the CBA counts). */
+  proBowl: Record<number, string[]>;
+  allPro: Record<number, { first: string[]; second: string[] }>;
+  awards: Record<number, AwardResult[]>;
+  /** Hall of Fame: inducted players by class year, and each year's finalists. */
+  hof: { classes: Record<number, string[]>; finalists: Record<number, string[]> };
+}
+
+/** A best mark: who, for whom, how much, and when. */
+export interface Mark { player: string; team: string; value: number; season: number; date: string }
+
+export interface RecordsState {
+  /** The best single-game and single-season marks set in this save, by stat. */
+  game: Record<string, Mark>;
+  season: Record<string, Mark>;
+  /** NFL records broken in this save, newest first. */
+  broken: { date: string; text: string }[];
+  /** Every meeting between two teams in this save, by pair ("ARI-ATL", sorted). */
+  h2h: Record<string, { games: number; wins: Record<string, number>; close: number; playoff: number; last: string }>;
+  /** Each club's valuation at the end of each league year. */
+  values: Record<number, Record<string, number>>;
 }

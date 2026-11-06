@@ -13,7 +13,8 @@ import { payCash } from "./finance";
 import { money, news, send } from "./inbox";
 import { onSeasonChange, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { careersDaily, planRetirements } from "./careers";
-import { capScale, fifthYearOption, franchiseTag, invalidateMarket, marketPrice, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
+import { proBowls } from "./honors";
+import { capScale, fifthYearOption, type OptionTier, franchiseTag, invalidateMarket, marketPrice, rfaTender, teamValue, transitionTag, type TenderLevel } from "./market";
 import { gaussian, rngFor } from "./rng";
 import { releasePlayer, rosterCount } from "./roster";
 import { teamStaff } from "./staff";
@@ -173,7 +174,7 @@ export const TENDER_LABEL: Record<TenderChoice, string> = {
 export interface OptionInfo {
   eligible: boolean;
   amount: number;
-  tier: "playingTime" | "basic";
+  tier: OptionTier;
   year: number;
 }
 
@@ -196,7 +197,9 @@ export function optionInfo(state: GameState, id: string): OptionInfo {
   const deal = dealOf(state, id);
   const year = NEXT + 1;
   const eligible = !!deal && deal.kind === "rookie" && p.draft.round === 1 && p.rookieYear === OPTION_CLASS && lastYear(deal) === NEXT;
-  const tier = eligible && playingTimeTier(state, id) ? "playingTime" : "basic";
+  // Pro Bowls on the original ballot in his first three seasons set the top tiers.
+  const pbs = eligible ? proBowls(state, id) : 0;
+  const tier = !eligible ? "basic" : pbs >= 2 ? "twoProBowls" : pbs === 1 ? "oneProBowl" : playingTimeTier(state, id) ? "playingTime" : "basic";
   return { eligible, tier, year, amount: eligible ? fifthYearOption(state, p.position, year, tier, p.draft.overall ?? 32) : 0 };
 }
 

@@ -21,6 +21,7 @@ import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./for
 import { useUi } from "./ui";
 import { PlayerClubhouse } from "./PlayerClubhouse";
 import { knownReturn } from "../engine/medical";
+import { honorsOf } from "../engine/honors";
 
 const CONTRACT_SOURCE = {
   overthecap: "Year-by-year figures from OverTheCap.",
@@ -114,6 +115,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
           </div>
         )}
 
+        {honorsOf(game, id).length > 0 && <div className="muted">Honors: {honorsOf(game, id).join(" · ")}</div>}
         <PlayerClubhouse game={game} id={id} changed={changed} />
 
         <section className="report">

@@ -23,15 +23,19 @@ export function termsLine(t: OfferTerms): string {
   if (t.signingBonus) parts.push(`${money(t.signingBonus)} signing bonus`);
   if (t.voidYears) parts.push(`${t.voidYears} void yr${t.voidYears === 1 ? "" : "s"}`);
   if (t.incentives) parts.push(`up to ${money(t.incentives)}/yr in incentives`);
+  if (t.perGame) parts.push(`${Math.round(t.perGame * 100)}% of salary per game`);
+  if (t.workout) parts.push(`${money(t.workout)} workout bonus`);
+  if (t.escalator) parts.push(`${money(t.escalator)} escalators`);
   return parts.join(" · ");
 }
 
-interface Form { years: number; apy: number; bonus: number; gtd: number; injury: number; voids: number; incentives: number; shape: OfferTerms["shape"] }
+interface Form { years: number; apy: number; bonus: number; gtd: number; injury: number; voids: number; incentives: number; perGame: number; workout: number; escalator: number; shape: OfferTerms["shape"] }
 
 function formFrom(t: OfferTerms, factor: number): Form {
   return {
     years: t.years, apy: toM((t.total / t.years) * factor), bonus: toM(t.signingBonus * factor), gtd: toM(t.guaranteed * factor),
     injury: toM(t.injuryGuaranteed), voids: t.voidYears, incentives: toM(t.incentives ?? 0), shape: t.shape,
+    perGame: Math.round((t.perGame ?? 0) * 100), workout: Math.round((t.workout ?? 0) / 1000), escalator: toM(t.escalator ?? 0),
   };
 }
 
@@ -40,6 +44,7 @@ function termsFrom(f: Form): OfferTerms {
   return {
     years: f.years, total: Math.round(total * M), signingBonus: Math.round(f.bonus * M), guaranteed: Math.round(f.gtd * M),
     injuryGuaranteed: Math.round(f.injury * M), voidYears: f.voids, shape: f.shape, incentives: Math.round(f.incentives * M),
+    perGame: Math.max(0, Math.min(25, f.perGame)) / 100, workout: Math.round(f.workout) * 1000, escalator: Math.round(f.escalator * M),
   };
 }
 
@@ -186,6 +191,9 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
               <label className="field">Injury guarantee ($M)<input type="number" min={0} step={0.1} value={form.injury} onChange={set("injury")} /></label>
               <label className="field">Void years<input type="number" min={0} max={4} value={form.voids} onChange={set("voids")} /></label>
               <label className="field" title="Playing-time, stat and playoff bonuses on top of the salary. Ones he reached last season count on the cap now; the rest only if earned, settled on next year's cap.">Incentives per year ($M)<input type="number" min={0} step={0.1} value={form.incentives} onChange={set("incentives")} /></label>
+              <label className="field" title="Part of each unguaranteed year's salary paid for each game he's on the game-day roster. The cap counts the games he dressed for last year. Agents for players who miss games want more for it.">Per-game share of salary (%)<input type="number" min={0} max={25} step={1} value={form.perGame} onChange={set("perGame")} /></label>
+              <label className="field" title="Paid for taking part in the spring program, out of the salary. Skipped, it's forfeited and the cap gets it back.">Workout bonus ($K)<input type="number" min={0} step={25} value={form.workout} onChange={set("workout")} /></label>
+              <label className="field" title="Next year's salary rises by this much each time he plays 65% of the snaps. Not on the cap until it's earned.">Escalator per year ($M)<input type="number" min={0} step={0.1} value={form.escalator} onChange={set("escalator")} /></label>
               <label className="field">Salary shape
                 <select value={form.shape} onChange={set("shape")}>
                   <option value="flat">Flat</option><option value="rising">Rising</option><option value="front">Front-loaded</option>
