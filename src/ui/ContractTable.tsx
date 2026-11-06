@@ -22,7 +22,11 @@ export function ContractTable({ deal, from }: { deal: Deal; from?: number }) {
               <td>{y.year}{y.void ? " (void)" : ""}</td>
               <td className="num">{y.void ? "" : money(y.base)}{y.weeks && y.weeks < 18 ? ` (${y.weeks} wks)` : ""}</td>
               <td className="num">{money(y.proration)}</td>
-              <td className="num">{y.void || !y.bonus ? "" : money(y.bonus)}</td>
+              <td className="num">
+                {y.void || !y.bonus ? "" : money(y.bonus)}
+                {y.perGame ? <span className="muted" title="Per-game roster bonus: paid for each game on the game-day roster">{y.bonus ? " + " : ""}{money(y.perGame)}/game</span> : ""}
+                {y.workout ? <span className="muted" title="Workout bonus for the offseason program">{y.bonus || y.perGame ? " + " : ""}{money(y.workout)} workout</span> : ""}
+              </td>
               <td className="num">
                 {y.guaranteed ? money(y.guaranteed) : ""}
                 {y.injuryGuaranteed ? <span className="muted">{y.guaranteed ? " + " : ""}{money(y.injuryGuaranteed)} injury</span> : ""}

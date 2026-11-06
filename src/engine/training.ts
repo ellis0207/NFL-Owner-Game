@@ -11,6 +11,7 @@
 // A position change takes time. The player plays below his level while he
 // learns the new spot, quicker if he picks things up fast, and some players
 // simply suit the new position better or worse than anyone could tell.
+import { emphasisFactors, type Emphasis } from "./gameweek";
 import { clubhouse, clubNote, personality, posOf } from "./clubhouse";
 import { ageOn, weekday } from "./dates";
 import { send } from "./inbox";
@@ -32,6 +33,8 @@ export interface Programs {
   /** 0 standard, 1 extra grounds crew and surface testing at the practice and game fields. */
   field: number;
   workload: Workload;
+  /** The week's practice emphasis in season (gameweek.ts). */
+  emphasis?: Emphasis;
   /** Veterans 30 and over sit out a practice day each week. */
   restVets: boolean;
 }
@@ -98,6 +101,7 @@ export function growthFactor(state: GameState, id: string, mentored: boolean): n
     if (c?.plans[id]) f *= 1.18;
     const p = c?.programs;
     if (p) f *= { light: 0.9, normal: 1, heavy: 1.1 }[p.workload] * [0.97, 1, 1.02, 1.04][p.strength];
+    f *= emphasisFactors(state).growth;
   }
   return f;
 }
@@ -119,7 +123,7 @@ export function riskFactor(state: GameState, id: string, team: string, practice:
   const p = state.clubhouse?.programs;
   if (!p) return f;
   f *= [1.05, 1, 0.97, 0.94][p.strength] * (p.nutrition ? 1 : 1.03) * (p.equipment ? 0.98 : 1) * (p.field ? 0.98 : 1);
-  if (practice) f *= { light: 0.75, normal: 1, heavy: 1.25 }[p.workload];
+  if (practice) f *= { light: 0.75, normal: 1, heavy: 1.25 }[p.workload] * emphasisFactors(state).practiceRisk;
   else f *= { light: 0.98, normal: 1, heavy: 1.03 }[p.workload];
   if (p.restVets && age(state, id) >= 30) f *= practice ? 0.75 : 0.95;
   return f;

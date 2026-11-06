@@ -3,7 +3,7 @@ import { mediaRank } from "../../engine/college";
 import { schoolName } from "../../engine/collegeData";
 import { shortDate } from "../../engine/dates";
 import {
-  advancePick, advanceToEndOfDay, advanceToOurPick, ourBoardValue, currentSlot, DAY_ROUNDS, dayDone, dayLabel, dayOfRound, draftCalls,
+  advancePick, advanceToEndOfDay, advanceToOurPick, CLOCK_MINUTES, setGmFrom, ourBoardValue, currentSlot, DAY_ROUNDS, dayDone, dayLabel, dayOfRound, draftCalls,
   draftDayOf, DRAFT_DAYS, DRAFT_YEAR, draftPool, makePick, mockSpot, ourPicksLeft, prepareClock, slotAt, slotLabel, staffRecommendations,
 } from "../../engine/draft";
 import { teamLabel, TEAM_BY_ID } from "../../engine/league";
@@ -111,11 +111,18 @@ function Room({ game, changed }: { game: GameState; changed: () => void }) {
         {slot ? (
           <div>
             <span className={us ? "good" : undefined}><strong>{us ? "We're on the clock" : `On the clock: ${teamLabel(slot.team)}`}</strong></span>
-            <span className="muted"> · {slotLabel(slot)}{parsePick(slot.pick).from !== slot.team ? `, from ${parsePick(slot.pick).from}` : ""}{parsePick(slot.pick).comp ? ", compensatory" : ""}</span>
+            <span className="muted"> · {CLOCK_MINUTES[slot.round - 1] ?? 4} minutes · {slotLabel(slot)}{parsePick(slot.pick).from !== slot.team ? `, from ${parsePick(slot.pick).from}` : ""}{parsePick(slot.pick).comp ? ", compensatory" : ""}</span>
           </div>
         ) : (
           <strong>{done ? (day < 3 ? `Day ${day} is complete. Day ${day + 1} starts tomorrow.` : "The draft is complete. Undrafted free agents have signed.") : "Waiting on the day to start."}</strong>
         )}
+        <label className="muted">Hand our picks to the GM from{" "}
+          <select value={d.gmFrom ?? ""} onChange={(e) => { setGmFrom(game, e.target.value ? Number(e.target.value) : null); changed(); }}>
+            <option value="">never</option>
+            {[1, 2, 3, 4, 5, 6, 7].map((r) => <option key={r} value={r}>round {r}</option>)}
+          </select>
+          {" "}on. He picks from the staff's board without waiting for us.
+        </label>
         {slot && (
           <div className="btn-row">
             <button className="btn" onClick={() => act(advancePick)} title={us ? "The GM makes our pick." : undefined}>

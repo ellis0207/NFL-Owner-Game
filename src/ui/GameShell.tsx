@@ -30,6 +30,7 @@ import { OwnerScreen } from "./screens/OwnerScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
 import { AnalyticsScreen } from "./screens/AnalyticsScreen";
 import { ClubhouseScreen } from "./screens/ClubhouseScreen";
+import { GameWeekScreen } from "./screens/GameWeekScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { SearchBox } from "./Search";
@@ -45,7 +46,7 @@ import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Clubhouse", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "Owners", "Settings", "Guide", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -206,6 +207,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
           {screen === "Analytics" && <AnalyticsScreen game={game} changed={changed} />}
           {screen === "Clubhouse" && <ClubhouseScreen game={game} changed={changed} />}
+          {screen === "Game week" && <GameWeekScreen game={game} changed={changed} />}
           {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
           {screen === "Guide" && <GuideScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}

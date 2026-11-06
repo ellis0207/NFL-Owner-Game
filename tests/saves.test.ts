@@ -104,6 +104,20 @@ describe("saves from older versions", () => {
     expect(back.clubhouse?.plans).toEqual(state.clubhouse!.plans);
   }, 90_000);
 
+  it("a save with a scouting staff, a practice plan and a per-game bonus keeps them, and older saves get a staff", async () => {
+    const state = load("pr36-2026-11-15");
+    expect(state.scouts?.emphasis).toBe("testing");
+    expect(state.scouts?.staff[0].id).toBe("scout-6");
+    expect(state.clubhouse?.programs.emphasis).toBe("plan");
+    expect(state.contracts["00-0033106"]?.years.some((y) => y.perGame === 20_000)).toBe(true);
+    for (let i = 0; i < 5; i++) advanceDay(state);
+    expect(Object.keys(state.gameWeek?.reports ?? {}).length).toBeGreaterThan(0);
+    const old = load("pr35-2026-11-15");
+    expect(old.scouts?.staff.length).toBe(5);
+    const back = await decompress(await compress(state));
+    expect(back.scouts?.staff).toEqual(state.scouts!.staff);
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

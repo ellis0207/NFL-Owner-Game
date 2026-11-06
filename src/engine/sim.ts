@@ -7,6 +7,7 @@
 // fast receiver, the quarterback's arm and the time the line buys against
 // the rush. Rosters that fit their coaches' schemes play better, good
 // play-callers make better calls, and luck still decides plenty of Sundays.
+import { joinedToday } from "./gameweek";
 import { chemistryEdge } from "./clubhouse";
 import { gameConditions, type Conditions } from "./gameday";
 import { addLine, pack, type StatKey, type StatLine } from "./stats";
@@ -69,6 +70,8 @@ interface Team {
   fx: StaffEffects;
   chart: Record<Position, string[]>;
   inactive: string[];
+  /** The emergency third quarterback: inactive, but he can play if both active quarterbacks are out. */
+  emergency?: string;
   out: Set<string>;
   form: number;
   timeouts: number;
@@ -205,7 +208,19 @@ class GameSim {
     const schemes = teamSchemes(id);
     const fx = staffEffects(id);
     const full = depthChart(this.state, id, this.game.date);
-    const { chart, inactive } = this.pre ? { chart: full, inactive: [] as string[] } : gameDayActives(full);
+    // Anyone who joined today missed the league's paperwork deadline for this game.
+    const late: string[] = [];
+    if (!this.pre) {
+      for (const pos of Object.keys(full) as Position[]) {
+        full[pos] = full[pos].filter((pid) => {
+          if (!joinedToday(this.state, pid, id, this.game.date)) return true;
+          late.push(pid);
+          return false;
+        });
+      }
+    }
+    const { chart, inactive, emergency } = this.pre ? { chart: full, inactive: [] as string[], emergency: undefined } : gameDayActives(full);
+    inactive.push(...late);
     // Injured players on the 53 are inactive too.
     for (const pid of teamPlayerIds(this.state, id)) {
       if (this.state.players[pid].status === "active" && (isHurt(this.state, pid, this.game.date) || isHoldingOut(this.state, pid, this.game.date) || isSuspended(this.state, pid, this.game.date))) inactive.push(pid);
@@ -215,7 +230,7 @@ class GameSim {
     const wk = this.game.week ?? 1;
     const starterSeries = wk === 2 ? (r < 0.3 ? 0 : r < 0.8 ? 1 : 2) : r < 0.65 ? 0 : r < 0.95 ? 1 : 2;
     return {
-      side, id, off: OFFENSE[schemes.offense], def: DEFENSE[schemes.defense], fx, chart, inactive,
+      side, id, off: OFFENSE[schemes.offense], def: DEFENSE[schemes.defense], fx, chart, inactive, emergency,
       out: new Set(), form: gaussian(this.rng) * leadershipSd + chemistryEdge(this.state, id), timeouts: 3, stats: {}, box: emptyTeamBox(),
       score: 0, quarters: [0, 0, 0, 0], drives: 0, starterSeries, passLean: 0,
       offFit: this.unitFit(id, chart, OFF_FIT), defFit: this.unitFit(id, chart, DEF_FIT),
@@ -247,6 +262,7 @@ class GameSim {
   /** Healthy players available at a position for this team (in-game injuries removed), with fallbacks. */
   pool(team: Team, pos: Position): string[] {
     const list = team.chart[pos].filter((id) => !team.out.has(id));
+    if (pos === "QB" && !list.length && team.emergency && !team.out.has(team.emergency)) list.push(team.emergency);
     for (const f of FALLBACK[pos] ?? []) for (const id of team.chart[f]) if (!team.out.has(id)) list.push(id);
     if (!list.length) {
       // Nobody left at the spot: anyone who can still stand up plays it.
@@ -1681,7 +1697,7 @@ interface PlayOutcome {
  * The 48 who dress on game day. Healthy scratches come from the deepest
  * spots on the depth chart, keeping enough at each position to play.
  */
-export function gameDayActives(chart: Record<Position, string[]>): { chart: Record<Position, string[]>; inactive: string[] } {
+export function gameDayActives(chart: Record<Position, string[]>): { chart: Record<Position, string[]>; inactive: string[]; emergency?: string } {
   const KEEP: Partial<Record<Position, number>> = { QB: 2, RB: 3, FB: 1, WR: 5, TE: 3, OT: 3, OG: 3, C: 2, EDGE: 4, IDL: 4, LB: 4, CB: 5, S: 4, K: 1, P: 1, LS: 1 };
   const all = Object.values(chart).reduce((s, l) => s + l.length, 0);
   let extra = all - RULES.rosterLimits.gameDayActive;
@@ -1700,7 +1716,9 @@ export function gameDayActives(chart: Record<Position, string[]>): { chart: Reco
     }
     if (!removed) break;
   }
-  return { chart: out, inactive };
+  // A third quarterback on the inactive list can be the emergency quarterback (since 2023).
+  const emergency = chart.QB.find((id) => inactive.includes(id));
+  return { chart: out, inactive, emergency };
 }
 
 /** For tests and tuning: adds up box score lines. */

@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { attachBonuses } from "./bonuses";
 import { attachIncentives, incentiveWorth } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
 import { addDeadMoney, adjustRollover, capSummary, teamPlayerIds, yearsExpIn } from "./cap";
@@ -536,6 +537,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   const oldLast = neg.kind === "extension" ? lastYear(dealOf(state, id)) : null;
   state.contracts[id] = deal;
   attachIncentives(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1), t.incentives);
+  attachBonuses(state, id, deal, Math.max(start, (oldLast ?? start - 1) + 1));
   invalidateMarket(state);
   neg.status = "agreed";
   neg.rounds.push({ date: state.date, from: "agent", terms: t, note: "Agreed." });

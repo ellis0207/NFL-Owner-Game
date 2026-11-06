@@ -13,6 +13,7 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { attachBonuses } from "./bonuses";
 import { attachIncentives } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
 import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
@@ -388,6 +389,7 @@ function install(state: GameState, id: string, team: string, deal = dealOf(state
   const fa = market(state)[id];
   state.contracts[id] = deal;
   attachIncentives(state, id, deal, deal.years[0]?.year ?? NEXT, incentives);
+  attachBonuses(state, id, deal, deal.years[0]?.year ?? NEXT);
   const ps = state.players[id];
   // After the regular season, deals for next year are reserve/future contracts until the offseason starts.
   const future = !isOffseason(state.date) && deal.years[0]?.year > leagueYear(state.date);

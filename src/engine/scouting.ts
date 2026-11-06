@@ -16,6 +16,7 @@ import { TRAIT_WORDS } from "./reports";
 import { gaussian, rngFor } from "./rng";
 import { DEFENSE, DEFENSE_LABEL, OFFENSE, OFFENSE_LABEL } from "./schemes";
 import { fogOf, staffEffects, teamSchemes, teamStaff } from "./staff";
+import { leanBias, leanNote, paceFactor, scoutFor, specialistFactor } from "./scouts";
 import type { GameState, ScoutAssignment, ScoutDepth, ScoutFilter, ScoutingState } from "./types";
 
 export const SCOUTING_BUDGET = 2_400_000;
@@ -198,7 +199,7 @@ export function scoutingDaily(state: GameState): void {
     }
     s.spent += q.cost;
     cost += q.cost;
-    const gain = gainFor(a.depth, q.players, us);
+    const gain = gainFor(a.depth, q.players, us) * paceFactor(state);
     for (const p of matchProspects(state, a.filter)) {
       const k = s.know[p.id] ?? 0;
       if (!(p.id in before)) before[p.id] = k;
@@ -285,6 +286,9 @@ export interface ProspectReport {
   makeup: string[];
   upside?: string;
   medical?: string;
+  /** The area scout who covers his position, and his lean when it colors the read. */
+  scout?: string;
+  lean?: string;
   /** What the next level of scouting would add. */
   next?: string;
 }
@@ -294,18 +298,20 @@ function noise(state: GameState, team: string, id: string, what: string): number
 }
 
 /** The scouting director's eye: error in rating points at a given knowledge. */
-function errorSd(state: GameState, team: string, k: number): number {
+function errorSd(state: GameState, team: string, k: number, id?: string): number {
   const eye = staffEffects(team).collegeScouting;
   // Our scouting department's budget: more area scouts and cross-checks tighten every read.
   const dept = team === state.userTeam ? [1.15, 1, 0.92, 0.85][state.business?.budget.scouts ?? 1] : 1;
-  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept * (team === state.userTeam ? fogOf(state) : 1);
+  // The scout who covers his position knows the group better.
+  const spec = team === state.userTeam && id ? specialistFactor(state, draftClass(state.seed).byId[id]?.position ?? "K") : 1;
+  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept * spec * (team === state.userTeam ? fogOf(state) : 1);
 }
 
 /** The value a team's scouts put on a prospect (engine only: other teams use this on draft day). */
 export function perceivedValue(state: GameState, id: string, team = state.userTeam): number {
   const h = draftClass(state.seed).hidden[id];
   const k = knowledge(state, id, team);
-  return h.value + noise(state, team, id, "value") * errorSd(state, team, k) * 1.4;
+  return h.value + noise(state, team, id, "value") * errorSd(state, team, k, id) * 1.4 + (team === state.userTeam ? leanBias(state, id) : 0);
 }
 
 function roundOf(cuts: number[], v: number): number {
@@ -349,7 +355,7 @@ export function scoutReport(state: GameState, id: string, team = state.userTeam)
   const p = dc.byId[id];
   const h = dc.hidden[id];
   const k = knowledge(state, id, team);
-  const sd = errorSd(state, team, k);
+  const sd = errorSd(state, team, k, id);
   const n = (what: string) => noise(state, team, id, what);
   const author = teamStaff(team).COL?.name ?? "College scouting";
   const report: ProspectReport = { knowledge: k, level: knowledgeLabel(k), author, strengths: [], concerns: [], makeup: [] };
@@ -357,7 +363,12 @@ export function scoutReport(state: GameState, id: string, team = state.userTeam)
     report.next = "Not enough work on him yet for a grade. Any scouting assignment that covers him will start a file.";
     return report;
   }
-  const pv = h.value + n("value") * sd * 1.4;
+  const pv = h.value + n("value") * sd * 1.4 + (team === state.userTeam ? leanBias(state, id) : 0);
+  if (team === state.userTeam) {
+    const sc = scoutFor(state, p.position);
+    if (sc) report.scout = sc.name;
+    report.lean = leanNote(state, id);
+  }
   report.grade = roundRange(state, pv, sd * 1.1);
   report.round = roundOf(dc.roundCuts, pv);
 

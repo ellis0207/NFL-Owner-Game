@@ -1,6 +1,8 @@
 import type { Adv } from "./analytics";
 import type { AnalyticsState } from "./strategy";
 import type { ClubhouseState } from "./clubhouse";
+import type { GameWeekState } from "./gameweek";
+import type { ScoutStaffState } from "./scouts";
 // Shapes of the generated league data (data/league-2026) and of a saved game.
 
 export type Position =
@@ -536,6 +538,15 @@ export interface DealYear {
   weeks?: number;
   /** Playing-time, statistical and playoff incentives for this year (see engine/incentives.ts). */
   incentives?: Incentive[];
+  /** Per-game roster bonus: paid for each game on the game-day roster (bonuses.ts). */
+  perGame?: number;
+  /** Games the cap counts as likely this year (last year's games). */
+  perGameLikely?: number;
+  /** Games actually earned, once the season is settled. */
+  perGameSettled?: number;
+  /** Workout bonus for taking part in the offseason program, and whether he earned it. */
+  workout?: number;
+  workoutEarned?: boolean;
 }
 
 export type IncentiveKind =
@@ -569,6 +580,8 @@ export interface Deal {
   fifthYearOption?: { year: number; amount: number; exercised?: boolean; declined?: boolean };
   /** The league year the deal was last restructured. */
   restructured?: number;
+  /** Rookie deals, rounds 3-7: qualifying seasons toward the proven performance escalator (bonuses.ts). */
+  ppe?: { seasons: number; counted?: number; done?: boolean };
 }
 
 /** @deprecated version 2 saves stored this shape; migrated to Deal. */
@@ -1053,6 +1066,8 @@ export interface DraftState {
   callsFor?: number;
   /** Draft days finished (1-3). */
   daysDone: number[];
+  /** From this round on, the GM makes our picks without waiting for the owner. */
+  gmFrom?: number;
 }
 
 // ---- Media (see engine/outlets.ts, media.ts, press.ts) ----
@@ -1533,6 +1548,10 @@ export interface GameState {
   analytics?: AnalyticsState;
   /** The locker room, player development programs, the medical side and injury insurance (clubhouse.ts). */
   clubhouse?: ClubhouseState;
+  /** Practice reports for each team's next game (gameweek.ts). */
+  gameWeek?: GameWeekState;
+  /** Our college scouts and the department's emphasis (scouts.ts). */
+  scouts?: ScoutStaffState;
   /** Game-day operations checks at the owner's home games, and officiating questions put to the league (gameops.ts). */
   gameOps?: GameOpsState;
   inbox: InboxItem[];

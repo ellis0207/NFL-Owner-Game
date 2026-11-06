@@ -413,6 +413,26 @@ first diagnoses are firmed up by follow-up tests, long rehabs hit setbacks
 or run ahead, the doctors (and for concussions an independent consultant)
 decide clearance, and big salaries can be insured against injury.
 
+Game weeks run like the league's. Every team files a practice report on the
+three practice days before a game (did not practice, limited, full, with the
+reason) and a game status with the last one; veterans get the first day off.
+The Game week page sets the practice plan (game plan work sharpens the plan
+for the opponent, fundamentals help young players grow, recovery lightens
+the load), lists the game-day inactives and the emergency quarterback, keeps
+the pro scouts' short list of free agents at quarterback, kicker, punter and
+long snapper, and reads the waiver risk at the bottom of the roster. A player
+signed or claimed on game day can't play until the next game. In scouting,
+five area and position scouts each cover a group of positions, sharpen our
+reads there and carry a lean (the stopwatch, the stat sheet, big programs)
+that colors their grades; the department can weigh tape, testing or
+production, and a scout can be replaced. In the draft, the GM can make our
+picks from any round on, and the clock runs ten minutes in the first round
+down to four in the seventh. On contracts, many veteran deals now pay part of
+the salary as per-game roster bonuses and workout bonuses, settled after the
+season and the minicamp; mid-round rookies who play enough earn the proven
+performance escalator; and every club must pay 89% of the caps in cash over
+each four-year period (from 2027) or pay the shortfall to its players.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -452,6 +472,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
+  Practice reports, the practice plan, the emergency list and game-day eligibility are `gameweek.ts`; the scouting staff and its leans `scouts.ts`; per-game and workout bonuses, the rookie escalator and the cash floor `bonuses.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.

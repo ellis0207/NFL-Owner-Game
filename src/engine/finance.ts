@@ -54,7 +54,7 @@ export function cashNextYear(state: GameState, team: string): number {
   let total = 0;
   for (const id of teamPlayerIds(state, team)) {
     const y = dealYear(dealOf(state, id), year);
-    if (y && !y.void) total += y.base + Math.max(0, y.bonus);
+    if (y && !y.void) total += y.base + Math.max(0, y.bonus) + (y.perGame ?? 0) * 17 + (y.workout ?? 0);
   }
   return Math.round(total);
 }
