@@ -2,6 +2,7 @@
 // reserve and replacement signings. Every team's decisions are made by its
 // own staff from what they believe about players (true ability blurred by
 // how good their evaluators are); the owner only sees the outcome.
+import { posOf } from "./clubhouse";
 import { accruedSeasons, addDeadMoney, adjustRollover, capHit, capSummary, invalidateRosters, releaseCost, teamPlayerIds, chargeYear, yearsExpIn } from "./cap";
 import { dealOf, leagueYear, writeMinimumDeal, writePracticeDeal } from "./contracts";
 import { addDays } from "./dates";
@@ -431,7 +432,7 @@ export function depthChart(state: GameState, team: string, date = state.date): R
     const elevated = ps.status === "ps" && ps.elevatedFor === date;
     if (ps.status !== "active" && ps.status !== "camp" && !elevated) continue;
     if (isHurt(state, id, date) || isHoldingOut(state, id, date) || isSuspended(state, id, date)) continue;
-    chart[PLAYER_BY_ID[id].position].push(id);
+    chart[posOf(state, id)].push(id);
     view[id] = coachView(state, team, id);
   }
   for (const pos of POSITION_ORDER) chart[pos].sort((a, b) => view[b] - view[a]);

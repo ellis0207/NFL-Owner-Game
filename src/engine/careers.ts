@@ -21,6 +21,7 @@ import { logMove } from "./roster";
 import { roomBoost } from "./positionCoaches";
 import { staffEffects, teamStaff } from "./staff";
 import { seasonTotals } from "./stats";
+import { offseasonFactor } from "./training";
 import type { GameState, Position } from "./types";
 
 /** The age where a position usually starts to slip. */
@@ -92,7 +93,7 @@ export function progressPlayers(state: GameState, season: number): void {
     const room = Math.max(0, ceiling - now);
     if (room > 0 && age <= 29) {
       const stage = age <= 24 ? 1 : age <= 26 ? 0.85 : 0.55;
-      change += room * (0.28 + 0.14 * rng()) * stage * coach * field;
+      change += room * (0.28 + 0.14 * rng()) * stage * coach * field * offseasonFactor(state, id);
     }
     // A late bloomer now and then.
     if (age >= 26 && age <= 31 && rng() < 0.02) change += 1.5 + rng() * 2;

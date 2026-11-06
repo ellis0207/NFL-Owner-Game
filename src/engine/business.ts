@@ -35,6 +35,8 @@ import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
 import { developmentCost } from "./culture";
 import { analyticsCost } from "./strategy";
+import { merchLift } from "./clubhouse";
+import { programsCost } from "./training";
 import { execBoost, execPayrollOver, signer } from "./executives";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
 
@@ -356,6 +358,8 @@ interface GateInputs {
   perCap?: number;
   /** Hosting the Super Bowl or the draft: more sold in the team store. */
   merchMult?: number;
+  /** Our best-known players sell jerseys (clubhouse.ts). */
+  starMult?: number;
 }
 
 interface GateResult {
@@ -399,7 +403,7 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const premium = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
   const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
-  const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1);
+  const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1) * (x.starMult ?? 1);
   return {
     sold, attendance, holders, singleSeats, singleSold, singlePrice: Math.round(singlePrice), heat: singleSeats ? singleWant / singleSeats : 2,
     tickets: Math.round(tickets), premium: Math.round(premium), concessions: Math.round(concessions), parking: Math.round(parking), merch: Math.round(merch),
@@ -424,6 +428,7 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
     premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
     ...(ours ? projectEffects(state).gate : {}),
     ...hostGate(state, team),
+    ...(ours ? { starMult: merchLift(state) } : {}),
   };
 }
 
@@ -881,6 +886,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   // The analytics department, above the one-analyst shop the football budget already assumes.
   const anl = analyticsCost(state);
   if (anl) add("staff", -m(anl * inflation(year, 0.03)), "Analytics department");
+  // Strength staff, nutrition, player support, equipment and field care.
+  const prog = programsCost(state);
+  if (prog) add("medical", -m(prog * inflation(year, 0.03)), "Performance and player support programs");
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));

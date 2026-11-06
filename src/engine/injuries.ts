@@ -3,7 +3,9 @@ import { addDays, ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES } from "./league";
 import { projectEffects } from "./projects";
 import { rngFor, type Rng } from "./rng";
+import { diagnose } from "./medical";
 import { staffEffects } from "./staff";
+import { concussionFactor, riskFactor } from "./training";
 import type { GameState, Injury } from "./types";
 
 interface InjuryType {
@@ -87,16 +89,18 @@ function medical(state: GameState, team: string): { risk: number; days: number }
 }
 
 /** How likely a player is to get hurt relative to an average player with an average training staff. */
-export function injuryRisk(state: GameState, id: string, team: string): number {
+export function injuryRisk(state: GameState, id: string, team: string, practice = false): number {
   const durability = HIDDEN_RATINGS[id]?.durability ?? 70;
   const prevention = staffEffects(team).injuryPrevention;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
-  return (1.65 - durability / 100) * (1.3 - prevention / 220) * (age >= 31 ? 1.15 : 1) * medical(state, team).risk;
+  return (1.65 - durability / 100) * (1.3 - prevention / 220) * (age >= 31 ? 1.15 : 1) * medical(state, team).risk * riskFactor(state, id, team, practice);
 }
 
 /** Creates an injury for a player. Returns the injury and the days out. */
 export function injure(state: GameState, id: string, team: string, rng: Rng, practice = false, nonFootball = false): { injury: Injury; days: number } {
-  const t = pick(rng, practice ? PRACTICE_TYPES : TYPES);
+  let t = pick(rng, practice ? PRACTICE_TYPES : TYPES);
+  // Better helmets head off some concussions; the hit lands somewhere less serious instead.
+  if (t.type === "Concussion" && concussionFactor(state, team) < 1 && rng() > concussionFactor(state, team)) t = TYPES.find((x) => x.type === "Neck stinger")!;
   const recovery = staffEffects(team).injuryRecovery;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
   const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.15);
@@ -109,7 +113,10 @@ export function injure(state: GameState, id: string, team: string, rng: Rng, pra
   };
   const p = state.players[id];
   // A new injury on top of an old one keeps the later return date.
-  if (!p.injury || p.injury.returnDate < returnDate) p.injury = injury;
+  if (!p.injury || p.injury.returnDate < returnDate) {
+    p.injury = injury;
+    diagnose(state, id, team, injury, days);
+  }
   lastingDamage(state, id, t.type, rng);
   return { injury: p.injury, days };
 }

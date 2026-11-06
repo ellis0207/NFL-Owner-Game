@@ -19,6 +19,8 @@ import type { GameState } from "../engine/types";
 import { ContractTable, dealSummary } from "./ContractTable";
 import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./format";
 import { useUi } from "./ui";
+import { PlayerClubhouse } from "./PlayerClubhouse";
+import { knownReturn } from "../engine/medical";
 
 const CONTRACT_SOURCE = {
   overthecap: "Year-by-year figures from OverTheCap.",
@@ -107,10 +109,12 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
 
         {state.injury && state.injury.returnDate > game.date && (
           <div className="notice error">
-            <strong>{state.injury.type}</strong> ({shortDate(state.injury.date)}): {outLabel(game.date, state.injury.returnDate, state.injury.seasonEnding)}
+            <strong>{state.injury.type}</strong> ({shortDate(state.injury.date)}): {outLabel(game.date, knownReturn(game, state.injury), state.injury.seasonEnding)}
             {status && nextGame ? `. ${status} for ${shortDate(nextGame.date)}.` : "."}
           </div>
         )}
+
+        <PlayerClubhouse game={game} id={id} changed={changed} />
 
         <section className="report">
           <span className="label">{report.authorRole}'s report · {report.author}</span>

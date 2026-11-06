@@ -1,5 +1,6 @@
 import type { Adv } from "./analytics";
 import type { AnalyticsState } from "./strategy";
+import type { ClubhouseState } from "./clubhouse";
 // Shapes of the generated league data (data/league-2026) and of a saved game.
 
 export type Position =
@@ -457,6 +458,14 @@ export interface Injury {
   seasonEnding: boolean;
   /** Hurt away from football (working out on his own): reserve/non-football injury if it lingers into the season. */
   nonFootball?: boolean;
+  /** The first estimate of the return date, shown until the follow-up tests come back (medical.ts). */
+  est?: string;
+  /** The day further tests firm up the timeline. */
+  testsOn?: string;
+  /** A long rehab's midpoint, where it can hit a setback or run ahead of schedule. */
+  mid?: string;
+  /** The owner already asked the doctors about an early return. */
+  asked?: boolean;
 }
 
 export interface PlayerState {
@@ -495,6 +504,12 @@ export interface PlayerState {
   keepUntil?: string;
   /** Suspended by the league: regular-season games still to sit out, without pay and off the 53. */
   suspended?: { games: number; reason: string };
+  /** Moved to another position by the coaches: plays there until moved back (training.ts). */
+  pos?: Position;
+  /** Learning a new position: `drag` (engine only) fades as he learns it; `fit` is how well he suits it for good. */
+  retrain?: { from: Position; since: string; drag: number; fit: number };
+  /** Cleared early from an injury: more likely to get hurt again until this date. */
+  fragile?: string;
 }
 
 export type DealKind =
@@ -1516,6 +1531,8 @@ export interface GameState {
   pbp?: Record<string, GameLog>;
   /** The analytics department, game plans and league strategy trends (strategy.ts). */
   analytics?: AnalyticsState;
+  /** The locker room, player development programs, the medical side and injury insurance (clubhouse.ts). */
+  clubhouse?: ClubhouseState;
   /** Game-day operations checks at the owner's home games, and officiating questions put to the league (gameops.ts). */
   gameOps?: GameOpsState;
   inbox: InboxItem[];

@@ -1,4 +1,5 @@
 
+import { knownReturn } from "../../engine/medical";
 import { useMemo, useState } from "react";
 import { campNote } from "../../engine/camp";
 import { capHit, contractYearsLeft, teamPlayerIds } from "../../engine/cap";
@@ -93,7 +94,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
             const inj = game.players[id].injury!;
             return (
               <button key={id} className="link" style={{ textDecoration: "none" }} onClick={() => ui.openPlayer(id)}>
-                <strong>{PLAYER_BY_ID[id].name}</strong> <span className="muted">{PLAYER_BY_ID[id].position}</span> · {inj.type} · {outLabel(game.date, inj.returnDate, inj.seasonEnding)}
+                <strong>{PLAYER_BY_ID[id].name}</strong> <span className="muted">{PLAYER_BY_ID[id].position}</span> · {inj.type} · {outLabel(game.date, knownReturn(game, inj), inj.seasonEnding)}
                 {game.players[id].status === "ir" ? " · on IR" : ""}
               </button>
             );
