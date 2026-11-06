@@ -17,6 +17,7 @@
 // Across seasons the league copies what works: if passing beats running by
 // more than usual, everyone throws a little more, and defenses answer with
 // more two-deep shells.
+import { emphasisPlanBonus } from "./gameweek";
 import { expectedPoints, fourthDownValues, perPlay, type Adv, addAdv, emptyAdv } from "./analytics";
 import { daysBetween } from "./dates";
 import { send } from "./inbox";
@@ -190,7 +191,7 @@ export function gamePlan(state: GameState, team: string, opp: string, g: Schedul
   const rest = prev ? daysBetween(prev, g.date) : 7;
   // A short week cuts preparation; extra days help a little.
   const prepDays = rest <= 4 ? -4 : rest >= 10 ? 1.5 : 0;
-  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + (rng() + rng() + rng() - 1.5) * 6;
+  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + emphasisPlanBonus(state, team) + (rng() + rng() + rng() - 1.5) * 6;
   const quality = Math.max(-1, Math.min(1, (raw - 70) / 15));
 
   // What the film and the numbers say about them.

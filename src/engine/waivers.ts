@@ -7,7 +7,7 @@
 // over his remaining salary; bonus money stays with the team that cut him.
 // Players nobody claims become free agents.
 import { accruedSeasons, addDeadMoney, capHit, capSummary, invalidateRosters, teamPlayerIds } from "./cap";
-import { claimedDeal, leagueYear } from "./contracts";
+import { claimedDeal, dealOf, leagueYear } from "./contracts";
 import { addDays, shortDate, weekday } from "./dates";
 import { payCash } from "./finance";
 import { money, send } from "./inbox";
@@ -232,4 +232,39 @@ function gmOf(team: string): string {
 /** "Claims due Tuesday 4 PM" */
 export function claimDueLabel(w: WaiverEntry): string {
   return `${weekday(w.clears)} ${shortDate(w.clears)}, 4 PM ET`;
+}
+
+// ---- Waiver risk ----
+
+/**
+ * The front office's read on how likely another club is to claim one of our
+ * players if we let him go: how many teams would see him as an upgrade and
+ * could afford his contract, and how often a team that wants a player
+ * actually puts in for him. A forecast, not a promise.
+ */
+export function claimOdds(state: GameState, id: string): number {
+  const from = state.players[id]?.team;
+  if (!from || !subjectToWaivers(state, id)) return 0;
+  const pos = PLAYER_BY_ID[id].position;
+  const cutdown = state.date === KEY.cutdownWaiversExpire || addDays(state.date, 1) === KEY.cutdownWaiversExpire;
+  const per = cutdown ? 0.5 : 0.3;
+  const deal = dealOf(state, id);
+  let miss = 1;
+  for (const { id: team } of TEAMS) {
+    if (team === from) continue;
+    const hit = deal ? capHit(id, leagueYear(state.date), { ...state, contracts: { ...state.contracts, [id]: claimedDeal(deal, team, state.date, PLAYER_BY_ID[id].yearsExp) } }) : 0;
+    if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) continue;
+    const mates = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status));
+    const view = claimView(state, team, id);
+    const worst = mates.reduce((m, x) => Math.min(m, claimView(state, team, x)), Infinity);
+    const drop = weakestOnRoster(state, team, pos);
+    const margin = 5.75 + (60 - staffEffects(team).gmEval) / 15;
+    const upgrade = view - Math.min(worst, drop ? claimView(state, team, drop) : Infinity);
+    if (upgrade >= margin || (mates.length < 2 && view > 45)) miss *= 1 - per;
+  }
+  return Math.round((1 - miss) * 100) / 100;
+}
+
+export function claimOddsWord(p: number): string {
+  return p >= 0.6 ? "Likely to be claimed" : p >= 0.25 ? "Could be claimed" : p > 0.05 ? "Should clear" : "Will clear";
 }

@@ -32,6 +32,8 @@ const AREAS: { area: string; minor: string[]; problem: string[]; cost: number; f
   { area: "Sideline credentials", minor: ["Turned away guests with the wrong wristbands"], problem: ["Someone without a credential reached the sideline; the league fined the club"], cost: 0, fine: 50 * K },
   { area: "Coach radios and booths", minor: ["Swapped a coaching booth headset during warmups"], problem: ["The coach-to-player radio went down for a series; league rules shut off the other side's too"], cost: 25 * K },
   { area: "Broadcast setup", minor: ["Re-ran a camera cable in the end zone"], problem: ["A power problem in the TV compound delayed the broadcast's start; the network billed the club"], cost: 150 * K },
+  { area: "Gamebook and roster check", minor: ["Corrected a jersey number on the gamebook before it went to the league"], problem: ["The inactive list reached the officials late; the league noted it"], cost: 0, fine: 25 * K },
+  { area: "Equipment and fittings", minor: ["Refitted two helmets after warmups", "Swapped a cracked face mask from the backup stock"], problem: ["A player's helmet failed and the backup wasn't fitted; he missed a series"], cost: 15 * K },
   { area: "Security and gates", minor: ["Opened two more gates when the lines grew"], problem: ["Gate lines backed up past kickoff; thousands were still outside for the first quarter"], cost: 40 * K },
 ];
 

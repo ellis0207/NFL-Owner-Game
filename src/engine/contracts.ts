@@ -162,7 +162,9 @@ export function yearCapHit(y: DealYear | undefined): number {
   if (!y) return 0;
   const weeks = y.weeks ?? REG_WEEKS;
   const likely = y.incentives?.reduce((s, i) => s + (i.likely ? i.amount : 0), 0) ?? 0;
-  return Math.round((y.base * weeks) / REG_WEEKS + y.proration + y.bonus + likely);
+  // Per-game roster bonuses count for the games the player dressed for last year; workout bonuses count in full.
+  const roster = (y.perGame ?? 0) * (y.perGameLikely ?? 17) * weeks / REG_WEEKS + (y.workout ?? 0);
+  return Math.round((y.base * weeks) / REG_WEEKS + y.proration + y.bonus + likely + roster);
 }
 
 export function dealCapHit(deal: Deal | null, year: number): number {

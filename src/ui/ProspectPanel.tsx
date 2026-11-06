@@ -110,7 +110,8 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           {report.makeup.map((m, i) => <div key={i}>{m}</div>)}
           {report.medical && <div><span className="muted">Medical:</span> {report.medical}</div>}
           {report.next && <div className="muted">{report.next}</div>}
-          <div className="muted">Filed by {report.author}.</div>
+          {report.lean && <div className="muted">{report.lean}</div>}
+          <div className="muted">Filed by {report.author}{report.scout ? `, with area scout ${report.scout}` : ""}.</div>
           <div className="btn-row">
             {(Object.keys(DEPTHS) as ScoutDepth[]).map((d) => (
               <button key={d} className={`btn small${listed === d ? " primary" : ""}`} onClick={() => scout(d)} disabled={listed === d}>

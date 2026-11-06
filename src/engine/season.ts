@@ -25,6 +25,9 @@ import { gameDayOps, gameOpsDaily } from "./gameops";
 import { analyticsDaily, ensureAnalytics } from "./strategy";
 import { ensureClubhouse, lockerDaily } from "./clubhouse";
 import { knownReturn, medicalDaily } from "./medical";
+import { gameWeekDaily } from "./gameweek";
+import { bonusesDaily } from "./bonuses";
+import { ensureScouts } from "./scouts";
 import { trainingDaily } from "./training";
 import { stat } from "./stats";
 import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
@@ -124,6 +127,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   ensureCulture(state);
   ensureAnalytics(state);
   ensureClubhouse(state);
+  ensureScouts(state);
   setupOwner(state, profile);
   approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
@@ -551,6 +555,8 @@ export function advanceDay(state: GameState): void {
   lockerDaily(state);
   trainingDaily(state);
   medicalDaily(state);
+  gameWeekDaily(state);
+  bonusesDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);

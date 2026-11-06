@@ -106,7 +106,7 @@ describe("game-day operations", () => {
       gameDayOps(s, g, { away: base.away, home: TEAM, awayScore: 10, homeScore: 20, overtime: false });
     }
     for (const c of gameOps(s).checks) {
-      expect(c.areas.length).toBe(8);
+      expect(c.areas.length).toBe(10);
       problems += c.areas.filter((a) => a[1] === "problem").length;
       minor += c.areas.filter((a) => a[1] === "minor").length;
     }

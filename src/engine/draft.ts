@@ -498,11 +498,22 @@ export function advancePick(state: GameState): void {
 /** Runs the draft until we're on the clock (our GM makes the pick if we already are), or the day ends. */
 export function advanceToOurPick(state: GameState): void {
   if (onTheClock(state)) advancePick(state);
+  const gmFrom = state.draft?.gmFrom ?? 99;
   for (let i = 0; i < 300; i++) {
     const s = currentSlot(state);
-    if (!s || s.team === state.userTeam) return;
+    // Rounds handed to the GM: he picks for us and the draft keeps going.
+    if (!s || (s.team === state.userTeam && s.round < gmFrom)) return;
     advancePick(state);
   }
+}
+
+/** Minutes each team has on the clock, by round (the league's rule since 2008). */
+export const CLOCK_MINUTES = [10, 7, 5, 5, 5, 5, 4];
+
+export function setGmFrom(state: GameState, round: number | null): void {
+  const d = draftState(state);
+  if (round === null) delete d.gmFrom;
+  else d.gmFrom = round;
 }
 
 /** Runs today's rounds to the end. Our GM makes our picks. */
