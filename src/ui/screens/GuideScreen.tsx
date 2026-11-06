@@ -59,6 +59,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "The clubhouse",
+    body: [
+      "Every player has a character the staff describes in words: how quickly he learns, how he prepares, and whether the room follows him. Chemistry comes from keeping your starters together, having veterans the room listens to, a happy and present roster, and the head coach. A close room plays slightly cleaner; it never makes up for talent.",
+      "Veterans look after young players at their position, who then develop a little faster. The coaches build trust in players who play well and show up, and that trust tips close depth chart calls; a new head coach starts everyone over. Players who were paid or drafted to start notice when they sit.",
+      "On the Development tab you set the practice load (heavier work grows young players faster and hurts more of them), rest days for veterans and the strength staff, and see the development plans you've set from players' pages. A position change takes weeks to learn and some players suit the new spot better than others.",
+      "Medical: the first estimate of an injury is firmed up by tests a few days later. Long rehabs can hit setbacks. The doctors decide when a player is cleared; you can ask, they answer. Concussions are an independent consultant's call. Insurance on a big salary pays back most of it once a player has missed more than three straight weeks.",
+    ],
+  },
+  {
     title: "Analytics and game plans",
     body: [
       "EPA (expected points added) is how much a play changed the offense's expected score, from the down, distance and spot. A success is a play with positive EPA. Win probability comes from the score, the time left and the drive in progress. These numbers are public: every club can compute them.",

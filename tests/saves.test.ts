@@ -87,6 +87,23 @@ describe("saves from older versions", () => {
     expect(back.analytics?.credibility).toBe(state.analytics!.credibility);
   }, 90_000);
 
+  it("a save with clubhouse programs, plans and a position change keeps them, and older saves get defaults", async () => {
+    const state = load("pr35-2026-11-15");
+    const c = state.clubhouse!;
+    expect(c.programs.workload).toBe("heavy");
+    expect(Object.keys(c.plans).length).toBe(3);
+    const moved = Object.keys(state.players).find((id) => state.players[id].retrain)!;
+    expect(state.players[moved].pos).toBe("S");
+    const drag = state.players[moved].retrain!.drag;
+    for (let i = 0; i < 9; i++) advanceDay(state);
+    expect(state.players[moved].retrain!.drag).toBeLessThan(drag);
+    const old = load("pr34-2026-11-15");
+    expect(old.clubhouse?.programs.workload).toBe("normal");
+    expect(Object.keys(old.clubhouse!.chem).length).toBe(32);
+    const back = await decompress(await compress(state));
+    expect(back.clubhouse?.plans).toEqual(state.clubhouse!.plans);
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

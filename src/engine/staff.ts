@@ -1,4 +1,6 @@
 // Who works for each team, and the engine-side reading of how good they are.
+import { trustNudge } from "./clubhouse";
+import { retrainEffect } from "./training";
 import { HIDDEN_RATINGS, HIDDEN_STAFF, PLAYER_BY_ID, PLAYERS, STAFF } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { DEFENSE, OFFENSE } from "./schemes";
@@ -124,7 +126,7 @@ export function rustDrag(state: GameState, id: string): number {
 }
 
 export function ability(state: GameState, id: string): number {
-  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id);
+  return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id) + retrainEffect(state, id);
 }
 
 /** Room a player still has to grow: his ceiling (as it has moved) over where he is now. Engine only. */
@@ -218,7 +220,7 @@ export function fogOf(state: GameState): number {
 
 /** A team's coaching staff's view of its own player, including how well the player fits the scheme. */
 export function coachView(state: GameState, team: string, id: string): number {
-  return coachRead(state, team, id) + 0.35 * schemeFit(state, id, team);
+  return coachRead(state, team, id) + 0.35 * schemeFit(state, id, team) + trustNudge(state, id);
 }
 
 /** One practice tells the coaches only so much: the spread of a single day's work around a player's true level. */

@@ -23,6 +23,9 @@ import { rngFor } from "./rng";
 import { simulateGame } from "./sim";
 import { gameDayOps, gameOpsDaily } from "./gameops";
 import { analyticsDaily, ensureAnalytics } from "./strategy";
+import { ensureClubhouse, lockerDaily } from "./clubhouse";
+import { knownReturn, medicalDaily } from "./medical";
+import { trainingDaily } from "./training";
 import { stat } from "./stats";
 import { DEFENSE_LABEL, OFFENSE_LABEL } from "./schemes";
 import { playCaller, teamSchemes, teamStaff } from "./staff";
@@ -120,6 +123,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   ensureOffice(state);
   ensureCulture(state);
   ensureAnalytics(state);
+  ensureClubhouse(state);
   setupOwner(state, profile);
   approvePlan(state, leagueYear(state.date));
   const team = TEAM_BY_ID[userTeam];
@@ -544,6 +548,9 @@ export function advanceDay(state: GameState): void {
   officeDaily(state);
   gameOpsDaily(state);
   analyticsDaily(state);
+  lockerDaily(state);
+  trainingDaily(state);
+  medicalDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
   reviewDaily(state);
@@ -602,7 +609,7 @@ function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxS
     if (chart[pos].slice(0, STARTERS[pos] ?? 1).includes(inj.player) && state.players[inj.player].injury?.date === state.date) {
       const out = state.players[inj.player].injury!;
       if (daysBetween(state.date, out.returnDate) >= 7) {
-        news(state, `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, out.returnDate, out.seasonEnding)}`);
+        news(state, `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, knownReturn(state, out), out.seasonEnding)}`);
       }
     }
   }
@@ -620,7 +627,7 @@ function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxS
     : ours > theirs ? "Good week of work showed up on game day." : "We'll get it fixed on the practice field.";
   const hurt = box.injuries.filter((i) => i.team === us).map((i) => {
     const inj = state.players[i.player].injury;
-    return `${PLAYER_BY_ID[i.player].name} (${i.type.toLowerCase()}${inj && inj.date === state.date ? `, ${outLabel(state.date, inj.returnDate, inj.seasonEnding)}` : ", returned"})`;
+    return `${PLAYER_BY_ID[i.player].name} (${i.type.toLowerCase()}${inj && inj.date === state.date ? `, ${outLabel(state.date, knownReturn(state, inj), inj.seasonEnding)}` : ", returned"})`;
   });
   const hc = teamStaff(us).HC?.name ?? "Head Coach";
   send(state, "game", `${hc}, head coach`, `${verdict} ${ours}-${theirs} against ${TEAM_BY_ID[opp].name}${r.overtime ? " in overtime" : ""}`,
@@ -683,14 +690,14 @@ function practiceInjuries(state: GameState, playedToday: Set<string>, teams: str
     });
     if (!ids.length) continue;
     const id = ids[Math.floor(rng() * ids.length)];
-    if (rng() > Math.min(1, 0.7 * injuryRisk(state, id, team))) continue;
+    if (rng() > Math.min(1, 0.7 * injuryRisk(state, id, team, true))) continue;
     const { injury } = injure(state, id, team, rng, true);
     if (team === state.userTeam) {
-      ours.push({ id, type: injury.type, out: outLabel(state.date, injury.returnDate, injury.seasonEnding) });
+      ours.push({ id, type: injury.type, out: outLabel(state.date, knownReturn(state, injury), injury.seasonEnding) });
       const trn = teamStaff(team).TRN?.name ?? "Head athletic trainer";
       send(state, "staff", `${trn}, head athletic trainer`, `${PLAYER_BY_ID[id].name} hurt in practice`,
         `${PLAYER_BY_ID[id].name} (${PLAYER_BY_ID[id].position}) came up with a ${injury.type.toLowerCase()} in practice today. ` +
-        `We expect ${PLAYER_BY_ID[id].name.split(" ").slice(-1)[0]} to be ${outLabel(state.date, injury.returnDate, injury.seasonEnding)}.`);
+        `We expect ${PLAYER_BY_ID[id].name.split(" ").slice(-1)[0]} to be ${outLabel(state.date, knownReturn(state, injury), injury.seasonEnding)}.`);
     }
   }
   return ours;

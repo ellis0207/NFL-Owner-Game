@@ -398,6 +398,21 @@ season. The Outlook tab explains the record (point margin, close games,
 turnovers, schedule, injuries) and lists starters aging out or near the end
 of their deals. "Sim to game day" stops the morning of your game.
 
+Players are people. Each has a lasting character the staff describes in
+words: how fast he learns, how he prepares, whether the room follows him.
+The Clubhouse page shows the team's chemistry (continuity, leaders, mood and
+the head coach; a small edge on the field), veterans mentoring young players
+at their position, whom the coaches trust (which tips close depth chart
+calls), players paid or drafted to start who are sitting, and the best-known
+names, who sell jerseys. Now and then a player is excused for a personal
+matter, and the club says nothing more. You set the practice load, rest
+days for veterans and the strength staff, put up to eight young players on
+development plans, and ask the coaches to try a player at a new position,
+which he learns over weeks and may or may not suit. On the medical side,
+first diagnoses are firmed up by follow-up tests, long rehabs hit setbacks
+or run ahead, the doctors (and for concussions an independent consultant)
+decide clearance, and big salaries can be insured against injury.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -436,6 +451,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
+  The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.

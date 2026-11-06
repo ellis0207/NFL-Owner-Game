@@ -7,6 +7,7 @@
 // fast receiver, the quarterback's arm and the time the line buys against
 // the rush. Rosters that fit their coaches' schemes play better, good
 // play-callers make better calls, and luck still decides plenty of Sundays.
+import { chemistryEdge } from "./clubhouse";
 import { gameConditions, type Conditions } from "./gameday";
 import { addLine, pack, type StatKey, type StatLine } from "./stats";
 import { teamPlayerIds } from "./cap";
@@ -215,7 +216,7 @@ class GameSim {
     const starterSeries = wk === 2 ? (r < 0.3 ? 0 : r < 0.8 ? 1 : 2) : r < 0.65 ? 0 : r < 0.95 ? 1 : 2;
     return {
       side, id, off: OFFENSE[schemes.offense], def: DEFENSE[schemes.defense], fx, chart, inactive,
-      out: new Set(), form: gaussian(this.rng) * leadershipSd, timeouts: 3, stats: {}, box: emptyTeamBox(),
+      out: new Set(), form: gaussian(this.rng) * leadershipSd + chemistryEdge(this.state, id), timeouts: 3, stats: {}, box: emptyTeamBox(),
       score: 0, quarters: [0, 0, 0, 0], drives: 0, starterSeries, passLean: 0,
       offFit: this.unitFit(id, chart, OFF_FIT), defFit: this.unitFit(id, chart, DEF_FIT),
       planEdge: 0, adjRun: 0, adjPass: 0,

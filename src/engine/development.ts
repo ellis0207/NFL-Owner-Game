@@ -7,6 +7,9 @@ import { HIDDEN_RATINGS, PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { roomBoost } from "./positionCoaches";
 import { staffEffects } from "./staff";
+import { mentors } from "./clubhouse";
+import { TEAM_BY_ID } from "./league";
+import { growthFactor } from "./training";
 import type { GameState } from "./types";
 
 const SIDE: Record<string, "off" | "def" | "st"> = {
@@ -17,6 +20,8 @@ const SIDE: Record<string, "off" | "def" | "st"> = {
 /** Runs one week of development for every player on a roster. `snapsLastWeek` marks who played. */
 export function weeklyDevelopment(state: GameState, played: Set<string>): void {
   const rng = rngFor(state.seed, `dev:${state.date}`);
+  const mentored = new Set<string>();
+  for (const t of Object.keys(TEAM_BY_ID)) for (const [, y] of mentors(state, t)) mentored.add(y);
   for (const [id, p] of Object.entries(state.players)) {
     if (!p.team || p.status === "fa") continue;
     const r = HIDDEN_RATINGS[id];
@@ -29,7 +34,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     const dev = p.dev ?? 0;
     const room = r.potential + (p.pot ?? 0) - (r.overall + dev);
     let change = 0;
-    if (room > 0 && !p.holdout) change += room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1);
+    if (room > 0 && !p.holdout) change += room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1) * growthFactor(state, id, mentored.has(id));
     if (age >= 30) change -= 0.025 * (age - 29);
     change += gaussian(rng) * 0.07;
     p.dev = Math.round((dev + change) * 100) / 100;
