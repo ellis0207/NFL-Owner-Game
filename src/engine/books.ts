@@ -74,8 +74,13 @@ function playerPlan(state: GameState, year: number): number {
     const spring = state.date < addDays(leagueYearStart(year), 75);
     return -Math.round(spring ? Math.max(known, salaryCap(state, year) * 0.92) : known);
   }
-  if (year === now + 1) return -Math.round(Math.max(cashNextYear(state, us), salaryCap(state, year) * 0.95));
-  return -Math.round(salaryCap(state, year) * 0.97);
+  // Later years follow how this club actually spends against the cap, drifting toward the 92% a club
+  // needs to stay clear of the four-year cash floor, instead of assuming every club spends to the cap.
+  const thisYear = -playerPlan(state, now);
+  const ratio = Math.max(0.85, Math.min(1, thisYear / salaryCap(state, now)));
+  const toward = (n: number) => ratio + (0.92 - ratio) * Math.min(1, n / 4);
+  if (year === now + 1) return -Math.round(Math.max(cashNextYear(state, us), salaryCap(state, year) * toward(1)));
+  return -Math.round(salaryCap(state, year) * toward(year - now));
 }
 
 /** Interest and principal planned for a league year from the loans on the books, at today's rates. */

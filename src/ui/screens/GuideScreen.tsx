@@ -76,6 +76,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Tickets, fans and sponsors",
+    body: [
+      "General seats are split into four zones; the cheaper the seat, the more its buyers react to price. Each home game is marquee, standard or value by the opponent, the rivalry, the kickoff and the weather, and you can price the tiers apart or let dynamic pricing move unsold seats through the week. Groups and promotions fill seats at a discount; a promotion at a game that would sell out anyway only gives money away. Holders who can't go resell their seats, and the ones nobody buys are most of the no-shows.",
+      "Season-ticket holders renew by how long they've had their seats, how the season went, the price change and how they feel about the club; the waiting list refills what they leave. If you don't set next season's prices, the business staff does. Suites and club seats renew when companies used them. Seat licenses raise cash once, cost trust that lasts for years, and some holders walk away.",
+      "The Fans tab shows the market (its population, incomes and the other teams competing for the same money), where fans live, trust in the club, generational loyalty, post-game surveys and what each kind of customer is worth over the years. The economy moves demand, price sensitivity and what sponsors spend.",
+      "Sponsors can buy exclusivity in their category for about a fifth more, where rights allow: league rules keep sportsbooks from being exclusive, and a stadium operator's pouring rights limit beer and soft-drink deals. Where the club controls the stadium, it negotiates the naming rights. After each season partners get a report of what they received; short of the deal, the club owes make-goods. Partners can fail to pay, and one in the news can be dropped.",
+    ],
+  },
+  {
     title: "History and honors",
     body: [
       "Pro Bowl rosters come out in late December, the All-Pro teams after the regular season, and the awards at NFL Honors the week of the Super Bowl. Voters look at the stats, the team's record and the film, and a player with Pro Bowls behind him gets the benefit of the doubt. Pro Bowls also set the fifth-year option price for first-round picks.",

@@ -37,6 +37,8 @@ import { playCaller, teamSchemes, teamStaff } from "./staff";
 
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
 import { commerceDaily } from "./commerce";
+import { fansDaily } from "./fans";
+import { sponsorsDaily } from "./sponsors";
 import { projectsDaily } from "./projects";
 import { reviewDaily } from "./review";
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
@@ -547,6 +549,8 @@ export function advanceDay(state: GameState): void {
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
   businessDaily(state);
   commerceDaily(state);
+  fansDaily(state);
+  sponsorsDaily(state);
   projectsDaily(state);
   leasesDaily(state);
   debtDaily(state);

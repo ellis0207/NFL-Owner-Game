@@ -131,6 +131,24 @@ describe("saves from older versions", () => {
     expect(old.honors).toBeUndefined();
   }, 90_000);
 
+  it("a save with ticket office settings and seat licenses keeps them through renewals", async () => {
+    const state = load("pr38-2027-02-15");
+    const t = state.business!.tix!;
+    expect(t.zones.lowerSide).toBe(1.2);
+    expect(t.dynamic).toBe(true);
+    expect(t.psl?.price).toBe(3000);
+    expect(state.fans?.trust).toBeLessThan(60);
+    const back = await decompress(await compress(state));
+    expect(back.business!.tix!.tiers.marquee).toBe(1.15);
+    // An older save gets the fan base, the ticket office and the new sponsor categories when it first needs them.
+    const old = load("pr37-2027-02-15");
+    expect(old.fans).toBeUndefined();
+    expect(old.business!.tix).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.fans).toBeDefined();
+    expect(old.business!.local!.deals.some((d) => d.cat === "digital")).toBe(true);
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

@@ -1,24 +1,26 @@
 import { useState } from "react";
 import {
-  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, CONCESSION_LABEL, deptCost, DEPTS, gateForecast, nationalRevenue,
-  operatingEstimate, ownerCash, pnl, PRICING_OPENS, RENEWAL_DEADLINE, revenueEstimate, setBudget, setConcessions, setNextSeasonPrices,
-  setParking, setSinglePrice, valuation,
+  answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, deptCost, DEPTS, nationalRevenue,
+  operatingEstimate, ownerCash, pnl, revenueEstimate, setBudget,
+  valuation,
 } from "../../engine/business";
 import { leagueYear } from "../../engine/contracts";
 import { creditLimit, openLoans } from "../../engine/debt";
 import { projectedYear } from "../../engine/books";
 import { shortDate, weekday } from "../../engine/dates";
-import { RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/league";
-import { controlOf, MARKETS, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
+import { RULES, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/league";
+import { controlOf, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
 import { acceptLease, counterLease, lease, leaseSummary, walkAway } from "../../engine/leases";
-import type { ConcessionTier, Dept, GameState, StadiumEvent } from "../../engine/types";
+import type { Dept, GameState, StadiumEvent } from "../../engine/types";
 import { money } from "../format";
 import { Projects, Sponsors } from "./BusinessDeals";
+import { Tickets } from "./BusinessTickets";
+import { Fans } from "./BusinessFans";
 import { Books, Plan } from "./BusinessBooks";
 import { Financing } from "./BusinessFinancing";
 import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Books", "Plan", "Financing", "Tickets", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
+const TABS = ["Overview", "Books", "Plan", "Financing", "Tickets", "Fans", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -40,6 +42,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Plan" && <Plan game={game} changed={changed} />}
       {tab === "Financing" && <Financing game={game} changed={changed} />}
       {tab === "Tickets" && <Tickets game={game} changed={changed} />}
+      {tab === "Fans" && <Fans game={game} />}
       {tab === "Stadium" && <Stadium game={game} changed={changed} />}
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
       {tab === "Projects" && <Projects game={game} changed={changed} />}
@@ -151,123 +154,6 @@ function Ledger({ game, year }: { game: GameState; year: number }) {
         </table>
       </div>
       {rows.length > shown && <button className="btn small" onClick={() => setShown(shown + 50)}>Show more</button>}
-    </div>
-  );
-}
-
-function heatWords(heat: number): string {
-  return heat >= 1.6 ? "Resale prices are far above face value" : heat >= 1.15 ? "Resale prices are above face value" : heat >= 0.95 ? "Selling out at face value"
-    : heat >= 0.7 ? "Some seats will go unsold" : "Lots of seats will go unsold";
-}
-
-function Tickets({ game, changed }: { game: GameState; changed: () => void }) {
-  const b = business(game);
-  const us = game.userTeam;
-  const s = STADIUM_BY_TEAM[us];
-  const mk = MARKETS[us];
-  const ctrl = controlOf(s);
-  const next = SCHEDULE.find((g) => g.home === us && !g.neutral && (g.type === "PRE" || g.type === "REG") && g.date >= game.date && !game.results[g.id]);
-  const f = next ? gateForecast(game, next) : null;
-  const [season, setSeason] = useState(b.next?.season ?? 1.03);
-  const [premium, setPremium] = useState(b.next?.premium ?? 1.03);
-  const [msg, setMsg] = useState<string | null>(null);
-  const offseason = game.date >= PRICING_OPENS;
-  return (
-    <div className="stack">
-      <div className="split">
-        <div className="panel stack tight">
-          <h3>This season</h3>
-          <dl className="kv">
-            <dt>Season-ticket holders</dt><dd>{b.holders.toLocaleString("en-US")}</dd>
-            <dt>Season-ticket price</dt><dd>${mk.ticket} a game on average (locked for {RULES.season})</dd>
-            <dt>Stadium</dt><dd>{s.capacity.toLocaleString("en-US")} seats, about {Math.round(s.capacity * 0.12).toLocaleString("en-US")} in suites and clubs</dd>
-          </dl>
-          <label className="field">
-            <span className="label">Single-game prices: {Math.round(b.prices.single * 100)}% of market (about ${Math.round(mk.ticket * 1.2 * b.prices.single)} a seat)</span>
-            <input type="range" min={60} max={180} step={5} value={Math.round(b.prices.single * 100)}
-              onChange={(e) => { setSinglePrice(game, Number(e.target.value) / 100); changed(); }} aria-label="Single-game price" />
-          </label>
-          {f && next && (
-            <span className="muted">
-              Next home game, {shortDate(next.date)} vs {teamLabel(next.home === us ? next.away! : next.home!)}: the ticket office expects about {Math.min(100, Math.round((f.sold / f.capacity) * 100))}% of seats sold. {heatWords(f.heat)}.
-            </span>
-          )}
-          <label className="field">
-            <span className="label">Concessions</span>
-            <select value={ctrl.concessions ? b.prices.concessions : "standard"} disabled={!ctrl.concessions}
-              onChange={(e) => { setConcessions(game, e.target.value as ConcessionTier); changed(); }}>
-              {(Object.keys(CONCESSION_LABEL) as ConcessionTier[]).map((t) => <option key={t} value={t}>{CONCESSION_LABEL[t]}</option>)}
-            </select>
-          </label>
-          <label className="field">
-            <span className="label">Parking: {ctrl.parking ? `$${Math.round(mk.parking * b.prices.parking)} a car` : `set by ${s.operator}`}</span>
-            <input type="range" min={50} max={180} step={10} value={Math.round(b.prices.parking * 100)} disabled={!ctrl.parking}
-              onChange={(e) => { setParking(game, Number(e.target.value) / 100); changed(); }} aria-label="Parking price" />
-          </label>
-          {(!ctrl.concessions || !ctrl.parking) && <span className="muted">{s.operator} runs concessions and parking at {s.name}. We get {Math.round(s.gameDayShare * 100)}% of the game-day commission.</span>}
-        </div>
-        <div className="panel stack tight">
-          <h3>{RULES.season + 1} season tickets</h3>
-          {!offseason && <span className="muted">Season-ticket and suite prices for {RULES.season + 1} are set after the regular season ends ({shortDate(PRICING_OPENS)}). Renewals are due {shortDate(RENEWAL_DEADLINE)}.</span>}
-          {offseason && !b.renewal && (
-            <>
-              <label className="field">
-                <span className="label">Season tickets: {season >= 1 ? "+" : ""}{Math.round((season - 1) * 100)}%</span>
-                <input type="range" min={90} max={125} step={1} value={Math.round(season * 100)} onChange={(e) => setSeason(Number(e.target.value) / 100)} aria-label="Season-ticket change" />
-              </label>
-              <label className="field">
-                <span className="label">Suites and clubs: {premium >= 1 ? "+" : ""}{Math.round((premium - 1) * 100)}%</span>
-                <input type="range" min={90} max={125} step={1} value={Math.round(premium * 100)} onChange={(e) => setPremium(Number(e.target.value) / 100)} aria-label="Premium change" />
-              </label>
-              <button className="btn primary small" onClick={() => { setMsg(setNextSeasonPrices(game, season, premium)); changed(); }}>
-                {b.next?.announced ? "Announce new prices" : "Announce prices"}
-              </button>
-              {b.next?.announced && <span className="muted">Announced {shortDate(b.next.announced)}. Renewals are due {shortDate(RENEWAL_DEADLINE)}; until then you can change them, though fans notice every change.</span>}
-              {!b.next?.announced && <span className="muted">If you don't announce anything, prices go up 3%, as they do most years.</span>}
-            </>
-          )}
-          {b.renewal && (
-            <dl className="kv">
-              <dt>Renewed</dt><dd>{Math.round(b.renewal.rate * 100)}%</dd>
-              <dt>Holders next season</dt><dd>{b.renewal.holders.toLocaleString("en-US")}</dd>
-            </dl>
-          )}
-          {msg && <p className="error">{msg}</p>}
-          {b.priceLog.length > 0 && (
-            <>
-              <span className="label">Price changes</span>
-              {b.priceLog.slice(0, 6).map((x, i) => <div key={i} className="muted">{shortDate(x.date)}: {x.text}</div>)}
-            </>
-          )}
-        </div>
-      </div>
-      <div className="panel stack tight">
-        <h3>The gate</h3>
-        {b.gates.length === 0 ? <p className="muted">No home games yet.</p> : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Game</th><th className="num">Sold</th><th className="num">Single-game sold</th><th className="num">Price</th><th>Market</th><th className="num">Our take</th></tr></thead>
-              <tbody>
-                {b.gates.map((g) => (
-                  <tr key={g.game}>
-                    <td>{shortDate(g.date)}</td>
-                    <td>{g.type === "PRE" ? "Preseason" : g.type === "POST" ? "Playoffs" : "Regular season"} vs {TEAM_BY_ID[g.opp]?.name ?? g.opp}</td>
-                    <td className="num">{g.sold.toLocaleString("en-US")} <span className="muted">({Math.round((g.sold / g.capacity) * 100)}%)</span></td>
-                    <td className="num">{g.type === "POST" ? "League gate" : `${g.singleSold.toLocaleString("en-US")} of ${g.singleSeats.toLocaleString("en-US")}`}</td>
-                    <td className="num">{g.price ? `$${g.price}` : "-"}</td>
-                    <td className="muted">{g.type === "POST" ? "Sold out" : heatWords(g.heat)}</td>
-                    <td className="num">{money(g.revenue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <span className="muted">
-          34% of general ticket money, after a 15% stadium deduction, goes into a league pool shared by all 32 teams; suites and clubs aren't shared.
-          Playoff ticket money goes to the league, and the home team keeps what's sold inside the building.
-        </span>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { leagueYear } from "../../engine/contracts";
-import { dealFor, dealValue, localDeals, localIncome, LOCAL_CATS, passLocalCategory, signLocalOffer } from "../../engine/commerce";
+import { categories, dealFor, dealValue, localDeals, localIncome, LOCAL_CATS, par, passLocalCategory, signLocalOffer, sponsorHeat } from "../../engine/commerce";
+import { dropPartner, INVENTORY, keepPartner, namingIncome, receivables, rightsConflict, sponsorRetention } from "../../engine/sponsors";
+import { tix } from "../../engine/ticketing";
+import { RULES } from "../../engine/league";
 import { shortDate } from "../../engine/dates";
 import { PROJECTS, projects, projectTerms, startProject } from "../../engine/projects";
 import { STADIUM_BY_TEAM } from "../../engine/stadiums";
@@ -27,9 +30,10 @@ export function Sponsors({ game, changed }: { game: GameState; changed: () => vo
           {cats.map((c) => (
             <div key={c} className="report">
               <strong>{LOCAL_CATS[c].label}</strong>
+              {rightsConflict(game, c, false) && <span className="muted">{rightsConflict(game, c, false)}</span>}
               {l.offers.filter((o) => o.cat === c).map((o) => (
                 <div key={o.id} className="btn-row" style={{ justifyContent: "space-between" }}>
-                  <span>{o.partner}{o.incumbent ? " (current partner)" : ""}: {money(o.value)} a year for {o.years} years</span>
+                  <span>{o.partner}{o.incumbent ? " (current partner)" : ""}: {money(o.value)} a year for {o.years} years{o.exclusive ? ", exclusive in its category" : ""}</span>
                   <button className="btn small" onClick={() => { setMsg(signLocalOffer(game, o.id) ?? `Signed ${o.partner}.`); changed(); }}>Sign</button>
                 </div>
               ))}
@@ -42,27 +46,65 @@ export function Sponsors({ game, changed }: { game: GameState; changed: () => vo
         <h3>Our partners</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Category</th><th>Partner</th><th className="num">This year</th><th>Through</th></tr></thead>
+            <thead><tr><th>Category</th><th>Partner</th><th className="num">This year</th><th>Through</th><th>Relationship</th><th className="num">Delivered</th></tr></thead>
             <tbody>
-              {Object.keys(LOCAL_CATS).map((c) => {
+              {categories(game).map((c) => {
                 const d = dealFor(game, c, year);
                 const next = dealFor(game, c, year + 1);
+                const del = d?.delivered?.[year] ?? d?.delivered?.[year - 1];
                 return (
                   <tr key={c}>
-                    <td>{LOCAL_CATS[c].label}</td>
-                    <td>{d?.partner ?? <span className="muted">None</span>}{next && next !== d ? <span className="muted">{next.partner === d?.partner ? ` (renewed through ${next.start + next.years - 1})` : ` (then ${next.partner})`}</span> : null}</td>
-                    <td className="num">{d ? money(dealValue(d, year)) : "—"}</td>
+                    <td>{LOCAL_CATS[c].label}{d?.exclusive ? <span className="muted"> (exclusive)</span> : null}</td>
+                    <td>{d?.partner ?? <span className="muted">None</span>}{next && next !== d ? <span className="muted">{next.partner === d?.partner ? ` (renewed through ${next.start + next.years - 1})` : ` (then ${next.partner})`}</span> : null}
+                      {d?.scandal && (
+                        <div className="btn-row"><span className="bad">In the news</span>
+                          <button className="btn small" onClick={() => { setMsg(dropPartner(game, c) ?? `We ended the partnership with ${d.partner}.`); changed(); }}>End it</button>
+                          <button className="btn small" onClick={() => { keepPartner(game, c); setMsg(`We're standing by ${d.partner}.`); changed(); }}>Stand by them</button>
+                        </div>
+                      )}
+                    </td>
+                    <td className="num">{d ? money(c === "naming" ? namingIncome(game, year) : dealValue(d, year)) : "—"}</td>
                     <td>{d ? d.start + d.years - 1 : "—"}</td>
+                    <td>{d ? relWord(d.rel ?? 60) : ""}</td>
+                    <td className="num">{del != null ? `${Math.round(del * 100)}%` : ""}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <span className="muted">League years run from March to March. Partner companies and stations are made up.</span>
+        <span className="muted">League years run from March to March. Exclusive partners pay about a fifth more, but they keep their rivals out, and with them some smaller deals. "Delivered" is the crowds, audiences and hospitality the partner got against what the deal promised; short of 93% we owe make-goods. Partner companies and stations are made up.</span>
       </section>
+      <div className="split">
+        <section className="panel stack tight">
+          <h3>What we sell</h3>
+          {INVENTORY.filter((x) => x.cats.some((c) => categories(game).includes(c))).map((x) => {
+            const sold = x.cats.filter((c) => dealFor(game, c, year)).length;
+            const of = x.cats.filter((c) => categories(game).includes(c)).length;
+            return <div key={x.asset}>{x.asset} <span className="muted">({sold} of {of} sold)</span></div>;
+          })}
+          {!categories(game).includes("naming") && <span className="muted">The stadium's name isn't ours to sell at {STADIUM_BY_TEAM[game.userTeam].name}.</span>}
+        </section>
+        <section className="panel stack tight">
+          <h3>Accounts</h3>
+          <span>Fees billed and not yet paid: {money(receivables(game).reduce((a, r) => a + r.amount + r.overdue, 0))}{receivables(game).some((r) => r.overdue) ? `, ${money(receivables(game).reduce((a, r) => a + r.overdue, 0))} of it late` : ""}.</span>
+          {sponsorRetention(game).slice(0, 5).map((r) => (
+            <div key={r.year} className="muted">{r.year}: {r.renewed} of {r.up} expiring partners renewed; the categories went from {money(r.before)} to {money(r.after)} a year.</div>
+          ))}
+          {tix(game).research?.season === RULES.season && (
+            <>
+              <span className="label">What the pricing study says each category is worth now</span>
+              {categories(game).map((c) => <div key={c} className="muted">{LOCAL_CATS[c].label}: about {money(par(game, c, year + 1) * sponsorHeat(game))} a year</div>)}
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
+}
+
+function relWord(r: number): string {
+  return r >= 75 ? "Excellent" : r >= 60 ? "Good" : r >= 45 ? "Strained" : "Poor";
 }
 
 export function Projects({ game, changed }: { game: GameState; changed: () => void }) {
