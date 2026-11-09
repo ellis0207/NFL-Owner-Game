@@ -4,6 +4,7 @@
 // players, the head coach, agents, fans and each outlet feel, can give an
 // agent leverage, can bring a league fine, and some answers are remembered and
 // come back later.
+import { afterAnswer, spokesperson } from "./teammedia";
 import { agentFor, agentHidden, changeMorale, changeTrust, morale, priorities } from "./agents";
 import { teamPlayerIds } from "./cap";
 import { draftClass } from "./prospects";
@@ -754,20 +755,23 @@ export function answerQuestion(state: GameState, qid: string, index: number): st
   const rng = rngFor(state.seed, `press:${q.id}:${index}`);
   consequences(state, q, opt?.key ?? "noComment", rng);
   ownerStory(state, q, opt);
+  afterAnswer(state, q.outlet);
   return null;
 }
 
 function ownerStory(state: GameState, q: PressQuestion, opt: PressOption | undefined): void {
   const outlet = MEDIA_BY_ID[q.outlet];
-  const owner = state.ownerName;
+  // The club's spokesperson takes the question (the owner unless someone else was named).
+  const voice = spokesperson(state);
+  const owner = voice.name;
   const team = teamLabel(state.userTeam);
   const quiet = !opt || opt.key === "noComment";
   addStory(state, {
     outlet: q.outlet, by: q.by, kind: "owner", teams: [state.userTeam], players: q.player && PLAYER_BY_ID[q.player] ? [q.player] : undefined,
     prospects: q.prospect && !PLAYER_BY_ID[q.prospect] ? [q.prospect] : undefined,
-    headline: quiet ? `${nick(state.userTeam)} owner declines to comment` : `${owner}: "${opt!.text.length > 70 ? `${opt!.text.slice(0, 67).replace(/\s+\S*$/, "")}..."` : `${opt!.text}"`}`,
+    headline: quiet ? `${nick(state.userTeam)} ${voice.title} declines to comment` : `${owner}: "${opt!.text.length > 70 ? `${opt!.text.slice(0, 67).replace(/\s+\S*$/, "")}..."` : `${opt!.text}"`}`,
     body: `${q.context} Asked by ${outlet.name}'s ${q.by} "${q.question}", ` +
-      (quiet ? `${owner}, who owns the ${team}, declined to comment.` : `${owner}, who owns the ${team}, said: "${opt!.text}"`),
+      (quiet ? `${owner}, ${voice.title === "owner" ? "who owns" : `${voice.title} of`} the ${team}, declined to comment.` : `${owner}, ${voice.title === "owner" ? "who owns" : `${voice.title} of`} the ${team}, said: "${opt!.text}"`),
   });
 }
 

@@ -16,11 +16,14 @@ import { money } from "../format";
 import { Projects, Sponsors } from "./BusinessDeals";
 import { Tickets } from "./BusinessTickets";
 import { Fans } from "./BusinessFans";
+import { Store } from "./BusinessStore";
+import { Media } from "./BusinessMedia";
+import { GameDay } from "./BusinessVenue";
 import { Books, Plan } from "./BusinessBooks";
 import { Financing } from "./BusinessFinancing";
 import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Books", "Plan", "Financing", "Tickets", "Fans", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
+const TABS = ["Overview", "Books", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -43,6 +46,9 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Financing" && <Financing game={game} changed={changed} />}
       {tab === "Tickets" && <Tickets game={game} changed={changed} />}
       {tab === "Fans" && <Fans game={game} />}
+      {tab === "Store" && <Store game={game} changed={changed} />}
+      {tab === "Media" && <Media game={game} changed={changed} />}
+      {tab === "Game day" && <GameDay game={game} changed={changed} />}
       {tab === "Stadium" && <Stadium game={game} changed={changed} />}
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
       {tab === "Projects" && <Projects game={game} changed={changed} />}

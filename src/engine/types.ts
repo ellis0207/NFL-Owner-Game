@@ -1182,7 +1182,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue";
 
 export interface LedgerEntry {
   date: string;
@@ -1286,6 +1286,140 @@ export interface TicketingState {
   renewals: { season: number; long: number; mid: number; recent: number; premium: number; waitlist: number; added: number }[];
   /** Spending on finding new ticket buyers this season and how many came in. */
   acquisition: { season: number; spend: number; added: number }[];
+}
+
+// ---- Batch J: merchandise, team media, the venue ----
+
+export type MerchChannel = "inHouse" | "partner";
+export type RebrandKind = "uniform" | "logo" | "name";
+
+export interface MerchStock {
+  /** Units ordered for the season, sold so far, and the cost of one. */
+  ordered: number;
+  sold: number;
+  cost: number;
+  name: string;
+  /** The staff's forecast of the season's sales, and (engine only) how far real demand runs from it. */
+  demand: number;
+  luck?: number;
+}
+
+export interface MerchSeason {
+  season: number;
+  gross: number;
+  cogs: number;
+  markdowns: number;
+  writeoffs: number;
+  returns: number;
+  discounts: number;
+  operatorShare: number;
+  counterfeit: number;
+  lostSales: number;
+  online: number;
+  stands: number;
+  /** Units sold by player id ("team" for the rest of the line). */
+  units: Record<string, number>;
+}
+
+export interface MerchState {
+  /** The club's marks: what the league licenses and what a rebrand changes. */
+  brand: { name: string; logo: number; uniform: number; since: number; lift?: { kind: RebrandKind; season: number } };
+  rebrand?: { kind: RebrandKind; name?: string; asked: string; decided?: string; approved?: boolean; launches?: number; cost: number; paid: number };
+  price: number;
+  /** How deep the preseason order runs against the staff forecast. */
+  depth: number;
+  stores: MerchChannel;
+  online: MerchChannel;
+  enforcement: boolean;
+  retro?: number;
+  /** Jerseys by player id ("team" for the rest), for the current season. */
+  stock: Record<string, MerchStock>;
+  orderedFor?: number;
+  seasons: MerchSeason[];
+}
+
+export interface TvDeal {
+  partner: string;
+  package: string;
+  /** Average yearly rights fee, in dollars. */
+  annual: number;
+  through: number;
+}
+
+export interface SocialPost {
+  date: string;
+  who: string;
+  text: string;
+}
+
+export interface TeamMediaState {
+  /** Content staff by role, and the shows the club makes. */
+  staff: Record<string, number>;
+  shows: Record<string, boolean>;
+  followers: number;
+  followers0: number;
+  /** Streaming's pull on the next round of TV deals: 1 is the trend everyone expects. */
+  streaming: number;
+  access: "open" | "standard" | "closed";
+  spokesperson: "owner" | "president" | "gm" | "coach";
+  feed: SocialPost[];
+  /** Headlines about our club across seasons. */
+  archive: { date: string; outlet: string; headline: string }[];
+  /** Stories that come back year after year. */
+  sagas: { key: string; title: string; start: string; until: number; told: number[] }[];
+  prime: string[];
+}
+
+export type VenueStaffing = 0 | 1 | 2 | 3;
+
+export interface VenuePlan {
+  staffing: VenueStaffing;
+  security: VenueStaffing;
+  show: "basic" | "standard" | "premium";
+  alcohol: "standard" | "thirdQuarter" | "strict";
+  transit: "none" | "shuttles" | "rideshare";
+  menu: "standard" | "local" | "wide";
+  weather: boolean;
+  backups: boolean;
+  medics: VenueStaffing;
+}
+
+export interface VenueReport {
+  game: string;
+  date: string;
+  attendance: number;
+  scanned: number;
+  sold: number;
+  distributed: number;
+  /** Minutes from parking to seat, and the worst gate and concession lines. */
+  arrival: number;
+  gateWait: number;
+  foodWait: number;
+  restroomWait: number;
+  foodWaste: number;
+  foodShort: number;
+  merchShort: number;
+  delay?: number;
+  faults: string[];
+  incidents: string[];
+  complaints: Record<string, number>;
+  perCap: { food: number; merch: number; parking: number };
+  revenue: number;
+  costs: { labor: number; vendors: number; cleaning: number; security: number; show: number; other: number };
+  profit: number;
+  experiment?: string;
+  inspection?: string;
+}
+
+export interface VenueState {
+  plan: VenuePlan;
+  reports: VenueReport[];
+  experiment?: { kind: string; label: string; start: string; games: number; effect: number; done?: boolean };
+  experiments: { kind: string; label: string; before: number; after: number; date: string }[];
+  /** Recurring problems the operations director flagged, by complaint category. */
+  flags: { cat: string; date: string }[];
+  investigations: { date: string; game: string; text: string; finding: string }[];
+  backupsBuilt?: string;
 }
 
 export type EventKind = "concert" | "college" | "soccer" | "motorsports" | "hockey" | "combat" | "highschool" | "private" | "bowl" | "tenant";
@@ -1630,6 +1764,10 @@ export interface GameState {
   business?: BusinessState;
   /** The fan base and the market (fans.ts). */
   fans?: FanState;
+  /** Batch J: the store and the brand (merch.ts), team media (teammedia.ts) and the venue (venue.ts). */
+  merch?: MerchState;
+  teamMedia?: TeamMediaState;
+  venue?: VenueState;
   /** Stadium leases with the city or stadium authority, by team (publicly owned buildings only). */
   leases?: Record<string, LeaseState>;
   /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */

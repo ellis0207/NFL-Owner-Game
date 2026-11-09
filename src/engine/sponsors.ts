@@ -15,6 +15,7 @@ import { money, news, send } from "./inbox";
 import { BASE_SEASON, RULES, SCHEDULE, TEAM_BY_ID } from "./league";
 import { rngFor } from "./rng";
 import { controlOf, STADIUM_BY_TEAM } from "./stadiums";
+import { audienceLift } from "./teammedia";
 import type { GameState, LocalDeal } from "./types";
 
 /** What the club can sell, and which deals use it. */
@@ -119,7 +120,7 @@ export function deliveryCheck(state: GameState): void {
     const c = LOCAL_CATS[d.cat];
     const media = c?.media || d.cat === "digital";
     let x = Math.pow(crowd / 0.92, 0.6) * staff;
-    if (media) x = (0.85 + prime * 0.03) * reach * staff;
+    if (media) x = (0.85 + prime * 0.03) * reach * staff * audienceLift(state);
     if (d.cat === "naming" || d.cat === "practice") x = 0.97 + (staff - 1);
     x = Math.round(Math.max(0.6, Math.min(1.1, x)) * 100) / 100;
     (d.delivered ??= {})[year] = x;

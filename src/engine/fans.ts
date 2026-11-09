@@ -156,7 +156,7 @@ export function trustWord(t: number): string {
 // ---- Surveys ----
 
 /** After each regular-season home game, a sample of the crowd rates the day. */
-export function survey(state: GameState, g: ScheduledGame, attendance: number, singleMult: number, rng: () => number): Survey {
+export function survey(state: GameState, g: ScheduledGame, attendance: number, singleMult: number, rng: () => number, adj: Partial<Record<SurveyItem, number>> = {}): Survey {
   const f = fanBase(state);
   const b = business(state);
   const s = STADIUM_BY_TEAM[state.userTeam];
@@ -174,6 +174,8 @@ export function survey(state: GameState, g: ScheduledGame, attendance: number, s
     service: clamp(6.9 + (b.budget.gameday - 1) * 0.5 + execBoost(state, "COO") * 0.3 + n()),
     value: clamp(7.1 - (singleMult - 1) * 5 - ((b.index?.season ?? 1) - 1) * 4 + (tier - 7) * 0.6 + n()),
   };
+  // What happened at the venue that day: lines, faults, delays, the plan (venue.ts).
+  for (const [k, d] of Object.entries(adj) as [SurveyItem, number][]) scores[k] = clamp(scores[k] + d);
   const overall = Math.round((Object.values(scores).reduce((a, x) => a + x, 0) / 6) * 10) / 10;
   const out: Survey = { game: g.id, date: g.date, scores, overall };
   f.surveys.unshift(out);

@@ -2,6 +2,7 @@
 // media state other systems touch: filing a story, and how each outlet feels
 // about the owner (engine only; the owner reads it from the coverage).
 import { addDays } from "./dates";
+import { archiveStory } from "./teammedia";
 import type { GameState, MediaState, Story } from "./types";
 
 export interface MediaOutlet {
@@ -47,6 +48,11 @@ export const MEDIA: MediaOutlet[] = [
     insider: "Lena Ortiz", columnist: "Wes Huddleston", analyst: "Lena Ortiz", draft: "Wes Huddleston", reporter: "Tasha Greer",
     heat: 0.3,
   },
+  {
+    id: "beat", name: "Local beat", what: "The writers who cover our club every day for the local paper and its site (made up).",
+    insider: "Beat desk", columnist: "Beat desk", analyst: "Beat desk", draft: "Beat desk", reporter: "Beat desk",
+    heat: 0.3,
+  },
 ];
 
 export const MEDIA_BY_ID: Record<string, MediaOutlet> = Object.fromEntries(MEDIA.map((o) => [o.id, o]));
@@ -66,6 +72,7 @@ export function addStory(state: GameState, s: Omit<Story, "id" | "date">): Story
   const m = mediaState(state);
   const story: Story = { id: `${state.date}-${m.stories.length}-${s.outlet}`, date: state.date, ...s };
   m.stories.unshift(story);
+  archiveStory(state, story);
   return story;
 }
 

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { capSummary } from "../src/engine/cap";
-import { RULES } from "../src/engine/league";
+import { RULES, TEAM_BY_ID } from "../src/engine/league";
 import { advanceDay } from "../src/engine/season";
 import { compress, decompress, parseSaveFile } from "../src/save/codec";
 
@@ -147,6 +147,23 @@ describe("saves from older versions", () => {
     for (let i = 0; i < 3; i++) advanceDay(old);
     expect(old.fans).toBeDefined();
     expect(old.business!.local!.deals.some((d) => d.cat === "digital")).toBe(true);
+  }, 90_000);
+
+  it("a renamed club stays renamed, with its store, media and game-day settings", async () => {
+    const state = load("pr39-2027-02-18");
+    expect(TEAM_BY_ID.DET.name).toBe("Pioneers");
+    expect(state.merch!.online).toBe("partner");
+    expect(state.venue!.plan.show).toBe("premium");
+    expect(state.teamMedia!.spokesperson).toBe("president");
+    const back = await decompress(await compress(state));
+    expect(back.merch!.brand.name).toBe("Pioneers");
+    // An older save keeps the league's names and starts the new departments when it needs them.
+    const old = load("pr38-2027-02-15");
+    expect(TEAM_BY_ID.DET.name).toBe("Lions");
+    expect(old.merch).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.merch).toBeDefined();
+    expect(old.teamMedia).toBeDefined();
   }, 90_000);
 
   it("an older save starts keeping play-by-play with its next games", () => {
