@@ -9,6 +9,7 @@
 // real: capital calls come out of it, distributions go into it, and the
 // owner pays the taxes on the club's income (NFL clubs are pass-through
 // entities, so the club itself pays no income tax).
+import { communityScore } from "./community";
 import { billions, business, businessChief, cashBalance, pnl, valuation } from "./business";
 import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
@@ -310,7 +311,7 @@ export function scorecard(state: GameState, rec?: SeasonRecord): { scores: Recor
   // Community: the community budget, fan goodwill and projects built.
   const b = business(state);
   const built = (b.projects ?? []).filter((x) => x.opened).length;
-  const community = 38 + b.budget.community * 12 + (state.pressure.fans - 50) * 0.8 + built * 3;
+  const community = 38 + b.budget.community * 12 + (state.pressure.fans - 50) * 0.8 + built * 3 + communityScore(state);
   // Reputation: the other owners, the press, lenders and the head coach.
   const rel = Object.values(owners(state).relations);
   const rapport = rel.length ? rel.reduce((s, r) => s + r.rapport, 0) / rel.length : 0;

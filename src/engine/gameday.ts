@@ -6,6 +6,7 @@
 // little flat; a team off its bye is a little fresher. None of it decides a
 // game on its own: the effects are about the size the betting markets give
 // them.
+import { travelEdge } from "./departments";
 import { SCHEDULE } from "./league";
 import { daysBetween } from "./dates";
 import { gaussian, rngFor } from "./rng";
@@ -118,8 +119,10 @@ function restEdge(state: GameState, g: ScheduledGame, team: string, side: "away"
   }
   if (side === "away" && !g.neutral) {
     const gap = (ZONE[team] ?? 0) - (ZONE[home] ?? 0);
-    if (gap >= 2 && g.timeET < "14:00") edge -= 0.35; // a West Coast body clock at 10 AM
-    else if (Math.abs(gap) >= 2) edge -= 0.15;
+    const clock = gap >= 2 && g.timeET < "14:00" ? 0.35 : Math.abs(gap) >= 2 ? 0.15 : 0; // a West Coast body clock at 10 AM
+    edge -= clock;
+    // Our travel office: a late flight, or arriving early enough to adjust.
+    edge += travelEdge(state, g, team, clock);
   }
   return edge;
 }

@@ -10,6 +10,8 @@
 // visiting team's rooms and the medical crews. A postgame report counts
 // everything and the game's own profit; complaints that keep coming back get
 // flagged; experiments show whether a change moved the surveys.
+import { securityFactor } from "./departments";
+import { concourseNudge, faultFactor, networkFactor } from "./facilities";
 import { business, businessChief, deptCost, post } from "./business";
 import { leagueYear } from "./contracts";
 import { execBoost, execRole } from "./executives";
@@ -111,7 +113,8 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
   const f = flow(p, crowd, b.prices.parking);
   const base = flow(DEFAULT_PLAN, crowd, b.prices.parking);
   const age = Math.max(0, leagueYear(state.date) - s.opened);
-  const upkeep = (1.3 - 0.2 * b.budget.facilities) * (1 + age / 40) * (1 - 0.2 * execBoost(state, "SOD"));
+  const upkeep = (1.3 - 0.2 * b.budget.facilities) * (1 + age / 40) * (1 - 0.2 * execBoost(state, "SOD")) * faultFactor(state);
+  const guard = securityFactor(state);
   const faults: string[] = [];
   const incidents: string[] = [];
   const complaints: Record<string, number> = {};
@@ -125,7 +128,7 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
   bump("parking", -(f.arrival - base.arrival) / 10);
   bump("service", (p.staffing - 1) * 0.25 + (p.show === "premium" ? 0.3 : p.show === "basic" ? -0.3 : 0));
   bump("concessions", p.menu === "local" ? 0.3 : p.menu === "wide" ? 0.4 : 0);
-  bump("cleanliness", (p.staffing - 1) * 0.3);
+  bump("cleanliness", (p.staffing - 1) * 0.3 + concourseNudge(state));
   // Food: what was prepared against what the crowd wanted.
   const want = x.attendance * (1 + gaussian(rng) * 0.08);
   const prep = x.attendance * (1.04 + (p.staffing - 1) * 0.02);
@@ -138,7 +141,7 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
   if (shortShare > 0.03) { bump("concessions", -0.4); complain("food", x.attendance * 0.0004); }
   // Faults: older buildings and thin upkeep break more; backups catch most outages.
   for (const ft of FAULTS) {
-    const pr = 0.025 * upkeep * (ft.backed && p.backups ? 0.3 : 1);
+    const pr = 0.025 * upkeep * (ft.backed && p.backups ? 0.3 : 1) * (ft.backed ? networkFactor(state) : 1);
     if (rng() < pr) {
       faults.push(ft.what);
       bump(ft.item, -0.5);
@@ -163,12 +166,12 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
   if (ejections >= 6) complain("safety", ejections * 0.6);
   const medical = Math.round((x.attendance / 8000) * (0.7 + rng() * 0.6));
   if (medical >= 10) incidents.push(`Medical crews handled ${medical} calls, most of them heat or falls.`);
-  if (p.medics === 0 && rng() < 0.15) {
+  if (p.medics === 0 && rng() < 0.15 * guard) {
     incidents.push("A fan in cardiac arrest waited too long for a crew; the league's medical review is asking why.");
     v.investigations.unshift({ date: state.date, game: g.id, text: "Slow medical response in the stands", finding: "Crews were stretched thin under the lean medical plan. The review recommends at least the standard number of crews." });
     send(state, "league", "League Office", "Emergency medical review", "The league requires qualified medical crews and ambulances at every game. Our review found the response was slow; bring the crews back to standard.", g.id);
   }
-  if (rng() < 0.012 * [1.4, 1, 0.8, 0.6][p.security] * (rival ? 1.6 : 1)) {
+  if (rng() < 0.012 * [1.4, 1, 0.8, 0.6][p.security] * (rival ? 1.6 : 1) * guard) {
     const text = "A brawl in the upper deck spilled onto the concourse; video went viral";
     incidents.push(`${text}.`);
     v.investigations.unshift({ date: state.date, game: g.id, text, finding: p.security === 0 ? "Security was thin in that section. Staffing should come back up." : "The response was by the book. Two fans were banned from the stadium." });

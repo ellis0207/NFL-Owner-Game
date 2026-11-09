@@ -94,6 +94,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Buildings, community and support departments",
+    body: [
+      "The Buildings tab lists every part of the stadium and the team facility with its condition, the year it went in and what replacing it costs. You see the operations director's read unless you pay for an engineering study. If the club runs its stadium you choose the maintenance plan: putting it off saves money but grows a backlog that breaks more on game days and that players notice; staying ahead costs more and keeps things newer. The team facility follows its budget. You can switch between grass and turf in the offseason, and the Projects tab shows each project's payback at last year's numbers.",
+      "The team foundation gives grants to local groups in the focus areas you pick. The staff approve small, sound ones; the rest wait for you. Thin oversight is cheaper and lets a bad grant become a story. Programs beyond what the community budget pays for build trust slowly, and long commitments count most. Player services help rookies settle, cut down on conduct problems and make players likelier to stay; what players share with well-being staff is never shown to you.",
+      "On the Front office page, Departments covers travel, security and technology: a budget level, standing policies, quarterly numbers and incidents. Road trips cost more the farther they go, and flying in two days early for a cross-country game takes the edge off the body clock. Security drills make game-day incidents smaller, and gambling education heads off suspensions. Old systems and loose policies invite ransomware and data breaches, which come to you as decision memos with legal notice deadlines.",
+    ],
+  },
+  {
     title: "History and honors",
     body: [
       "Pro Bowl rosters come out in late December, the All-Pro teams after the regular season, and the awards at NFL Honors the week of the Super Bowl. Voters look at the stats, the team's record and the film, and a player with Pro Bowls behind him gets the benefit of the doubt. Pro Bowls also set the fifth-year option price for first-round picks.",

@@ -140,7 +140,7 @@ export function planTotals(plan: Partial<Record<LedgerCat, number>>): { revenue:
 
 /** Monthly lines (league money, sponsors, staff, departments, the building, the bank): one twelfth each month. */
 const MONTHLY = new Set<LedgerCat>(["national", "sponsorship", "localMedia", "naming", "staff", "staffOwed", "businessOps", "marketing", "community", "medical", "facilities", "scouts",
-  "benefits", "league", "stadium", "rent", "debt", "interest", "loanFees"]);
+  "benefits", "league", "stadium", "rent", "debt", "interest", "loanFees", "content", "security", "technology"]);
 /** Game lines: earned or spent as the preseason and regular season are played. */
 const GAMES = new Set<LedgerCat>(["tickets", "premium", "concessions", "parking", "merch", "gateShare", "gatePool", "gameday", "travel", "intl"]);
 

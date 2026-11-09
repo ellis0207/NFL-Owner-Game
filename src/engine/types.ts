@@ -1182,7 +1182,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology";
 
 export interface LedgerEntry {
   date: string;
@@ -1409,6 +1409,75 @@ export interface VenueReport {
   profit: number;
   experiment?: string;
   inspection?: string;
+}
+
+export interface FacilityPart {
+  /** Engine only: wear since the last replacement, 0 new to 100 worn out. The owner sees a read, or a study's numbers. */
+  wear: number;
+  replaced: number;
+}
+export interface FacilitiesState {
+  parts: Record<string, FacilityPart>;
+  /** How the stadium's maintenance budget is spent: put off, as scheduled, or ahead of schedule. */
+  plan: "defer" | "standard" | "ahead";
+  surface: "grass" | "turf";
+  /** League year of the last engineering study. */
+  study?: number;
+  surveys: { year: number; scores: Record<string, number>; notes: string[] }[];
+  log: { date: string; key: string; cost: number; auto: boolean }[];
+}
+export interface Grant {
+  id: string;
+  date: string;
+  org: string;
+  area: string;
+  amount: number;
+  status: "pending" | "approved" | "declined";
+  /** Engine only: how well the group will use the money. */
+  quality: number;
+  outcome?: string;
+}
+export interface CommunityState {
+  focus: string[];
+  foundation: { balance: number; clubGift: number; given: number; raised: number; ownerGiven: number };
+  /** Foundation staff and board review: 0 thin, 1 standard, 2 thorough. */
+  oversight: 0 | 1 | 2;
+  /** Grants approved by the staff without the owner, up to this amount. */
+  autoLimit: number;
+  programs: Record<string, boolean>;
+  services: Record<string, boolean>;
+  /** The season each program started, for long commitments. */
+  since: Record<string, number>;
+  grants: Grant[];
+  appearances: { season: number; count: number; players: Record<string, number> };
+  alumni: { events: number; last?: string; names: string[] };
+  partnership: boolean;
+  reports: { year: number; spent: number; grants: number; participants: number; text: string }[];
+}
+export interface DeptState {
+  director: string;
+  budget: 0 | 1 | 2 | 3;
+  policy: Record<string, string>;
+  metrics: { quarter: string; values: Record<string, number> }[];
+}
+export interface TripReport {
+  game: string;
+  date: string;
+  where: string;
+  miles: number;
+  people: number;
+  costs: { charter: number; hotel: number; ground: number; meals: number; equipment: number; security: number };
+  delay?: number;
+  note?: string;
+}
+export interface DepartmentsState {
+  travel: DeptState;
+  security: DeptState;
+  it: DeptState;
+  trips: TripReport[];
+  /** Core systems: the year each went in, and a replacement under way. */
+  systems: Record<string, { since: number; until?: string }>;
+  incidents: { date: string; dept: "travel" | "security" | "it"; text: string; cost?: number }[];
 }
 
 export interface VenueState {
@@ -1768,6 +1837,9 @@ export interface GameState {
   merch?: MerchState;
   teamMedia?: TeamMediaState;
   venue?: VenueState;
+  facilities?: FacilitiesState;
+  community?: CommunityState;
+  departments?: DepartmentsState;
   /** Stadium leases with the city or stadium authority, by team (publicly owned buildings only). */
   leases?: Record<string, LeaseState>;
   /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */
@@ -1824,7 +1896,7 @@ export interface PositionBattle {
   decided?: string;
 }
 
-export type IncidentKind = "ped" | "substance" | "comments" | "conduct" | "minicamp";
+export type IncidentKind = "ped" | "substance" | "gambling" | "comments" | "conduct" | "minicamp";
 
 /** A discipline matter: a failed drug test, something said in public, a missed meeting. */
 export interface Incident {
@@ -2173,7 +2245,7 @@ export interface MemoOption {
 /** A decision memo: the proposal, who's responsible, the case, the money and the deadline. */
 export interface Memo {
   id: string;
-  kind: "signing" | "street" | "trade" | "pricing" | "retain" | "overrun" | "refinance" | "coachReview" | "execReview" | "complaint" | "dispute" | "general";
+  kind: "signing" | "street" | "trade" | "pricing" | "retain" | "overrun" | "refinance" | "coachReview" | "execReview" | "complaint" | "dispute" | "incident" | "general";
   date: string;
   area?: DecisionArea;
   from: string;

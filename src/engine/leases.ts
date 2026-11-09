@@ -9,6 +9,7 @@
 // rolls over a year at a time at a higher rent. Public money from a new lease
 // goes into a renovation fund the owner's stadium projects draw on first.
 // Moving the team is a later step: for now no one can credibly threaten it.
+import { cityGoodwill } from "./community";
 import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
 import { money, news, send } from "./inbox";
@@ -82,7 +83,9 @@ function generosity(state: GameState, team: string): number {
   const age = nextSeason(state) - s.opened;
   const rng = rngFor(state.seed, `lease-mood:${team}:${nextSeason(state)}`);
   const authority = s.structure === "publicAuthority" ? 0.1 : 0;
-  return Math.max(0.1, Math.min(0.95, 0.35 + Math.min(0.25, age / 100) + authority + (rng() - 0.5) * 0.3));
+  // Our shared programs with the city count for something at the table.
+  const goodwill = team === state.userTeam ? cityGoodwill(state) : 0;
+  return Math.max(0.1, Math.min(0.95, 0.35 + Math.min(0.25, age / 100) + authority + goodwill + (rng() - 0.5) * 0.3));
 }
 
 function firstOffer(state: GameState, team: string): LeaseOffer {

@@ -341,3 +341,6 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 .wp-chart .mid { stroke: var(--rule); stroke-dasharray: 3 3; }
 .wp-chart .line { fill: none; stroke: var(--ink); stroke-width: 1.5; }
 .wp-chart text { fill: var(--muted); font-size: 10px; }
+
+/* Long option text stays inside its panel. */
+.panel select { max-width: 100%; }

@@ -4,6 +4,8 @@
  * them. Kept to policy matters on purpose: nothing criminal.
  */
 import { changeMorale, priorities } from "./agents";
+import { disciplineCut } from "./community";
+import { gamblingCut } from "./departments";
 import { program } from "./camp";
 import { teamPlayerIds } from "./cap";
 import { dealOf, dealYear, leagueYear } from "./contracts";
@@ -21,7 +23,10 @@ import type { GameState, IncidentKind, OwnerDecision } from "./types";
 const KEY = RULES.keyDates;
 
 /** League-wide incidents a year, by kind. */
-const PER_YEAR: Record<Exclude<IncidentKind, "minicamp">, number> = { ped: 7, substance: 8, comments: 14, conduct: 6 };
+const PER_YEAR: Record<Exclude<IncidentKind, "minicamp">, number> = { ped: 7, substance: 8, gambling: 2, comments: 14, conduct: 6 };
+
+/** Betting on other sports from a team facility costs two games under the league's gambling policy. */
+const GAMBLING_GAMES = 2;
 
 /** A first violation of the policy on performance-enhancing substances costs six games. */
 const PED_GAMES = 6;
@@ -74,6 +79,18 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
   const p = PLAYER_BY_ID[id];
   const ours = team === state.userTeam;
   const log = program(state).incidents;
+  // Our player services and the security staff's gambling education head some of these off.
+  const cut = ours ? (kind === "gambling" ? gamblingCut(state) : kind === "conduct" || kind === "comments" ? disciplineCut(state) : 0) : 0;
+  if (cut > 0 && rng() < cut) return;
+  if (kind === "gambling") {
+    state.players[id].suspended = { games: GAMBLING_GAMES, reason: "the league's gambling policy" };
+    const text = `Suspended ${GAMBLING_GAMES} games for betting on other sports from a team facility`;
+    log.push({ date: state.date, team, player: id, kind, games: GAMBLING_GAMES, text });
+    news(state, `${p.name} (${teamLabel(team)}) suspended ${GAMBLING_GAMES} games under the league's gambling policy`);
+    if (ours) send(state, "league", "League Office", `${p.name} suspended`,
+      `${p.name} placed bets on other sports while at the team facility, which the gambling policy forbids. He is suspended ${GAMBLING_GAMES} regular-season games without pay.`);
+    return;
+  }
   if (kind === "ped") {
     state.players[id].suspended = { games: PED_GAMES, reason: "the policy on performance-enhancing substances" };
     const when = state.date >= KEY.regularSeasonStart && state.date <= KEY.regularSeasonEnd ? "effective immediately" : "to start the regular season";

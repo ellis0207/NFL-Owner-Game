@@ -166,6 +166,21 @@ describe("saves from older versions", () => {
     expect(old.teamMedia).toBeDefined();
   }, 90_000);
 
+  it("a save with building, community and department settings keeps them", async () => {
+    const state = load("pr40-2027-03-02");
+    expect(state.facilities!.plan).toBe("defer");
+    expect(state.community!.programs.clinics).toBe(true);
+    expect(state.departments!.travel.policy.arrive).toBe("early");
+    const back = await decompress(await compress(state));
+    expect(back.community!.services.family).toBe(true);
+    // An older save starts the new departments on the first of a month.
+    const old = load("pr39-2027-02-18");
+    expect(old.facilities).toBeUndefined();
+    for (let i = 0; i < 12; i++) advanceDay(old);
+    expect(old.facilities).toBeDefined();
+    expect(old.departments).toBeDefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();
