@@ -85,6 +85,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Store, media and game day",
+    body: [
+      "Jerseys are ordered before the season by player, on the staff's forecast: order deep and you risk markdowns and a liquidator if a player leaves, order thin and the racks go empty. Sales follow the record, injuries and what nobody could forecast. The stores and the online shop can run in-house or through an operator or partner who takes a share and the risk. Counterfeiters work the big games unless the club pays to go after them. The league's licensing royalties are national money, shared equally.",
+      "A new uniform, a new logo or a new name needs the league's approval and a season or two of lead time, and the league wants marks to last. A new name costs about $30M, old stock is written off, and longtime fans take years to forgive it; new gear sells well for a few seasons. A throwback line sells best in a title anniversary year.",
+      "The national TV and streaming deals belong to the league and run through 2033, with an opt-out after 2029; the Media tab shows a range for what comes after. The club's own content department makes a podcast, a weekly local show and, if you want, a season documentary and content for the international market the league assigns. A bigger audience makes digital sponsorship worth more. Beat writers keep their own sources; open access warms them and leaks more. Choose who answers press questions for the club, and search every headline in the archive.",
+      "The Game day tab sets the standing orders for home games: staff, security, medical crews, alcohol rules, the show, the menu, transit and a severe weather plan. After each game the operations staff report the lines, food that ran out or was thrown away, outages, ejections and medical calls, complaints and the game's own books. Problems that keep coming back get flagged. Experiments run for three games and report what the surveys said.",
+    ],
+  },
+  {
     title: "History and honors",
     body: [
       "Pro Bowl rosters come out in late December, the All-Pro teams after the regular season, and the awards at NFL Honors the week of the Super Bowl. Voters look at the stats, the team's record and the film, and a player with Pro Bowls behind him gets the benefit of the doubt. Pro Bowls also set the fifth-year option price for first-round picks.",

@@ -17,6 +17,7 @@ import { standings, winPct } from "./standings";
 import { execBoost } from "./executives";
 import { controlsNaming, dealTerms, exclusivityDrag, initialNaming, namingPartner, rightsConflict } from "./sponsors";
 import { STADIUM_BY_TEAM } from "./stadiums";
+import { audienceLift } from "./teammedia";
 import type { GameState, LocalDeal, LocalDeals, LocalOffer } from "./types";
 
 interface Category {
@@ -71,6 +72,8 @@ function partners(state: GameState, cat: string): string[] {
 /** What a category is worth on the market in a league year, before how hot the team is. */
 export function par(state: GameState, cat: string, year: number): number {
   if (cat === "naming") return STADIUM_BY_TEAM[state.userTeam].naming * inflation(year, 0.03);
+  // A digital partner pays for our audience.
+  if (cat === "digital") return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share * audienceLift(state);
   return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share;
 }
 

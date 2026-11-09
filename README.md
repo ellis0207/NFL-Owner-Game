@@ -322,6 +322,23 @@ name and a digital partnership, partners get year-end delivery reports with
 make-goods, and some fail to pay or land in scandals. The forecast now plans
 player pay from how the club actually spends against the cap.
 
+The club runs its own store, media and game days. Jerseys are ordered
+before the season by player on the staff's forecast, sell with the record
+and injuries, and get marked down or liquidated when a player leaves; the
+stores and online shop run in-house or through partners, counterfeiters
+work the big games, and the league's licensing royalties stay national.
+Rebrands (uniforms, a logo, even a new name) need the league's approval,
+cost real money and lead time, and a new name costs fans' trust for years.
+The Media tab shows the league's real TV and streaming deals, our share and
+a range for after the 2029 opt-out, a content department with its shows,
+social followers that make digital sponsorship worth more, beat writers and
+their sources, a spokesperson for press questions and a searchable archive
+of headlines. The Game day tab sets staffing, security, medical crews,
+alcohol rules, the show, the menu, transit and a weather plan, and after
+each home game the operations staff report lines, food, outages, incidents,
+complaints and the game's own books, with recurring problems flagged and
+three-game experiments.
+
 The owner's office runs like a real club's. At the start you set up who
 you are: a background (finance, real estate, a company you built, an old
 football family or a former player, each with its own edge), how much money
@@ -511,7 +528,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
-  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
+  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

@@ -41,6 +41,9 @@ import { execBoost, execPayrollOver, signer } from "./executives";
 import { fanDemand, metroPop, priceSensitivity, reachLift, survey, trustHit } from "./fans";
 import { rivalryHeat } from "./records";
 import { namingIncome } from "./sponsors";
+import { bigGame, merchGame } from "./merch";
+import { venueGame } from "./venue";
+import { afterOurGame, contentMonthly, defaultContentNet } from "./teammedia";
 import { afterHomeGame, applyRenewals, gameTier, hospitalityRevenue, planRenewals, premiumUse, pslCash, recommendedIncrease, sellGeneral, tix, type Sale } from "./ticketing";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, GameTier, LedgerCat, Promo, ScheduledGame, StadiumEvent, Zone } from "./types";
 
@@ -160,6 +163,9 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   bids: { label: "Bids to host the Super Bowl or the draft", side: "out" },
   seatLicenses: { label: "Personal seat licenses", side: "in" },
   research: { label: "Market research", side: "out" },
+  content: { label: "Team media and content", side: "out" },
+  brand: { label: "Rebrand and trademark work", side: "out" },
+  venue: { label: "Game-day staffing and services beyond the budget", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -515,6 +521,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
     }
   }
   if (r.home !== us && r.away !== us) return;
+  afterOurGame(state, g, r);
   const oppTeam = r.home === us ? r.away : r.home;
   // Playoff gates go to the league; the home team keeps what's sold inside the building.
   if (g.type === "POST" && r.home === us && g.round !== "SB") {
@@ -571,11 +578,12 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   post(state, "premium", gr.premium, what);
   post(state, "concessions", gr.concessions, what);
   post(state, "parking", gr.parking, what);
-  post(state, "merch", gr.merch, what);
+  const mg = merchGame(state, g, gr.merch, bigGame(state, g) || gr.tier === "marquee");
+  post(state, "merch", mg.net, what);
   if (gr.sale.resaleFee) post(state, "tickets", gr.sale.resaleFee, `${what}: fees on resales through the team exchange`);
   post(state, "gateShare", -gr.tickets * GATE_SHARE, `${what}: 34% of the gate after the stadium deduction`);
   post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), what);
-  const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + gr.merch + gr.sale.resaleFee;
+  const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + mg.net + gr.sale.resaleFee;
   const sl = gr.sale;
   b.gates.unshift({
     game: g.id, date: g.date, opp: o, type: g.type === "PRE" ? "PRE" : "REG", capacity: s.capacity, sold: gr.sold, seasonHolders: gr.holders,
@@ -584,8 +592,12 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
     dynamic: sl.dynamic, premiumUse: gr.premiumUse, zones: sl.zones,
   });
   afterHomeGame(state, g, sl);
+  const vg = venueGame(state, g, {
+    attendance: gr.attendance, sold: gr.sold, comps: sl.comps, noShows: gr.noShows, revenue, gateShare: gr.tickets * GATE_SHARE,
+    concessions: gr.concessions, parking: gr.parking, merch: mg.net, merchShort: mg.short,
+  });
   if (g.type === "PRE") return;
-  survey(state, g, gr.attendance, b.prices.single * (sl.dynamic || 1), rngFor(state.seed, `survey:${g.id}`));
+  survey(state, g, gr.attendance, b.prices.single * (sl.dynamic || 1), rngFor(state.seed, `survey:${g.id}`), vg.adj);
   // How the crowd feels about the prices and the building.
   const ctrl = controlOf(s);
   fans(state, [-0.6, 0, 0.4, 0.7][b.budget.gameday] + (ctrl.concessions ? CONCESSIONS[b.prices.concessions].fans : 0) -
@@ -929,7 +941,9 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   const top = state.staff ? pay.staff - BUDGETED_TOP_STAFF * grow : 0;
   add("staff", -m(FOOTBALL_STAFF * grow + top));
   if (pay.owed) add("staffOwed", -m(pay.owed), "Fired staff still under contract");
-  add("businessOps", -m(businessOps(us) * grow * opsFactor(state)));
+  // The business staff budget already pays for a standard content department; changes to it are on the content line.
+  add("businessOps", -m(businessOps(us) * grow * opsFactor(state) - defaultContentNet(year)));
+  for (const it of contentMonthly(state, year)) add(it.cat, it.amount, it.note);
   // The executives' pay above what the budget assumes, and anyone let go but still being paid.
   const execOver = execPayrollOver(state);
   if (execOver) add("businessOps", -m(execOver), "Executive pay above budget and severance");

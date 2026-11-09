@@ -38,6 +38,8 @@ import { playCaller, teamSchemes, teamStaff } from "./staff";
 import { fillConference, fillDivisional, fillSuperBowl, fillWildCard, matchup, standings } from "./standings";
 import { commerceDaily } from "./commerce";
 import { fansDaily } from "./fans";
+import { bindBrand, merchDaily } from "./merch";
+import { teamMediaDaily } from "./teammedia";
 import { sponsorsDaily } from "./sponsors";
 import { projectsDaily } from "./projects";
 import { reviewDaily } from "./review";
@@ -121,6 +123,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   ensureStaff(state);
   ensureLeases(state);
   bindLeases(state);
+  bindBrand(state);
   ensurePositionCoaches(state);
   state.college = newCollege(state);
   business(state);
@@ -551,6 +554,8 @@ export function advanceDay(state: GameState): void {
   commerceDaily(state);
   fansDaily(state);
   sponsorsDaily(state);
+  merchDaily(state);
+  teamMediaDaily(state);
   projectsDaily(state);
   leasesDaily(state);
   debtDaily(state);

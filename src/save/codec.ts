@@ -1,6 +1,7 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
 import { bindLeases, ensureLeases } from "../engine/leases";
+import { bindBrand } from "../engine/merch";
 import { ensurePositionCoaches } from "../engine/positionCoaches";
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
@@ -82,6 +83,7 @@ export function migrate(state: GameState): GameState {
   ensureStaff(state);
   ensureLeases(state);
   bindLeases(state);
+  bindBrand(state);
   ensurePositionCoaches(state);
   // In-season moves used to leak into next year's rollover; rollover only exists from the Super Bowl on.
   if (state.date <= RULES.keyDates.superBowl) {
