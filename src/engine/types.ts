@@ -1182,7 +1182,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research";
 
 export interface LedgerEntry {
   date: string;
@@ -1211,6 +1211,81 @@ export interface GateRecord {
   /** Single-game demand at that price over the seats we had: above 1 means the resale market is hot. */
   heat: number;
   revenue: number;
+  /** Batch I: the turnstile and the resale market, the game's price tier and premium seats in use. */
+  attendance?: number;
+  noShows?: number;
+  comps?: number;
+  resale?: { listed: number; sold: number; price: number };
+  groups?: number;
+  promo?: number;
+  tier?: GameTier;
+  dynamic?: number;
+  premiumUse?: number;
+  zones?: { sold: number; seats: number; price: number }[];
+}
+
+export type GameTier = "marquee" | "standard" | "value";
+export type FanSegment = "casual" | "subscribers" | "families" | "corporate" | "premium";
+export type SurveyItem = "parking" | "lines" | "concessions" | "cleanliness" | "service" | "value";
+
+/** One home game's post-game survey, 1-10 a question. */
+export interface Survey {
+  game: string;
+  date: string;
+  scores: Record<SurveyItem, number>;
+  overall: number;
+}
+
+/** The fan base: the market, who buys, how they feel about the club. */
+export interface FanState {
+  /** League-wide economy, 1 is normal. */
+  economy: number;
+  /** This year's pull of everything else to do in our market, 1 is normal. */
+  competition: number;
+  /** Confidence in the club's leadership, fairness and service, 0-100, and the part of the damage that lasts. */
+  trust: number;
+  scar: number;
+  /** Generational loyalty, built over decades of winning and losing, and where it started. */
+  core: number;
+  core0: number;
+  sat: Record<FanSegment, number>;
+  /** Followers by where they live, and the national number when the owner took over. */
+  reach: { local: number; region: number; national: number; intl: number };
+  national0: number;
+  surveys: Survey[];
+  /** Customer records: complaints, upgrades and contacts this season. */
+  crm: { season: number; complaints: number; upgrades: number; contacts: number; newSubs: number; newBuyers: number };
+  /** Seasons already rolled into core loyalty. */
+  seasons: number[];
+  log: { date: string; text: string }[];
+}
+
+export type Zone = "lowerSide" | "lowerEnd" | "upperSide" | "upperEnd";
+export type Promo = "none" | "family" | "young";
+
+export interface TicketingState {
+  /** Owner's price for each zone against the default spread. */
+  zones: Record<Zone, number>;
+  /** Variable pricing by game: the multiplier for each tier (all 1 means one price for every game). */
+  tiers: Record<GameTier, number>;
+  dynamic: boolean;
+  groups: boolean;
+  promo: Promo;
+  /** Resale: "open" lets fans use any site; "official" routes transfers through the team's exchange. */
+  transfers: "open" | "official";
+  /** Unused suites sold as corporate hospitality packages. */
+  hospitality: boolean;
+  waitlist: number;
+  /** Season-ticket holders by how long they've held them. */
+  tenure: { long: number; mid: number; recent: number };
+  psl?: { season: number; price: number; holders: number; revenue: number };
+  /** Share of suites and club seats under lease, 1 is the 2026 book. */
+  premiumBook: number;
+  research?: { season: number; date: string };
+  /** Renewal history by segment. */
+  renewals: { season: number; long: number; mid: number; recent: number; premium: number; waitlist: number; added: number }[];
+  /** Spending on finding new ticket buyers this season and how many came in. */
+  acquisition: { season: number; spend: number; added: number }[];
 }
 
 export type EventKind = "concert" | "college" | "soccer" | "motorsports" | "hockey" | "combat" | "highschool" | "private" | "bowl" | "tenant";
@@ -1292,6 +1367,8 @@ export interface BusinessState {
   projects?: Project[];
   /** Season-ticket deposits collected for a season not yet played: they count toward the tickets as the home games are played. */
   deferred?: { season: number; amount: number; applied: number };
+  /** Price zones, variable and dynamic pricing, resale, seat licenses and the waiting list (ticketing.ts). */
+  tix?: TicketingState;
 }
 
 /** A local partner's deal: the value is the first year's fee, and it rises 3% a year. */
@@ -1302,6 +1379,15 @@ export interface LocalDeal {
   start: number;
   years: number;
   value: number;
+  /** Batch I: exclusive in its category, the partner's relationship with the club (0-100), its yearly chance of failing to pay, a scandal, and how much it delivered. */
+  exclusive?: boolean;
+  rel?: number;
+  risk?: number;
+  scandal?: string;
+  delivered?: Record<number, number>;
+  /** Fees owed and not yet paid. */
+  overdue?: number;
+  ended?: string;
 }
 
 export interface LocalOffer {
@@ -1311,6 +1397,7 @@ export interface LocalOffer {
   years: number;
   value: number;
   incumbent?: boolean;
+  exclusive?: boolean;
 }
 
 export interface LocalDeals {
@@ -1320,6 +1407,8 @@ export interface LocalDeals {
   window?: { year: number; closes: string };
   /** Categories the owner chose to leave empty for a year. */
   vacant: string[];
+  /** Expiring deals each year: how many and how much the incumbents kept. */
+  retention?: { year: number; up: number; renewed: number; before: number; after: number }[];
 }
 
 export interface Project {
@@ -1539,6 +1628,8 @@ export interface GameState {
   staff?: StaffState;
   /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
   business?: BusinessState;
+  /** The fan base and the market (fans.ts). */
+  fans?: FanState;
   /** Stadium leases with the city or stadium authority, by team (publicly owned buildings only). */
   leases?: Record<string, LeaseState>;
   /** This season's offseason program, training camp and discipline (spring.ts, camp.ts, discipline.ts). */

@@ -15,6 +15,8 @@ import { projectEffects } from "./projects";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { standings, winPct } from "./standings";
 import { execBoost } from "./executives";
+import { controlsNaming, dealTerms, exclusivityDrag, initialNaming, namingPartner, rightsConflict } from "./sponsors";
+import { STADIUM_BY_TEAM } from "./stadiums";
 import type { GameState, LocalDeal, LocalDeals, LocalOffer } from "./types";
 
 interface Category {
@@ -36,17 +38,26 @@ export const LOCAL_CATS: Record<string, Category> = {
   airline: { label: "Official airline", share: 0.06, partners: ["Bluewing Airlines", "Northstar Air", "Coastal Jet"] },
   drink: { label: "Official soft drink", share: 0.06, partners: ["Fizz Cola", "Sparkwater", "Peak Soda"] },
   insurance: { label: "Official insurance partner", share: 0.05, partners: ["Shieldline Insurance", "Harborview Mutual", "Cornerstone Insurance"] },
+  digital: { label: "Digital partner (app, newsletter, social)", share: 0.05, partners: ["Streamline Media", "Pixelforge Studios", "Northbeam Digital", "Clickwise"] },
+  practice: { label: "Practice facility name", share: 0.03, partners: ["Granite Health Performance Center", "Summit Mutual Training Complex", "Harbor Freightways Practice Facility", "Ridgeway Energy Performance Center"] },
   radio: { label: "Flagship radio station", share: 0.06, media: true, partners: [] },
   tv: { label: "Preseason TV and team shows", share: 0.02, media: true, partners: [] },
+  naming: { label: "Stadium naming rights", share: 0, partners: [] },
 };
 /** Dozens of smaller partners, signed by the sales staff: what the marketing budget and the fans' mood drive. */
-const SMALL_PARTNERS = 0.12;
+const SMALL_PARTNERS = 0.04;
 /** Deals rise this much a year. */
 const ESCALATOR = 0.03;
 
 const WEST = new Set(["KC", "MIN", "DAL", "HOU", "DEN", "LV", "LAC", "LA", "SF", "SEA", "ARI"]);
 
+/** The categories this club sells: stadium naming only where the club controls it. */
+export function categories(state: GameState): string[] {
+  return Object.keys(LOCAL_CATS).filter((c) => c !== "naming" || controlsNaming(state));
+}
+
 function partners(state: GameState, cat: string): string[] {
+  if (cat === "naming") return [namingPartner(state)];
   const c = LOCAL_CATS[cat];
   if (c.partners.length) return c.partners;
   // Made-up stations, with call letters the way the FCC hands them out (K west of the Mississippi, W east).
@@ -57,7 +68,9 @@ function partners(state: GameState, cat: string): string[] {
     : [`${call()}-TV Channel 4`, `${call()}-TV Channel 9`, `${call()}-TV Channel 11`];
 }
 
-function par(state: GameState, cat: string, year: number): number {
+/** What a category is worth on the market in a league year, before how hot the team is. */
+export function par(state: GameState, cat: string, year: number): number {
+  if (cat === "naming") return STADIUM_BY_TEAM[state.userTeam].naming * inflation(year, 0.03);
   return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share;
 }
 
@@ -68,10 +81,30 @@ export function dealValue(d: LocalDeal, year: number): number {
 
 export function localDeals(state: GameState): LocalDeals {
   const b = business(state);
-  if (b.local) return b.local;
-  // The deals in place when the owner takes over: staggered terms, so a few come up every year.
+  if (b.local) {
+    // Saves from before digital, practice-facility and naming deals get them now.
+    if (!b.local.deals.some((d) => d.cat === "digital")) {
+      // They run at least through next league year, so none lapses before its first renewal window.
+      const added = startingDeals(state, ["digital", "practice", ...(controlsNaming(state) ? ["naming"] : [])]);
+      const next = leagueYear(state.date) + 1;
+      for (const d of added) d.years = Math.max(d.years, next - d.start + 1);
+      b.local.deals.push(...added);
+    }
+    return b.local;
+  }
+  b.local = { deals: startingDeals(state, categories(state)), offers: [], vacant: [] };
+  return b.local;
+}
+
+/** The deals in place when the owner takes over: staggered terms, so a few come up every year. */
+function startingDeals(state: GameState, cats: string[]): LocalDeal[] {
   const deals: LocalDeal[] = [];
-  for (const cat of Object.keys(LOCAL_CATS)) {
+  for (const cat of cats) {
+    if (cat === "naming") {
+      const n = initialNaming(state);
+      if (n) deals.push(n);
+      continue;
+    }
     const rng = rngFor(state.seed, `local:${state.userTeam}:${cat}`);
     const years = 2 + Math.floor(rng() * 5);
     const end = BASE_SEASON + Math.floor(rng() * Math.min(5, years));
@@ -79,10 +112,10 @@ export function localDeals(state: GameState): LocalDeals {
     const list = partners(state, cat);
     // Priced near today's market, less the raises it has already had.
     const value = (par(state, cat, BASE_SEASON) * (0.92 + 0.12 * rng())) / Math.pow(1 + ESCALATOR, BASE_SEASON - start);
-    deals.push({ cat, partner: list[Math.floor(rng() * list.length)], start, years, value: Math.round(value) });
+    const exclusive = !rightsConflict(state, cat, true) && rng() < 0.5;
+    deals.push({ cat, partner: list[Math.floor(rng() * list.length)], start, years, value: Math.round(value), exclusive, ...dealTerms(cat, rng) });
   }
-  b.local = { deals, offers: [], vacant: [] };
-  return b.local;
+  return deals;
 }
 
 /** This league year's local money: named sponsors and the small partners, and radio and TV. */
@@ -92,6 +125,7 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
   let sponsors = 0;
   let media = 0;
   for (const d of l.deals) {
+    if (d.cat === "naming") continue;
     const v = dealValue(d, year);
     if (LOCAL_CATS[d.cat].media) media += v;
     else sponsors += v;
@@ -102,6 +136,8 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
   sponsors *= 1 + 0.04 * execBoost(state, "CRO");
   // Partners who've lost confidence in the club spend less with it.
   sponsors *= 1 + ((state.culture?.rel.sponsors ?? 60) - 60) / 1000;
+  // Exclusive partners keep their rivals out, and with them some smaller deals.
+  sponsors -= exclusivityDrag(state, year);
   return { sponsors, media };
 }
 
@@ -116,7 +152,10 @@ export function sponsorHeat(state: GameState): number {
   const played = r ? r.w + r.l + r.t : 0;
   const wp = played >= 4 ? winPct(r.w, r.l, r.t) : 0.5;
   const playoff = state.seeds && [...state.seeds.AFC, ...state.seeds.NFC].includes(state.userTeam) ? 0.04 : 0;
-  return 0.78 + state.pressure.fans / 400 + 0.2 * wp + playoff + [-0.03, 0, 0.02, 0.04][business(state).budget.marketing] + projectEffects(state).sponsor + hostEffects(state, state.userTeam).sponsor;
+  // Companies spend more in a strong economy, and on clubs fans trust.
+  const f = state.fans;
+  const extra = f ? (Math.pow(f.economy, 0.5) - 1) + (f.trust - 60) / 1000 : 0;
+  return 0.78 + state.pressure.fans / 400 + 0.2 * wp + playoff + [-0.03, 0, 0.02, 0.04][business(state).budget.marketing] + projectEffects(state).sponsor + hostEffects(state, state.userTeam).sponsor + extra;
 }
 
 /** Renewal season opens February 1 for every deal that ends with the league year. */
@@ -128,23 +167,42 @@ function makeOffers(state: GameState, year: number): void {
   const l = localDeals(state);
   const heat = sponsorHeat(state);
   const next = year + 1;
-  for (const cat of Object.keys(LOCAL_CATS)) {
+  const ret = { year: next, up: 0, renewed: 0, before: 0, after: 0 };
+  for (const cat of categories(state)) {
     const current = dealFor(state, cat, year);
     const renewing = current && current.start + current.years - 1 === year;
     const empty = !dealFor(state, cat, next);
     if (!renewing && !(empty && !current)) continue;
     const rng = rngFor(state.seed, `offers:${year}:${cat}`);
-    const base = par(state, cat, next) * heat;
+    const naming = cat === "naming";
+    // Naming partners pay for the market more than the season.
+    const base = par(state, cat, next) * (naming ? Math.pow(heat, 0.4) : heat) * ((cat === "beer" || cat === "drink") && rightsConflict(state, cat, false) ? 0.75 : 1);
     const list = partners(state, cat).filter((p) => p !== current?.partner);
-    const offer = (partner: string, incumbent: boolean, r: Rng): LocalOffer => ({
-      id: `${next}:${cat}:${partner}`, cat, partner, incumbent,
-      years: incumbent ? 3 + Math.floor(r() * 3) : 2 + Math.floor(r() * 5),
-      value: Math.round(base * (incumbent ? 0.98 + gaussian(r) * 0.04 : 0.97 + gaussian(r) * 0.08) / 1000) * 1000,
-    });
-    if (renewing) l.offers.push(offer(current!.partner, true, rng));
+    const offer = (partner: string, incumbent: boolean, r: Rng): LocalOffer => {
+      // A partner that liked the relationship pays to keep it; exclusivity costs a fifth more where it can be sold.
+      const exclusive = incumbent ? !!current?.exclusive && !rightsConflict(state, cat, true) : !naming && !rightsConflict(state, cat, true) && r() < 0.4;
+      const rel = incumbent ? 1 + ((current?.rel ?? 60) - 60) / 600 : 1;
+      return {
+        id: `${next}:${cat}:${partner}`, cat, partner, incumbent, exclusive,
+        years: naming ? 8 + Math.floor(r() * 10) : incumbent ? 3 + Math.floor(r() * 3) : 2 + Math.floor(r() * 5),
+        value: Math.round(base * rel * (exclusive ? 1.2 : 1) * (incumbent ? 0.98 + gaussian(r) * 0.04 : 0.97 + gaussian(r) * 0.08) / 1000) * 1000,
+      };
+    };
+    if (renewing) {
+      ret.up++;
+      ret.before += dealValue(current!, year);
+      // A partner that soured on the club doesn't come back to the table.
+      if ((current!.rel ?? 60) >= 35) l.offers.push(offer(current!.partner, true, rng));
+    }
+    // A new name on the stadium would need the league's and the city's sign-off, so the staff deals only with the current partner.
+    if (naming) {
+      if (renewing && (current!.rel ?? 60) >= 35) l.offers.push({ ...offer(current!.partner, true, rng), id: `${next}:${cat}:${current!.partner}:short`, years: 5 });
+      continue;
+    }
     const rivals = 1 + Math.floor(rng() * 2);
     for (let i = 0; i < rivals && list.length; i++) l.offers.push(offer(list.splice(Math.floor(rng() * list.length), 1)[0], false, rng));
   }
+  if (ret.up) (l.retention ??= []).unshift(ret);
 }
 
 /** The owner takes an offer: it starts with the new league year. */
@@ -154,8 +212,13 @@ export function signLocalOffer(state: GameState, id: string): string | null {
   if (!o || !l.window) return "That offer is no longer on the table.";
   const start = l.window.year + 1;
   l.deals = l.deals.filter((d) => !(d.cat === o.cat && d.start >= start));
-  l.deals.push({ cat: o.cat, partner: o.partner, start, years: o.years, value: o.value });
+  l.deals.push({ cat: o.cat, partner: o.partner, start, years: o.years, value: o.value, exclusive: o.exclusive, ...dealTerms(o.cat, rngFor(state.seed, `terms:${o.id}`)) });
   l.offers = l.offers.filter((x) => x.cat !== o.cat);
+  const ret = l.retention?.find((r) => r.year === start);
+  if (ret) {
+    if (o.incumbent) ret.renewed++;
+    ret.after += o.value;
+  }
   l.vacant = l.vacant.filter((c) => c !== o.cat);
   news(state, `${TEAM_BY_ID[state.userTeam].name} ${o.incumbent ? "renew" : "sign"} ${o.partner} as ${LOCAL_CATS[o.cat].label.toLowerCase()} (${o.years} years)`);
   return null;
@@ -176,7 +239,7 @@ function closeWindow(state: GameState): void {
   for (const cat of cats) {
     const best = l.offers.filter((o) => o.cat === cat).sort((a, b) => b.value * Math.min(b.years, 4) - a.value * Math.min(a.years, 4))[0];
     signLocalOffer(state, best.id);
-    signed.push(`${LOCAL_CATS[cat].label}: ${best.partner}, ${best.years} years at ${money(best.value)} a year`);
+    signed.push(`${LOCAL_CATS[cat].label}: ${best.partner}, ${best.years} years at ${money(best.value)} a year${best.exclusive ? ", exclusive" : ""}`);
   }
   if (signed.length) send(state, "business", businessChief(state), "Sponsor deals we closed", `You hadn't picked in these categories, so we took the best offer:\n\n${signed.join("\n")}`);
   l.window = undefined;

@@ -38,7 +38,11 @@ import { analyticsCost } from "./strategy";
 import { merchLift } from "./clubhouse";
 import { programsCost } from "./training";
 import { execBoost, execPayrollOver, signer } from "./executives";
-import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, LedgerCat, ScheduledGame, StadiumEvent } from "./types";
+import { fanDemand, metroPop, priceSensitivity, reachLift, survey, trustHit } from "./fans";
+import { rivalryHeat } from "./records";
+import { namingIncome } from "./sponsors";
+import { afterHomeGame, applyRenewals, gameTier, hospitalityRevenue, planRenewals, premiumUse, pslCash, recommendedIncrease, sellGeneral, tix, type Sale } from "./ticketing";
+import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, GameTier, LedgerCat, Promo, ScheduledGame, StadiumEvent, Zone } from "./types";
 
 const KEY = RULES.keyDates;
 const M = 1_000_000;
@@ -154,10 +158,12 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   projects: { label: "Stadium and facility projects", side: "out" },
   hosting: { label: "Hosting the Super Bowl or the draft", side: "in" },
   bids: { label: "Bids to host the Super Bowl or the draft", side: "out" },
+  seatLicenses: { label: "Personal seat licenses", side: "in" },
+  research: { label: "Market research", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
-export const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects", "loanIn", "principal"];
+export const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects", "loanIn", "principal", "seatLicenses"];
 /** The cost of borrowing: shown below operating income. */
 const BORROWING: LedgerCat[] = ["interest", "loanFees"];
 
@@ -360,6 +366,22 @@ interface GateInputs {
   merchMult?: number;
   /** Our best-known players sell jerseys (clubhouse.ts). */
   starMult?: number;
+  /** The market and the fan base (fans.ts), and how hard buyers react to price. */
+  fan?: number;
+  elastic?: number;
+  /** This game: the rivalry's pull and the price tier (ticketing.ts). */
+  rivalry?: number;
+  tier?: GameTier;
+  tierMult?: number;
+  /** The owner's ticket office settings (ticketing.ts); other teams sell one price everywhere. */
+  zones?: Record<Zone, number>;
+  dynamic?: boolean;
+  groups?: boolean;
+  promo?: Promo;
+  transfers?: "open" | "official";
+  hospitality?: boolean;
+  premiumBook?: number;
+  premiumSat?: number;
 }
 
 interface GateResult {
@@ -375,6 +397,11 @@ interface GateResult {
   concessions: number;
   parking: number;
   merch: number;
+  sale: Sale;
+  tier: GameTier;
+  premiumUse: number;
+  noShows: number;
+  hospitality: number;
 }
 
 /** Ticket demand and money for one home game. */
@@ -387,35 +414,45 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const month = Number(g.date.slice(5, 7));
   const prime = g.weekday === "Monday" || g.weekday === "Thursday" || g.timeET >= "20:00";
   const cold = s.roof === "open" && COLD.has(team) && (month === 12 || month === 1);
-  const index = mk.pull * x.mood * x.win * x.marketing * (DRAW[opp] ?? 1) * (g.divisionGame ? 1.03 : 1) * (prime ? 1.05 : 1) *
-    (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise * (x.demand ?? 1);
+  const index = mk.pull * x.mood * x.win * x.marketing * (DRAW[opp] ?? 1) * (x.rivalry ?? (g.divisionGame ? 1.03 : 1)) * (prime ? 1.05 : 1) *
+    (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise * (x.demand ?? 1) * (x.fan ?? 1);
   const want = general * index * 1.05;
-  const singleSeats = Math.max(0, general - holders);
-  const singlePrice = mk.ticket * x.ticketIdx * 1.2 * x.price * (pre ? 0.6 : 1);
-  const singleWant = Math.max(0, want - holders) * Math.pow(x.price, -1.5);
-  const singleSold = Math.round(Math.min(singleSeats, singleWant));
-  const sold = holders + singleSold + premiumSeats(s);
-  const attendance = Math.round((holders + singleSold) * (pre ? 0.82 : 0.93) + premiumSeats(s) * 0.9);
+  const sale = sellGeneral({
+    general, holders, want, base: mk.ticket * x.ticketIdx * 1.2 * (pre ? 0.6 : 1), price: x.price * (pre ? 1 : x.tierMult ?? 1), elastic: x.elastic ?? 1,
+    zones: x.zones, dynamic: x.dynamic && !pre, groups: x.groups, promo: x.promo, transfers: x.transfers, pre, cold, win: x.win,
+  });
+  const tier = x.tier ?? "standard";
+  const use = premiumUse(x.win, tier, pre, !!x.hospitality && !pre, x.premiumSat);
+  const paid = holders + sale.singleSold + sale.groups;
+  const sold = paid + premiumSeats(s);
+  const noShows = Math.round(paid * sale.noShow);
+  const attendance = Math.round(paid - noShows + sale.comps + premiumSeats(s) * use);
   const regHome = SCHEDULE.filter((x2) => x2.type === "REG" && x2.home === team && !x2.neutral).length;
   const preHome = SCHEDULE.filter((x2) => x2.type === "PRE" && x2.home === team && !x2.neutral).length;
-  const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + singleSold * singlePrice;
+  const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + sale.singleRevenue + sale.groupRevenue;
   // Suite and club money is spread over the home schedule; preseason games count half.
-  const premium = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
+  const perGame = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) * (x.premiumBook ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
+  const hospitality = x.hospitality && !pre ? hospitalityRevenue(perGame, premiumUse(x.win, tier, pre, false, x.premiumSat)) : 0;
+  const premium = perGame + hospitality;
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
   const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
   const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1) * (x.starMult ?? 1);
   return {
-    sold, attendance, holders, singleSeats, singleSold, singlePrice: Math.round(singlePrice), heat: singleSeats ? singleWant / singleSeats : 2,
+    sold, attendance, holders, singleSeats: sale.singleSeats, singleSold: sale.singleSold, singlePrice: sale.singlePrice, heat: sale.heat,
     tickets: Math.round(tickets), premium: Math.round(premium), concessions: Math.round(concessions), parking: Math.round(parking), merch: Math.round(merch),
+    sale, tier, premiumUse: Math.round(use * 100) / 100, noShows, hospitality: Math.round(hospitality),
   };
 }
 
-function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
+function inputs(state: GameState, team: string, rng?: Rng, g?: ScheduledGame): GateInputs {
   const ours = team === state.userTeam;
   const b = state.business;
   const rec = standings(state)[team];
   const played = rec ? rec.w + rec.l + rec.t : 0;
   const win = played >= 2 ? 0.88 + 0.24 * winPct(rec.w, rec.l, rec.t) : 1;
+  const t = ours && b ? tix(state) : undefined;
+  const tier = g ? gameTier(state, team, g) : undefined;
+  const fans = state.fans;
   return {
     mood: ours ? 0.8 + state.pressure.fans / 250 : 1,
     win,
@@ -426,9 +463,14 @@ function inputs(state: GameState, team: string, rng?: Rng): GateInputs {
     noise: rng ? 0.96 + rng() * 0.08 : 1,
     ticketIdx: ours && b?.index ? b.index.season : inflation(RULES.season, 0.035),
     premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
+    fan: fanDemand(state, team),
+    elastic: priceSensitivity(state, team, t?.promo === "family" ? 0.36 : 0.3),
+    ...(tier ? { rivalry: tier.rivalry, tier: tier.tier, tierMult: t?.tiers[tier.tier] ?? 1 } : {}),
+    ...(t ? { zones: t.zones, dynamic: t.dynamic, groups: t.groups, promo: t.promo, transfers: t.transfers, hospitality: t.hospitality, premiumBook: t.premiumBook } : {}),
+    ...(ours && fans ? { premiumSat: (fans.sat.corporate + fans.sat.premium) / 2 } : {}),
     ...(ours ? projectEffects(state).gate : {}),
     ...hostGate(state, team),
-    ...(ours ? { starMult: merchLift(state) } : {}),
+    ...(ours ? { starMult: merchLift(state) * reachLift(state) } : {}),
   };
 }
 
@@ -439,11 +481,12 @@ function hostGate(state: GameState, team: string): Partial<GateInputs> {
   return { merchMult: h.merch, demand: ours * h.demand };
 }
 
-/** What the business staff expects at a home game, for the Business page. */
-export function gateForecast(state: GameState, g: ScheduledGame): { sold: number; capacity: number; heat: number; singlePrice: number } {
+/** What the business staff expects at a home game, for the Business page; `price` tries another single-game price. */
+export function gateForecast(state: GameState, g: ScheduledGame, price?: number): { sold: number; capacity: number; heat: number; singlePrice: number; tickets: number; tier: GameTier } {
   const team = state.userTeam;
-  const r = gateModel(team, g, inputs(state, team), business(state).holders);
-  return { sold: r.sold, capacity: STADIUM_BY_TEAM[team].capacity, heat: r.heat, singlePrice: r.singlePrice };
+  const x = inputs(state, team, undefined, g);
+  const r = gateModel(team, g, price ? { ...x, price } : x, business(state).holders);
+  return { sold: r.sold, capacity: STADIUM_BY_TEAM[team].capacity, heat: r.heat, singlePrice: r.singlePrice, tickets: r.tickets, tier: r.tier };
 }
 
 export function billions(n: number): string {
@@ -462,7 +505,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
   const rng = rngFor(state.seed, `gate:${g.id}`);
   // Every regular-season and preseason gate feeds the league pool.
   if (!g.neutral && (g.type === "PRE" || g.type === "REG")) {
-    const gr = gateModel(home, g, inputs(state, home, rng), home === us ? b.holders : defaultHolders(home));
+    const gr = gateModel(home, g, inputs(state, home, rng, g), home === us ? b.holders : defaultHolders(home));
     b.pool += gr.tickets * GATE_SHARE;
     if (home === us) homeGate(state, g, gr);
     // The Rams' owner is the Chargers' landlord.
@@ -475,7 +518,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
   const oppTeam = r.home === us ? r.away : r.home;
   // Playoff gates go to the league; the home team keeps what's sold inside the building.
   if (g.type === "POST" && r.home === us && g.round !== "SB") {
-    const gr = gateModel(us, g, { ...inputs(state, us, rng), price: 1 }, b.holders);
+    const gr = gateModel(us, g, { ...inputs(state, us, rng, g), price: 1, tierMult: 1, dynamic: false, promo: "none", groups: false }, b.holders);
     const stadium = STADIUM_BY_TEAM[us];
     post(state, "concessions", gr.concessions * 1.15, `${label(g)} vs ${teamLabel(oppTeam)}`);
     post(state, "parking", gr.parking * 1.2, `${label(g)} vs ${teamLabel(oppTeam)}`);
@@ -494,7 +537,9 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
   if (g.type !== "PRE") {
     const ours = r.home === us ? r.homeScore : r.awayScore;
     const theirs = r.home === us ? r.awayScore : r.homeScore;
-    fans(state, ours > theirs ? 0.5 : ours < theirs ? -0.5 : 0);
+    // Beating a bitter rival means more, and so does losing to one.
+    const stakes = rivalryHeat(state, us, oppTeam) >= 3.5 ? 2 : 1;
+    fans(state, (ours > theirs ? 0.5 : ours < theirs ? -0.5 : 0) * stakes);
   }
 }
 
@@ -511,7 +556,7 @@ function averageHomeGate(state: GameState): number {
   const regs = business(state).gates.filter((x) => x.type === "REG");
   if (regs.length) return Math.round(regs.reduce((t, x) => t + x.revenue, 0) / regs.length);
   const g = SCHEDULE.find((x) => x.home === state.userTeam && !x.neutral && x.type === "REG")!;
-  const r = gateModel(state.userTeam, g, inputs(state, state.userTeam), business(state).holders);
+  const r = gateModel(state.userTeam, g, inputs(state, state.userTeam, undefined, g), business(state).holders);
   return r.tickets + r.premium;
 }
 
@@ -527,14 +572,20 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   post(state, "concessions", gr.concessions, what);
   post(state, "parking", gr.parking, what);
   post(state, "merch", gr.merch, what);
+  if (gr.sale.resaleFee) post(state, "tickets", gr.sale.resaleFee, `${what}: fees on resales through the team exchange`);
   post(state, "gateShare", -gr.tickets * GATE_SHARE, `${what}: 34% of the gate after the stadium deduction`);
   post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), what);
-  const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + gr.merch;
+  const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + gr.merch + gr.sale.resaleFee;
+  const sl = gr.sale;
   b.gates.unshift({
     game: g.id, date: g.date, opp: o, type: g.type === "PRE" ? "PRE" : "REG", capacity: s.capacity, sold: gr.sold, seasonHolders: gr.holders,
-    singleSeats: gr.singleSeats, singleSold: gr.singleSold, price: gr.singlePrice, heat: Math.round(gr.heat * 100) / 100, revenue,
+    singleSeats: gr.singleSeats, singleSold: gr.singleSold, price: gr.singlePrice, heat: Math.round(gr.heat * 100) / 100, revenue: Math.round(revenue),
+    attendance: gr.attendance, noShows: gr.noShows, comps: sl.comps, resale: sl.resale, groups: sl.groups, promo: sl.promo, tier: gr.tier,
+    dynamic: sl.dynamic, premiumUse: gr.premiumUse, zones: sl.zones,
   });
+  afterHomeGame(state, g, sl);
   if (g.type === "PRE") return;
+  survey(state, g, gr.attendance, b.prices.single * (sl.dynamic || 1), rngFor(state.seed, `survey:${g.id}`));
   // How the crowd feels about the prices and the building.
   const ctrl = controlOf(s);
   fans(state, [-0.6, 0, 0.4, 0.7][b.budget.gameday] + (ctrl.concessions ? CONCESSIONS[b.prices.concessions].fans : 0) -
@@ -871,7 +922,8 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   const local = localIncome(state, year);
   add("sponsorship", m(local.sponsors));
   add("localMedia", m(local.media));
-  if (s.naming && s.namingShare) add("naming", m(s.naming * s.namingShare), `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
+  const naming = namingIncome(state, year);
+  if (naming) add("naming", m(naming), `${s.name}${s.namingShare < 1 ? `, our ${Math.round(s.namingShare * 100)}% share` : ""}`);
   // The base budget covers the coaching staff at going rates; the top jobs and anyone fired but still paid are on top of it.
   const pay = payroll(state, us);
   const top = state.staff ? pay.staff - BUDGETED_TOP_STAFF * grow : 0;
@@ -916,35 +968,41 @@ export function yearPlan(state: GameState, year: number): Partial<Record<LedgerC
   const out: Partial<Record<LedgerCat, number>> = {};
   const add = (cat: LedgerCat, v: number) => { out[cat] = (out[cat] ?? 0) + v; };
   for (const it of monthAmounts(state, year)) add(it.cat, it.amount * 12);
-  // Local deals that run out before then are assumed renewed at about what they pay now, plus 4% a year.
   const now = leagueYear(state.date);
+  const us = state.userTeam;
+  // The market grows (or shrinks) with the metro population.
+  const pop = Math.pow(metroPop(us, year) / metroPop(us, now), 0.6);
+  // Local deals that run out before then are assumed renewed near what the market pays: sponsorship prices rise about 5% a year.
   if (year > now) {
     const today = localIncome(state, now);
-    const g = Math.pow(1.04, year - now);
-    out.sponsorship = Math.max(out.sponsorship ?? 0, today.sponsors * g);
-    out.localMedia = Math.max(out.localMedia ?? 0, today.media * g);
+    out.sponsorship = Math.max(out.sponsorship ?? 0, today.sponsors * Math.pow(1.05, year - now) * pop);
+    out.localMedia = Math.max(out.localMedia ?? 0, today.media * Math.pow(1.045, year - now));
   }
-  const us = state.userTeam;
   const s = STADIUM_BY_TEAM[us];
+  const b = business(state);
+  // Ticket prices follow next season's announced (or recommended) change, then 3.5% a year; suites and clubs 4%.
+  const ahead = year - RULES.season;
+  const tk = ahead <= 0 ? 1 : (b.next?.season ?? 1 + recommendedIncrease(state)) * Math.pow(1.035, ahead - 1);
+  const pr = ahead <= 0 ? 1 : (b.next?.premium ?? 1.03) * Math.pow(1.04, ahead - 1);
+  const spend = inflation(year, 0.035) / inflation(RULES.season, 0.035);
   // The schedule in place is this season's; later years look like it.
   const games = SCHEDULE.filter((g) => (g.home === us || g.away === us) && (g.type === "PRE" || g.type === "REG"));
-  const x = inputs(state, us);
-  const grow = inflation(year) / inflation(RULES.season);
   let home = 0;
   let homeGames = 0;
   for (const g of games) {
     if (g.home === us && !g.neutral) {
-      const r = gateModel(us, g, x, business(state).holders);
-      add("tickets", r.tickets * grow);
-      add("premium", r.premium * grow);
-      add("concessions", r.concessions * grow);
-      add("parking", r.parking * grow);
-      add("merch", r.merch * grow);
-      add("gateShare", -r.tickets * GATE_SHARE * grow);
+      const r = gateModel(us, g, inputs(state, us, undefined, g), b.holders);
+      const tickets = r.tickets * tk * pop;
+      add("tickets", tickets + r.sale.resaleFee * tk);
+      add("premium", r.premium * pr);
+      add("concessions", r.concessions * spend * pop);
+      add("parking", r.parking * spend * pop);
+      add("merch", r.merch * spend * pop);
+      add("gateShare", -tickets * GATE_SHARE);
       // The visiting-team pool comes back about even for a typical team.
-      add("gatePool", r.tickets * GATE_SHARE * grow);
-      add("gameday", -deptCost("gameday", business(state).budget.gameday, year));
-      home += r.tickets * (1 - GATE_SHARE) + r.premium + r.concessions + r.parking + r.merch;
+      add("gatePool", tickets * GATE_SHARE);
+      add("gameday", -deptCost("gameday", b.budget.gameday, year));
+      home += tickets * (1 - GATE_SHARE) + r.premium * pr + (r.concessions + r.parking + r.merch) * spend * pop;
       homeGames++;
     } else {
       add("travel", -(g.neutral ? 1.4 * M : g.type === "PRE" ? 0.35 * M : 0.45 * M) * inflation(year));
@@ -952,7 +1010,7 @@ export function yearPlan(state: GameState, year: number): Partial<Record<LedgerC
   }
   // A home game given up to play abroad is made whole by the league.
   const abroad = games.filter((g) => g.home === us && g.neutral && g.type === "REG").length;
-  if (abroad && homeGames) add("intl", abroad * home / homeGames * grow);
+  if (abroad && homeGames) add("intl", abroad * home / homeGames);
   add("events", typicalEvents(s) * s.eventShare * inflation(year));
   return out;
 }
@@ -1039,6 +1097,7 @@ export function setNextSeasonPrices(state: GameState, season: number, premium: n
   const pct = Math.round((season - 1) * 100);
   b.priceLog.unshift({ date: state.date, text: `${RULES.season + 1} season tickets ${pct > 0 ? `up ${pct}%` : pct < 0 ? `down ${-pct}%` : "unchanged"}, suites and clubs ${Math.round((premium - 1) * 100)}%` });
   if (pct > 0) fans(state, -pct * 0.35);
+  if (pct > 5) trustHit(state, -(pct - 5) * 0.6, pct >= 10 ? 1 : 0, `Raised season-ticket prices ${pct}%`);
   if (pct < 0) fans(state, -pct * 0.2);
   addStory(state, {
     outlet: "capspace", by: MEDIA_BY_ID.capspace.columnist, kind: "league", teams: [state.userTeam],
@@ -1057,28 +1116,28 @@ function renewals(state: GameState): void {
     const rec = standings(state)[us];
     const wp = winPct(rec.w, rec.l, rec.t);
     const playoffs = !!state.seeds?.[TEAM_BY_ID[us].conference].includes(us);
-    const change = (b.next?.season ?? 1.03) - 1;
-    const mk = MARKETS[us];
-    const rate = Math.max(0.6, Math.min(0.99, 0.9 + (mk.pull - 1) * 0.3 + (wp - 0.5) * 0.12 + (playoffs ? 0.02 : 0) + (state.pressure.fans - 50) / 600 - Math.max(0, change) * 0.6 + Math.max(0, -change) * 0.2));
-    // Waiting lists refill seats in the strongest markets.
-    const waitlist = mk.pull >= 1.1 ? 0.6 : mk.pull >= 1.0 ? 0.3 : 0;
-    const general = generalSeats(STADIUM_BY_TEAM[us]);
-    const kept = Math.round(b.holders * rate);
-    const holders = Math.min(Math.round(general * 0.97), kept + Math.round((b.holders - kept) * waitlist));
-    b.renewal = { rate, holders, date: state.date };
+    // Without an announcement, the business staff sets the increase.
+    if (!b.next) b.next = { season: 1 + recommendedIncrease(state), premium: 1.03 };
+    const t = tix(state);
+    const p = planRenewals(state, b.next.season - 1, wp, playoffs, t.psl?.season === RULES.season + 1 ? t.psl.price : 0);
+    applyRenewals(state, p);
+    b.renewal = { rate: p.rate, holders: p.holders, date: state.date };
     send(state, "business", businessChief(state), `${RULES.season + 1} season-ticket renewals are in`,
-      `${Math.round(rate * 100)}% of our season-ticket holders renewed` + (waitlist ? ", and the waiting list filled part of the rest" : "") +
-      `. We'll have about ${holders.toLocaleString("en-US")} season-ticket holders next season, ${holders >= b.holders ? "up" : "down"} from ${b.holders.toLocaleString("en-US")}. Deposits are due ${shortDate(DEPOSITS_DUE)}.`);
+      `${Math.round(p.rate * 100)}% of our season-ticket holders renewed (${Math.round(p.long * 100)}% of the longtime holders, ${Math.round(p.recent * 100)}% of the newest)` +
+      (p.fromWaitlist ? `, and ${p.fromWaitlist.toLocaleString("en-US")} came off the waiting list` : "") + (p.added ? `; the sales staff signed ${p.added.toLocaleString("en-US")} new holders` : "") +
+      `. We'll have about ${p.holders.toLocaleString("en-US")} season-ticket holders next season, ${p.holders >= b.holders ? "up" : "down"} from ${b.holders.toLocaleString("en-US")}. ` +
+      `${Math.round(p.premiumRate * 100)}% of suite and club accounts renewed. Deposits are due ${shortDate(DEPOSITS_DUE)}.`);
   }
   if (state.date === DEPOSITS_DUE && b.renewal) {
     const mk = MARKETS[us];
     const games = 9;
     const idx = b.index ?? { season: 1, premium: 1 };
     const season = b.renewal.holders * mk.ticket * idx.season * (b.next?.season ?? 1.03) * games;
-    const premium = mk.premium * idx.premium * (b.next?.premium ?? 1.03) * (b.renewal.rate + 0.03);
+    const premium = mk.premium * idx.premium * (b.next?.premium ?? 1.03) * tix(state).premiumBook;
     const amount = Math.round((season + premium) * 0.35);
     post(state, "deposits", amount, `${RULES.season + 1} season tickets and suites: 35% deposits`);
     b.deferred = { season: RULES.season + 1, amount, applied: 0 };
+    pslCash(state);
   }
 }
 

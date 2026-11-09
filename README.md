@@ -304,6 +304,24 @@ season ends, the record is measured against those expectations. The
 Business page has Sponsors and Projects tabs; the Media page has the
 storylines and grades.
 
+Selling the game works like a real ticket office. General seats come in four
+price zones, each home game is a marquee, standard or value game, and the
+owner can price zones and tiers apart, turn on dynamic pricing, run group
+sales and promotions (which give money away when the game would sell out
+anyway), sell unused suites as corporate hospitality and route resales
+through the team exchange. Each gate records paid tickets, no-shows, comps,
+resales and suites in use. Season-ticket holders renew by tenure, and the
+waiting list refills the seats they give up; suites renew with how much
+companies used them; seat licenses raise cash and cost lasting trust. The
+Fans tab covers the market (approximate metro population, growth, incomes,
+competing teams, the economy), where fans live, trust and generational
+loyalty, post-game surveys and the lifetime value of each kind of customer.
+Sponsors can buy exclusivity where rights allow, the club negotiates stadium
+naming rights where it controls the building and sells a practice-facility
+name and a digital partnership, partners get year-end delivery reports with
+make-goods, and some fail to pay or land in scandals. The forecast now plans
+player pay from how the club actually spends against the cap.
+
 The owner's office runs like a real club's. At the start you set up who
 you are: a background (finance, real estate, a company you built, an old
 football family or a former player, each with its own edge), how much money
@@ -493,7 +511,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
-  Local sponsors and radio/TV deals are `commerce.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
+  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
