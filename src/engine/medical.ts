@@ -17,6 +17,7 @@
 // Disability insurance on a big salary: the club pays a premium before the
 // season and, once a player has missed more than three straight weeks with a
 // football injury, the policy pays back most of his salary for the weeks after.
+import { recoveryEdge } from "./facilities";
 import { FORMAT } from "./format";
 import { diagnosisFactor } from "./playercare";
 import { post } from "./business";
@@ -100,10 +101,12 @@ function injuriesDaily(state: GameState): void {
       const left = daysBetween(state.date, inj.returnDate);
       const roll = rng();
       let text = "";
-      if (roll < [0.2, 0.15, 0.12, 0.09][lvl]) {
+      // Our training complex and recovery center shade the odds a little (facilities.ts).
+      const edge = ps.team === state.userTeam ? recoveryEdge(state) : 0;
+      if (roll < [0.2, 0.15, 0.12, 0.09][lvl] - edge) {
         inj.returnDate = addDays(inj.returnDate, Math.round(left * (0.15 + 0.2 * rng())));
         text = `${name} has had a setback in his rehab. The new target is ${weeksText(state.date, inj.returnDate)} from now.`;
-      } else if (roll > 1 - [0.08, 0.11, 0.14, 0.17][lvl]) {
+      } else if (roll > 1 - [0.08, 0.11, 0.14, 0.17][lvl] - edge) {
         inj.returnDate = addDays(inj.returnDate, -Math.round(left * (0.08 + 0.1 * rng())));
         text = `${name} is ahead of schedule in his rehab. He could be back in ${weeksText(state.date, inj.returnDate)}.`;
       } else {

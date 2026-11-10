@@ -3,8 +3,8 @@
 // before the preseason, one or two summers later. Who pays depends on who owns
 // the building; a tenant can't renovate a landlord's stadium, and a public
 // stadium authority has to sign off. Costs are rough 2026 figures from recent
-// NFL renovations, scaled for later years. Relocation and new stadiums are not
-// part of the game yet.
+// NFL renovations, scaled for later years. New stadiums are construction.ts.
+import { newStadiumLift } from "./construction";
 import { constructionFactor } from "./economy";
 import { business, businessChief, cashBalance, inflation, post } from "./business";
 import { creditLimit } from "./debt";
@@ -77,6 +77,12 @@ export function projectEffects(state: GameState): { gate: { demand: number; prem
     out.facilities += e.facilities ?? 0;
     out.medical += e.medical ?? 0;
   }
+  // A new building of our own (construction.ts).
+  const n = newStadiumLift(state);
+  out.gate.demand += n.demand;
+  out.gate.premiumMult += n.premium;
+  out.gate.perCap += n.perCap;
+  out.sponsor += n.sponsor;
   return out;
 }
 

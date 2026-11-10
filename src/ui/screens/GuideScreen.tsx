@@ -148,6 +148,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "A new stadium",
+    body: [
+      "Business > New stadium starts with feasibility studies: three sites, a demand forecast and a cost range. Pick a site, roof, seats, an ownership model and community benefits, then ask the public side for money (or pay for it all yourself and skip the vote).",
+      "Voters weigh the tax per resident, the team's winning, fans' trust, the officials and the economy. Your own impact study, lobbying and commitments help; the city's budget office may debunk your numbers. A council votes, and a tax district goes to a referendum in November.",
+      "If the vote fails: try again with a smaller ask, go private, renovate, or say other markets are on the table. Financing needs your share plus 5%. Fixed-price contracts cost more up front but leave most overruns with the builder. Building on the current site means a temporary home until opening day.",
+    ],
+  },
+  {
     title: "The economy and risk",
     body: [
       "The economy moves every month, and your metro has its own trend. Household incomes move ticket and store demand; corporate earnings move sponsors and suites. Recessions come from the conditions, about once a decade at normal volatility (Settings).",

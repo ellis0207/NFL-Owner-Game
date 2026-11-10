@@ -19,7 +19,7 @@ import { addDays } from "./dates";
 import { execBoost, execRole } from "./executives";
 import { money, send } from "./inbox";
 import { RULES } from "./league";
-import { PROJECT_BY_ID, projects } from "./projects";
+import { PROJECT_BY_ID, projectEffects, projects } from "./projects";
 import { gaussian, rngFor } from "./rng";
 import { servicesScore } from "./community";
 import { STADIUM_BY_TEAM, type Stadium } from "./stadiums";
@@ -113,6 +113,17 @@ export function stadiumCondition(state: GameState): number {
 }
 export function complexCondition(state: GameState): number {
   return avg(state, "complex");
+}
+
+/**
+ * How much the team facility helps recovery: a well-kept complex and a
+ * recovery center make a good rehab outcome a little likelier and a setback
+ * a little rarer. No skill comes from it, only better odds of getting back.
+ */
+export function recoveryEdge(state: GameState): number {
+  if (!state.facilities) return 0;
+  const built = projectEffects(state);
+  return Math.max(-0.04, Math.min(0.05, (complexCondition(state) - 60) / 600 + 0.012 * (built.facilities + built.medical)));
 }
 
 /** Worn-out parts still in service: what it would cost to catch up. */
