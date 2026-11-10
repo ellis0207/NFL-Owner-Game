@@ -11,7 +11,7 @@
 // everything and the game's own profit; complaints that keep coming back get
 // flagged; experiments show whether a change moved the surveys.
 import { securityFactor } from "./departments";
-import { concourseNudge, faultFactor, networkFactor } from "./facilities";
+import { concourseNudge, condition, faultFactor, networkFactor } from "./facilities";
 import { business, businessChief, deptCost, post } from "./business";
 import { leagueYear } from "./contracts";
 import { execBoost, execRole } from "./executives";
@@ -189,6 +189,12 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
     const fail = rng() < 0.06 * upkeep * (p.staffing === 0 ? 1.6 : 1);
     inspection = fail ? "The health inspector cited two stands for food temperatures; fixed and fined." : "Health and fire inspections passed.";
     if (fail) { other += 40 * K; post(state, "fines", -15 * K, "Health code citation at the stadium"); }
+    // The league's field check: drainage, the surface, lines and markers, goalposts and sideline equipment.
+    const field = condition(state, "field");
+    const fieldFail = rng() < Math.max(0.02, (70 - field) / 200);
+    const finding = field < 45 ? "standing water near the sideline drains" : rng() < 0.5 ? "faded hash marks and a loose pylon" : "a goalpost padding tear and a worn bench heater";
+    inspection += fieldFail ? ` The league's field inspection found ${finding}; fixed before kickoff.` : " The league's field inspection passed: drainage, surface, lines, goalposts and equipment.";
+    if (fieldFail) other += 30 * K;
   }
   // Everyone else's view of the day.
   complain("lines", Math.max(0, f.gateWait - 8) * x.attendance * 0.00008 + Math.max(0, f.foodWait - 8) * x.attendance * 0.00006);

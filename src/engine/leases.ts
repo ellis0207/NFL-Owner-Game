@@ -8,7 +8,8 @@
 // too hard wears out the city's patience. A lease that runs out unsigned
 // rolls over a year at a time at a higher rent. Public money from a new lease
 // goes into a renovation fund the owner's stadium projects draw on first.
-// Moving the team is a later step: for now no one can credibly threaten it.
+// The owner can also push on maintenance duties, the share of events, and
+// renewal options.
 import { cityGoodwill } from "./community";
 import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
@@ -16,7 +17,7 @@ import { money, news, send } from "./inbox";
 import { RULES, TEAMS, teamLabel } from "./league";
 import { rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium } from "./stadiums";
-import type { GameState, LeaseOffer, LeaseState } from "./types";
+import type { GameState, LeaseAsk, LeaseOffer, LeaseState } from "./types";
 
 const M = 1_000_000;
 
@@ -47,6 +48,8 @@ export function ensureLeases(state: GameState): void {
 /** Lays the save's lease terms over the stadium data, so the books and the Business page use them. */
 export function bindLeases(state: GameState): void {
   for (const [team, o] of Object.entries(ORIGINAL)) Object.assign(STADIUM_BY_TEAM[team], o);
+  // A new building (construction.ts) comes with its own rent and upkeep, and a team-owned one with no lease.
+  for (const n of state.construction?.opened ?? []) Object.assign(STADIUM_BY_TEAM[n.team], { leaseThrough: undefined, rent: n.rent, upkeep: n.upkeep });
   for (const [team, l] of Object.entries(state.leases ?? {})) {
     Object.assign(STADIUM_BY_TEAM[team], { leaseThrough: l.through, rent: l.rent, upkeep: l.upkeep, eventShare: l.eventShare });
   }
@@ -105,14 +108,15 @@ function firstOffer(state: GameState, team: string): LeaseOffer {
 }
 
 function describe(o: LeaseOffer): string {
-  return `${o.years} years at ${money(o.rent)} a year in rent, with ${money(o.publicMoney)} of public money for renovations`;
+  return `${o.years} years at ${money(o.rent)} a year in rent, with ${money(o.publicMoney)} of public money for renovations, ` +
+    `${money(o.upkeep)} a year of upkeep on us, ${Math.round(o.eventShare * 100)}% of event income${o.option ? `, and ${o.option} option years` : ""}`;
 }
 
 /** Signs a lease: new terms from the next season on, and the public money goes into the renovation fund. */
 function sign(state: GameState, team: string, o: LeaseOffer): void {
   const l = state.leases![team];
   const start = nextSeason(state);
-  l.through = Math.max(l.through, start - 1) + o.years;
+  l.through = Math.max(l.through, start - 1) + o.years + (o.option ?? 0);
   l.rent = o.rent;
   l.upkeep = o.upkeep;
   l.eventShare = o.eventShare;
@@ -135,11 +139,11 @@ export function acceptLease(state: GameState): { ok: boolean; text: string } {
 }
 
 /** Pushes for better terms: the answer comes back in about a week. */
-export function counterLease(state: GameState, ask: "money" | "rent"): { ok: boolean; text: string } {
+export function counterLease(state: GameState, ask: LeaseAsk): { ok: boolean; text: string } {
   const l = lease(state);
   if (!l?.talks || l.talks.waiting) return { ok: false, text: "We're waiting on their answer." };
   l.talks.waiting = { ask, date: state.date };
-  return { ok: true, text: ask === "money" ? "We asked for more public money. They'll come back to us next week." : "We asked for a lower rent. They'll come back to us next week." };
+  return { ok: true, text: `We asked for ${ASK_TEXT[ask]}. They'll come back to us next week.` };
 }
 
 export function walkAway(state: GameState): { ok: boolean; text: string } {
@@ -149,6 +153,11 @@ export function walkAway(state: GameState): { ok: boolean; text: string } {
   l.log.unshift({ date: state.date, text: "We broke off lease talks for the year." });
   return { ok: true, text: "Talks are off until next spring." };
 }
+
+export const ASK_TEXT: Record<LeaseAsk, string> = {
+  money: "more public money", rent: "a lower rent", upkeep: "the city to take on more of the maintenance",
+  events: "a bigger share of non-NFL events", option: "renewal options at the same rent",
+};
 
 function answer(state: GameState): void {
   const l = state.leases![state.userTeam];
@@ -166,7 +175,12 @@ function answer(state: GameState): void {
   const from = s.owner;
   if (rng() < p) {
     if (w.ask === "money") t.offer.publicMoney = Math.round((t.offer.publicMoney * (1.1 + 0.15 * rng()) + 10 * M) / M) * M;
-    else t.offer.rent = Math.round((t.offer.rent * (0.8 + 0.1 * rng())) / 50_000) * 50_000;
+    else if (w.ask === "rent") t.offer.rent = Math.round((t.offer.rent * (0.8 + 0.1 * rng())) / 50_000) * 50_000;
+    // Maintenance duties: the public side picks up more of the building's capital repairs.
+    else if (w.ask === "upkeep") t.offer.upkeep = Math.round((t.offer.upkeep * (0.82 + 0.08 * rng())) / 100_000) * 100_000;
+    // Commercial rights: more of the concerts and other events the building books.
+    else if (w.ask === "events") t.offer.eventShare = Math.min(1, Math.round((t.offer.eventShare + 0.1 + 0.1 * rng()) * 100) / 100);
+    else t.offer.option = (t.offer.option ?? 0) + 5;
     send(state, "business", from, "Lease talks: a better offer", `We can move a little: ${describe(t.offer)}. We'd like to get this done.`);
   } else {
     t.patience--;

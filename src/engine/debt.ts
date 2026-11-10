@@ -498,6 +498,36 @@ export function acquisitionLoan(state: GameState, amount: number): void {
   log(state, `Took over the club with ${money(amount)} of acquisition debt from Meridian Sports Finance.`);
 }
 
+/**
+ * A stadium construction loan: 30 years, fixed, secured on the building's
+ * revenue. It counts against the stadium room above the league's debt limit.
+ */
+export function stadiumLoan(state: GameState, amount: number): string | null {
+  const room = debtRoom(state, "projects");
+  if (amount > room) return `The league's debt rules leave room for about ${money(Math.max(0, room))} of stadium debt.`;
+  const d = debt(state);
+  const rate = Math.round((marketRate(state) + 0.017) * 10000) / 10000;
+  const terms = { lender: "Sterling Municipal & Stadium Capital", amount, years: 30, kind: "fixed" as const, rate, amort: "amortizing" as const, fee: 0.0075, minCoverage: 1.25, maxLeverage: 6, security: "The new stadium's revenue" };
+  if (coverage(state, terms) < 1.3) return "Lenders passed: the club's earnings don't cover a loan that size with room to spare.";
+  d.loans.push({ ...terms, id: `LS-${state.date}`, start: state.date, maturity: addDays(state.date, Math.round(30 * 365.25)), balance: amount, stepUp: 0, breaches: 0, purpose: "projects" });
+  post(state, "loanIn", amount, "Stadium construction loan");
+  post(state, "loanFees", -amount * terms.fee, "Stadium loan: arrangement fee");
+  log(state, `Borrowed ${money(amount)} for the new stadium (30-year fixed at ${(rate * 100).toFixed(2)}%).`);
+  return null;
+}
+
+/** The league's stadium program: a low-rate loan repaid from the club's share of premium-seat revenue. */
+export function leagueStadiumLoan(state: GameState, amount: number): void {
+  const d = debt(state);
+  d.loans.push({
+    lender: "League stadium program", amount, years: 25, kind: "fixed", rate: 0.03, amort: "amortizing", fee: 0, minCoverage: 1, maxLeverage: 8,
+    security: "The club's share of premium-seating revenue", id: `LG-${state.date}`, start: state.date, maturity: addDays(state.date, Math.round(25 * 365.25)),
+    balance: amount, stepUp: 0, breaches: 0, purpose: "League stadium program",
+  });
+  post(state, "loanIn", amount, "League stadium program loan");
+  log(state, `The league's stadium program lent ${money(amount)}.`);
+}
+
 /** The year's interest on the club's debt as pnl() sees it, for the statements. */
 export function interestCost(state: GameState, year: number): number {
   const p = pnl(state, year);

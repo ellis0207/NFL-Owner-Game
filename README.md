@@ -641,6 +641,33 @@ signed stay as written. The union files grievances that an arbitrator
 decides unless the club settles. All of it is in a Labor relations panel on
 the Owners page.
 
+A new stadium is a multi-year project on the Business page. Feasibility
+studies (about three months and $4M) compare the current site, a downtown
+site and a suburban one on land, transit, parking, environmental risk and
+development. The owner picks a roof, seats, an ownership model (team-owned,
+a public authority, or a partnership), community benefits and a district
+around the building, then asks the public side for money. The city's budget
+office publishes its own impact study, an environmental review sets the
+mitigation, rival suburbs sometimes pitch a site of their own, and voters
+weigh the tax burden, the club's winning and fans' trust, the officials and
+the economy. The council votes, and a tax district goes to a referendum on
+Election Day. A failed vote leaves another round at a smaller ask, private
+money, renovation, or saying other markets are on the table. Financing mixes
+the owner's money, a 30-year stadium loan, the league's stadium program and
+seat licenses, with a 5% contingency. Three contractors bid on fixed-price,
+guaranteed-maximum or cost-plus terms; labor shortages, supply delays,
+engineering surprises and change orders push most jobs 10-30% over and
+sometimes a season late. Building on the current site means a temporary
+home with smaller crowds. The new building opens on August 1 with a demand
+lift that fades over five seasons, more premium seating, fresh facility
+parts and a new lease (or none, if the team owns it). Other clubs plan and
+open buildings too, starting from the real projects in Tennessee, Cleveland,
+Washington and Kansas City; about one is approved every two to four years.
+Lease talks can now also push maintenance onto the city, take a bigger
+share of events, or add renewal options. Sponsors up for renewal ask where
+the team will play, the training complex speeds rehab a little, and the
+league inspects the field once a month.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -686,6 +713,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
+  New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

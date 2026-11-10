@@ -15,6 +15,7 @@
 // 32 teams. Suites and the premium part of club seats aren't shared. Playoff
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
+import { tempVenueFactor } from "./construction";
 import { termsFor } from "./cbaterms";
 import { disruptGate } from "./shocks";
 import { corporateFactor, multipleShift, wageFactor } from "./economy";
@@ -592,7 +593,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const o = opp(g, us);
   const what = `${label(g)} vs ${teamLabel(o)}`;
   // Damage to the stadium cuts the crowd, or moves the game (shocks.ts).
-  const keep = disruptGate(state, g.date, gr.tickets + gr.premium + gr.concessions + gr.parking);
+  const keep = disruptGate(state, g.date, gr.tickets + gr.premium + gr.concessions + gr.parking) * tempVenueFactor(state, g.date);
   if (keep < 1) gr = { ...gr, tickets: gr.tickets * keep, premium: gr.premium * keep, concessions: gr.concessions * keep, parking: gr.parking * keep, merch: gr.merch * keep, attendance: Math.round(gr.attendance * keep) };
   post(state, "tickets", gr.tickets, what);
   applyDeposit(state, g, what);

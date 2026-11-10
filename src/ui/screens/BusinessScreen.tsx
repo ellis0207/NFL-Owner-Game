@@ -10,7 +10,7 @@ import { projectedYear } from "../../engine/books";
 import { shortDate, weekday } from "../../engine/dates";
 import { RULES, TEAM_BY_ID, TEAMS, teamLabel } from "../../engine/league";
 import { controlOf, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
-import { acceptLease, counterLease, lease, leaseSummary, walkAway } from "../../engine/leases";
+import { acceptLease, ASK_TEXT, counterLease, lease, leaseSummary, walkAway } from "../../engine/leases";
 import type { Dept, GameState, StadiumEvent } from "../../engine/types";
 import { money } from "../format";
 import { Projects, Sponsors } from "./BusinessDeals";
@@ -26,9 +26,10 @@ import { Financing } from "./BusinessFinancing";
 import { Journal, Treasury } from "./BusinessTreasury";
 import { LeagueMoney } from "./BusinessLeague";
 import { EconomyRisk } from "./BusinessEconomy";
+import { NewStadium } from "./BusinessNewStadium";
 import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk"] as const;
+const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -45,6 +46,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
           ))}
         </div>
       </div>
+      {tab === "New stadium" && <NewStadium game={game} changed={changed} />}
       {tab === "Overview" && <Overview game={game} changed={changed} />}
       {tab === "Books" && <Books game={game} />}
       {tab === "Journal" && <Journal game={game} />}
@@ -319,12 +321,15 @@ function Lease({ game, changed }: { game: GameState; changed: () => void }) {
       <span>{summary}</span>
       {t && (
         <div className="report">
-          <strong>Their offer: {t.offer.years} years, {money(t.offer.rent)} a year in rent, {money(t.offer.publicMoney)} in public money for renovations</strong>
-          {t.waiting ? <span className="muted">We asked for {t.waiting.ask === "money" ? "more public money" : "a lower rent"}; waiting on their answer.</span> : (
+          <strong>Their offer: {t.offer.years} years, {money(t.offer.rent)} a year in rent, {money(t.offer.publicMoney)} in public money for renovations, {money(t.offer.upkeep)} a year of upkeep on us, {Math.round(t.offer.eventShare * 100)}% of event income{t.offer.option ? `, ${t.offer.option} option years` : ""}</strong>
+          {t.waiting ? <span className="muted">We asked for {ASK_TEXT[t.waiting.ask]}; waiting on their answer.</span> : (
             <div className="btn-row">
               <button className="btn primary small" onClick={() => act(acceptLease(game))}>Sign it</button>
               <button className="btn small" onClick={() => act(counterLease(game, "money"))}>Ask for more public money</button>
               <button className="btn small" onClick={() => act(counterLease(game, "rent"))}>Ask for a lower rent</button>
+              <button className="btn small" onClick={() => act(counterLease(game, "upkeep"))}>Push maintenance onto them</button>
+              <button className="btn small" onClick={() => act(counterLease(game, "events"))}>Ask for more event income</button>
+              <button className="btn small" onClick={() => act(counterLease(game, "option"))}>Ask for renewal options</button>
               <button className="btn small" onClick={() => act(walkAway(game))}>Walk away for this year</button>
             </div>
           )}

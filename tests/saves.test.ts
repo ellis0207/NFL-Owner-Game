@@ -282,6 +282,24 @@ describe("saves from older versions", () => {
     expect(old.labor!.agreements[0].through).toBe(2030);
   }, 120_000);
 
+  it("a save made mid-construction keeps building, plays in its temporary home, and older saves start with the league's real projects", async () => {
+    const state = load("pr47-2026-10-10");
+    const p = state.construction!.plan!;
+    expect(p.stage).toBe("build");
+    expect(p.roof).toBe("retractable");
+    expect(state.construction!.temporary!.name).toBe("Michigan Stadium");
+    expect(state.politics!.question!.partner).toBe("Fixture Partner");
+    for (let i = 0; i < 25; i++) advanceDay(state);
+    expect(p.paid).toBeGreaterThan(0);
+    expect(state.politics!.question!.answered).toBe("quiet");
+    const back = await decompress(await compress(state));
+    expect(back.construction!.plan!.price).toBe(p.price);
+    const old = load("pr46-2026-10-10");
+    expect(old.construction).toBeUndefined();
+    advanceDay(old);
+    expect(old.construction!.cpu.map((b) => b.team)).toEqual(["TEN", "CLE", "WAS", "KC"]);
+  }, 120_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

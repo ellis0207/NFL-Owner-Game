@@ -1553,7 +1553,12 @@ export interface LeaseOffer {
   upkeep: number;
   publicMoney: number;
   eventShare: number;
+  /** Batch O: renewal option years the team can call at the same rent. */
+  option?: number;
 }
+
+/** What the owner can push for in lease talks: public money, rent, the city taking on more upkeep, a bigger share of events, or renewal options. */
+export type LeaseAsk = "money" | "rent" | "upkeep" | "events" | "option";
 
 export interface LeaseState {
   /** Last season the lease covers. */
@@ -1566,7 +1571,7 @@ export interface LeaseState {
   /** Playing year to year after the lease ran out. */
   holdover?: boolean;
   signed?: string;
-  talks?: { opened: string; round: number; offer: LeaseOffer; patience: number; waiting?: { ask: "money" | "rent"; date: string } };
+  talks?: { opened: string; round: number; offer: LeaseOffer; patience: number; waiting?: { ask: LeaseAsk; date: string } };
   log: { date: string; text: string }[];
 }
 
@@ -1890,6 +1895,8 @@ export interface GameState {
   economy?: import("./economy").EconomyState;
   shocks?: import("./shocks").ShockState;
   labor?: import("./labor").LaborState;
+  construction?: import("./construction").ConstructionState;
+  politics?: import("./politics").PoliticsState;
   legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;
