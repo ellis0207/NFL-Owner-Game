@@ -41,14 +41,19 @@ const COMMITTEE_SIZE = 7;
 const GROWTH: Record<string, number> = { games18: 0.18, secondBye: 0.08, intlMore: 0.07, games17: -0.12, oneBye: -0.05, intlFewer: -0.04 };
 
 export function leagueOffice(state: GameState): LeagueOfficeState {
-  if (state.leagueOffice) return state.leagueOffice;
+  const fill = (committees: Record<Committee, string[]>) => {
+    for (const c of Object.keys(COMMITTEES) as Committee[]) {
+      if (committees[c]) continue;
+      const r = rngFor(state.seed, `committee:${c}`);
+      committees[c] = TEAMS.filter((t) => t.id !== state.userTeam).map((t) => ({ id: t.id, v: r() + (state.owners?.relations[t.id]?.influence ?? 0.3) })).sort((a, b) => b.v - a.v).slice(0, COMMITTEE_SIZE).map((x) => x.id);
+    }
+  };
+  // Saves from before a committee existed get it now.
+  if (state.leagueOffice) { fill(state.leagueOffice.committees); return state.leagueOffice; }
   const rng = rngFor(state.seed, "commissioner");
   const name = `${FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)]}`;
   const committees = {} as Record<Committee, string[]>;
-  for (const c of Object.keys(COMMITTEES) as Committee[]) {
-    const r = rngFor(state.seed, `committee:${c}`);
-    committees[c] = TEAMS.filter((t) => t.id !== state.userTeam).map((t) => ({ id: t.id, v: r() + (state.owners?.relations[t.id]?.influence ?? 0.3) })).sort((a, b) => b.v - a.v).slice(0, COMMITTEE_SIZE).map((x) => x.id);
-  }
+  fill(committees);
   state.leagueOffice = {
     commissioner: { name, since: 2019, through: 2028, approval: 62 },
     committees, coalitions: [], trials: {}, moves: [], log: [],
@@ -62,7 +67,7 @@ export function committeeFor(issue: Issue): Committee {
 }
 
 export function onCommittee(state: GameState, c: Committee): boolean {
-  return !!state.leagueOffice?.committees[c].includes(state.userTeam);
+  return !!state.leagueOffice?.committees[c]?.includes(state.userTeam);
 }
 
 /**

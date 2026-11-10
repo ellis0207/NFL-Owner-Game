@@ -25,9 +25,10 @@ import { Books, Plan } from "./BusinessBooks";
 import { Financing } from "./BusinessFinancing";
 import { Journal, Treasury } from "./BusinessTreasury";
 import { LeagueMoney } from "./BusinessLeague";
+import { EconomyRisk } from "./BusinessEconomy";
 import { expectLabel } from "../../engine/review";
 
-const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
+const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk"] as const;
 type Tab = (typeof TABS)[number];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -62,6 +63,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Projects" && <Projects game={game} changed={changed} />}
       {tab === "Budget" && <Budget game={game} changed={changed} />}
       {tab === "League" && <><LeagueMoney game={game} changed={changed} /><League game={game} /></>}
+      {tab === "Economy and risk" && <EconomyRisk game={game} changed={changed} />}
     </section>
   );
 }

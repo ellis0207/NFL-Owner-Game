@@ -5,6 +5,7 @@
 // stadium authority has to sign off. Costs are rough 2026 figures from recent
 // NFL renovations, scaled for later years. Relocation and new stadiums are not
 // part of the game yet.
+import { constructionFactor } from "./economy";
 import { business, businessChief, cashBalance, inflation, post } from "./business";
 import { creditLimit } from "./debt";
 import { shortDate } from "./dates";
@@ -90,7 +91,7 @@ export function projectTerms(state: GameState, id: string): { cost: number; ours
   const def = PROJECT_BY_ID[id];
   const s = STADIUM_BY_TEAM[state.userTeam];
   // An owner from real estate knows how to buy construction.
-  const cost = Math.round(def.cost * inflation(Number(state.date.slice(0, 4)), 0.04) * (state.owner?.background === "realEstate" ? 0.94 : 1));
+  const cost = Math.round(def.cost * inflation(Number(state.date.slice(0, 4)), 0.04) * constructionFactor(state) * (state.owner?.background === "realEstate" ? 0.94 : 1));
   let share = 1;
   let payer: string | undefined;
   let blocked: string | undefined;

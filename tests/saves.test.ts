@@ -247,6 +247,22 @@ describe("saves from older versions", () => {
     expect(old.legal).toBeDefined();
   }, 90_000);
 
+  it("a save with the economy, insurance and a stadium disruption keeps them, and older saves start the economy", async () => {
+    const state = load("pr45-2026-10-10");
+    expect(state.economy!.now.gap).toBeCloseTo(-2.2, 5);
+    expect(state.shocks!.flood).toBe(true);
+    expect(state.shocks!.disruptions[0].kind).toBe("power");
+    expect(state.settings.economy).toBe("volatile");
+    for (let i = 0; i < 25; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.economy!.history.length).toBeGreaterThan(0);
+    const old = load("pr44-2027-05-20");
+    expect(old.economy).toBeUndefined();
+    for (let i = 0; i < 15; i++) advanceDay(old);
+    expect(old.economy).toBeDefined();
+    expect(old.shocks).toBeDefined();
+  }, 120_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

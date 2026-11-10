@@ -4,6 +4,7 @@
 // kept, and disputes that move from negotiation to mediation to arbitration
 // or court, with an exposure report on everything unresolved. The disputes
 // and their counterparties are made up.
+import { liabilityShare } from "./shocks";
 import { post } from "./business";
 import { salaryCap } from "./contracts";
 import { addDays } from "./dates";
@@ -103,7 +104,7 @@ export function openMatter(state: GameState, kind: string, party: string, claim:
   const s = strength ?? Math.round((0.2 + rng() * 0.6) * 100) / 100;
   const m: LegalMatter = {
     id: `${state.date}:${kind}`, kind, party, entity: entityFor(state, kind.includes("sponsor") || kind.includes("trademark") ? "Sponsor or media" : kind.includes("fan") ? "Stadium" : "Player"),
-    opened: state.date, stage: "negotiation", claim: Math.round(claim / 10_000) * 10_000, strength: s, spent: 0, insured: INSURED[kind] ?? 0,
+    opened: state.date, stage: "negotiation", claim: Math.round(claim / 10_000) * 10_000, strength: s, spent: 0, insured: kind === "fan injury claims" ? liabilityShare(state) : INSURED[kind] ?? 0,
     demand: Math.round((claim * (0.6 + 0.3 * s)) / 10_000) * 10_000, next: addDays(state.date, STAGE_DAYS.negotiation), text: text ?? kind,
   };
   l.matters.unshift(m);

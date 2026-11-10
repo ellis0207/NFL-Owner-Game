@@ -218,12 +218,12 @@ export function Plan({ game, changed }: { game: GameState; changed: () => void }
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>League year</th><th className="num">Revenue</th><th className="num">Players</th><th className="num">Other costs</th><th className="num">Operating</th><th className="num">Construction</th><th className="num">Interest</th><th className="num">Principal</th><th className="num">Cash at year end</th><th className="num">Range</th></tr></thead>
+            <thead><tr><th>League year</th><th className="num">Revenue</th><th className="num">Revenue range</th><th className="num">Players</th><th className="num">Other costs</th><th className="num">Operating</th><th className="num">Construction</th><th className="num">Interest</th><th className="num">Principal</th><th className="num">Cash at year end</th><th className="num">Range</th></tr></thead>
             <tbody>
               {fc.map((f) => (
                 <tr key={f.year}>
                   <td>{f.year}{f.year === year ? " (rest of year)" : ""}</td>
-                  <td className="num">{money(f.revenue)}</td><td className="num">{money(f.players)}</td><td className="num">{money(-f.otherCosts)}</td>
+                  <td className="num">{money(f.revenue)}</td><td className="num">{money(f.revLow)} to {money(f.revHigh)}</td><td className="num">{money(f.players)}</td><td className="num">{money(-f.otherCosts)}</td>
                   <td className={`num ${f.operating < 0 ? "bad" : ""}`}>{money(f.operating)}</td><td className="num">{f.capex ? money(f.capex) : ""}</td>
                   <td className="num">{f.interest ? money(f.interest) : ""}</td><td className="num">{f.principal ? money(f.principal) : ""}</td>
                   <td className={`num ${f.cash < 0 ? "bad" : ""}`}>{money(f.cash)}</td>

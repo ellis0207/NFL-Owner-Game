@@ -15,6 +15,8 @@
 // 32 teams. Suites and the premium part of club seats aren't shared. Playoff
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
+import { disruptGate } from "./shocks";
+import { corporateFactor, multipleShift, wageFactor } from "./economy";
 import { monthlyDistribution } from "./leaguemoney";
 import { LEAGUE_RULES } from "./rules";
 import { hostBlackout, hostEffects } from "./hosting";
@@ -34,7 +36,7 @@ import { localIncome } from "./commerce";
 import { projectEffects } from "./projects";
 import { roadTrip } from "./departments";
 import { upkeepLines } from "./facilities";
-import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
+import { creditLimit, distributionsBlocked, marketRate, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
 import { developmentCost } from "./culture";
@@ -178,6 +180,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   technology: { label: "Technology and data", side: "out" },
   legal: { label: "Legal: defense costs, settlements and judgments", side: "out" },
   escrow: { label: "Guaranteed pay funded with the league (escrow)", side: "out" },
+  insurance: { label: "Insurance premiums, less claim recoveries", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -349,7 +352,7 @@ export function revenueEstimate(state: GameState, team: string): number {
 /** A franchise value estimate: a revenue multiple, richer for teams that control their building and markets that pay. */
 export function valuation(state: GameState, team: string): number {
   const s = STADIUM_BY_TEAM[team];
-  const mult = 8.0 + { owned: 1.1, coowned: 0.9, publicTeam: 0.35, publicAuthority: 0, tenant: -0.3 }[s.structure] + (MARKETS[team].pull >= 1.15 ? 0.6 : 0) + (MARKETS[team].target >= 850 * M ? 0.5 : 0);
+  const mult = multipleShift(state, state.debt ? marketRate(state) : 0.0375) + 8.0 + { owned: 1.1, coowned: 0.9, publicTeam: 0.35, publicAuthority: 0, tenant: -0.3 }[s.structure] + (MARKETS[team].pull >= 1.15 ? 0.6 : 0) + (MARKETS[team].target >= 850 * M ? 0.5 : 0);
   return Math.round(revenueEstimate(state, team) * mult / (50 * M)) * 50 * M;
 }
 
@@ -480,7 +483,7 @@ function inputs(state: GameState, team: string, rng?: Rng, g?: ScheduledGame): G
     parking: ours && b && controlOf(STADIUM_BY_TEAM[team]).parking ? b.prices.parking : 1,
     noise: rng ? 0.96 + rng() * 0.08 : 1,
     ticketIdx: ours && b?.index ? b.index.season : inflation(RULES.season, 0.035),
-    premiumIdx: ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035),
+    premiumIdx: (ours && b?.index ? b.index.premium : inflation(RULES.season, 0.035)) * corporateFactor(state, team),
     fan: fanDemand(state, team),
     elastic: priceSensitivity(state, team, t?.promo === "family" ? 0.36 : 0.3),
     ...(tier ? { rivalry: tier.rivalry, tier: tier.tier, tierMult: t?.tiers[tier.tier] ?? 1 } : {}),
@@ -587,6 +590,9 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const s = STADIUM_BY_TEAM[us];
   const o = opp(g, us);
   const what = `${label(g)} vs ${teamLabel(o)}`;
+  // Damage to the stadium cuts the crowd, or moves the game (shocks.ts).
+  const keep = disruptGate(state, g.date, gr.tickets + gr.premium + gr.concessions + gr.parking);
+  if (keep < 1) gr = { ...gr, tickets: gr.tickets * keep, premium: gr.premium * keep, concessions: gr.concessions * keep, parking: gr.parking * keep, merch: gr.merch * keep, attendance: Math.round(gr.attendance * keep) };
   post(state, "tickets", gr.tickets, what);
   applyDeposit(state, g, what);
   post(state, "premium", gr.premium, what);
@@ -953,10 +959,10 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   // The base budget covers the coaching staff at going rates; the top jobs and anyone fired but still paid are on top of it.
   const pay = payroll(state, us);
   const top = state.staff ? pay.staff - BUDGETED_TOP_STAFF * grow : 0;
-  add("staff", -m(FOOTBALL_STAFF * grow + top));
+  add("staff", -m(FOOTBALL_STAFF * grow * wageFactor(state) + top));
   if (pay.owed) add("staffOwed", -m(pay.owed), "Fired staff still under contract");
   // The business staff budget already pays for a standard content department; changes to it are on the content line.
-  add("businessOps", -m(businessOps(us) * grow * opsFactor(state) - defaultContentNet(year)));
+  add("businessOps", -m(businessOps(us) * grow * opsFactor(state) * wageFactor(state) - defaultContentNet(year)));
   for (const it of contentMonthly(state, year)) add(it.cat, it.amount, it.note);
   // The executives' pay above what the budget assumes, and anyone let go but still being paid.
   const execOver = execPayrollOver(state);

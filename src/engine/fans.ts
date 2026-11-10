@@ -9,6 +9,7 @@
 // a little each season with winning and losing. Post-game surveys read the
 // building. The league-wide economy and each market's other entertainment
 // move ticket demand, price sensitivity and sponsors.
+import { demandFactor } from "./economy";
 import { adopted } from "./analysts";
 import { business } from "./business";
 import { merchLift } from "./clubhouse";
@@ -117,7 +118,9 @@ function newFans(state: GameState): FanState {
 export function fanDemand(state: GameState, team: string): number {
   const year = leagueYear(state.date);
   const f = state.fans;
-  const market = Math.pow(metroPop(team, year) / metroPop(team, BASE_SEASON), 0.6) * Math.pow(f?.economy ?? 1, 0.8);
+  // Household incomes and mood in the metro (economy.ts); our own reading is kept on the fan base.
+  const econ = state.economy ? (team === state.userTeam && f ? f.economy : demandFactor(state, team)) : f?.economy ?? 1;
+  const market = Math.pow(metroPop(team, year) / metroPop(team, BASE_SEASON), 0.6) * Math.pow(econ, 0.8);
   if (team !== state.userTeam || !f) return market;
   const trust = 1 + ((f.trust - TRUST0) / 100) * 0.15;
   const core = 1 + (f.core - f.core0) / 300;
@@ -233,7 +236,7 @@ function yearly(state: GameState): void {
   const year = leagueYear(state.date);
   const rng = rngFor(state.seed, `economy:${year}`);
   // The economy wanders and drifts back toward normal; other entertainment comes and goes.
-  f.economy = Math.max(0.93, Math.min(1.06, f.economy + gaussian(rng) * 0.015 - (f.economy - 1) * 0.3));
+  if (!state.economy) f.economy = Math.max(0.93, Math.min(1.06, f.economy + gaussian(rng) * 0.015 - (f.economy - 1) * 0.3));
   const m = METRO[state.userTeam];
   f.competition = Math.max(0.94, Math.min(1.06, 1 + gaussian(rng) * 0.015 + (m.rivals - 3) * 0.003));
   f.crm = { season: RULES.season, complaints: 0, upgrades: 0, contacts: 0, newSubs: 0, newBuyers: 0 };

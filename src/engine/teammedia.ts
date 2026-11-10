@@ -13,6 +13,7 @@
 // for press questions, and a long memory: headlines stay in an archive, and
 // the biggest stories come back year after year. The writers, voices online
 // and the international assignment are made up.
+import { broadcastLean } from "./economy";
 import { inflation, nationalRevenue } from "./business";
 import { leagueYear } from "./contracts";
 import { addDays } from "./dates";
@@ -343,7 +344,8 @@ export function teamMediaDaily(state: GameState): void {
   // The streaming market moves a little each year, and with it what the next TV deals look like.
   if (state.date === addDays(K.superBowl, 3)) {
     const rng = rngFor(state.seed, `streaming:${RULES.season}`);
-    t.streaming = Math.max(0.8, Math.min(1.25, t.streaming + gaussian(rng) * 0.04));
+    // The advertising market behind the networks follows the economy.
+    t.streaming = Math.max(0.8, Math.min(1.25, t.streaming + gaussian(rng) * 0.04 + broadcastLean(state)));
     if (leagueYear(state.date) >= OPT_OUT - 1 && leagueYear(state.date) <= OPT_OUT) {
       const o = tvOutlook(state);
       send(state, "league", "League Office", "Media rights outlook",

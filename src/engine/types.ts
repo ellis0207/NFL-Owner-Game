@@ -752,6 +752,8 @@ export interface Settings {
   mode?: "owner" | "football" | "business";
   /** How much estimated and private information the owner sees: every staff estimate, the usual, or confirmed facts only. */
   info?: "full" | "real" | "limited";
+  /** How volatile the economy is: calm, normal or volatile (engine/economy.ts). */
+  economy?: "calm" | "normal" | "volatile";
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
@@ -1213,7 +1215,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow" | "insurance";
 
 export interface LedgerEntry {
   date: string;
@@ -1885,6 +1887,8 @@ export interface GameState {
   leagueOffice?: LeagueOfficeState;
   compliance?: ComplianceState;
   crisis?: CrisisState;
+  economy?: import("./economy").EconomyState;
+  shocks?: import("./shocks").ShockState;
   legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;

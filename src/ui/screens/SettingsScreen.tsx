@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { VOLATILITY } from "../../engine/economy";
 import type { GameState, Settings } from "../../engine/types";
 import { PlaySettings } from "./PlaySettings";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
@@ -29,6 +30,11 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           <label className="field"><span className="label">Scouting precision</span>
             <select value={game.settings.scouting ?? "real"} onChange={(e) => set({ scouting: e.target.value as Settings["scouting"] })}>
               {Object.entries(SCOUTING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          <label className="field"><span className="label">Economic volatility</span>
+            <select value={game.settings.economy ?? "normal"} onChange={(e) => set({ economy: e.target.value as Settings["economy"] })}>
+              {Object.entries(VOLATILITY).map(([k, v]) => <option key={k} value={k}>{v.label}: {v.what}</option>)}
             </select>
           </label>
           <span className="muted">No setting shows a player's true rating. Precision changes how far your own staff's reads can be off; other teams see what they always saw.</span>

@@ -10,6 +10,7 @@
 //
 // Cash below zero is a draw on the credit facility. Past the facility's limit
 // the owner has to put money in (the capital call in business.ts).
+import { rateLean } from "./economy";
 import { addDays, daysBetween, shortDate } from "./dates";
 import { business, businessChief, cashBalance, operatingEstimate, post, pnl } from "./business";
 import { leagueYear } from "./contracts";
@@ -97,7 +98,8 @@ export function marketRate(state: GameState, month = state.date.slice(0, 7)): nu
   while (m < month) {
     m = nextMonth(m);
     const rng = rngFor(state.seed, `rate:${m}`);
-    r = Math.max(0.005, Math.min(0.08, r + 0.06 * (NEUTRAL_RATE - r) + gaussian(rng) * 0.0012));
+    // The central bank leans against inflation and the cycle.
+    r = Math.max(0.005, Math.min(0.08, r + 0.06 * (NEUTRAL_RATE + rateLean(state) - r) + gaussian(rng) * 0.0012));
     r = Math.round(r * 10000) / 10000;
     d.rates[m] = r;
   }
@@ -413,7 +415,8 @@ function testCovenants(state: GameState): void {
 
 /** True while a lender's covenant breach bars money going out to the owner. */
 export function distributionsBlocked(state: GameState): boolean {
-  return openLoans(state).some((l) => l.breaches > 0 || l.accelerated);
+  // Under league supervision (shocks.ts) nothing goes out to the owner until the recovery plan is met.
+  return openLoans(state).some((l) => l.breaches > 0 || l.accelerated) || state.shocks?.distress?.stage === "supervised";
 }
 
 export function debtDaily(state: GameState): void {
