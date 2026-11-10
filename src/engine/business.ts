@@ -30,6 +30,8 @@ import { teamStaff } from "./staff";
 import { BUDGETED_TOP_STAFF, payroll } from "./coaches";
 import { localIncome } from "./commerce";
 import { projectEffects } from "./projects";
+import { roadTrip } from "./departments";
+import { upkeepLines } from "./facilities";
 import { creditLimit, distributionsBlocked, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
 import { fundCapitalCall, ownerMoney } from "./ownership";
@@ -166,6 +168,8 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   content: { label: "Team media and content", side: "out" },
   brand: { label: "Rebrand and trademark work", side: "out" },
   venue: { label: "Game-day staffing and services beyond the budget", side: "out" },
+  security: { label: "Team security", side: "out" },
+  technology: { label: "Technology and data", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -539,7 +543,9 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
   }
   if (r.away === us || g.neutral) {
     const abroad = g.neutral && !!g.stadium && !(g.city ?? "").match(/, [A-Z]{2}$/);
-    post(state, "travel", -(abroad ? 1.4 * M : g.type === "PRE" ? 0.35 * M : 0.45 * M), `${label(g)} ${g.neutral ? `in ${g.stadium}` : `at ${teamLabel(r.home)}`}`);
+    const base = abroad ? 1.4 * M : g.type === "PRE" ? 0.35 * M : 0.45 * M;
+    // The travel office books the trip: the cost follows the distance, and it files a report.
+    post(state, "travel", -(us === state.userTeam ? roadTrip(state, g, base, abroad) : base), `${label(g)} ${g.neutral ? `in ${g.stadium}` : `at ${teamLabel(r.home)}`}`);
   }
   if (g.type !== "PRE") {
     const ours = r.home === us ? r.homeScore : r.awayScore;
@@ -959,7 +965,8 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));
   // Upkeep rises with costs; rent and debt service are fixed by their leases and loans.
-  if (s.upkeep) add("stadium", -m(s.upkeep * inflation(year)), s.structure === "owned" ? "Operations, maintenance, insurance and capital repairs" : "Our share of operations and capital repairs");
+  // Upkeep rises with costs: utilities, inspections and service contracts, and maintenance on the owner's plan.
+  if (s.upkeep) for (const u of upkeepLines(state, s, year)) add("stadium", -m(u.amount), u.note);
   if (s.rent >= 100) add("rent", -m(s.rent), `To ${s.owner}`);
   if (s.debt) add("debt", -m(s.debt));
   return out;

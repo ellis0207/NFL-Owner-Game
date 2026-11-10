@@ -339,6 +339,26 @@ each home game the operations staff report lines, food, outages, incidents,
 complaints and the game's own books, with recurring problems flagged and
 three-game experiments.
 
+The buildings wear out. The Buildings tab lists every part of the stadium
+and the team facility (roof, heating and cooling, seats, the playing
+surface, video boards, concourses, the network, parking; practice fields,
+locker rooms, weight room, film rooms, kitchen, video systems, equipment)
+with its condition, age and replacement cost, as the operations director
+reads it or an engineering study measures it. A club that runs its stadium
+chooses to maintain on schedule, put it off (a backlog that breaks more on
+game days and that players notice) or stay ahead; the owner can replace a
+part, switch between grass and turf, and see each project's payback. Owned
+stadiums carry a value apart from the team, and a yearly players' and
+staff survey rates the facilities. The Community tab runs the team
+foundation (focus areas, made-up applicants, oversight, the owner's
+personal gifts), programs from youth flag leagues to accessible game days,
+a shared initiative with the city that helps in lease talks, player
+appearances, player services and alumni. On the Front office page,
+Departments covers travel (trip reports with real distances, early
+arrival for long trips), security (drills, credentials, gambling education
+against a new league suspension) and technology (core systems, backups,
+ransomware and data breaches as decision memos).
+
 The owner's office runs like a real club's. At the start you set up who
 you are: a background (finance, real estate, a company you built, an old
 football family or a former player, each with its own edge), how much money
@@ -528,7 +548,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
-  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
+  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

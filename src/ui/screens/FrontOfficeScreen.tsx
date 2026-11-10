@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Departments } from "./FrontOfficeDepartments";
 import { shortDate } from "../../engine/dates";
 import { AREA_KEYS, AREAS, apyLimit, mode, office, openMemos, ownerLoad, PRESETS, setAlert, setLimits, setMode, setPreset } from "../../engine/delegation";
 import {
@@ -11,7 +12,7 @@ import { money } from "../format";
 import { Desk, Meetings, Record } from "./FrontOfficeDesk";
 import { Culture } from "./FrontOfficeCulture";
 
-const TABS = ["Executives", "Decision rights", "Memos", "Meetings", "Culture", "Record"] as const;
+const TABS = ["Executives", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
 
 export function FrontOfficeScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -30,6 +31,7 @@ export function FrontOfficeScreen({ game, changed }: { game: GameState; changed:
       {tab === "Memos" && <Desk game={game} changed={changed} />}
       {tab === "Meetings" && <Meetings game={game} changed={changed} />}
       {tab === "Culture" && <Culture game={game} changed={changed} />}
+      {tab === "Departments" && <Departments game={game} changed={changed} />}
       {tab === "Record" && <Record game={game} />}
     </section>
   );

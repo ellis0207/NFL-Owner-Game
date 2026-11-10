@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { builtReport, projectPayback } from "../../engine/facilities";
 import { leagueYear } from "../../engine/contracts";
 import { categories, dealFor, dealValue, localDeals, localIncome, LOCAL_CATS, par, passLocalCategory, signLocalOffer, sponsorHeat } from "../../engine/commerce";
 import { dropPartner, INVENTORY, keepPartner, namingIncome, receivables, rightsConflict, sponsorRetention } from "../../engine/sponsors";
@@ -128,6 +129,7 @@ export function Projects({ game, changed }: { game: GameState; changed: () => vo
               <span className="muted">{money(t.cost)}{t.payer ? `; ${t.payer}` : ""}{p.build === 2 ? ", two offseasons" : ""}</span>
             </div>
             <span className="muted">{p.what}</span>
+            {(() => { const pb = projectPayback(game, p.id); const built = mine?.opened ? builtReport(game).find((x) => x.id === p.id) : undefined; return <span className="muted">{built ? `Brought in about ${money(built.earned)} since it opened, against ${money(built.cost)}.` : pb.years ? `At last year's numbers: about ${money(pb.yearly)} a year, paid back in ${pb.years} years.` : "No direct payback; it shows up elsewhere."}</span>; })()}
             {mine ? <span className={mine.opened ? "good" : ""}>{mine.opened ? `Opened ${shortDate(mine.opens)}.` : `Under way: ${money(mine.paid)} of ${money(mine.cost)} paid, opens ${shortDate(mine.opens)}.`}</span>
               : t.blocked ? <span className="muted">{t.blocked}</span>
               : <div><button className="btn small primary" onClick={() => { setMsg(startProject(game, p.id)); changed(); }}>Start it ({money(t.ours)} our share)</button></div>}

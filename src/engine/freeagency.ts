@@ -13,6 +13,8 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { loyaltyPull } from "./community";
+import { facilityPull } from "./facilities";
 import { attachBonuses } from "./bonuses";
 import { attachIncentives } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
@@ -181,7 +183,9 @@ export function teamPull(state: GameState, id: string, team: string, from: strin
     + (0.04 * pr.role + 0.03 * pr.playingTime) * role
     + 0.03 * pr.city * cityPref(id, team)
     + (team === from ? 0.05 * pr.loyalty : 0)
-    + 0.05 * ah.memory * (trustOf(state, agentFor(id).id, team) / 100);
+    + 0.05 * ah.memory * (trustOf(state, agentFor(id).id, team) / 100)
+    // Our buildings and player services, when they're better or worse than usual.
+    + (team === state.userTeam ? facilityPull(state) + (team === from ? loyaltyPull(state) : 0) : 0);
 }
 
 export function utility(state: GameState, fa: FreeAgent, team: string, t: OfferTerms): number {

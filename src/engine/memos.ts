@@ -6,6 +6,7 @@
 // It also carries out what the owner delegated: the GM answering trade calls,
 // the coaches filling staff jobs, the revenue staff setting prices and signing
 // sponsors, stadium operations taking bookings, and the CFO refinancing loans.
+import { resolveIncident } from "./departments";
 import { budgetVsActual, books } from "./books";
 import { answerOffer, business, PRICING_OPENS, post, setBudget, setNextSeasonPrices } from "./business";
 import { delegateSearch, openSearches } from "./carousel";
@@ -132,6 +133,8 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "complaint":
     case "dispute":
       return settle(state, m, choice);
+    case "incident":
+      return resolveIncident(state, p, choice);
     default:
       return null;
   }
@@ -698,6 +701,7 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "pricing") carryOut(state, m, m.recommend);
   if (m.kind === "retain") carryOut(state, m, 1);
   if (m.kind === "complaint") carryOut(state, m, 2);
+  if (m.kind === "incident") carryOut(state, m, m.recommend);
   if (m.kind === "trade") declineOffer(state, m.payload?.offer as string);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: no answer by the deadline`, m.amount, m.from, "policy", m.ifLate);
   const role = roleOf(state, m);
