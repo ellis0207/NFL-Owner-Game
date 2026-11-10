@@ -17,7 +17,7 @@ import { gmTrust } from "./culture";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { acceptLoan, debt } from "./debt";
 import {
-  addMemo, AREAS, mode, noteDecision, office, officeMood, openMemos, report, sendPriority, weeklyDigest,
+  addMemo, AREAS, areaLimit, mode, noteDecision, office, officeMood, openMemos, report, sendPriority, weeklyDigest,
 } from "./delegation";
 import {
   bindExecs, deputy, EXEC_KEYS, EXEC_ROLES, execBoost, execLeaves, execRole, execs, execsNewYear, openExecSearch, poachTarget, retainExec, SEARCH_FIRMS, signer,
@@ -33,6 +33,9 @@ import { teamStaff } from "./staff";
 import { settle, workplaceMonthly } from "./workplace";
 import { standings, winPct } from "./standings";
 import { acceptOffer, declineOffer, tradeBalance, trades } from "./trades";
+import { consulting, invested } from "./treasury";
+import { agendaOrder, mandateScore, micromanagement, remember } from "./people";
+import { resolveStandingMemo } from "./standing";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -73,6 +76,8 @@ export function decideMemo(state: GameState, id: string, choice: number, why = "
   const role = roleOf(state, m);
   const e = role ? execRole(state, role) : undefined;
   if (e) e.satisfaction = clamp(e.satisfaction + (choice === m.recommend ? 1.5 : -2));
+  // Whoever wrote it remembers whether the owner took the advice.
+  remember(state, m.from.split(",")[0], choice === m.recommend ? `Backed on ${m.title.toLowerCase()}` : `Overruled on ${m.title.toLowerCase()}`, choice === m.recommend ? 1 : -1.5);
   if (!role && (m.area === "signings" || m.area === "trades" || m.kind === "coachReview") && state.media) {
     state.media.coach = clamp(state.media.coach + (choice === m.recommend ? 0.5 : -0.5));
   }
@@ -135,6 +140,8 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
       return settle(state, m, choice);
     case "incident":
       return resolveIncident(state, p, choice);
+    case "general":
+      return resolveStandingMemo(state, m, choice);
     default:
       return null;
   }
@@ -233,6 +240,8 @@ function delegatedSponsors(state: GameState): void {
   if (!l.window || !l.offers.length) return;
   for (const cat of [...new Set(l.offers.map((o) => o.cat))]) {
     const best = l.offers.filter((o) => o.cat === cat).sort((a, b) => b.value * Math.min(b.years, 4) - a.value * Math.min(a.years, 4))[0];
+    // Deals worth more than the owner's limit for sponsors wait for the owner.
+    if (best.value * best.years > areaLimit(state, "sponsors")) continue;
     if (signLocalOffer(state, best.id)) continue;
     report(state, "sponsors", signer(state, "CRO"), `Signed ${best.partner}`, `${LOCAL_CATS[cat].label}: ${best.years} years at ${money(best.value)} a year.`, { amount: best.value });
   }
@@ -281,7 +290,7 @@ function delegatedFinancing(state: GameState): void {
   for (const o of d.offers) if (o.purpose === "refinance" && o.refinances) byLoan.set(o.refinances, [...(byLoan.get(o.refinances) ?? []), o]);
   for (const [loan, offers] of byLoan) {
     const best = offers.slice().sort((a, b) => a.rate + a.fee / a.years - (b.rate + b.fee / b.years))[0];
-    if (how === "delegate" && best.amount <= office(state).limits.debt) {
+    if (how === "delegate" && best.amount <= Math.min(office(state).limits.debt, areaLimit(state, "financing"))) {
       const err = acceptLoan(state, best.id);
       report(state, "financing", signer(state, "CFO"), `Refinanced with ${best.lender}`, err ?? `${money(best.amount)} over ${best.years} years at ${(best.rate * 100).toFixed(2)}%${best.kind === "floating" ? " over the market rate" : ""}.`, { amount: best.amount });
       continue;
@@ -396,6 +405,11 @@ export function execScores(state: GameState, year: number): Partial<Record<ExecR
   set("CTO", 72 - incidents("systems") * 14, `${incidents("systems")} systems incident${incidents("systems") === 1 ? "" : "s"}.`);
   const r = standings(state)[state.userTeam];
   if (r) set("FOPS", 60 + ((r.w + r.t / 2) - (staff(state).expect[state.userTeam] ?? 0.5) * 17) * 5, `The team went ${r.w}-${r.l}${r.t ? `-${r.t}` : ""}.`);
+  // Reviews weigh whether the year met the mandate the owner set.
+  for (const role of Object.keys(out) as ExecRole[]) {
+    const md = mandateScore(state, role, year);
+    if (md) out[role] = { score: Math.round(clamp(out[role]!.score + md.delta, 5, 99)), text: `${out[role]!.text} ${md.text}` };
+  }
   const others = Object.values(out).map((v) => v!.score);
   set("PRES", others.length ? others.reduce((a, b) => a + b, 0) / others.length : 60, "The business side as a whole.");
   return out;
@@ -445,7 +459,9 @@ export function assignTask(state: GameState, kind: string): string | null {
   if (!t) return "No such task.";
   if (o.tasks.some((x) => x.kind === kind && x.status === "open")) return "That's already being worked on.";
   if (t.who !== "GM" && !execRole(state, t.who) && !deputy(state, t.who)) return `Nobody is in the ${EXEC_ROLES[t.who].label.toLowerCase()} job.`;
-  o.tasks.unshift({ id: `task-${state.date}-${o.tasks.length}`, title: t.label, kind, who: t.who, set: state.date, due: addDays(state.date, t.days), status: "open" });
+  // An owner who second-guesses everything gets slower work back.
+  const days = Math.round(t.days * (1 + 0.5 * micromanagement(state)));
+  o.tasks.unshift({ id: `task-${state.date}-${o.tasks.length}`, title: t.label, kind, who: t.who, set: state.date, due: addDays(state.date, days), status: "open" });
   o.tasks = o.tasks.slice(0, 60);
   noteDecision(state, "tasks", `Asked for: ${t.label.toLowerCase()}`, undefined, "Owner", "owner");
   return null;
@@ -534,7 +550,13 @@ export function holdMeeting(state: GameState): void {
   topics.push("Football");
   minutes.push(`${football(state)}: ${r && r.w + r.l + r.t ? `we're ${r.w}-${r.l}${r.t ? `-${r.t}` : ""}.` : "the roster work goes on."}`);
   if (state.date < RULES.keyDates.regularSeasonStart) tasks.push("bookingPush");
-  o.meetings.unshift({ date: state.date, topics, minutes, tasks });
+  // The owner's agenda sets the order; the meeting only has time to turn the first three topics into work.
+  const order = agendaOrder(state, topics);
+  const pairs = order.map((t) => [t, minutes[topics.indexOf(t)]] as const);
+  const TOPIC_TASKS: Record<string, string[]> = { "The budget": ["savings"], Sponsors: ["sponsorPush"], Debt: ["refinancing"], Incidents: ["compliance"], Football: ["bookingPush"] };
+  const first = new Set(order.slice(0, 3).flatMap((t) => TOPIC_TASKS[t] ?? []));
+  const kept = (state.people?.agenda.length ? tasks.filter((k) => first.has(k)) : tasks);
+  o.meetings.unshift({ date: state.date, topics: pairs.map((x) => x[0]), minutes: pairs.map((x) => x[1]), tasks: kept });
   o.meetings = o.meetings.slice(0, 24);
 }
 
@@ -545,15 +567,15 @@ function incidents(state: GameState): void {
   const rng = rngFor(state.seed, `incidents:${state.date}`);
   const review = o.compliance && o.compliance >= state.date ? 0.5 : 1;
   const kinds: { kind: "compliance" | "operations" | "systems"; role: ExecRole; p: number; texts: string[]; cost: [number, number] }[] = [
-    { kind: "compliance", role: "GC", p: 0.04 * review, texts: ["A vendor contract dispute went to arbitration.", "The league fined the club over a reporting lapse.", "A former employee filed a complaint."], cost: [0.2, 1.5] },
+    { kind: "compliance", role: "GC", p: 0.04 * review * (consulting(state, "legal") ? 0.6 : 1), texts: ["A vendor contract dispute went to arbitration.", "The league fined the club over a reporting lapse.", "A former employee filed a complaint."], cost: [0.2, 1.5] },
     { kind: "operations", role: "SOD", p: 0.05, texts: ["A concourse leak closed concession stands for a game.", "A power outage delayed the gates opening.", "A vendor's staffing shortfall left lines out the door."], cost: [0.1, 0.8] },
-    { kind: "systems", role: "CTO", p: 0.03, texts: ["The ticketing system went down during a presale.", "A phishing attack reached the business office.", "Scanners failed at two gates on game day."], cost: [0.1, 1.2] },
+    { kind: "systems", role: "CTO", p: 0.03 * (invested(state, "techRefresh") ? 0.6 : 1), texts: ["The ticketing system went down during a presale.", "A phishing attack reached the business office.", "Scanners failed at two gates on game day."], cost: [0.1, 1.2] },
   ];
   for (const k of kinds) {
     // A strong executive in the job makes trouble rarer; a vacancy makes it likelier.
     if (rng() > k.p * (1 - 0.6 * execBoost(state, k.role))) continue;
     const text = k.texts[Math.floor(rng() * k.texts.length)];
-    const cost = Math.round((k.cost[0] + rng() * (k.cost[1] - k.cost[0])) * M / 10_000) * 10_000;
+    const cost = Math.round((k.cost[0] + rng() * (k.cost[1] - k.cost[0])) * M * (k.kind === "compliance" && consulting(state, "legal") ? 0.7 : 1) / 10_000) * 10_000;
     o.incidents.unshift({ date: state.date, kind: k.kind, text, cost });
     o.incidents = o.incidents.slice(0, 60);
     post(state, "professional", -cost, text);

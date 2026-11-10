@@ -7,12 +7,14 @@ import {
   openExecSearch, ownerSpan, promoteDeputy, reputationWord, SEARCH_FIRMS, setReportsTo,
 } from "../../engine/executives";
 import { RULES } from "../../engine/league";
-import type { DecisionMode, Exec, ExecRole, GameState, OfficeState } from "../../engine/types";
+import type { DecisionArea, DecisionMode, Exec, ExecRole, GameState, OfficeState } from "../../engine/types";
 import { money } from "../format";
+import { setAreaLimit } from "../../engine/delegation";
 import { Desk, Meetings, Record } from "./FrontOfficeDesk";
+import { People } from "./FrontOfficePeople";
 import { Culture } from "./FrontOfficeCulture";
 
-const TABS = ["Executives", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
+const TABS = ["Executives", "People", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
 
 export function FrontOfficeScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -27,6 +29,7 @@ export function FrontOfficeScreen({ game, changed }: { game: GameState; changed:
         </div>
       </div>
       {tab === "Executives" && <Executives game={game} changed={changed} />}
+      {tab === "People" && <People game={game} changed={changed} />}
       {tab === "Decision rights" && <Rights game={game} changed={changed} />}
       {tab === "Memos" && <Desk game={game} changed={changed} />}
       {tab === "Meetings" && <Meetings game={game} changed={changed} />}
@@ -213,6 +216,16 @@ function Rights({ game, changed }: { game: GameState; changed: () => void }) {
             {[50, 100, 150, 300, 500].map((m) => <option key={m} value={m * 1_000_000}>${m}M</option>)}
           </select>
         </label>
+        <h4>Limits by area</h4>
+        <span className="muted">A dollar ceiling on what each area may commit on its own: per year for signings, the whole deal for sponsors, the loan for borrowing.</span>
+        {(["signings", "sponsors", "financing"] as DecisionArea[]).map((a) => (
+          <label key={a} className="field"><span className="label">{AREAS[a].label}</span>
+            <select value={o.limits.areas?.[a] ?? ""} onChange={(e) => { setAreaLimit(game, a, e.target.value ? Number(e.target.value) : null); changed(); }}>
+              <option value="">No extra limit</option>
+              {(a === "signings" ? [2, 5, 10, 20] : a === "sponsors" ? [1, 3, 5, 10, 25] : [25, 75, 150, 300]).map((m) => <option key={m} value={m * 1_000_000}>${m}M</option>)}
+            </select>
+          </label>
+        ))}
         <span className="muted">Anything over a limit comes to you as a memo even when the area is delegated.</span>
       </div>
     </div>

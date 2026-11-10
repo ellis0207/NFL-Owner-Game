@@ -197,6 +197,24 @@ describe("saves from older versions", () => {
     expect(old.care).toBeDefined();
   }, 90_000);
 
+  it("a save with the treasury, staff memory and standing keeps them, and older saves start them", async () => {
+    const state = load("pr42-2027-03-15");
+    expect(state.treasury!.controls).toBe(2);
+    expect(state.treasury!.cuts.marketing).toBeCloseTo(0.1, 5);
+    expect(state.people!.qc).toHaveLength(1);
+    expect(state.people!.agenda).toEqual(["Debt", "Football"]);
+    expect(state.standing!.stance).toBe("handsOff");
+    expect(state.office!.reports).toHaveLength(1);
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.people!.calendar.length).toBeGreaterThan(0);
+    const old = load("pr41-2027-03-15");
+    expect(old.treasury).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.treasury).toBeDefined();
+    expect(old.standing).toBeDefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

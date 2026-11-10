@@ -344,3 +344,11 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 
 /* Long option text stays inside its panel. */
 .panel select { max-width: 100%; }
+
+/* Contextual help, evidence labels and the sandbox banner. */
+.help button.link { font-size: 0.85em; padding: 0 0.25em; }
+.tag { display: inline-block; font-size: 0.75em; padding: 0 0.4em; border-radius: 0.6em; border: 1px solid currentColor; margin-left: 0.25em; vertical-align: middle; }
+.evidence-confirmed { color: var(--good); }
+.evidence-estimate { color: var(--muted); }
+.evidence-opinion { color: var(--warn, var(--muted)); font-style: italic; }
+.sandbox-banner { background: var(--bad); color: #fff; text-align: center; padding: 0.25em; font-weight: 600; }

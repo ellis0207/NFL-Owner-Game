@@ -533,6 +533,30 @@ snaps, respond to training differently and weigh money and family when they
 think about retiring; the owner's standing with players and the medical staff
 affect free agency, diagnoses and rehab.
 
+Owner's office follow-ups (Batch L2). The Business page adds a Treasury
+tab (supplier payment terms and collections, financial controls, audit
+findings that come back worse if left unfixed, outside consultants, one
+capital pool that every equipment and technology request competes for,
+payroll by department, and layoffs with severance and a hit to morale) and a
+Journal tab with every ledger entry in double-entry form and a trial
+balance. The Front office page adds a People tab: succession plans and named
+successors, quality-control coaches who sharpen game plans and can be
+promoted, promotions from within, coaching extensions with partial
+guarantees and playoff bonuses (a fired coach is owed only the guaranteed
+share), the head coach's job security and votes of confidence, mandates for
+each executive, working conditions and what each person remembers about
+you. The Owner page shows how eight audiences judge you and how that has
+moved over a year, your public line on football decisions (calls you make
+quietly while saying otherwise tend to leak), elected officials who follow
+their voters, staff and owner scandals, your calendar, and a slider from
+past results through the forecast with ranges. New Football, Agreements and
+Reports pages give the football overview, a searchable contract center with
+an archive, and saved reports with the desk ranked by what needs you first.
+Memos take follow-up questions, meeting agendas can be reordered, figures
+carry confirmed/estimate/opinion labels and help, and Settings adds a full
+realism preset, play modes that hand one side to the staff, a sandbox,
+information levels and approval limits by area.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -576,6 +600,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
+  Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.

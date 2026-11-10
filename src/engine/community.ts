@@ -24,6 +24,8 @@ import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "./league";
 import { owner, ownerMoney } from "./ownership";
 import { addStory, MEDIA_BY_ID } from "./outlets";
 import { gaussian, rngFor } from "./rng";
+import { cutShare } from "./treasury";
+import { officialsLean } from "./standing";
 import type { CommunityState, GameState, Grant } from "./types";
 
 const M = 1_000_000;
@@ -195,7 +197,7 @@ export function servicesScore(state: GameState): number {
 export function cityGoodwill(state: GameState): number {
   const c = state.community;
   if (!c) return 0;
-  return (c.partnership ? 0.04 * commitment(c, "city") : 0) + 0.01 * Object.entries(PROGRAMS).filter(([k, p]) => !p.base && c.programs[k]).length;
+  return (c.partnership ? 0.04 * commitment(c, "city") : 0) + 0.01 * Object.entries(PROGRAMS).filter(([k, p]) => !p.base && c.programs[k]).length - cutShare(state, "community") * 0.05 + officialsLean(state);
 }
 /** The owner's community score, beyond the budget, fan goodwill and projects already counted. */
 export function communityScore(state: GameState): number {

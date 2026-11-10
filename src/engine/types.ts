@@ -8,6 +8,9 @@ import type { ScoutOpsState } from "./scoutops";
 import type { HindsightState } from "./hindsight";
 import type { CareState } from "./playercare";
 import type { AnalystsState } from "./analysts";
+import type { TreasuryState } from "./treasury";
+import type { PeopleState } from "./people";
+import type { StandingState } from "./standing";
 // Shapes of the generated league data (data/league-2026) and of a saved game.
 
 export type Position =
@@ -153,7 +156,8 @@ export interface Coach {
   hiredYear: number;
   callsPlays: ("offense" | "defense")[];
   /** The last season the contract covers, and the salary per year. */
-  contract?: { through: number; salary: number };
+  /** The last season the contract covers and the salary per year; the share owed if fired (1 when left out) and a playoff incentive. */
+  contract?: { through: number; salary: number; guaranteed?: number; incentive?: number };
   /** The head coach or GM this person worked under longest: a coaching tree. */
   mentor?: string;
   agent?: string;
@@ -744,6 +748,10 @@ export interface Settings {
   ironman?: boolean;
   /** Multi-day sims stop when something lands on the owner's desk: never, or when an urgent decision arrives. */
   pause?: "never" | "urgent";
+  /** How the owner plays: the whole club, football with the business delegated, or the business with football delegated. */
+  mode?: "owner" | "football" | "business";
+  /** How much estimated and private information the owner sees: every staff estimate, the usual, or confirmed facts only. */
+  info?: "full" | "real" | "limited";
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
@@ -1911,6 +1919,14 @@ export interface GameState {
   care?: CareState;
   /** Analysts by name, data feeds and experiments (analysts.ts). */
   analysts?: AnalystsState;
+  /** Payment terms, collections, audit findings, the capital pool, consultants and cuts (treasury.ts). */
+  treasury?: TreasuryState;
+  /** Succession, promotions, quality-control coaches, memory, mandates and the owner's calendar (people.ts). */
+  people?: PeopleState;
+  /** Credibility, public stances, officials and scandals (standing.ts). */
+  standing?: StandingState;
+  /** A sandbox game: set once and never cleared, so its results stay apart from realism games. */
+  sandbox?: boolean;
 }
 
 // ---- Offseason program, training camp and discipline ----
@@ -2326,7 +2342,9 @@ export interface OfficeState {
   modes: Record<DecisionArea, DecisionMode>;
   /** Deals above these need the owner's sign-off even when delegated. */
   /** Dollar limits on what the staff may commit without the owner: average per year and guaranteed money on a contract, and borrowing. */
-  limits: { contractApy: number; debt: number; guaranteed?: number };
+  limits: { contractApy: number; debt: number; guaranteed?: number; areas?: Partial<Record<DecisionArea, number>> };
+  /** Reports the owner saved to run again: a name, a report type and its settings. */
+  reports?: { id: string; name: string; kind: string; params: Record<string, string> }[];
   /** How each area reports what it did: every action, a weekly summary, or only exceptions. */
   alerts: Record<DecisionArea, "every" | "weekly" | "exceptions">;
   /** Every consequential decision: who proposed it, who approved it and why. */

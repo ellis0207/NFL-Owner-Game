@@ -7,6 +7,7 @@ import {
   setWeights, SPENDING, STYLES, takeSuggestion,
 } from "../../engine/ownership";
 import type { GameState, OwnerGoal } from "../../engine/types";
+import { OwnerStanding } from "./OwnerStanding";
 import { money } from "../format";
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
@@ -151,6 +152,7 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
           {o.log.slice(0, 12).map((l, i) => <span key={i}>{shortDate(l.date)} {l.date.slice(0, 4)}: {l.text}</span>)}
         </div>
       )}
+      <OwnerStanding game={game} changed={changed} />
     </section>
   );
 }

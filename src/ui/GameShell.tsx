@@ -45,9 +45,12 @@ import { StandingsScreen } from "./screens/StandingsScreen";
 import { StatsScreen } from "./screens/StatsScreen";
 import { TodayScreen } from "./screens/TodayScreen";
 import { TradesScreen, type TradeStart } from "./screens/TradesScreen";
+import { FootballScreen } from "./screens/FootballScreen";
+import { AgreementsScreen } from "./screens/AgreementsScreen";
+import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "History", "Owners", "Settings", "Guide", "Save"] as const;
+const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Football", "Agreements", "Reports", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "History", "Owners", "Settings", "Guide", "Save"] as const;
 export type Screen = (typeof SCREENS)[number];
 
 export function phaseLabel(state: GameState): string {
@@ -152,6 +155,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         <div className="owner">Owner: {game.ownerName}</div>
       </aside>
       <div className="main">
+        {game.sandbox && <div className="sandbox-banner" role="note">Sandbox game: unlimited money and no cap; results here are kept apart from realism games.</div>}
         <header className="scoreboard">
           <div className="clock">
             <span className="day">{longDate(game.date).replace(/, \d{4}$/, "")}</span>
@@ -207,6 +211,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
+          {screen === "Football" && <FootballScreen game={game} />}
+          {screen === "Agreements" && <AgreementsScreen game={game} />}
+          {screen === "Reports" && <ReportsScreen game={game} changed={changed} />}
           {screen === "Analytics" && <AnalyticsScreen game={game} changed={changed} />}
           {screen === "Clubhouse" && <ClubhouseScreen game={game} changed={changed} />}
           {screen === "Game week" && <GameWeekScreen game={game} changed={changed} />}

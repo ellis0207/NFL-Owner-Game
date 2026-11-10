@@ -7,6 +7,7 @@ import { isOffseason, NEXT } from "../../engine/offseason";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { CapTools } from "./CapTools";
+import { Help } from "../Help";
 
 export function CapScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const team = game.userTeam;
@@ -30,8 +31,8 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
             <dt>{year} adjusted cap</dt><dd>{money(cap.limit)}</dd>
             {incentiveAdjustment(game, team, year) !== 0 && <><dt>Incentive settlement</dt><dd className={incentiveAdjustment(game, team, year) < 0 ? "bad" : "good"}>{money(incentiveAdjustment(game, team, year))}</dd></>}
             <dt>Players</dt><dd>{money(cap.players)}</dd>
-            <dt>Dead money</dt><dd>{money(cap.dead)}</dd>
-            <dt>Cap space</dt><dd className={cap.space < 0 ? "bad" : "good"}>{money(cap.space)}</dd>
+            <dt>Dead money <Help k="deadMoney" /></dt><dd>{money(cap.dead)}</dd>
+            <dt>Cap space <Help k="capSpace" /></dt><dd className={cap.space < 0 ? "bad" : "good"}>{money(cap.space)}</dd>
           </dl>
           <div className="meter" aria-hidden="true">
             <span style={{ width: pct(cap.players), background: "var(--team)" }} />

@@ -28,6 +28,7 @@ import { staffEffects, teamSchemes } from "./staff";
 import type { GameState, ScheduledGame } from "./types";
 import { innovate, type Innovation } from "./simtactics";
 import { advanceBonus } from "./scoutops";
+import { hotSeatDrag, qcBonus } from "./people";
 import { analystEdge } from "./analysts";
 
 const M = 1_000_000;
@@ -198,7 +199,7 @@ export function gamePlan(state: GameState, team: string, opp: string, g: Schedul
   // A short week cuts preparation; extra days help a little.
   const prepDays = rest <= 4 ? -4 : rest >= 10 ? 1.5 : 0;
   // Our pro scouts' advance report on the opponent adds to the preparation.
-  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + emphasisPlanBonus(state, team) + (ours ? advanceBonus(state) : 0) + (rng() + rng() + rng() - 1.5) * 6;
+  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + emphasisPlanBonus(state, team) + (ours ? advanceBonus(state) + qcBonus(state) + hotSeatDrag(state) : 0) + (rng() + rng() + rng() - 1.5) * 6;
   const quality = Math.max(-1, Math.min(1, (raw - 70) / 15));
 
   // What the film and the numbers say about them.
