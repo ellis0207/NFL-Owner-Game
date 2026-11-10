@@ -156,7 +156,7 @@ describe("the offseason", () => {
     const slot = currentSlot(state)!;
     expect(slot.team).toBe(TEAM);
     const recs = staffRecommendations(state);
-    expect(recs.map((r) => r.role)).toEqual(["GM", "HC", "OC", "DC"]);
+    expect(recs.map((r) => r.role)).toEqual(["GM", "HC", "OC", "DC", "AN"]);
     expect(makePick(state, recs[1].player, "owner")).toBeNull();
     const rookie = recs[1].player;
     expect(state.players[rookie].team).toBe(TEAM);
