@@ -27,6 +27,7 @@ export const COMMITTEES: Record<Committee, { label: string; what: string; issues
   media: { label: "Media and Broadcast Committee", what: "The national TV deals and the season's shape and schedule the networks buy.", issues: ["scheduling"] },
   stadium: { label: "Stadium Committee", what: "Stadium projects, league stadium loans and Super Bowl sites.", issues: [] },
   international: { label: "International Committee", what: "Games abroad and the clubs' overseas marketing areas.", issues: ["international"] },
+  labor: { label: "Management Council Executive Committee", what: "The owners' labor committee: it sets the league's bargaining goals with the players' union and brings a deal to the owners' vote.", issues: [] },
 };
 
 /** Who decides what: the commissioner's powers next to the owners' votes. */

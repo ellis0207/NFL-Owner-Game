@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
 import { tradePhysicals } from "./compliance";
 import { changeRapport } from "./owners";
@@ -961,6 +962,7 @@ function processAgreed(state: GameState): void {
 
 /** The owner puts a trade to a CPU team. teams[0] must be the owner's team. */
 export function proposeTrade(state: GameState, deal: TradeDeal): Answer & { record?: TradeRecord } {
+  if (lockedOut(state)) return { verdict: "reject", text: LOCKOUT_REASON };
   const team = deal.teams[1];
   const t = (trades(state).talks[team] ??= { strikes: 0 });
   if (t.coolingUntil && t.coolingUntil > state.date) {

@@ -170,7 +170,7 @@ export function injuryDiscount(state: GameState, id: string): number {
 
 // ---- Market curves ----
 
-interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number }
+interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number; floorViews: number[]; floorShares: number[] }
 const curveCache = new WeakMap<GameState, Record<string, Curve>>();
 
 const VETERAN_KINDS = new Set(["veteran", "extension", "franchise", "transition"]);
@@ -219,7 +219,18 @@ function curves(state: GameState): Record<string, Curve> {
   for (const [pos, list] of Object.entries(pts)) {
     const { views, shares } = goingRate(list);
     const top = Math.max(...list.map((x) => x.s));
-    c[pos] = { views, shares, top, spill: 1, ceiling: ceilings[pos] ?? top * 1.1 };
+    c[pos] = { views, shares, top, spill: 1, ceiling: ceilings[pos] ?? top * 1.1, floorViews: [], floorShares: [] };
+  }
+  // A market can't wash out: the r-th best player at a position commands at least
+  // FLOOR of what the r-th biggest deal there paid when the game started. Without it a
+  // position whose stars sit on cheap deals drags its own going rate down year after year.
+  const start = baselineShares(state);
+  const ranked: Record<string, number[]> = {};
+  for (const p of PLAYERS) if (state.players[p.id]?.team && c[p.position]) (ranked[p.position] ??= []).push(perceivedAbility(state, p.id, "market", MARKET_EYE));
+  for (const [pos, list] of Object.entries(ranked)) {
+    const real = [...(start[pos] ?? [])].reverse().slice(0, 32);
+    c[pos].floorViews = list.sort((a, b) => b - a).slice(0, real.length);
+    c[pos].floorShares = real.map((s) => s * FLOOR);
   }
   // Spillover: when the top of one market jumps, agents at neighboring positions point to it.
   const base = baselineTops(state);
@@ -315,6 +326,13 @@ function capAt(year: number): number {
 export function shareFor(state: GameState, pos: Position, view: number): number {
   const c = curves(state)[pos];
   if (!c || !c.views.length) return 0.003;
+  const rank = c.floorViews.filter((v) => v > view + 0.5).length;
+  return Math.min(c.ceiling, Math.max(rank < c.floorShares.length ? c.floorShares[rank] : 0, curveShare(c, view)));
+}
+
+const FLOOR = 0.8;
+
+function curveShare(c: Curve, view: number): number {
   const n = c.views.length;
   if (view <= c.views[0]) return c.shares[0];
   // A player better than everyone already paid gets a little more than the going rate at the top, up to the ceiling.

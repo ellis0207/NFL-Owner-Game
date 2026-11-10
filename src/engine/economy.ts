@@ -8,6 +8,7 @@
 // the labor market moves staff wages, and rates and confidence move
 // franchise values. Starting values are approximate 2026 conditions; the
 // paths after that are made up from the save's seed.
+import { laborDrag } from "./labor";
 import { BASE_SEASON, TEAMS } from "./league";
 import { gaussian, rngFor } from "./rng";
 import type { GameState } from "./types";
@@ -103,13 +104,14 @@ export function demandFactor(state: GameState, team: string): number {
   const pop = state.economy!.metros[team]?.pop ?? 1;
   // A slump in the market's appetite for games (shocks.ts).
   const slump = team === state.userTeam ? state.shocks?.slump?.mult ?? 1 : 1;
-  return Math.max(0.85, Math.min(1.12, (1 + 0.8 * income + mood + 0.5 * (pop - 1)) * slump));
+  // Labor trouble (labor.ts) keeps some buyers waiting.
+  return Math.max(0.85, Math.min(1.12, (1 + 0.8 * income + mood + 0.5 * (pop - 1)) * slump * (1 - 0.5 * laborDrag(state))));
 }
 
 /** Corporate earnings in a metro: sponsor, suite and hospitality budgets (1 = normal). */
 export function corporateFactor(state: GameState, team: string): number {
   if (!current(state)) return 1;
-  return Math.max(0.82, Math.min(1.15, 1 + 0.6 * 0.022 * metroGap(state, team)));
+  return Math.max(0.82, Math.min(1.15, (1 + 0.6 * 0.022 * metroGap(state, team)) * (1 - laborDrag(state))));
 }
 
 /** Staff pay against the budget's usual raises: tight labor markets and surprise inflation push it up. */

@@ -18,6 +18,7 @@
 // shortfall to its players after the period's last season. In the game the
 // periods start with 2027, the first league year a save sees from March on
 // (the 2026 bonuses were paid before the game begins).
+import { termsFor } from "./cbaterms";
 import { FORMAT } from "./format";
 import { dealOf, leagueYear, minimumSalary, salaryCap } from "./contracts";
 import { addDays } from "./dates";
@@ -238,7 +239,7 @@ export function cashSpending(state: GameState, team: string, year = leagueYear(s
     paid += cashPaid(state, team, y);
     caps += salaryCap(state, y);
   }
-  return { from, to, paid, caps, floor: caps * CASH_FLOOR, share: caps ? paid / caps : 1 };
+  return { from, to, paid, caps, floor: caps * termsFor(to).cashFloor, share: caps ? paid / caps : 1 };
 }
 
 /** After the last season of a period, clubs under the floor pay the difference to their players. */
@@ -254,7 +255,7 @@ function cashFloor(state: GameState): void {
     payCash(state, team, short, season);
     if (team === state.userTeam) {
       send(state, "league", "League office", "Minimum cash spending",
-        `Over ${s.from}-${s.to} we paid players ${Math.round(s.share * 100)}% of the salary caps in cash, below the CBA's ${Math.round(CASH_FLOOR * 100)}% floor. The ${money(short)} shortfall is paid to the players on our roster.`);
+        `Over ${s.from}-${s.to} we paid players ${Math.round(s.share * 100)}% of the salary caps in cash, below the CBA's ${Math.round(termsFor(s.to).cashFloor * 100)}% floor. The ${money(short)} shortfall is paid to the players on our roster.`);
     } else if (short > 5_000_000) {
       news(state, `The ${teamLabel(team)} fell short of the CBA's cash spending floor for ${s.from}-${s.to} and will pay ${money(short)} to their players.`);
     }

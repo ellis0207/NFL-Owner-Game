@@ -1889,6 +1889,7 @@ export interface GameState {
   crisis?: CrisisState;
   economy?: import("./economy").EconomyState;
   shocks?: import("./shocks").ShockState;
+  labor?: import("./labor").LaborState;
   legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;
@@ -2063,7 +2064,7 @@ export interface LeagueMoneyState {
   log: { date: string; text: string }[];
 }
 
-export type Committee = "competition" | "finance" | "media" | "stadium" | "international";
+export type Committee = "competition" | "finance" | "media" | "stadium" | "international" | "labor";
 
 /** The league office (leagueoffice.ts): the commissioner, committees, coalitions, technology trials and schedule moves. */
 export interface LeagueOfficeState {

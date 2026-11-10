@@ -3,6 +3,7 @@
 //
 // Original contracts come from the data (OverTheCap year-by-year lines) and are
 // converted on first use; contracts signed in the game are stored in the save.
+import { termsFor } from "./cbaterms";
 import { FORMAT } from "./format";
 import { addDays, daysBetween } from "./dates";
 import { keyDatesFor, newLeagueYearDate } from "./calendar";
@@ -64,6 +65,8 @@ export function projectedCap(year: number): number {
   }
   let cap = base;
   for (let y = from + 1; y <= year; y++) cap *= y === BASE_SEASON + 1 ? 1.085 : 1.07;
+  // A new labor deal's share of revenue moves the cap with it.
+  cap *= termsFor(year).share / termsFor(from).share;
   return Math.round(cap / 100_000) * 100_000;
 }
 
@@ -79,7 +82,7 @@ export function minimumSalary(yearsExp: number, year = RULES.season): number {
   const capped = Math.min(year, 2030);
   const base = table[String(step)] + Math.max(0, capped - BASE_SEASON - 1) * 45_000;
   if (year <= 2030) return base;
-  return Math.round(base * Math.pow(1.05, year - 2030) / 5_000) * 5_000;
+  return Math.round(base * Math.pow(1.05, year - 2030) * termsFor(year).minScale / 5_000) * 5_000;
 }
 
 // ---- Reading a contract ----
@@ -551,7 +554,7 @@ export function voidedProration(deal: Deal, year: number): number {
 export function rookieScale(pick: number, year: number): { total: number; signingBonus: number; years: number; option: boolean } {
   const cap = projectedCap(year);
   const share = 0.0155 + 0.1595 * Math.exp(-(pick - 1) / 22);
-  const total = Math.round((cap * share) / 1000) * 1000;
+  const total = Math.round((cap * share * termsFor(year).rookieScale) / 1000) * 1000;
   const sbShare = 0.04 + 0.62 * Math.exp(-(pick - 1) / 40);
   return { total, signingBonus: Math.round((total * sbShare) / 1000) * 1000, years: 4, option: pick <= 32 };
 }

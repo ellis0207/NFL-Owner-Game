@@ -140,6 +140,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Labor and the CBA",
+    body: [
+      "The agreement with the players' union runs through 2030. Talks on the next one open two years before; set your stance and priorities in the Labor relations panel on the Owners page. A seat on the owners' labor committee makes your view count fully.",
+      "Most talks end in a deal. If the deadline passes, the owners lock out the players: no free agency, trades or team activities. If it reaches the season, games are cancelled, tickets refunded and national money cut.",
+      "A tentative deal needs 24 owners' votes and the players' ratification. The new terms apply at once to the cap, minimums, rookie pool and benefits; existing contracts stay as written. Grievances against the club can be settled before the hearing.",
+    ],
+  },
+  {
     title: "The economy and risk",
     body: [
       "The economy moves every month, and your metro has its own trend. Household incomes move ticket and store demand; corporate earnings move sponsors and suites. Recessions come from the conditions, about once a decade at normal volatility (Settings).",

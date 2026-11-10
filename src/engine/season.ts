@@ -1,4 +1,5 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { cancelGame, laborDaily, lockedOut } from "./labor";
 import { leagueMoneyDaily } from "./leaguemoney";
 import { complianceDaily } from "./compliance";
 import { crisisDaily } from "./crisis";
@@ -413,6 +414,8 @@ function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
   if (state.results[g.id]) return state.results[g.id];
   const m = matchup(state, g);
   if (!m) return undefined;
+  // No games are played during a lockout.
+  if (lockedOut(state)) { cancelGame(state, g); return undefined; }
   if (g.type !== "PRE") {
     for (const team of [m.away, m.home]) {
       const up = gameDayElevations(state, team);
@@ -513,17 +516,22 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   carouselDaily(state);
   positionCoachesDaily(state);
-  contractsDaily(state);
+  // A lockout stops signings, trades and every team activity.
+  const out = lockedOut(state);
+  if (!out) contractsDaily(state);
   contractExtrasDaily(state);
   incentivesDaily(state);
   capMovesDaily(state);
-  faDaily(state);
-  tradesDaily(state);
-  springDaily(state);
-  campDaily(state);
+  if (!out) {
+    faDaily(state);
+    tradesDaily(state);
+    springDaily(state);
+    campDaily(state);
+  }
   coachRoomDaily(state);
   ownersDaily(state);
   leagueOfficeDaily(state);
+  laborDaily(state);
   leagueMoneyDaily(state);
   complianceDaily(state);
   crisisDaily(state);
@@ -544,7 +552,7 @@ export function advanceDay(state: GameState): void {
   }
   if (weekday(date) === "Tuesday" && !offseason) {
     weeklyDevelopment(state, playedLastWeek(state));
-    if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2)) payWeek(state);
+    if (date > KEY.regularSeasonStart && date <= addDays(KEY.regularSeasonEnd, 2) && !lockedOut(state)) payWeek(state);
   }
   if (date === KEY.regularSeasonEnd) {
     recordCredits(state);

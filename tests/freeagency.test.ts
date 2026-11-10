@@ -111,6 +111,8 @@ describe("the free agent pool", () => {
     expect(sendOffer(state, id, terms).ok).toBe(false);
     releasePlayer(state, cut);
     expect(sendOffer(state, id, terms).ok).toBe(true);
+    // Keep a spare spot: a player back from injured reserve can take the open one before the agent answers.
+    releasePlayer(state, teamPlayerIds(state, team).find((x) => x !== cut && state.players[x].status === "active" && PLAYER_BY_ID[x].yearsExp <= 1)!);
     for (let i = 0; i < 6 && state.players[id].team !== team; i++) advanceDay(state);
     expect(state.players[id].team).toBe(team);
     expect(state.players[id].status).toBe("active");
