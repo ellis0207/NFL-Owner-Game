@@ -12,6 +12,7 @@
 import { addDays, shortDate } from "./dates";
 import { news, send } from "./inbox";
 import { RULES, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
+import { issuePull, trialDone } from "./leagueoffice";
 import { MEDIA_BY_ID, addStory } from "./outlets";
 import { gaussian, rngFor } from "./rng";
 import { RULE_BY_ID, RULE_CATALOG, rulesFor } from "./rules";
@@ -87,7 +88,8 @@ export function proposable(state: GameState): string[] {
   const agenda = currentMeeting(state)?.proposals ?? [];
   for (const p of agenda) RULE_BY_ID[p.rule].apply(r);
   const on = new Set(agenda.map((p) => p.rule));
-  return RULE_CATALOG.filter((c) => c.when(r) && !on.has(c.id)).map((c) => c.id);
+  // New technology has to go through a committee trial season first.
+  return RULE_CATALOG.filter((c) => c.when(r) && !on.has(c.id) && (!c.trial || trialDone(state, c.trial))).map((c) => c.id);
 }
 
 function committeeView(appeal: number): RuleProposal["committee"] {
@@ -101,16 +103,24 @@ function publishAgenda(state: GameState): void {
   const m: LeagueMeeting = { year: RULES.season + 1, ...d, proposals: [], calls: 0 };
   o.meeting = m;
   const rng = rngFor(state.seed, `agenda:${m.year}`);
-  const draw = () => {
-    const pool = proposable(state);
+  // The Competition Committee brings playing rules, rosters and technology; the season's shape and the money come from clubs.
+  const draw = (committee = false) => {
+    const pool = proposable(state).filter((id) => !committee || ["competition", "rosters", "technology"].includes(RULE_BY_ID[id].issue));
     return pool.length ? pool[Math.floor(rng() * pool.length)] : undefined;
   };
   // The committee brings two or three of its own; the clubs bring the ones that help them most.
   const committee = 2 + (rng() < 0.5 ? 1 : 0);
   for (let i = 0; i < committee; i++) {
-    const rule = draw();
+    const rule = draw(true);
     if (!rule) break;
     m.proposals.push({ id: `${m.year}:${rule}`, rule, sponsor: "committee", committee: "for", lobby: {} });
+  }
+  // A proposal voted down in the last two years sometimes comes back, narrowed to win votes.
+  const failed = o.history.filter((h) => !h.passed && h.year >= m.year - 2 && h.sponsor !== state.userTeam && proposable(state).includes(h.rule));
+  if (failed.length && rng() < 0.4) {
+    const h = failed[Math.floor(rng() * failed.length)];
+    const c = RULE_BY_ID[h.rule];
+    m.proposals.push({ id: `${m.year}:${h.rule}`, rule: h.rule, sponsor: h.sponsor, committee: committeeView(c.appeal + 0.05), lobby: {}, revised: true, amended: true });
   }
   const clubs = 2 + Math.floor(rng() * 3);
   for (let i = 0; i < clubs; i++) {
@@ -164,6 +174,8 @@ function support(state: GameState, p: RuleProposal, team: string, noisy: boolean
     if (p.ourVote !== undefined) s += (p.ourVote ? 1 : -1) * (r.ally ? 0.25 : r.rival ? -0.2 : 0);
   }
   s += p.lobby[team] ?? 0;
+  // The issue itself, coalitions on it, league-wide growth every owner shares, and a narrower version's easier sell.
+  s += issuePull(state, p, team);
   if (noisy) s += gaussian(rngFor(state.seed, `vote:${p.id}:${team}`)) * 0.12;
   return s;
 }
@@ -229,12 +241,12 @@ function holdVote(state: GameState): void {
     p.yes = Object.values(votes).filter(Boolean).length;
     p.passed = p.yes >= VOTES_TO_PASS;
     const c = RULE_BY_ID[p.rule];
-    if (p.passed) o.rules.push({ rule: p.rule, year: m.year, yes: p.yes, sponsor: p.sponsor });
+    if (p.passed) o.rules.push({ rule: p.rule, year: m.year, yes: p.yes, sponsor: p.sponsor, ...(p.amended ? { until: m.year } : {}) });
     o.history.push({ year: m.year, rule: p.rule, sponsor: p.sponsor, yes: p.yes, passed: p.passed, ours: votes[us] });
     // Owners remember who stood with them.
     if (p.sponsor !== "committee" && p.sponsor !== us) changeRapport(state, p.sponsor, votes[us] ? 6 : -4);
     if (p.sponsor === us) for (const [team, v] of Object.entries(votes)) if (team !== us) changeRapport(state, team, v ? 2 : -2);
-    lines.push(`${p.passed ? "Approved" : "Voted down"}, ${p.yes}-${32 - p.yes}: ${c.title}. We voted ${votes[us] ? "yes" : "no"}.`);
+    lines.push(`${p.passed ? "Approved" : "Voted down"}, ${p.yes}-${32 - p.yes}: ${c.title}${p.amended ? " (as a one-season trial)" : ""}. We voted ${votes[us] ? "yes" : "no"}.`);
     news(state, `Owners ${p.passed ? "approve" : "reject"} proposal (${p.yes}-${32 - p.yes}): ${c.title.toLowerCase()}`);
   }
   m.done = true;
@@ -285,6 +297,17 @@ export function ownersDaily(state: GameState): void {
   if (date === d.published && !currentMeeting(state)) publishAgenda(state);
   const m = currentMeeting(state);
   if (m && !m.done && date === m.voteDate) holdVote(state);
+  // Sponsors a few votes short narrow their proposals to a one-season trial before the vote.
+  if (m && !m.done && date === addDays(m.voteDate, -3)) {
+    for (const p of m.proposals) {
+      if (p.amended || p.sponsor === "committee" || p.sponsor === state.userTeam) continue;
+      const yes = whipCount(state, p).yes.length + 1;
+      if (yes >= 19 && yes < VOTES_TO_PASS) {
+        p.amended = true;
+        news(state, `${sponsorName(p.sponsor)} narrow their proposal to a one-season trial to win votes: ${RULE_BY_ID[p.rule].title.toLowerCase()}`);
+      }
+    }
+  }
   if (m && !m.done && date === m.deadline) {
     const ours = m.proposals.filter((p) => p.ourVote === undefined).length;
     if (ours) send(state, "league", "League Office", "The league meeting is a week away", `We haven't decided on ${ours} of the proposals. If you don't, our president votes with the Competition Committee (and no where it has no position).`);

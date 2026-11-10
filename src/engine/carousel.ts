@@ -8,6 +8,7 @@
 // nobody joins a new team until his current team's season is over.
 // Head coaching interviews can't be blocked; a lateral move to another
 // coordinator job can, while the coach is under contract.
+import { FORMAT } from "./format";
 import { changeRapport } from "./owners";
 import {
   canHold, COACH_ROLES, CONCERN_TAGS, coachAge, install, knownFor, newHireFromWithin, quality, recordTeamSeason, reputation, retire, retiresNow,
@@ -779,7 +780,7 @@ function seasonReview(state: GameState): void {
   const table = standings(state);
   const off = rankOf(table, team, "pf");
   const def = rankOf(table, team, "pa");
-  const exp = Math.round(expect * 17);
+  const exp = Math.round(expect * FORMAT.games);
   const lines = [
     `We finished ${r.w}-${r.l}${r.t ? `-${r.t}` : ""}. Going in, the roster looked like about a ${exp}-win team.`,
     `The offense ranked ${ordinal(off)} in points scored; the defense ${ordinal(def)} in points allowed.`,

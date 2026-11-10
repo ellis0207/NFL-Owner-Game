@@ -11,6 +11,7 @@
 //
 // Officials draw on their own random stream, so the plays themselves come out
 // the same as they would without them except where a call changes a result.
+import { LEAGUE_RULES } from "./rules";
 import { rngFor, type Rng } from "./rng";
 import type { DisputedCall } from "./types";
 
@@ -83,7 +84,8 @@ export class Officials {
   rule(kind: Ruling, c: CallContext): { stands: boolean; note: string } {
     const hurt = kind === "catch" ? c.offense : c.defense;
     const other = hurt === c.offense ? c.defense : c.offense;
-    const wrong = this.rng() < WRONG[kind];
+    // A booth official, if the owners adopted one, catches many clear misses on the spot.
+    const wrong = this.rng() < WRONG[kind] * (LEAGUE_RULES.skyJudge ? 0.6 : 1);
     const onField = kind === "catch" ? (wrong ? "incomplete" : "complete") : kind === "drop" ? (wrong ? "a catch" : "incomplete") : wrong ? "down by contact" : "a fumble";
     const what = kind === "fumble" ? (wrong ? "Runner ruled down by contact" : "Fumble ruled on the field") : `Pass ruled ${onField}`;
     if (!wrong) {

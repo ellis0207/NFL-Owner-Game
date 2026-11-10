@@ -144,6 +144,8 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "Owners vote on rule changes at the March meeting; most need 24 of 32 votes. Relationships with other owners help with votes, trades and hosting bids.",
       "Interview rules protect teams still in the playoffs, and the draft, free agency and the trade deadline run on the real league calendar.",
+      "The league office splits national money into pools, holds a little back until the spring audit, and briefs every proposal. Committees decide what reaches the floor: ask for a seat to argue there or to bring proposals in the committee's name.",
+      "Owners vote issue by issue, so build a coalition for each issue you care about. Narrowing a proposal to a one-season trial wins votes. Season length, a second bye, international games and new technology are ordinary rule votes, and a longer season moves the calendar, the cap and players' pay.",
     ],
   },
 ];

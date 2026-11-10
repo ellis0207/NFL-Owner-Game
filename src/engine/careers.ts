@@ -11,6 +11,7 @@
 // Retirements are decided after the Super Bowl and announced over the next
 // weeks, mostly by older players, more often by those who are slipping or
 // have no contract. Free agents nobody signs by the spring mostly move on.
+import { FORMAT } from "./format";
 import { retirementLean } from "./playercare";
 import { addDeadMoney, adjustRollover, chargeYear, invalidateRosters, releaseCost } from "./cap";
 import { dealOf } from "./contracts";
@@ -48,7 +49,7 @@ function playingTime(state: GameState): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [id, row] of Object.entries(seasonTotals(state, "REG"))) {
     const snaps = Math.max(row.line.offSnaps ?? 0, row.line.defSnaps ?? 0, (row.line.stSnaps ?? 0) * 0.25);
-    out[id] = Math.min(1, snaps / (17 * 62));
+    out[id] = Math.min(1, snaps / (FORMAT.games * 62));
   }
   return out;
 }

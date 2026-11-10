@@ -11,6 +11,7 @@
 // true effect, hidden and fixed for the save; a test measures it with noise
 // that a bigger, better staff shrinks. Adopting a change applies the true
 // effect, whatever the test said. Names are made up from the shared lists.
+import { FORMAT } from "./format";
 import { capHit, releaseCost, teamPlayerIds } from "./cap";
 import { careerLines } from "./careerstats";
 import { dealOf, leagueYear, minimumSalary } from "./contracts";
@@ -144,7 +145,7 @@ export function availabilityModel(state: GameState, id: string): number {
   if (!p) return 0;
   const age = RULES.season - Number((p.birthDate ?? "1995").slice(0, 4));
   const lines = careerLines(state, id).slice(-3);
-  const missed = lines.length ? lines.reduce((t, s) => t + Math.max(0, 17 - Number(s.g ?? 0)), 0) / lines.length : 3;
+  const missed = lines.length ? lines.reduce((t, s) => t + Math.max(0, FORMAT.games - Number(s.g ?? 0)), 0) / lines.length : 3;
   const base = 2 + Math.max(0, age - 28) * 0.4 + missed * 0.4;
   return Math.round(base * (hasFeed(state, "injury") ? 1 : 1 + gaussian(rngFor(state.seed, `avail:${id}:${RULES.season}`)) * 0.15) * 10) / 10;
 }

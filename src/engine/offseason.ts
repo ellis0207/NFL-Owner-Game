@@ -2,6 +2,8 @@
 // ends, the cap for next year is set, teams use their tags and tenders and
 // clear cap room, and the new league year turns expiring contracts into free
 // agents. Free agency itself is in freeagency.ts.
+import { capMediaBump, leagueHealth } from "./leaguemoney";
+import { FORMAT } from "./format";
 import { cpuPayCut, june1Left, june1Preview, releaseJune1 } from "./capmoves";
 import { lockedSpace } from "./capplan";
 import { inAgreedTrade } from "./trades";
@@ -188,7 +190,7 @@ function playingTimeTier(state: GameState, id: string): boolean {
   }
   const line = seasonTotals(state, "REG")[id]?.line;
   const snaps = line ? Math.max(line.offSnaps ?? 0, line.defSnaps ?? 0) : 0;
-  if (snaps / (17 * 63) >= 0.75) seasons++;
+  if (snaps / (FORMAT.games * 63) >= 0.75) seasons++;
   return seasons >= 2;
 }
 
@@ -658,13 +660,14 @@ export function ordinal(n: number): string {
 function setCap(state: GameState): void {
   const rng = rngFor(state.seed, `cap${NEXT}`);
   const sd = NEXT === 2027 ? 0.012 : 0.02;
-  const media = NEXT === 2030 ? 0.03 + rng() * 0.05 : 0;
-  const cap = Math.round((projectedCap(NEXT) * (1 + media + Math.max(-0.05, Math.min(0.05, gaussian(rng) * sd)))) / 100_000) * 100_000;
+  // New national media deals and a longer or shorter season move the cap; so does how the league's business is doing overall.
+  const media = capMediaBump(state, NEXT);
+  const cap = Math.round((projectedCap(NEXT) * (1 + media + leagueHealth(state) * 0.5 + Math.max(-0.05, Math.min(0.05, gaussian(rng) * sd)))) / 100_000) * 100_000;
   const league = (state.league ??= { caps: {} });
   league.caps[NEXT] = cap;
   invalidateMarket(state);
   const diff = cap - projectedCap(NEXT);
-  if (media) news(state, "The league's new national media deals kick in: rights fees jump, and so does the cap");
+  if (media > 0.01) news(state, "The league's new national media money kicks in: rights fees jump, and so does the cap");
   news(state, `The league sets the ${NEXT} salary cap at ${money(cap)}, ${money(Math.abs(diff))} ${diff >= 0 ? "above" : "below"} projections`);
   const space = capSummary(state, state.userTeam, NEXT);
   send(state, "league", "League Office", `${NEXT} salary cap: ${money(cap)}`,

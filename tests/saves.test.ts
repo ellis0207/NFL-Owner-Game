@@ -215,6 +215,22 @@ describe("saves from older versions", () => {
     expect(old.standing).toBeDefined();
   }, 90_000);
 
+  it("a save with a coalition, a seat request, an amended proposal and a money dispute keeps them, and older saves start the league office", async () => {
+    const state = load("pr43-2027-03-20");
+    expect(state.leagueOffice!.coalitions).toHaveLength(1);
+    expect(state.leagueOffice!.seatAsk).toBe("finance");
+    expect(state.leagueMoney!.dispute?.amount).toBe(1_250_000);
+    expect(state.owners!.meeting!.proposals.some((p) => p.amended)).toBe(true);
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.leagueOffice!.commissioner.name).toBe(state.leagueOffice!.commissioner.name);
+    const old = load("pr42-2027-03-15");
+    expect(old.leagueOffice).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.leagueOffice).toBeDefined();
+    expect(old.leagueMoney).toBeDefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

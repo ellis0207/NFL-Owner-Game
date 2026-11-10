@@ -17,6 +17,7 @@
 // Disability insurance on a big salary: the club pays a premium before the
 // season and, once a player has missed more than three straight weeks with a
 // football injury, the policy pays back most of his salary for the weeks after.
+import { FORMAT } from "./format";
 import { diagnosisFactor } from "./playercare";
 import { post } from "./business";
 import { clubhouse, clubNote } from "./clubhouse";
@@ -229,7 +230,7 @@ function insuranceWeekly(state: GameState): void {
     const out = !!inj && !inj.nonFootball && inj.returnDate > state.date && inj.date < state.date;
     pol.weeksOut = out ? pol.weeksOut + 1 : 0;
     if (pol.weeksOut <= 3) continue;
-    const pay = Math.round(pol.base / 18 * 0.8);
+    const pay = Math.round(pol.base / FORMAT.weeks * 0.8);
     pol.paid += pay;
     post(state, "medical", pay, `Insurance claim: ${PLAYER_BY_ID[id].name}`);
     if (pol.weeksOut === 4) send(state, "business", "Risk management", `Insurance claim: ${PLAYER_BY_ID[id].name}`,

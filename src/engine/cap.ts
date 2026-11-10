@@ -5,13 +5,13 @@
 // every player on the 53 counts in full and practice squad players count at
 // their weekly pay. Dead money from released players counts throughout.
 // Unused cap space rolls over into the next league year.
+import { FORMAT } from "./format";
 import { dealCapHit, dealOf, dealYearsLeft, leagueYear, practiceWeekly, releaseCharges, salaryCap, writeMinimumDeal } from "./contracts";
 import { BASE_SEASON, PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
 import type { GameState } from "./types";
 
 export { minimumSalary } from "./contracts";
 
-const REGULAR_SEASON_WEEKS = 18;
 
 export function capHit(playerId: string, year = SEASON, state?: GameState): number {
   return dealCapHit(dealOf(state, playerId), year);
@@ -46,7 +46,7 @@ export function isRegularSeasonOrLater(date: string): boolean {
 }
 
 export function practiceSquadCapHit(): number {
-  return practiceWeekly(0) * REGULAR_SEASON_WEEKS;
+  return practiceWeekly(0) * FORMAT.weeks;
 }
 
 /** A practice squad player's cap charge: the weekly pay left on the practice deal. */

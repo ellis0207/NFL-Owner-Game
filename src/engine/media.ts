@@ -2,6 +2,7 @@
 // injuries, signings and releases, trades and trade rumors, interviews,
 // weekly trends, college football and the draft. Reporters only know what the
 // public knows, plus what leaks: rumors are sometimes true and sometimes not.
+import { FORMAT } from "./format";
 import { notableWeather } from "./gameday";
 import { capSummary, contractYearsLeft, teamPlayerIds } from "./cap";
 import { AWARDS, awardRace, gamesOn, latestPoll, mediaBoard, mediaRank, prospectLine, prospectTotals, rankedName } from "./college";
@@ -654,7 +655,7 @@ function statWatch(state: GameState): void {
   const week = Math.max(1, Math.round(games / 16));
   const lines = [lead("passYds", "Passing yards"), lead("passTd", "Passing TDs"), lead("rushYds", "Rushing yards"), lead("recYds", "Receiving yards"), lead("sacks", "Sacks"), lead("defInt", "Interceptions")].filter(Boolean);
   const qb = totals.filter(([id]) => PLAYER_BY_ID[id]).sort((a, b) => (b[1].line.passYds ?? 0) - (a[1].line.passYds ?? 0))[0];
-  const pace = qb ? Math.round(((qb[1].line.passYds ?? 0) / Math.max(1, qb[1].line.g ?? 1)) * 17) : 0;
+  const pace = qb ? Math.round(((qb[1].line.passYds ?? 0) / Math.max(1, qb[1].line.g ?? 1)) * FORMAT.games) : 0;
   story(state, O.ledger, "analyst", {
     kind: "trend", teams: [], players: qb ? [qb[0]] : [],
     headline: qb ? `Stat watch: ${pname(qb[0])} on pace for ${pace.toLocaleString("en-US")} yards` : "Stat watch",

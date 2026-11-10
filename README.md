@@ -557,6 +557,26 @@ carry confirmed/estimate/opinion labels and help, and Settings adds a full
 realism preset, play modes that hand one side to the staff, a sandbox,
 information levels and approval limits by area.
 
+The league office (Batch M1). The league's national money is split into
+media, sponsorship, licensing and other pools, with the league's own costs
+taken off the top and a little held back each month until the spring audit,
+which can open a dispute the owner may contest. New TV deals and a longer
+season move the salary cap, the media deals can be renegotiated or opted out
+of, and owners vote on sharing more of the gate and on a premium-seating
+pool. A made-up commissioner runs the office under a contract the owners
+vote to extend; five committees decide what reaches the floor, and the owner
+can ask for a seat, bring proposals in a committee's name and argue in
+committee. Owners line up issue by issue in coalitions, proposals can be
+narrowed to one-season trials, failed ones come back revised, and the office
+briefs every proposal on cost and difficulty. Season length (17 or 18
+games), a second bye week, more international games, a sky judge and new
+safety technology (the last two only after a trial season) are ordinary rule
+votes; a longer season runs through the calendar, the schedule maker, the
+cap, per-game pay and accrued seasons. From 2027 on the schedule maker picks
+prime-time games by draw, keeps short weeks and long road trips down, flexes
+late games and moves games for storms or stadium problems. 2026 stays the
+real schedule.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -600,6 +620,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
+  The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.

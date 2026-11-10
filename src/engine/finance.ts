@@ -1,7 +1,8 @@
 // Cash, kept separate from the cap. A signing bonus is paid when the deal is
 // signed even though the cap spreads it over five years, so front-loading and
 // big bonuses cost real money now. Salaries are paid weekly in the season.
-import { leagueYear, REG_WEEKS, dealOf, dealYear } from "./contracts";
+import { FORMAT } from "./format";
+import { leagueYear, dealOf, dealYear } from "./contracts";
 import { teamPlayerIds, practiceSquadCapHit } from "./cap";
 import { TEAMS } from "./league";
 import type { GameState } from "./types";
@@ -25,12 +26,12 @@ export function payWeek(state: GameState): void {
       const p = state.players[id];
       if (p.status === "ps") {
         const d = dealOf(state, id);
-        total += (d?.kind === "practice" ? dealYear(d, year)?.base ?? 0 : practiceSquadCapHit()) / REG_WEEKS;
+        total += (d?.kind === "practice" ? dealYear(d, year)?.base ?? 0 : practiceSquadCapHit()) / FORMAT.weeks;
       }
       else if (p.status === "active" || p.status === "ir") {
         if (p.holdout?.kind === "holdout" || p.suspended) continue; // holdouts and suspended players forfeit game checks
         const y = dealYear(dealOf(state, id), year);
-        if (y && !y.void) total += y.base / REG_WEEKS;
+        if (y && !y.void) total += y.base / FORMAT.weeks;
       }
     }
     payCash(state, team, total, year);
@@ -43,7 +44,7 @@ export function cashOwedThisYear(state: GameState, team: string, weeksLeft: numb
   let total = 0;
   for (const id of teamPlayerIds(state, team)) {
     const y = dealYear(dealOf(state, id), year);
-    if (y && !y.void && state.players[id].status !== "ps") total += (y.base * Math.min(weeksLeft, y.weeks ?? REG_WEEKS)) / REG_WEEKS;
+    if (y && !y.void && state.players[id].status !== "ps") total += (y.base * Math.min(weeksLeft, y.weeks ?? FORMAT.weeks)) / FORMAT.weeks;
   }
   return Math.round(total);
 }
