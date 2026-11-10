@@ -509,6 +509,8 @@ export interface PlayerState {
   redo?: RedoAsk;
   /** Practice squad: times elevated to the game-day roster this season (three is the limit). */
   elevations?: number;
+  /** On the practice squad through the International Player Pathway: an extra spot that does not count against the limit (global.ts). */
+  ipp?: boolean;
   /** Practice squad: the game day the player is elevated for. */
   elevatedFor?: string;
   /** Signed off another team's practice squad: has to stay on the 53 until this date. */
@@ -1215,7 +1217,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow" | "insurance";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow" | "insurance" | "relocation" | "global";
 
 export interface LedgerEntry {
   date: string;
@@ -1897,6 +1899,8 @@ export interface GameState {
   labor?: import("./labor").LaborState;
   construction?: import("./construction").ConstructionState;
   politics?: import("./politics").PoliticsState;
+  relocation?: import("./relocation").RelocationState;
+  global?: import("./global").GlobalState;
   legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;

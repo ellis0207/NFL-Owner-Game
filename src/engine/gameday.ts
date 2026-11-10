@@ -40,7 +40,7 @@ export interface Conditions {
 // (average high, degrees F), typical wind, the share of game days with rain or
 // snow, and how much of December and January's wet weather is snow. From
 // public climate normals, rounded. Domes and retractable roofs play indoors.
-const CLIMATE: Record<string, { temp: [number, number, number, number, number]; wind: number; wet: number; snow: number }> = {
+export const CLIMATE: Record<string, { temp: [number, number, number, number, number]; wind: number; wet: number; snow: number }> = {
   BUF: { temp: [70, 58, 47, 36, 31], wind: 12, wet: 0.35, snow: 0.6 },
   MIA: { temp: [89, 85, 80, 77, 76], wind: 9, wet: 0.3, snow: 0 },
   NE: { temp: [74, 63, 52, 41, 36], wind: 10, wet: 0.3, snow: 0.35 },

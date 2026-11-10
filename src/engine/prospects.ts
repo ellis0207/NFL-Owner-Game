@@ -95,7 +95,7 @@ const POSITION_SHARE: [Position, number][] = [
 ];
 
 // Listed size by position: [height inches, sd, weight, sd], and a 40 baseline.
-const SIZE: Record<Position, [number, number, number, number, number]> = {
+export const SIZE: Record<Position, [number, number, number, number, number]> = {
   QB: [74.5, 1.6, 218, 12, 4.82], RB: [70.5, 1.5, 210, 11, 4.53], FB: [72, 1.3, 240, 9, 4.75],
   WR: [72.5, 2.2, 195, 13, 4.48], TE: [76.5, 1.2, 248, 10, 4.7], OT: [77.5, 1.1, 315, 11, 5.2],
   OG: [76, 1.1, 315, 11, 5.25], C: [75, 1, 305, 9, 5.25], EDGE: [75.5, 1.3, 255, 12, 4.7],

@@ -16,6 +16,7 @@
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
 import { tempVenueFactor } from "./construction";
+import { moveGateFactor } from "./relocation";
 import { termsFor } from "./cbaterms";
 import { disruptGate } from "./shocks";
 import { corporateFactor, multipleShift, wageFactor } from "./economy";
@@ -183,6 +184,8 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   legal: { label: "Legal: defense costs, settlements and judgments", side: "out" },
   escrow: { label: "Guaranteed pay funded with the league (escrow)", side: "out" },
   insurance: { label: "Insurance premiums, less claim recoveries", side: "out" },
+  relocation: { label: "Relocation: the league fee, leaving the old lease and moving", side: "out" },
+  global: { label: "International program, net of overseas income", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -593,7 +596,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const o = opp(g, us);
   const what = `${label(g)} vs ${teamLabel(o)}`;
   // Damage to the stadium cuts the crowd, or moves the game (shocks.ts).
-  const keep = disruptGate(state, g.date, gr.tickets + gr.premium + gr.concessions + gr.parking) * tempVenueFactor(state, g.date);
+  const keep = disruptGate(state, g.date, gr.tickets + gr.premium + gr.concessions + gr.parking) * tempVenueFactor(state, g.date) * moveGateFactor(state, g.date);
   if (keep < 1) gr = { ...gr, tickets: gr.tickets * keep, premium: gr.premium * keep, concessions: gr.concessions * keep, parking: gr.parking * keep, merch: gr.merch * keep, attendance: Math.round(gr.attendance * keep) };
   post(state, "tickets", gr.tickets, what);
   applyDeposit(state, g, what);

@@ -2,6 +2,7 @@
 // JSON, base64-encoded so they fit in text stores.
 import { bindLeases, ensureLeases } from "../engine/leases";
 import { bindBrand } from "../engine/merch";
+import { clearPathway, restorePathway } from "../engine/global";
 import { ensurePositionCoaches } from "../engine/positionCoaches";
 import { ensureCollege } from "../engine/college";
 import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
@@ -77,6 +78,7 @@ export function migrate(state: GameState): GameState {
   }
   // Another save's draftees leave the player list before this save's come back.
   clearDraftees();
+  clearPathway();
   // The save's season: its dates, schedule, caps and draft classes.
   applySeason(state);
   // Everyone on a staff or looking for a job (saves from before the carousel start from the data).
@@ -84,6 +86,7 @@ export function migrate(state: GameState): GameState {
   ensureLeases(state);
   bindLeases(state);
   bindBrand(state);
+  restorePathway(state);
   ensurePositionCoaches(state);
   // In-season moves used to leak into next year's rollover; rollover only exists from the Super Bowl on.
   if (state.date <= RULES.keyDates.superBowl) {

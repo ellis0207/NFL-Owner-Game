@@ -668,6 +668,33 @@ share of events, or add renewal options. Sponsors up for renewal ask where
 the team will play, the training complex speeds rehab a little, and the
 league inspects the field once a month.
 
+Clubs can move. A market study compares a city's size, corporate base,
+media market, football attachment, growth and the competition for the same
+fans; the open markets are San Antonio, St. Louis, San Diego, Oakland,
+Portland, Salt Lake City, Toronto and Columbus, plus a second team in a
+metro big enough for one. Leaving costs the rest of the lease and, under a
+non-relocation pledge, the public money back with a penalty. Applications
+go in between January 1 and February 15, the league's relocation committee
+reviews them, and the owners vote at the annual meeting (24 of 32), looking
+hard at whether the club tried to stay. An approved move pays a relocation
+fee over ten years and moving costs, ends the local sponsor and media
+deals, resets the fan base to the new market's football attachment, and
+lets the club keep its name, take a new one (through the league's rebrand
+process) or leave the old one behind. The franchise keeps its records and
+history, and the move goes on its timeline. A stopgap venue means a new
+stadium; a moved club keeps its division unless the owners vote to realign.
+CPU clubs move rarely, and only after a stadium plan fails at home.
+
+The club can also grow abroad. The league grants marketing rights in up to
+three countries for five years; localized content, fan events and youth
+programs build an audience over years against other clubs chasing the same
+fans, with merchandise through the league's licensee and local sponsors
+outside the league's reserved categories. Income arrives in local currency,
+so exchange rates move it, and a hedge can lock a year's rates. Games
+abroad can carry a full fan program. Each spring the International Player
+Pathway places a handful of overseas athletes with clubs, with an extra
+practice-squad spot; clubs that take part and scout abroad can ask for one.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -714,6 +741,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
   New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
+  Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

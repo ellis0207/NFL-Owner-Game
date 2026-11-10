@@ -1,6 +1,8 @@
 // The game clock: starting a new game and moving the league forward one day.
 import { constructionDaily } from "./construction";
 import { politicsDaily } from "./politics";
+import { relocationDaily } from "./relocation";
+import { clearPathway, globalDaily } from "./global";
 import { cancelGame, laborDaily, lockedOut } from "./labor";
 import { leagueMoneyDaily } from "./leaguemoney";
 import { complianceDaily } from "./compliance";
@@ -108,6 +110,7 @@ export function veteranReportDate(team: string): string {
 
 export function newGame(userTeam: string, ownerName: string, settings: Settings, seed = Date.now() % 2 ** 31, profile: OwnerSetup = DEFAULT_SETUP): GameState {
   clearDraftees();
+  clearPathway();
   applySeason({ season: BASE_SEASON } as GameState);
   const players: GameState["players"] = {};
   for (const p of PLAYERS) {
@@ -601,6 +604,8 @@ export function advanceDay(state: GameState): void {
   projectsDaily(state);
   constructionDaily(state);
   politicsDaily(state);
+  relocationDaily(state);
+  globalDaily(state);
   leasesDaily(state);
   debtDaily(state);
   booksDaily(state);

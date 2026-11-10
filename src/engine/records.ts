@@ -267,6 +267,9 @@ export function clubTimeline(state: GameState, team = state.userTeam): { date: s
     }
   }
   for (const l of state.leases?.[team]?.log ?? []) out.push(l);
+  // Moves keep the franchise's records and history; the old markets stay on its timeline.
+  for (const m of state.relocation?.moves ?? []) if (m.team === team) out.push({ date: m.date, text: `Moved from ${m.fromCity} to ${m.toCity} for the ${m.season} season${m.toName !== m.fromName ? `, as the ${m.toName}` : ""} (left ${m.fromStadium})` });
+  for (const n of state.construction?.opened ?? []) if (n.team === team) out.push({ date: `${n.opened}-08-01`, text: `Opened ${n.name}` });
   if (team === state.userTeam) {
     // Naming rights: each stadium naming deal the club signed, and the name it put on the building.
     for (const d of localDeals(state).deals.filter((x) => x.cat === "naming")) {

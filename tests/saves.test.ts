@@ -300,6 +300,21 @@ describe("saves from older versions", () => {
     expect(old.construction!.cpu.map((b) => b.team)).toEqual(["TEN", "CLE", "WAS", "KC"]);
   }, 120_000);
 
+  it("a save made after a move plays in the new market, and older saves stay home", async () => {
+    const state = load("pr48-2026-10-10");
+    expect(TEAM_BY_ID.DET.city).toBe("St. Louis");
+    expect(state.relocation!.moves[0].fromCity).toBe("Detroit");
+    expect(state.global!.rights[0].market).toBe("UK");
+    for (let i = 0; i < 25; i++) advanceDay(state);
+    expect(state.global!.rights[0].history.length).toBeGreaterThan(0);
+    const back = await decompress(await compress(state));
+    expect(back.relocation!.feeYears).toBe(9);
+    expect(TEAM_BY_ID.DET.city).toBe("St. Louis");
+    const old = load("pr47-2026-10-10");
+    expect(old.relocation).toBeUndefined();
+    expect(TEAM_BY_ID.DET.city).toBe("Detroit");
+  }, 120_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

@@ -158,7 +158,8 @@ export function practiceSquad(state: GameState, team: string): string[] {
 }
 
 export function psRoom(state: GameState, team: string): number {
-  return RULES.rosterLimits.practiceSquad - practiceSquad(state, team).length;
+  // Pathway players (global.ts) hold an extra spot.
+  return RULES.rosterLimits.practiceSquad - practiceSquad(state, team).filter((id) => !state.players[id].ipp).length;
 }
 
 /** Can this player join this team's practice squad now? */
