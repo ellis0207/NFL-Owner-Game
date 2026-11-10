@@ -13,6 +13,7 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
 import { loyaltyPull } from "./community";
 import { facilityPull } from "./facilities";
@@ -493,6 +494,7 @@ export function priceEstimate(state: GameState, team: string, id: string): numbe
 /** The owner signs a free agent to a one-year minimum deal on the spot, if his agent will take it. */
 export function canSignAtMinimum(state: GameState, team: string, id: string): { ok: boolean; reason?: string } {
   if (state.players[id]?.status !== "fa") return { ok: false, reason: "Not a free agent." };
+  if (lockedOut(state)) return { ok: false, reason: LOCKOUT_REASON };
   if (onWaivers(state, id)) return { ok: false, reason: "On waivers: claim him, or wait until he clears." };
   if (isMarketOpen(state.date)) return { ok: false, reason: "Free agency is open: make an offer through contract talks." };
   const fa = market(state)[id] ?? (freeAgentPrice(state, id), market(state)[id]);

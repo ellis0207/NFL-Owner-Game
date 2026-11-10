@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { termsFor } from "../src/engine/cbaterms";
+import { rulesFor } from "../src/engine/rules";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { capSummary } from "../src/engine/cap";
@@ -261,6 +263,23 @@ describe("saves from older versions", () => {
     for (let i = 0; i < 15; i++) advanceDay(old);
     expect(old.economy).toBeDefined();
     expect(old.shocks).toBeDefined();
+  }, 120_000);
+
+  it("a save made after a new labor deal keeps its terms bound, and older saves start under the 2020 agreement", async () => {
+    const state = load("pr46-2026-10-10");
+    expect(state.labor!.agreements.length).toBe(2);
+    expect(termsFor(2031).share).toBe(0.5);
+    expect(termsFor(2030).share).toBe(0.485);
+    expect(rulesFor(state, 2031).games).toBe(18);
+    expect(state.labor!.grievances[0].id).toBe("gr-fixture");
+    for (let i = 0; i < 10; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.labor!.stance).toBe("hard");
+    const old = load("pr45-2026-10-10");
+    expect(old.labor).toBeUndefined();
+    expect(termsFor(2031).share).toBe(0.485);
+    advanceDay(old);
+    expect(old.labor!.agreements[0].through).toBe(2030);
   }, 120_000);
 
   it("an older save starts keeping play-by-play with its next games", () => {

@@ -11,6 +11,7 @@
 // A position change takes time. The player plays below his level while he
 // learns the new spot, quicker if he picks things up fast, and some players
 // simply suit the new position better or worse than anyone could tell.
+import { termsFor } from "./cbaterms";
 import { LEAGUE_RULES } from "./rules";
 import { fatigueRisk, trainingResponse } from "./playercare";
 import { adopted } from "./analysts";
@@ -98,7 +99,7 @@ const ours = (state: GameState, team: string | null | undefined) => !!team && te
  */
 export function growthFactor(state: GameState, id: string, mentored: boolean): number {
   const me = personality(id);
-  let f = (0.8 + 0.4 * me.learning) * (0.9 + 0.2 * me.work) * (mentored ? 1.1 : 1);
+  let f = (0.8 + 0.4 * me.learning) * (0.9 + 0.2 * me.work) * (mentored ? 1.1 : 1) * (1 + (termsFor(RULES.season).practice - 16) * 0.004);
   const team = state.players[id]?.team;
   if (ours(state, team)) {
     const c = state.clubhouse;
@@ -125,6 +126,9 @@ export function riskFactor(state: GameState, id: string, team: string, practice:
   let f = fatigueRisk(state, id);
   const ps = state.players[id];
   if (ps?.fragile && ps.fragile > state.date) f *= 1.6;
+  // The labor deal's camp practice limits and safety provisions apply to every club.
+  const cba = termsFor(RULES.season);
+  f *= (practice ? 1 + (cba.practice - 16) * 0.015 : 1) * (1 - 0.01 * cba.safety);
   if (!ours(state, team)) return f;
   f *= 1 - adopted(state, "conditioning");
   if (invested(state, "trainingGear")) f *= 0.98;

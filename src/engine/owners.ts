@@ -89,7 +89,8 @@ export function proposable(state: GameState): string[] {
   for (const p of agenda) RULE_BY_ID[p.rule].apply(r);
   const on = new Set(agenda.map((p) => p.rule));
   // New technology has to go through a committee trial season first.
-  return RULE_CATALOG.filter((c) => c.when(r) && !on.has(c.id) && (!c.trial || trialDone(state, c.trial))).map((c) => c.id);
+  // An 18th game needs the players' agreement: it comes through a labor deal (labor.ts), not a vote alone.
+  return RULE_CATALOG.filter((c) => c.id !== "games18" && c.when(r) && !on.has(c.id) && (!c.trial || trialDone(state, c.trial))).map((c) => c.id);
 }
 
 function committeeView(appeal: number): RuleProposal["committee"] {

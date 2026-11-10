@@ -15,6 +15,7 @@
 // 32 teams. Suites and the premium part of club seats aren't shared. Playoff
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
+import { termsFor } from "./cbaterms";
 import { disruptGate } from "./shocks";
 import { corporateFactor, multipleShift, wageFactor } from "./economy";
 import { monthlyDistribution } from "./leaguemoney";
@@ -362,7 +363,7 @@ export function operatingEstimate(state: GameState, team: string): number {
   const players = 300 * M * salaryCap(state, leagueYear(state.date)) / salaryCap(state, BASE_SEASON);
   const year = leagueYear(state.date);
   const depts = (Object.keys(DEPTS) as Dept[]).reduce((t, d) => t + deptCost(d, 1, year) * (DEPTS[d].perGame ? homeDates(team).length : 1), 0);
-  const costs = players + (FOOTBALL_STAFF + BENEFITS + businessOps(team)) * inflation(year, 0.05) + (LEAGUE_DUES + s.upkeep) * inflation(year) + depts + s.rent + s.debt + 4 * M;
+  const costs = players + (FOOTBALL_STAFF + BENEFITS * termsFor(year).benefits + businessOps(team)) * inflation(year, 0.05) + (LEAGUE_DUES + s.upkeep) * inflation(year) + depts + s.rent + s.debt + 4 * M;
   return revenueEstimate(state, team) - Math.round(costs);
 }
 
@@ -976,7 +977,7 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   const prog = programsCost(state);
   if (prog) add("medical", -m(prog * inflation(year, 0.03)), "Performance and player support programs");
   for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year) * (1 - cutShare(state, d))), BUDGET_LEVELS[b.budget[d]]);
-  add("benefits", -m(BENEFITS * grow));
+  add("benefits", -m(BENEFITS * grow * termsFor(year).benefits));
   add("league", -m(LEAGUE_DUES * inflation(year)));
   // Upkeep rises with costs; rent and debt service are fixed by their leases and loans.
   // Upkeep rises with costs: utilities, inspections and service contracts, and maintenance on the owner's plan.

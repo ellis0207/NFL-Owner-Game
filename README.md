@@ -621,6 +621,26 @@ it in distress: outside investors, refinancing or a control partner, and the
 league supervises a recovery plan if nothing changes. These live on the
 Business page's Economy and risk tab.
 
+Labor relations and the CBA (Batch N2). The players' union is its own side,
+with a (made-up) leader and a mood of its own, and the real 2020 agreement
+runs through the 2030 season. Talks on the next one open two years before it
+expires: the owners' labor committee sets the league's goals, each side's
+proposal moves month by month, and the owner picks a stance (hard line,
+steady or labor peace) and priorities (an 18th game, the players' share, the
+rookie pool); a seat on the committee makes that count fully. Most talks end
+in a deal before the deadline. About a third end in an offseason lockout that
+stops free agency, signings, trades and team activities, and a few run into
+the season and cancel games: no gate, refunds for season-ticket holders, a
+smaller national distribution and a hit to fans' trust. A tentative deal
+needs 24 owners' votes and the players' ratification, and then applies at
+once: the cap follows the new share, minimums and the rookie pool follow the
+new scales, benefits, camp practice limits, safety provisions and the cash
+floor change, and an 18th game (which the union trades only for a higher
+share and fewer padded practices) goes into the rulebook. Contracts already
+signed stay as written. The union files grievances that an arbitrator
+decides unless the club settles. All of it is in a Labor relations panel on
+the Owners page.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -665,6 +685,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
+  The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

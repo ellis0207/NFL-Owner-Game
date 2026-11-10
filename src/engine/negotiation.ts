@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { asksBonuses, attachBonuses, bonusTermsValue, missRisk } from "./bonuses";
 import { attachIncentives, incentiveWorth } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, clientsOnTeam, morale, priorities, trustOf, type AgentHidden, type Priorities } from "./agents";
@@ -269,6 +270,7 @@ export interface OfferCheck {
 
 /** What signing these terms would do, and whether the team can do it. */
 export function checkOffer(state: GameState, neg: Negotiation, t: OfferTerms): OfferCheck {
+  if (lockedOut(state)) return { ok: false, reason: LOCKOUT_REASON, capChange: 0, cashNow: 0 };
   if (t.years < 1 || t.years > 7) return { ok: false, reason: "Contracts run one to seven years.", capChange: 0, cashNow: 0 };
   if (t.total <= 0) return { ok: false, reason: "Enter the contract's total value.", capChange: 0, cashNow: 0 };
   if (t.signingBonus > t.total) return { ok: false, reason: "The signing bonus can't exceed the total.", capChange: 0, cashNow: 0 };

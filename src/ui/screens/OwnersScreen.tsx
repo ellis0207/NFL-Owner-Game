@@ -9,6 +9,7 @@ import { BID_LEVELS, bidWindow, canHostSuperBowl, hosting, submitBid, upcomingVo
 import { inflation } from "../../engine/business";
 import { money } from "../format";
 import type { GameState, RuleProposal } from "../../engine/types";
+import { LaborPanel } from "./LaborPanel";
 import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
@@ -37,6 +38,8 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
       {said && <p className="notice">{said}</p>}
 
       <LeagueOffice game={game} say={say} />
+
+      <LaborPanel game={game} say={say} />
 
       <Hosting game={game} say={say} />
 

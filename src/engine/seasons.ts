@@ -4,6 +4,7 @@
 // goes into the record books, players get a year older (better or worse),
 // the unsigned drift away, and the next season's schedule comes out of last
 // season's standings.
+import { bindLabor } from "./labor";
 import { bindBrand } from "./merch";
 import { bindLeases } from "./leases";
 import { bindRules, bindSeasonFormat, rulesFor } from "./rules";
@@ -71,6 +72,7 @@ export function applySeason(state: GameState): void {
   setLeagueSeason(season, keyDatesFor(season), schedule, season === BASE_SEASON ? undefined : state.waiverOrder);
   bindCaps(state.league?.caps ?? {});
   bindRules(state);
+  bindLabor(state);
   bindHosts(state);
   bindLeases(state);
   bindBrand(state);

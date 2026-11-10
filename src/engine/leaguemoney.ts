@@ -11,6 +11,7 @@
 // The audit variances, disputes and renewal results are made up; the shape
 // of the system (pools, costs off the top, a spring true-up, the 34% visiting
 // gate share) follows how the league describes it.
+import { distributionCut } from "./labor";
 import { business, nationalRevenue, post } from "./business";
 import { leagueYear } from "./contracts";
 import { addDays, shortDate } from "./dates";
@@ -74,7 +75,8 @@ export function poolsFor(_state: GameState | undefined, year: number): Pools {
 
 /** What the league pays each month as its preliminary estimate, net of the amount held back. */
 export function monthlyDistribution(state: GameState, year: number): number {
-  return (poolsFor(state, year).net * (1 - WITHHELD)) / 12;
+  // Games cancelled by a lockout aren't paid for by the networks (labor.ts).
+  return (poolsFor(state, year).net * (1 - WITHHELD)) / 12 * distributionCut(state, year);
 }
 
 /** Revenue belongs to the league year it was earned in; the cash arrives monthly and the rest after the spring audit. */

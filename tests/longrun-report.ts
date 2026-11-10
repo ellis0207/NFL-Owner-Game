@@ -89,6 +89,11 @@ for (let n = 0; n < seasons; n++) {
   }
   console.log(`\n== after the ${season} season (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
   if (state.economy) console.log(`  economy: gap ${economy(state).now.gap}%, unemployment ${economy(state).now.unemployment}%, recessions ${economy(state).recessions.map((r) => `${r.start}-${r.end ?? "now"}`).join(", ") || "none"}`);
+  if (state.labor) {
+    const l = state.labor;
+    const a = l.agreements[l.agreements.length - 1];
+    console.log(`  labor: agreement ${a.from}-${a.through} share ${(a.terms.share * 100).toFixed(2)}% games ${a.terms.games}${a.lockout ? ` after a lockout ${a.lockout.start} to ${a.lockout.end} (${a.lockout.gamesLost} games lost)` : ""}; talks ${l.talks ? `${l.talks.status} since ${l.talks.opened}` : "none"}; grievances ${l.grievances.length}`);
+  }
   books(season);
   deals(season + 1);
   capLine("new season");

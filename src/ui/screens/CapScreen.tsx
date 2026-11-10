@@ -1,4 +1,5 @@
-import { CASH_FLOOR, cashSpending } from "../../engine/bonuses";
+import { cashSpending } from "../../engine/bonuses";
+import { termsFor } from "../../engine/cbaterms";
 import { incentiveAdjustment } from "../../engine/incentives";
 import { capHit, capSummary, deadMoney, practiceSquadCapHit, teamPlayerIds } from "../../engine/cap";
 import { leagueYear, salaryCap } from "../../engine/contracts";
@@ -54,8 +55,8 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
           <span className="muted">The {year + 1} cap hasn't been set yet. Projection: {money(salaryCap(game, year + 1))}.</span>
           {(() => {
             const c = cashSpending(game, team);
-            if (leagueYear(game.date) < c.from) return <span className="muted">The CBA's cash spending floor ({Math.round(CASH_FLOOR * 100)}% of the salary caps, paid in cash over four years) counts from {c.from} to {c.to}.</span>;
-            return <span className="muted">Cash spending {c.from}-{c.to}: {money(c.paid)} paid to players so far. The CBA requires at least {Math.round(CASH_FLOOR * 100)}% of the period's four salary caps in cash, about {money(c.floor / Math.max(1, Math.min(c.to, leagueYear(game.date)) - c.from + 1))} a season; a shortfall is paid to the players after {c.to}. Salaries are paid weekly through the season, so the count climbs until January.</span>;
+            if (leagueYear(game.date) < c.from) return <span className="muted">The CBA's cash spending floor ({Math.round(termsFor(c.to).cashFloor * 100)}% of the salary caps, paid in cash over four years) counts from {c.from} to {c.to}.</span>;
+            return <span className="muted">Cash spending {c.from}-{c.to}: {money(c.paid)} paid to players so far. The CBA requires at least {Math.round(termsFor(c.to).cashFloor * 100)}% of the period's four salary caps in cash, about {money(c.floor / Math.max(1, Math.min(c.to, leagueYear(game.date)) - c.from + 1))} a season; a shortfall is paid to the players after {c.to}. Salaries are paid weekly through the season, so the count climbs until January.</span>;
           })()}
         </div>
       </div>
