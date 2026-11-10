@@ -5,6 +5,7 @@
 // the unsigned drift away, and the next season's schedule comes out of last
 // season's standings.
 import { bindConstruction } from "./construction";
+import { bindRelocation } from "./relocation";
 import { bindLabor } from "./labor";
 import { bindBrand } from "./merch";
 import { bindLeases } from "./leases";
@@ -259,6 +260,8 @@ export function startNewSeason(state: GameState): void {
   }
   prune(state, next);
 
+  // Divisions realigned by the owners (relocation.ts) count from the season they take effect.
+  bindRelocation(state, next);
   state.schedule = buildSchedule(next, state.seed, record.place, record.champion, { draw: scheduleDraw(state, record.place, record.champion), intlExtra: rulesFor(state, next).intlExtra });
   state.waiverOrder = firstRound;
   state.season = next;

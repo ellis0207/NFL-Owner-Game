@@ -28,6 +28,7 @@ import { stadiumLoan, leagueStadiumLoan } from "./debt";
 import { constructionFactor } from "./economy";
 import { partDefs } from "./facilities";
 import { bindLeases } from "./leases";
+import { bindRelocation, cpuStadiumFailed, restoreStadiums } from "./relocation";
 import { metroPop } from "./fans";
 import { money, news, send } from "./inbox";
 import { RULES, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
@@ -189,6 +190,9 @@ function note(state: GameState, text: string): void {
 export function bindConstruction(state: GameState): void {
   for (const [team, o] of Object.entries(ORIGINAL)) Object.assign(STADIUM_BY_TEAM[team], o);
   for (const [team, o] of Object.entries(ORIGINAL_TEAMS)) Object.assign(TEAM_BY_ID[team], o);
+  // Moved clubs (relocation.ts) play in their new markets before any new building goes up there.
+  restoreStadiums();
+  bindRelocation(state);
   for (const n of state.construction?.opened ?? []) {
     const s = STADIUM_BY_TEAM[n.team];
     Object.assign(s, {
@@ -417,7 +421,7 @@ function startBuild(state: GameState): void {
   p.stage = "build";
   const site = p.sites.find((s) => s.id === p.site)!;
   if (site.kind === "current") {
-    c.temporary = { name: TEMP_HOME[state.userTeam] ?? "a college stadium nearby", until: addDays(p.opens, -1) };
+    c.temporary = { name: (!state.relocation?.moves.some((m) => m.team === state.userTeam) && TEMP_HOME[state.userTeam]) || "a college stadium nearby", until: addDays(p.opens, -1) };
     send(state, "business", businessChief(state), "Our temporary home",
       `The old stadium comes down to make room, so we play at ${c.temporary.name} until ${p.name} opens. Smaller crowds and less premium seating until then.`);
   }
@@ -582,10 +586,11 @@ function cpuYear(state: GameState): void {
   }
 }
 
-/** A failed public deal: the relocation module listens for it (O2). Kept as a log line here. */
+/** A failed public deal: logged, and the club may look at other markets (relocation.ts). */
 function failedDeal(state: GameState, team: string): void {
   const c = construction(state);
   c.log.unshift({ date: state.date, text: `${teamLabel(team)}: stadium plan failed.` });
+  cpuStadiumFailed(state, team);
 }
 
 function leagueYear0(state: GameState): number {

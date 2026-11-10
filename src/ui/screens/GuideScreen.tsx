@@ -156,6 +156,20 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Moving the club",
+    body: [
+      "Business > Relocation compares markets. A move needs a study, an application between January 1 and February 15, and 24 owners' votes at the annual meeting. Owners want to see you tried to stay: a failed public vote or failed lease talks help.",
+      "Leaving costs the rest of the lease, and public money back if you promised to stay. The league's relocation fee is paid over ten years. Local sponsors and media start over, and the new market's fans take years to build. Keep the name, take a new one, or leave it with the old city; the club's records come along either way.",
+    ],
+  },
+  {
+    title: "Growing abroad",
+    body: [
+      "Business > International: apply for rights in up to three countries (September to November). Content in the local language, fan events and merchandise build an audience over years; the first years cost more than they bring in. Money comes in local currency, so you can lock a year's exchange rates.",
+      "The International Player Pathway places a few overseas athletes with clubs each spring. They're long projects with an extra practice-squad spot. Take part and fund international scouting to ask for one.",
+    ],
+  },
+  {
     title: "The economy and risk",
     body: [
       "The economy moves every month, and your metro has its own trend. Household incomes move ticket and store demand; corporate earnings move sponsors and suites. Recessions come from the conditions, about once a decade at normal volatility (Settings).",

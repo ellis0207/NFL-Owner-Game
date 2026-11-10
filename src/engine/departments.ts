@@ -31,7 +31,7 @@ const M = 1_000_000;
 const K = 1_000;
 
 /** Stadium locations, for trip distances (approximate). */
-const PLACE: Record<string, [number, number]> = {
+export const PLACE: Record<string, [number, number]> = {
   ARI: [33.53, -112.26], ATL: [33.75, -84.4], BAL: [39.28, -76.62], BUF: [42.77, -78.79], CAR: [35.23, -80.85], CHI: [41.86, -87.62],
   CIN: [39.1, -84.52], CLE: [41.51, -81.7], DAL: [32.75, -97.09], DEN: [39.74, -105.02], DET: [42.34, -83.05], GB: [44.5, -88.06],
   HOU: [29.68, -95.41], IND: [39.76, -86.16], JAX: [30.32, -81.64], KC: [39.05, -94.48], LV: [36.09, -115.18], LAC: [33.95, -118.34],

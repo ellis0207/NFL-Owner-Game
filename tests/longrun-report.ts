@@ -94,6 +94,11 @@ for (let n = 0; n < seasons; n++) {
     const a = l.agreements[l.agreements.length - 1];
     console.log(`  labor: agreement ${a.from}-${a.through} share ${(a.terms.share * 100).toFixed(2)}% games ${a.terms.games}${a.lockout ? ` after a lockout ${a.lockout.start} to ${a.lockout.end} (${a.lockout.gamesLost} games lost)` : ""}; talks ${l.talks ? `${l.talks.status} since ${l.talks.opened}` : "none"}; grievances ${l.grievances.length}`);
   }
+  {
+    const c = state.construction;
+    const moves = state.relocation?.moves ?? [];
+    console.log(`  stadiums: approved ${c?.cpu.filter((b) => b.approved && b.approved > "2026-08-01").map((b) => `${b.team} ${b.approved!.slice(0, 4)}`).join(", ") || "none"}; failed ${c?.cpu.filter((b) => b.failed).map((b) => b.team).join(", ") || "none"}; moves ${moves.map((m) => `${m.team} to ${m.toCity} ${m.season}`).join(", ") || "none"}; pathway players ${state.global?.pathway.players.length ?? 0}`);
+  }
   books(season);
   deals(season + 1);
   capLine("new season");
