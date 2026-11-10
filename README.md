@@ -577,6 +577,27 @@ prime-time games by draw, keeps short weeks and long road trips down, flexes
 late games and moves games for storms or stadium problems. 2026 stays the
 real schedule.
 
+Compliance and legal (Batch M2). A new Legal page. The compliance office
+(staffed from the GM's assistant up to a department with outside counsel)
+files roster moves and the ownership report on time, signs the yearly policy
+acknowledgments and conflict disclosures, trains staff, and funds guaranteed
+pay with the league in cash or with a letter of credit. The league audits
+every club's cap in June, players in a trade with us pass physicals before it
+is final (a failed one voids the trade), and league investigations move from
+inquiry to interviews to findings, where cooperating, giving only what's
+required or contesting changes the outcome, then to fines and lost draft
+picks that repeat violations make heavier, with an appeal to the
+commissioner. The league disciplines one to three clubs in a typical year. A
+crisis playbook runs the response to stadium accidents, data breaches,
+misconduct allegations and the like: the crisis team, the first statement,
+internal or independent fact-finding, who speaks, what is disclosed, and
+briefings for sponsors, staff and the league; denials the facts contradict
+leave lasting damage that heals with clean years and real fixes. The legal
+side names the club companies behind each agreement, how each kind ends and
+renews, who must sign off by size, counsel's review of major signings,
+privileged-records and retention policies, and disputes that go from
+negotiation to mediation to arbitration or court, with an exposure report.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -621,6 +642,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
+  The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.

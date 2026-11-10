@@ -19,6 +19,7 @@ const COUNTER: Partial<Record<LedgerCat, string>> = {
   distribution: "Owner's equity: distributions",
   projects: "Construction in progress",
   seatLicenses: "Deferred revenue: seat licenses",
+  escrow: "Funded guarantees held by the league",
 };
 
 export function accountFor(cat: LedgerCat): string {

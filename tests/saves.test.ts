@@ -231,6 +231,22 @@ describe("saves from older versions", () => {
     expect(old.leagueMoney).toBeDefined();
   }, 90_000);
 
+  it("a save with a league inquiry, a crisis and a dispute keeps them, and older saves start compliance and legal", async () => {
+    const state = load("pr44-2027-05-20");
+    expect(state.compliance!.leagueCases.some((k) => k.team === "DET" && k.kind === "equipment")).toBe(true);
+    expect(state.compliance!.funding).toBe("cash");
+    expect(state.crisis!.crises[0].plan.response).toBe("safety");
+    expect(state.legal!.matters[0].kind).toBe("trademark dispute");
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.legal!.matters.length).toBeGreaterThan(0);
+    const old = load("pr43-2027-03-20");
+    expect(old.legal).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.compliance!.filings).toBeDefined();
+    expect(old.legal).toBeDefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

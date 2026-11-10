@@ -177,10 +177,11 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   security: { label: "Team security", side: "out" },
   technology: { label: "Technology and data", side: "out" },
   legal: { label: "Legal: defense costs, settlements and judgments", side: "out" },
+  escrow: { label: "Guaranteed pay funded with the league (escrow)", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
-export const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects", "loanIn", "principal", "seatLicenses"];
+export const FINANCING: LedgerCat[] = ["capital", "distribution", "deposits", "projects", "loanIn", "principal", "seatLicenses", "escrow"];
 /** The cost of borrowing: shown below operating income. */
 const BORROWING: LedgerCat[] = ["interest", "loanFees"];
 

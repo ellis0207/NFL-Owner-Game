@@ -121,7 +121,9 @@ export function buildOrder(state: GameState): string[] {
     for (const t of roundOrder(r1, st, round)) ids.push(pickId(DRAFT_YEAR, round, t));
     for (const c of comp) if (parsePick(c.pick).round === round) ids.push(c.pick);
   }
-  return ids;
+  // Picks the league took away as discipline drop out of the order.
+  const lost = new Set(state.compliance?.forfeited ?? []);
+  return ids.filter((id) => !lost.has(id));
 }
 
 /** The order as it stands, or as the media projects it before the season is over. */
@@ -131,7 +133,8 @@ export function projectedOrder(state: GameState, rounds = 7): string[] {
   const teams = TEAMS.map((t) => t.id).sort((a, b) => projectedSlot(state, a, DRAFT_YEAR) - projectedSlot(state, b, DRAFT_YEAR));
   const ids: string[] = [];
   for (let round = 1; round <= rounds; round++) for (const t of teams) ids.push(pickId(DRAFT_YEAR, round, t));
-  return ids;
+  const lost = new Set(state.compliance?.forfeited ?? []);
+  return ids.filter((id) => !lost.has(id));
 }
 
 function awardCompPicks(state: GameState, quiet = false): void {

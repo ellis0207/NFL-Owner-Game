@@ -1213,7 +1213,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow";
 
 export interface LedgerEntry {
   date: string;
@@ -1884,6 +1884,8 @@ export interface GameState {
   leagueMoney?: LeagueMoneyState;
   leagueOffice?: LeagueOfficeState;
   compliance?: ComplianceState;
+  crisis?: CrisisState;
+  legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;
   /** The club's accounting: approved budgets, closed years and the reserve policy (books.ts). */
@@ -2074,8 +2076,122 @@ export interface LeagueOfficeState {
 }
 
 /** League discipline cases (compliance.ts): kept short here so the league's health can read them. */
-export interface LeagueCase { id: string; team: string; year: number; kind: string; opened: string; stage: string; sanction?: string; text: string }
-export interface ComplianceState { leagueCases: LeagueCase[] }
+/** A league investigation of a club (ours or another): see engine/compliance.ts. */
+export interface LeagueCase {
+  id: string;
+  team: string;
+  year: number;
+  kind: string;
+  opened: string;
+  /** inquiry (documents asked for), interviews, findings (the club may respond), sanctioned, appeal, closed. */
+  stage: "inquiry" | "interviews" | "findings" | "sanctioned" | "appeal" | "closed";
+  /** Engine only: how strong the league's evidence is, 0-1. */
+  evidence?: number;
+  /** Engine only: how serious the conduct was, 1-3. */
+  severity?: number;
+  /** Our answer when the league asked for documents and interviews. */
+  response?: "cooperate" | "limited" | "contest";
+  /** The day the case moves to its next stage. */
+  next?: string;
+  sanction?: string;
+  fine?: number;
+  picks?: string[];
+  appealed?: boolean;
+  outcome?: string;
+  text: string;
+}
+
+/** Our compliance office and the league's oversight of the club (engine/compliance.ts). */
+export interface ComplianceState {
+  leagueCases: LeagueCase[];
+  /** 0: the GM's assistant handles filings; 1: a compliance officer; 2: a department; 3: a department with outside counsel on call. */
+  staff: number;
+  officer?: string;
+  /** The last compliance training for coaches and staff. */
+  trained?: string;
+  filings: { id: string; kind: string; due: string; filed?: string; late?: boolean; fine?: number }[];
+  /** The last roster we filed, to see what changed. */
+  roster?: string[];
+  /** League years whose policy acknowledgments and conflict disclosures are certified. */
+  certified: number[];
+  /** Guaranteed money funded with the league: cash in escrow or a letter of credit. */
+  funding: "cash" | "letter";
+  escrow: number;
+  audits: { year: number; date: string; findings: string[]; fine: number; capCharge: number }[];
+  /** Draft picks the league took away. */
+  forfeited: string[];
+  /** Documented violations, which raise scrutiny and penalties; one falls off every two years. */
+  strikes: number;
+  physicals: { trade: string; player: string; team: string; passed: boolean; date: string; note: string }[];
+  log: { date: string; text: string }[];
+}
+
+/** A crisis and the club's handling of it (engine/crisis.ts). */
+export interface Crisis {
+  id: string;
+  kind: string;
+  date: string;
+  title: string;
+  text: string;
+  /** Engine only: whether the club is actually at fault, and how badly (0-1). */
+  fault: number;
+  severity: number;
+  stage: "open" | "review" | "resolved";
+  /** The owner's choices, by step: response, review, spokesperson, timing, disclosure, sponsors, staff, league. */
+  plan: Record<string, string>;
+  /** When the fact-finding reports back. */
+  reviewDue?: string;
+  findings?: string;
+  remediation?: number;
+  outcome?: string;
+}
+
+export interface CrisisState {
+  crises: Crisis[];
+  /** Who handles crises: the roles on the team and whether an outside firm is on retainer. */
+  team: string[];
+  firm: boolean;
+  /** Engine only: lasting reputational damage that heals with clean conduct, not marketing. */
+  scar: number;
+  log: { date: string; text: string }[];
+}
+
+/** A legal matter: a dispute moving from negotiation to mediation to arbitration or court (engine/legal.ts). */
+export interface LegalMatter {
+  id: string;
+  kind: string;
+  party: string;
+  entity: string;
+  opened: string;
+  stage: "negotiation" | "mediation" | "arbitration" | "litigation" | "settled" | "won" | "lost";
+  /** What the other side claims, and the engine-only chance they win at the end. */
+  claim: number;
+  strength: number;
+  /** Defense costs so far. */
+  spent: number;
+  /** The share insurance covers. */
+  insured: number;
+  /** Their latest settlement demand. */
+  demand: number;
+  next: string;
+  result?: string;
+  text: string;
+}
+
+export interface LegalState {
+  matters: LegalMatter[];
+  /** Major transactions go to counsel before they're signed. */
+  review: boolean;
+  /** Who can see privileged material: strict (need to know) or broad. */
+  access: "strict" | "broad";
+  /** How long records are kept: full (seven years and litigation holds) or minimal. */
+  retention: "full" | "minimal";
+  /** Transactions counsel reviewed, with what the checks found. */
+  reviews: { date: string; what: string; checks: string[] }[];
+  /** Changes to agreements, kept with the original terms. */
+  amendments: { date: string; party: string; what: string }[];
+  breaches: { date: string; text: string }[];
+}
 
 export interface AdoptedRule {
   rule: string;
