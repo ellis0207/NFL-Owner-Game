@@ -15,9 +15,10 @@ import { acceptOffer, askPrice, declineOffer, gmRead, parsePick, proposeTrade, t
 import type { GameState, Position, TradeDeal } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
+import { DraftBoards } from "./DraftBoards";
 
-type Tab = "room" | "order" | "mocks" | "grades" | "class";
-const TABS: [Tab, string][] = [["room", "Draft room"], ["order", "Draft order"], ["mocks", "Mock drafts"], ["grades", "GM grades"], ["class", "Our class"]];
+type Tab = "room" | "boards" | "order" | "mocks" | "grades" | "class";
+const TABS: [Tab, string][] = [["room", "Draft room"], ["boards", "Boards"], ["order", "Draft order"], ["mocks", "Mock drafts"], ["grades", "GM grades"], ["class", "Our class"]];
 
 export function DraftScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const live = draftDayOf(game.date) > 0;
@@ -33,6 +34,7 @@ export function DraftScreen({ game, changed }: { game: GameState; changed: () =>
         {TABS.map(([k, label]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
       </div>
       {tab === "room" && <Room game={game} changed={changed} />}
+      {tab === "boards" && <DraftBoards game={game} changed={changed} />}
       {tab === "order" && <Order game={game} />}
       {tab === "mocks" && <Mocks game={game} />}
       {tab === "grades" && <Grades game={game} />}

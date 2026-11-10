@@ -505,6 +505,34 @@ finishes, how every trade turned out, the club's eras under each head coach
 and GM, contracts that set a new high at their position, and the club's
 books and valuation by year. Title anniversaries make the news.
 
+Football follow-ups (Batch L1). Player pages carry career stats from 2005
+on (the real seasons, then every season played in the game), with career
+milestones and records against the real NFL marks, career leaders and
+careers ranked across eras on the History page, plus biographies of the
+club's executives and coaches, rule eras and owner eras. Two and four
+seasons after each draft and free agency period the staff re-grades them on
+what players did, and each season ends with a coaching grade against the
+talent on hand. Contracts can carry roster bonuses, an option bonus the club
+exercises or declines, salary guaranteed only against a release for football
+reasons or only against one to save cap room, and a no-trade clause; the
+Cap page adds a five-year planner with trial deals, the compensatory pick
+forecast from the league's formula, and the analysts' cap optimizer, and you
+can sign another team's restricted free agent to an offer sheet. The sim reads
+play-calling tendencies, blitz pickups and protection slides, quarterback
+reads and shadow corners, broken tackles, composure in big moments, return
+and punt plans, and new schemes that spread around the league. Camp has a
+coach's room (preseason snaps, the roster-bubble meeting with up to three
+asks to keep, the next-man-up order and the special teams plan). Scouting
+splits its budget across travel, video, medical and data, adds a national
+scout, pro scouts with an advance report before every game, four draft boards,
+college stats adjusted for schedule and system, and a race for undrafted
+players with bonus offers. The analytics department has named analysts, data
+feeds, contract and availability models, experiments with noisy results, and
+position assessments. Players learn a new playbook, wear down under heavy
+snaps, respond to training differently and weigh money and family when they
+think about retiring; the owner's standing with players and the medical staff
+affect free agency, diagnoses and rehab.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -547,6 +575,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Practice reports, the practice plan, the emergency list and game-day eligibility are `gameweek.ts`; the scouting staff and its leans `scouts.ts`; per-game and workout bonuses, the rookie escalator and the cash floor `bonuses.ts`.
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
+  Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
 - `src/ui/` React screens.

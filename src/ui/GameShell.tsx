@@ -200,7 +200,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Camp" && <CampScreen game={game} changed={changed} />}
           {screen === "Free agents" && <FreeAgentsScreen game={game} changed={changed} />}
           {screen === "Trades" && <TradesScreen key={tradeStart?.player ?? "trades"} game={game} changed={changed} start={tradeStart} />}
-          {screen === "Cap" && <CapScreen game={game} />}
+          {screen === "Cap" && <CapScreen game={game} changed={changed} />}
           {screen === "Business" && <BusinessScreen game={game} changed={changed} />}
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "History" && <HistoryScreen game={game} />}

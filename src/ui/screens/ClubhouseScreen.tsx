@@ -8,6 +8,7 @@ import { outLabel } from "../../engine/season";
 import { FOCUS, MAX_PLANS, planWord, PROGRAM_COSTS, retrainWord, setPrograms, STRENGTH_LEVELS, grownTo, type Workload } from "../../engine/training";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { DoctorsPanel, StandingPanel } from "./ClubhouseStanding";
 import { useUi } from "../ui";
 
 const TABS = ["Locker room", "Development", "Medical"] as const;
@@ -23,9 +24,9 @@ export function ClubhouseScreen({ game, changed }: { game: GameState; changed: (
           {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
         </div>
       </div>
-      {tab === "Locker room" && <LockerTab game={game} />}
+      {tab === "Locker room" && <><StandingPanel game={game} /><LockerTab game={game} /></>}
       {tab === "Development" && <DevelopmentTab game={game} changed={changed} />}
-      {tab === "Medical" && <MedicalTab game={game} changed={changed} />}
+      {tab === "Medical" && <><DoctorsPanel game={game} changed={changed} /><MedicalTab game={game} changed={changed} /></>}
     </section>
   );
 }

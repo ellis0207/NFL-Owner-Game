@@ -156,7 +156,8 @@ export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "a
   const ah = agentHidden(agentFor(neg.player).id);
   const years = Math.max(1, t.years);
   const apy = t.total / years;
-  const g = t.guaranteed + 0.4 * t.injuryGuaranteed;
+  // Skill and cap guarantees protect him against some releases but not all: worth part of a full guarantee.
+  const g = t.guaranteed + 0.4 * t.injuryGuaranteed + 0.5 * (t.skillGuaranteed ?? 0) + 0.3 * (t.capGuaranteed ?? 0);
   const wantG = neg.askGuarantee * t.total;
   const gAdj = ((g - wantG) / years) * (0.3 + 0.5 * ah.guaranteeFocus);
   const yearGap = Math.abs(years - neg.askYears);
@@ -164,7 +165,12 @@ export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "a
   const bonusAdj = (t.signingBonus / Math.max(1, t.total)) * apy * 0.04 * (1 + ah.creativity);
   const voidAdj = t.voidYears * apy * (ah.creativity > 0.7 ? 0.01 : 0);
   const incentiveAdj = (t.incentives ?? 0) * incentiveWorth(ah.guaranteeFocus, ah.creativity);
-  return apy + gAdj + yearAdj + bonusAdj + voidAdj + incentiveAdj + bonusTermsValue(t, neg.missRisk ?? 0.12);
+  // A no-trade clause is worth real money to a player; an option bonus lets the club walk away after a year;
+  // roster bonuses come as a lump in March, a little ahead of weekly checks.
+  const ntcAdj = t.noTrade ? apy * 0.03 : 0;
+  const optionAdj = (t.optionBonus ?? 0) > 0 ? -apy * 0.02 : 0;
+  const rosterAdj = ((t.rosterBonus ?? 0) * Math.max(0, years - 1) * 0.02) / years;
+  return apy + gAdj + yearAdj + bonusAdj + voidAdj + incentiveAdj + ntcAdj + optionAdj + rosterAdj + bonusTermsValue(t, neg.missRisk ?? 0.12);
 }
 
 /**
@@ -172,8 +178,10 @@ export function offerValue(neg: Pick<Negotiation, "player" | "askGuarantee" | "a
  * more in total to make up what they cost his client.
  */
 function carryBonuses(neg: Pick<Negotiation, "missRisk">, counter: OfferTerms, t: OfferTerms): OfferTerms {
-  if (!asksBonuses(t)) return counter;
-  const out: OfferTerms = { ...counter, perGame: t.perGame, workout: t.workout, escalator: t.escalator };
+  // Structure we wrote (roster and option bonuses, partial guarantees, a no-trade clause) stays in his counter.
+  const extras = { rosterBonus: t.rosterBonus, optionBonus: t.optionBonus, skillGuaranteed: t.skillGuaranteed, capGuaranteed: t.capGuaranteed, noTrade: t.noTrade };
+  if (!asksBonuses(t)) return { ...counter, ...extras };
+  const out: OfferTerms = { ...counter, ...extras, perGame: t.perGame, workout: t.workout, escalator: t.escalator };
   const gap = -bonusTermsValue(out, neg.missRisk ?? 0.12);
   if (gap > 0) out.total = Math.round((out.total + gap * out.years) / 50_000) * 50_000;
   return out;

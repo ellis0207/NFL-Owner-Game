@@ -242,7 +242,7 @@ function AssetList({ game, team, chosen, toggle, title, other }: { game: GameSta
                       {p.name}
                       {game.players[id].status === "ir" && <span className="pill"> IR</span>}
                       {req && <span className="pill cut"> Wants out</span>}
-                      {hasNoTradeClause(id) && <span className="pill"> No-trade</span>}
+                      {hasNoTradeClause(id, game) && <span className="pill"> No-trade</span>}
                       {!ok.ok && <span className="muted"> · {ok.reason}</span>}
                     </td>
                     <td>{p.position}</td>

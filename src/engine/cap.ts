@@ -158,7 +158,12 @@ export function releaseCost(playerId: string, state?: GameState, opts: { june1?:
   const date = opts.date ?? state?.date ?? RULES.keyDates.regularSeasonStart;
   const injured = !!state?.players[playerId]?.injury;
   const termPay = !!state && state.termPay?.[playerId] === leagueYear(date);
-  const c = releaseCharges(dealOf(state, playerId), date, { june1: opts.june1, injured, termPay });
+  // A release while the club is pressed against the cap counts as a cap release (cap guarantees apply); otherwise it is for skill.
+  const team = state?.players[playerId]?.team;
+  const deal = dealOf(state, playerId);
+  const partial = deal?.years.some((y) => y.skillGuaranteed || y.capGuaranteed);
+  const reason = partial && state && team && capSummary(state, team).space < salaryCap(state, leagueYear(date)) * 0.02 ? "cap" : "skill";
+  const c = releaseCharges(deal, date, { june1: opts.june1, injured, termPay, reason });
   return { deadThisYear: c.thisYear, deadNextYear: c.nextYear, savingsThisYear: c.savings, cashOwed: c.cashOwed, salaryThisYear: c.salaryThisYear, salaryNextYear: c.salaryNextYear };
 }
 

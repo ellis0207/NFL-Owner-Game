@@ -15,11 +15,13 @@ import { gameTypeLabel, outLabel } from "../engine/season";
 import { canTradePlayer, hasNoTradeClause, trades } from "../engine/trades";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
+import { careerLines, careerNote, careerTotals } from "../engine/careerstats";
 import type { GameState } from "../engine/types";
 import { ContractTable, dealSummary } from "./ContractTable";
 import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./format";
 import { useUi } from "./ui";
 import { PlayerClubhouse } from "./PlayerClubhouse";
+import { PlayerExtras } from "./PlayerExtras";
 import { knownReturn } from "../engine/medical";
 import { honorsOf } from "../engine/honors";
 
@@ -40,7 +42,10 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
   const ui = useUi();
   const cost = releaseCost(id, game);
   const year = leagueYear(game.date);
-  const seasons = [...new Set(p.stats.map((s) => s.season))].sort((a, b) => b - a);
+  const career = careerLines(game, id);
+  const seasons = [...new Set(career.map((s) => s.season))].sort((a, b) => b - a);
+  const totals = careerTotals(game, id);
+  const note = careerNote(game, id);
   const mine = state.team === game.userTeam;
   const deal = dealOf(game, id);
   const original = !(id in game.contracts);
@@ -117,6 +122,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
 
         {honorsOf(game, id).length > 0 && <div className="muted">Honors: {honorsOf(game, id).join(" · ")}</div>}
         <PlayerClubhouse game={game} id={id} changed={changed} />
+        <PlayerExtras game={game} id={id} changed={changed} />
 
         <section className="report">
           <span className="label">{report.authorRole}'s report · {report.author}</span>
@@ -270,7 +276,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
               return (
                 <div className="btn-row">
                   <button className="btn" onClick={() => ui.openTrade(id)}>{mine ? "Shop him in a trade" : "Trade for him"}</button>
-                  {hasNoTradeClause(id) && <span className="muted">No-trade clause: he has to agree to any deal.</span>}
+                  {hasNoTradeClause(id, game) && <span className="muted">No-trade clause: he has to agree to any deal.</span>}
                   {trades(game).requests[id] && <span className="bad">Has asked for a trade.</span>}
                 </div>
               );
@@ -287,7 +293,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
                 <thead><tr><th>Season</th><th>Team</th><th className="num">G</th><th>Line</th><th className="num">Snaps</th></tr></thead>
                 <tbody>
                   {seasons.map((season) => {
-                    const s = mergeSeason(p.stats.filter((x) => x.season === season))!;
+                    const s = mergeSeason(career.filter((x) => x.season === season))!;
                     const snaps = p.snaps[String(season)];
                     const share = snaps ? Math.max(snaps.offShare, snaps.defShare) : 0;
                     return (
@@ -298,11 +304,13 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
                       </tr>
                     );
                   })}
+                  {seasons.length > 1 && <tr><td><strong>Career</strong></td><td>{totals.seasons} seasons</td><td className="num">{totals.g ?? ""}</td><td>{statLine(p.position, { season: 0, team: "", ...totals })}</td><td></td></tr>}
                 </tbody>
               </table>
             </div>
           )}
-          <span className="muted">Real NFL regular-season stats through 2025, then the seasons simulated in this save. Snap share is of the team's snaps across the season.</span>
+          {note && <span className="muted">{note}</span>}
+          <span className="muted">Real NFL regular-season stats back to his rookie year (season totals before 2023), then the seasons simulated in this save. Snap share is of the team's snaps across the season.</span>
         </section>
 
         {mine && state.status !== "ps" && state.status !== "ir" && (

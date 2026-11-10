@@ -9,9 +9,10 @@ import {
   seasonAdv, setAnalyticsLevel, setPriority, type Priority,
 } from "../../engine/strategy";
 import type { GameState } from "../../engine/types";
+import { AnalyticsStaffTab, AssessmentsTab } from "./AnalyticsLab";
 import { useUi } from "../ui";
 
-const TABS = ["Team", "Players", "Game plan", "Department", "Outlook", "Trends"] as const;
+const TABS = ["Team", "Players", "Assessments", "Game plan", "Department", "Analysts", "Outlook", "Trends"] as const;
 type Tab = (typeof TABS)[number];
 
 const f2 = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(2);
@@ -29,8 +30,10 @@ export function AnalyticsScreen({ game, changed }: { game: GameState; changed: (
       </div>
       {tab === "Team" && <TeamTab game={game} />}
       {tab === "Players" && <PlayersTab game={game} />}
+      {tab === "Assessments" && <AssessmentsTab game={game} />}
       {tab === "Game plan" && <PlanTab game={game} />}
       {tab === "Department" && <DepartmentTab game={game} changed={changed} />}
+      {tab === "Analysts" && <AnalyticsStaffTab game={game} changed={changed} />}
       {tab === "Outlook" && <OutlookTab game={game} />}
       {tab === "Trends" && <TrendsTab game={game} />}
     </section>

@@ -1,4 +1,5 @@
 // Who works for each team, and the engine-side reading of how good they are.
+import { careDrag } from "./playercare";
 import { trustNudge } from "./clubhouse";
 import { retrainEffect } from "./training";
 import { HIDDEN_RATINGS, HIDDEN_STAFF, PLAYER_BY_ID, PLAYERS, STAFF } from "./league";
@@ -140,7 +141,8 @@ export function upside(state: GameState, id: string): number {
 export function trait(state: GameState, id: string, name: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r) return 45;
-  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id);
+  // A playbook not yet learned and weeks of every snap take a little off (playercare.ts).
+  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id) - careDrag(state, id);
 }
 
 /** How well a player's traits match what a scheme asks for at the position, in rating points around zero. */

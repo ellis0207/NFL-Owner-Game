@@ -1,4 +1,10 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { contractExtrasDaily } from "./contractextras";
+import { coachRoomDaily, ownerKeeps } from "./coachroom";
+import { scoutOpsDaily } from "./scoutops";
+import { hindsightDaily } from "./hindsight";
+import { careDaily } from "./playercare";
+import { analystsDaily } from "./analysts";
 import { approvePlan, books, booksDaily } from "./books";
 import { debt, debtDaily } from "./debt";
 import { ensureOffice } from "./delegation";
@@ -498,12 +504,14 @@ export function advanceDay(state: GameState): void {
   carouselDaily(state);
   positionCoachesDaily(state);
   contractsDaily(state);
+  contractExtrasDaily(state);
   incentivesDaily(state);
   capMovesDaily(state);
   faDaily(state);
   tradesDaily(state);
   springDaily(state);
   campDaily(state);
+  coachRoomDaily(state);
   ownersDaily(state);
   hostingDaily(state);
   disciplineDaily(state);
@@ -512,6 +520,7 @@ export function advanceDay(state: GameState): void {
   proDayDaily(state);
   collegeDaily(state);
   scoutingDaily(state);
+  scoutOpsDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {
     protectPracticeSquads(state);
     for (const t of Object.keys(TEAM_BY_ID)) {
@@ -569,12 +578,15 @@ export function advanceDay(state: GameState): void {
   officeDaily(state);
   gameOpsDaily(state);
   analyticsDaily(state);
+  analystsDaily(state);
   lockerDaily(state);
   trainingDaily(state);
   medicalDaily(state);
+  careDaily(state);
   gameWeekDaily(state);
   bonusesDaily(state);
   honorsDaily(state);
+  hindsightDaily(state);
   recordsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.
   mediaDaily(state);
@@ -606,7 +618,7 @@ function runCutdown(state: GameState): void {
   for (const team of Object.keys(TEAM_BY_ID)) {
     const keep = team === state.userTeam && state.cutPlan?.length
       ? trimPlan(state, team, state.cutPlan.filter((id) => state.players[id]?.team === team && ["camp", "active"].includes(state.players[id].status)))
-      : proposeFinal53(state, team);
+      : proposeFinal53(state, team, team === state.userTeam ? ownerKeeps(state) : []);
     const { cut, ps } = applyCutdown(state, team, keep);
     if (team === state.userTeam) {
       const cap = capSummary(state, team);

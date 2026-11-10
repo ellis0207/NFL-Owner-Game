@@ -15,7 +15,11 @@
 import { invalidateRosters } from "./cap";
 import { mediaBoard, mediaRank } from "./college";
 import { schoolName } from "./collegeData";
-import { minimumSalary, rookieScale, salaryCap as salaryCapFor } from "./contracts";
+import { minimumSalary, rookieScale } from "./contracts";
+import { compFormula } from "./contractextras";
+import { draftBoards, resolveUdfaRace } from "./scoutops";
+import { noteScoutCalls } from "./hindsight";
+import { teamPlayerIds } from "./cap";
 import { addDays } from "./dates";
 import { payCash } from "./finance";
 import { letter, OUTLETS } from "./grades";
@@ -133,7 +137,7 @@ export function projectedOrder(state: GameState, rounds = 7): string[] {
 function awardCompPicks(state: GameState, quiet = false): void {
   const d = draftState(state);
   const count: Record<string, number> = {};
-  const list = DRAFT_YEAR === 2027 ? COMP_2027 : compFormula(state);
+  const list = DRAFT_YEAR === 2027 ? COMP_2027 : compPicksFor(state);
   d.comp = list.map(([team, round, player, to]) => {
     const n = (count[`${team}-${round}`] = (count[`${team}-${round}`] ?? 0) + 1);
     return { pick: `${DRAFT_YEAR}-${round}-${team}-c${n}`, player, to };
@@ -150,41 +154,9 @@ function awardCompPicks(state: GameState, quiet = false): void {
     (ours.length ? `We get ${ours.length}: ${ours.map((c) => `No. ${pickOverall(state, c.pick)} for ${c.player}`).join(", ")}.` : "We didn't qualify for any."));
 }
 
-/**
- * The compensatory formula, simplified the way the league runs it: every
- * unrestricted free agent whose contract ran out and who signed elsewhere in
- * the spring is valued by his new contract's APY against the cap; each one a
- * team signs cancels one it lost of the same or the next lower value; what's
- * left becomes picks in rounds 3-7. At most four a team and 32 in all.
- */
-function compFormula(state: GameState): [team: string, round: number, lost: string, signedWith: string][] {
-  const moves = state.league?.cfa?.[DRAFT_YEAR] ?? [];
-  const cap = salaryCapFor(state, DRAFT_YEAR - 1);
-  const roundOf = (apy: number) => {
-    const share = apy / cap;
-    return share >= 0.08 ? 3 : share >= 0.045 ? 4 : share >= 0.025 ? 5 : share >= 0.012 ? 6 : share >= 0.006 ? 7 : 0;
-  };
-  const lost: Record<string, { player: string; to: string; apy: number; round: number }[]> = {};
-  const gained: Record<string, number[]> = {};
-  for (const m of moves) {
-    const round = roundOf(m.apy);
-    if (!round) continue;
-    (lost[m.from] ??= []).push({ player: m.player, to: m.to, apy: m.apy, round });
-    (gained[m.to] ??= []).push(round);
-  }
-  const out: { team: string; round: number; player: string; to: string; apy: number }[] = [];
-  for (const [team, ls] of Object.entries(lost)) {
-    const left = [...ls].sort((a, b) => b.apy - a.apy);
-    for (const g of (gained[team] ?? []).sort((a, b) => a - b)) {
-      // A signing cancels a loss of the same round, or else the best one below it.
-      let i = left.findIndex((l) => l.round === g);
-      if (i < 0) i = left.findIndex((l) => l.round > g);
-      if (i >= 0) left.splice(i, 1);
-    }
-    for (const l of left.slice(0, 4)) out.push({ team, round: l.round, player: PLAYER_BY_ID[l.player]?.name ?? l.player, to: l.to, apy: l.apy });
-  }
-  out.sort((a, b) => b.apy - a.apy);
-  return out.slice(0, 32).sort((a, b) => a.round - b.round || b.apy - a.apy).map((c) => [c.team, c.round, c.player, c.to]);
+/** The compensatory formula (contractextras.ts), as [team, round, player lost, team he signed with]. */
+function compPicksFor(state: GameState): [team: string, round: number, lost: string, signedWith: string][] {
+  return compFormula(state, DRAFT_YEAR).picks.map((c) => [c.team, c.round, c.player, c.to]);
 }
 
 // ---- Who can be drafted ----
@@ -527,14 +499,14 @@ export function advanceToEndOfDay(state: GameState): void {
 // ---- Staff recommendations ----
 
 export interface StaffRec {
-  role: "GM" | "HC" | "OC" | "DC";
+  role: "GM" | "HC" | "OC" | "DC" | "AN";
   name: string;
   title: string;
   player: string;
   reason: string;
 }
 
-const ROLE_TITLE = { GM: "general manager", HC: "head coach", OC: "offensive coordinator", DC: "defensive coordinator" };
+const ROLE_TITLE = { GM: "general manager", HC: "head coach", OC: "offensive coordinator", DC: "defensive coordinator", AN: "analytics department" };
 const recCache = new WeakMap<GameState, { key: string; recs: StaffRec[] }>();
 
 function evalSkill(person: StaffPerson | undefined): number {
@@ -610,6 +582,31 @@ export function staffRecommendations(state: GameState): StaffRec[] {
     else if (role === "HC") reason = `${last} fits how we want to play, and he's the best of what's left for us.`;
     else reason = `Best player on our board. We take the talent and sort out the depth chart later.`;
     recs.push({ role, name: person.name, title: ROLE_TITLE[role], player: top.id, reason });
+  }
+  // The analysts' pick: their model reads college production, testing and age, prices positions by the
+  // value a pick returns, and ignores need. It can disagree with the scouts, and says so.
+  const level = state.analytics?.level ?? 0;
+  if (level > 0 && pool.length) {
+    const sd = (5.5 - level * 1.3) * (state.analysts?.feeds.college ? 0.75 : 1);
+    let best: { id: string; score: number } | undefined;
+    for (const id of pool) {
+      const p = dc.byId[id];
+      if (["K", "P", "LS"].includes(p.position) && round < 6) continue;
+      const h = dc.hidden[id];
+      const age = Number(DRAFT_YEAR) - Number(p.birthDate.slice(0, 4));
+      const score = boardValue(state, us, id) * 0.6 + (h.college - 60) * 0.12 + (4.6 - h.forty) * 6 + (22 - age) * 0.5 + PREMIUM[p.position] * 0.7
+        + gaussian(rngFor(state.seed, `rec:an:${id}`)) * sd;
+      if (!best || score > best.score) best = { id, score };
+    }
+    if (best) {
+      const p = dc.byId[best.id];
+      const gm = recs.find((r) => r.role === "GM");
+      const last = p.name.split(" ").slice(-1)[0];
+      const reason = gm && gm.player !== best.id
+        ? `Our model has ${last} ahead of ${dc.byId[gm.player].name.split(" ").slice(-1)[0]}: his production against the schedule, his testing and his age project better, and ${POS_NOUN[p.position]}s return more on a pick.`
+        : `The model agrees with the scouts: ${last} is the best value on the board.`;
+      recs.push({ role: "AN", name: "Analytics department", title: ROLE_TITLE.AN, player: best.id, reason });
+    }
   }
   recCache.set(state, { key, recs });
   return recs;
@@ -798,6 +795,9 @@ function gradeRank(g: string): number {
   return ["F", "D", "C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+"].indexOf(g);
 }
 
+/** Bodies a camp roster usually carries at each position, to judge how crowded a room is for an undrafted player. */
+const UDFA_DEPTH: Partial<Record<Position, number>> = { QB: 4, RB: 5, WR: 10, TE: 5, OT: 7, OG: 7, C: 3, EDGE: 8, IDL: 8, LB: 7, CB: 10, S: 6, K: 2, P: 2, LS: 2 };
+
 /** Right after the last pick, every team signs undrafted free agents to fill out its 90. */
 function udfaRush(state: GameState): void {
   const d = draftState(state);
@@ -807,6 +807,27 @@ function udfaRush(state: GameState): void {
   const want: Record<string, number> = {};
   for (const t of teams) want[t] = Math.max(4, Math.min(16, ROSTER_MAX + 4 - rosterCount(state, t).roster));
   const signed: Record<string, string[]> = {};
+  const sign = (id: string, team: string, bonus: number) => {
+    register(state, id, team, null);
+    d.udfa![id] = team;
+    state.players[id] = { team, status: "camp" };
+    state.contracts[id] = udfaDeal(team, state.date, bonus);
+    payCash(state, team, bonus);
+    const p = draftClass(state.seed).byId[id];
+    logMove(state, team, id, "signed", `signed undrafted free agent ${p.position} ${p.name} (${schoolName(p.school)})`);
+    (signed[team] ??= []).push(id);
+  };
+  // The owner's offers go first: each player picks between our bonus and roster chance and the best rival offer.
+  const us = state.userTeam;
+  const dcl = draftClass(state.seed);
+  const depth = (pos: Position) => teamPlayerIds(state, us).filter((id) => (PLAYER_BY_ID[id]?.position ?? dcl.byId[id]?.position) === pos).length * (4 / (UDFA_DEPTH[pos] ?? 4));
+  // Our scouts' draft-day calls on our picks go on the record, to be judged in a few years.
+  const ourPicks = (d.made ?? []).filter((m) => m.team === us);
+  const rows = new Map(draftBoards(state, ourPicks.map((m) => m.player)).map((r) => [r.id, r]));
+  noteScoutCalls(state, ourPicks.map((m) => ({ player: m.player, overall: m.overall, projRound: scoutReport(state, m.player).round ?? 8, risk: rows.get(m.player)?.riskWord ?? "Medium" })));
+  const race = resolveUdfaRace(state, new Set(draftPool(state)), depth);
+  for (const [id, bonus] of race.won) sign(id, us, bonus);
+  for (const [id, team] of race.lost) sign(id, team, Math.round((60_000 + rng() * 120_000) / 1000) * 1000);
   for (let pass = 0; pass < 16; pass++) {
     const pool = draftPool(state);
     for (const team of teams) {
@@ -815,14 +836,7 @@ function udfaRush(state: GameState): void {
       if (!id) continue;
       pool.splice(pool.indexOf(id), 1);
       const bonus = Math.round((pass < 3 ? 40_000 + rng() * 160_000 : 5_000 + rng() * 25_000) / 1000) * 1000;
-      register(state, id, team, null);
-      d.udfa[id] = team;
-      state.players[id] = { team, status: "camp" };
-      state.contracts[id] = udfaDeal(team, state.date, bonus);
-      payCash(state, team, bonus);
-      const p = draftClass(state.seed).byId[id];
-      logMove(state, team, id, "signed", `signed undrafted free agent ${p.position} ${p.name} (${schoolName(p.school)})`);
-      (signed[team] ??= []).push(id);
+      sign(id, team, bonus);
     }
   }
   invalidateRosters(state);
@@ -841,6 +855,7 @@ function udfaRush(state: GameState): void {
   const ours = signed[state.userTeam] ?? [];
   const dc = draftClass(state.seed);
   send(state, "transaction", gmOf(state.userTeam), "Undrafted free agents",
+    (race.won.length || race.lost.length ? `Of the players you made offers to, ${race.won.length} chose us${race.lost.length ? ` and ${race.lost.length} went elsewhere (${race.lost.map(([id, t]) => `${dc.byId[id].name} to the ${teamLabel(t)}`).join(", ")})` : ""}. ` : "") +
     `We signed ${ours.length} undrafted free agents as soon as the draft ended: ` +
     `${ours.map((id) => `${dc.byId[id].position} ${dc.byId[id].name} (${schoolName(dc.byId[id].school)})`).join(", ")}.` +
     (cut.length ? `\n\nTo stay at ${ROSTER_MAX} we released ${cut.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(", ")}.` : "") +

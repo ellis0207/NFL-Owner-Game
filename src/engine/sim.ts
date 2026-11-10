@@ -23,6 +23,8 @@ import { perPlay } from "./analytics";
 import { coverage as coverShell, formation, PLAY_FLAGS as F, Recorder, spotText } from "./playlog";
 import { DEFENSE, OFFENSE, type DefenseStyle, type OffenseStyle, type Personnel, type RunType } from "./schemes";
 import { ability, schemeFit, staffEffects, teamSchemes, trait, type StaffEffects } from "./staff";
+import { bigMoment, blitzPressure, defensiveRead, innovationEdge, pickupChance, poise, returnShape, selfScout, slideChance, stPlan, tendencyBucket, type StPlan } from "./simtactics";
+import { preseasonOrder, preseasonSeries } from "./coachroom";
 import type { BoxScore, GameLog, GameResult, GameState, Position, ScheduledGame, ScoringPlay, TeamBox } from "./types";
 
 type Side = "away" | "home";
@@ -92,6 +94,12 @@ interface Team {
   planEdge: number;
   adjRun: number;
   adjPass: number;
+  /** What this offense has called by situation, as the other sideline charts it: [passes, plays]. */
+  seen: Record<string, [number, number]>;
+  /** The club's special teams plan. */
+  st: StPlan;
+  /** Edges from ideas the offense came up with this year or the last two (rating points). */
+  innov: { pass: number; run: number };
 }
 
 interface Lineup {
@@ -147,6 +155,8 @@ class GameSim {
   quietTd = false;
   trend = { pass: 0, twoHigh: 0 };
   advice: Rng;
+  /** This snap: -1 the defense sat on the call it read from the offense's tendencies, +1 it guessed wrong. */
+  read: -1 | 0 | 1 = 0;
 
   constructor(public state: GameState, public game: ScheduledGame, away: string, home: string) {
     this.rng = rngFor(state.seed, `game:${game.id}`);
@@ -157,6 +167,11 @@ class GameSim {
     this.t = { away: this.makeTeam("away", away), home: this.makeTeam("home", home) };
     for (const side of ["away", "home"] as const) this.t[side].form += this.cond.edge[side];
     for (const side of ["away", "home"] as const) this.t[side].passLean = this.estimatePassLean(side);
+    for (const side of ["away", "home"] as const) {
+      const t = this.t[side];
+      const dc = this.t[this.other(side)].fx.defCalling;
+      t.innov = { pass: innovationEdge(state, t.id, "pass", dc), run: innovationEdge(state, t.id, "run", dc) };
+    }
     // League trends move every team's play calling and coverage a little.
     this.trend = leagueTrend(state);
     this.advice = rngFor(state.seed, `advice:${game.id}`);
@@ -219,6 +234,7 @@ class GameSim {
         });
       }
     }
+    if (this.pre) preseasonOrder(this.state, id, full);
     const { chart, inactive, emergency } = this.pre ? { chart: full, inactive: [] as string[], emergency: undefined } : gameDayActives(full);
     inactive.push(...late);
     // Injured players on the 53 are inactive too.
@@ -228,13 +244,13 @@ class GameSim {
     const leadershipSd = 3.0 - (fx.leadership - 75) * 0.03;
     const r = this.rng();
     const wk = this.game.week ?? 1;
-    const starterSeries = wk === 2 ? (r < 0.3 ? 0 : r < 0.8 ? 1 : 2) : r < 0.65 ? 0 : r < 0.95 ? 1 : 2;
+    const starterSeries = preseasonSeries(this.state, id, wk) ?? (wk === 2 ? (r < 0.3 ? 0 : r < 0.8 ? 1 : 2) : r < 0.65 ? 0 : r < 0.95 ? 1 : 2);
     return {
       side, id, off: OFFENSE[schemes.offense], def: DEFENSE[schemes.defense], fx, chart, inactive, emergency,
       out: new Set(), form: gaussian(this.rng) * leadershipSd + chemistryEdge(this.state, id), timeouts: 3, stats: {}, box: emptyTeamBox(),
       score: 0, quarters: [0, 0, 0, 0], drives: 0, starterSeries, passLean: 0,
       offFit: this.unitFit(id, chart, OFF_FIT), defFit: this.unitFit(id, chart, DEF_FIT),
-      planEdge: 0, adjRun: 0, adjPass: 0,
+      planEdge: 0, adjRun: 0, adjPass: 0, seen: {}, st: stPlan(this.state, id), innov: { pass: 0, run: 0 },
     };
   }
 
@@ -589,9 +605,10 @@ class GameSim {
     }
     const ret = this.returner(r, "kr");
     const skill = this.tr(ret, "speed") - 80 + (r.fx.specialTeams - k.fx.specialTeams) * 0.15;
-    let yards = Math.round(23 + gaussian(this.rng) * 5 + skill * 0.15);
+    const plan = returnShape(r.st.returns);
+    let yards = Math.round(23 + plan.yards + gaussian(this.rng) * 5 + skill * 0.15);
     const burst = this.rng();
-    if (burst < 0.035 + skill * 0.001) yards += 15 + Math.round(this.rng() * 40);
+    if (burst < (0.035 + skill * 0.001) * plan.burst) yards += 15 + Math.round(this.rng() * 40);
     this.tick(6);
     this.add(r, ret, "kr");
     if (burst < 0.003 + skill * 0.0002 || yards >= 100) {
@@ -610,7 +627,7 @@ class GameSim {
     this.add(r, ret, "krYds", yards);
     const kt = this.tackle(k, this.coverage(k), 0);
     const kText = `${this.name(kicker)} kicks off; ${this.name(ret)} returns it to the ${spotText(yards, r.id, k.id)}${kt ? ` (${this.name(kt)})` : ""}.`;
-    if (this.rng() < 0.006) {
+    if (this.rng() < 0.006 * plan.fumble) {
       this.rec.kick(this, kicking, `${kText} ${this.name(ret)} FUMBLES; ${k.id} recovers.`, F.turnover | F.big);
       // Muffed or fumbled return.
       this.add(r, ret, "fum");
@@ -640,7 +657,9 @@ class GameSim {
     }
     const power = this.tr(punter, "kickPower");
     const placement = this.tr(punter, "placement");
-    let gross = Math.round(49.5 + (power - 80) * 0.22 + gaussian(this.rng) * 7 + (o.fx.specialTeams - 70) * 0.03);
+    // Directional punting gives up distance to keep the ball away from the returner.
+    const directional = o.st.punts === "directional";
+    let gross = Math.round(50.4 - (directional ? 2.5 : 0) + (power - 80) * 0.22 + gaussian(this.rng) * 7 + (o.fx.specialTeams - 70) * 0.03);
     const room = 100 - this.ydl;
     // Short-field punts are aimed inside the 20 instead of hit for distance.
     if (room < 45) gross = Math.round(room - 5 - this.rng() * 8 + (placement - 80) * 0.1);
@@ -662,10 +681,12 @@ class GameSim {
     const r = this.rng();
     let ret = 0;
     const returner = this.returner(d, "pr");
-    if (landing < 90 && r < 0.42) {
+    const rplan = returnShape(d.st.returns);
+    const returnRate = (directional ? 0.3 : 0.42) * (d.st.returns === "aggressive" ? 1.15 : d.st.returns === "safe" ? 0.8 : 1);
+    if (landing < 90 && r < returnRate) {
       const skill = this.tr(returner, "agility") - 80 + (d.fx.specialTeams - o.fx.specialTeams) * 0.15;
-      ret = Math.round(Math.max(0, 8 + gaussian(this.rng) * 6 + skill * 0.15));
-      if (this.rng() < 0.03 + skill * 0.001) ret += 15 + Math.round(this.rng() * 50);
+      ret = Math.round(Math.max(0, 8 + rplan.yards - (directional ? 2 : 0) + gaussian(this.rng) * 6 + skill * 0.15));
+      if (this.rng() < (0.03 + skill * 0.001) * rplan.burst) ret += 15 + Math.round(this.rng() * 50);
       this.add(d, returner, "pr");
       if (landing - ret <= 0) {
         this.add(d, returner, "prYds", landing);
@@ -680,7 +701,7 @@ class GameSim {
       this.add(d, returner, "prYds", ret);
       const pt = this.tackle(o, this.coverage(o), 0);
       this.rec.say(`${this.name(punter)} punts ${gross} yards; ${this.name(returner)} returns it ${yardsText(ret)}${pt ? ` (${this.name(pt)})` : ""}.`, F.kick | (ret >= 20 ? F.big : 0));
-      if (this.rng() < 0.01) {
+      if (this.rng() < 0.01 * rplan.fumble) {
         this.rec.say(`${this.name(punter)} punts ${gross} yards; ${this.name(returner)} MUFFS it and ${o.id} recovers!`, F.kick | F.turnover | F.big);
 
         // Muffed punt recovered by the kicking team.
@@ -719,7 +740,9 @@ class GameSim {
     this.add(o, kicker, "fga");
     if (distance >= 50) this.add(o, kicker, "fga50");
     else if (distance >= 40) this.add(o, kicker, "fga40");
-    const made = this.rng() < this.fgMakeChance(kicker, distance) && this.rng() > 0.01;
+    const lead = o.score - d.score;
+    const moment = bigMoment(this.q, this.clock, lead, this.ot.active, this.game.type === "POST") && lead <= 0;
+    const made = this.rng() < clamp(this.fgMakeChance(kicker, distance) + (moment && kicker ? poise(this.state, kicker) * 0.04 : 0), 0.02, 0.99) && this.rng() > 0.01;
     if (made) {
       this.add(o, kicker, "fgm");
       this.add(o, kicker, "fgLong", distance);
@@ -916,9 +939,19 @@ class GameSim {
     if (this.down === 3) o.box.thirdAtt++;
     if (this.down === 4) o.box.fourthAtt++;
 
-    const passProb = this.passProbability(o, lead, hurry, milk);
+    // A good coordinator who has become predictable in a situation breaks his own tendency now and then.
+    const dd = tendencyBucket(this.down, this.dist, "");
+    const passProb = clamp(this.passProbability(o, lead, hurry, milk) + (hurry || milk ? 0 : selfScout(o.seen, dd, o.fx.offCalling)), 0.12, 0.95);
     const isPass = this.rng() < passProb;
     const personnel = this.choosePersonnel(o, isPass, hurry);
+    // The defense charts what this offense calls by down, distance and personnel, and sometimes sits on it.
+    const bucket = tendencyBucket(this.down, this.dist, personnel);
+    this.read = hurry || this.pre ? 0 : defensiveRead(o.seen, bucket, d.fx.defCalling, isPass, this.rng(), this.rng());
+    for (const b of [dd, bucket]) {
+      const x = (o.seen[b] ??= [0, 0]);
+      x[0] += isPass ? 1 : 0;
+      x[1]++;
+    }
     const lineup = this.offenseLineup(o, personnel);
     const pkg: Package = this.down >= 3 && this.dist >= 7 ? "dime" : personnel === "12" || personnel === "13" || personnel === "21" ? "base" : "nickel";
     const def = this.defenseLineup(d, pkg);
@@ -1195,7 +1228,7 @@ class GameSim {
         : type === "qbRun" ? 0.6 * tr(carrier, "mobility") + 0.4 * tr(carrier, "speed")
           : 0.5 * tr(carrier, "vision") + 0.3 * tr(carrier, "power") + 0.2 * tr(carrier, "burst");
     const motion = o.off.motion * 1.5 - (d.def.disguise * 0.5);
-    const e = 0.55 * block + 0.45 * runner - stop + this.baseEdge(o, d) + motion;
+    const e = 0.55 * block + 0.45 * runner - stop + this.baseEdge(o, d) + motion + o.innov.run - this.read * 1.6;
 
     const shortYardage = this.dist <= 2 && this.down >= 3;
     const goalLine = this.ydl >= 97;
@@ -1212,8 +1245,15 @@ class GameSim {
     } else if (r < pStuff + pBig) {
       yards = 10 + Math.round(-Math.log(Math.max(1e-6, this.rng())) * (7.5 + (tr(carrier, "speed") - 82) * 0.15));
     } else {
-      const mode = 3.9 + e * 0.045;
+      const mode = 3.55 + e * 0.045;
       yards = Math.max(1, Math.min(9, Math.round(mode + (this.rng() + this.rng() + this.rng() - 1.5) * 3.2)));
+      // Contact: a runner with power and balance breaks the first tackle and keeps going.
+      const tackler = front[Math.floor(this.rng() * front.length)];
+      const pBreak = clamp(0.075 + ((tr(carrier, "power") + tr(carrier, "agility")) / 2 - 80) * 0.004 - (tr(tackler, "runStop") - 80) * 0.003, 0.02, 0.2);
+      if (type !== "qbRun" && this.rng() < pBreak) {
+        yards += 3 + Math.floor(this.rng() * 6);
+        this.add(o, carrier, "brkTkl");
+      }
     }
     const room = 100 - this.ydl;
     yards = Math.min(yards, room);
@@ -1326,9 +1366,24 @@ class GameSim {
     // One-on-ones up front: each edge rusher against a tackle, each interior rusher against a guard or
     // the center. A line is only as good as its weakest pairing, so one bad mismatch adds pressure.
     const pairs = this.rushPairs(lu, rushers);
-    const pPressure = clamp(0.29 + (rushValue - protect) * 0.011 + (blitz ? 0.09 : 0) + holdTime - pocket - (playAction ? 0.0 : 0) - base * 0.004
-      + (pairs.worst - MISMATCH_TYPICAL) * 0.004, 0.04, 0.65);
+    // The protection call: who blocks the blitzer, and whether the line slides to its weakest matchup.
+    const back = lu.rbs[0] ?? lu.tes[0];
+    const pickedUp = blitz && this.rng() < pickupChance(tr(qb, "decisions"), tr(lu.ol[2] ?? lu.ol[0], "passBlock"), 0.5 * tr(back, "passBlock") + 0.5 * tr(back, "blocking"), o.fx.offCalling);
+    const slide = this.rng() < slideChance(o.fx.offCalling);
+    const mismatch = (pairs.worst - MISMATCH_TYPICAL) * 0.004 * (slide && pairs.worst > MISMATCH_TYPICAL ? 0.55 : slide ? 1.45 : 1);
+    const pPressure = clamp(0.29 + (rushValue - protect) * 0.011 + (blitz ? blitzPressure(pickedUp) : 0) + holdTime - pocket - (playAction ? 0.0 : 0) - base * 0.004
+      + mismatch + (this.read === -1 ? 0.025 : this.read === 1 ? -0.025 : 0), 0.04, 0.65);
     const pressured = this.rng() < pPressure;
+    if (pressured) {
+      this.add(o, qb, "pressured");
+      const all = [...rushers, ...blitzers];
+      const by = all[Math.floor(this.rng() * all.length)];
+      if (by) this.add(d, by, "pressures");
+      const beaten = by && pairs.blocker[by];
+      if (beaten) this.add(o, beaten, "pressAllowed");
+      if (blitz && !pickedUp) this.rec.why = "Blitz not picked up";
+      else if (this.read === -1) this.rec.why = "Defense sat on the call";
+    }
 
     if (pressured && depth !== "screen") {
       const pSack = clamp(0.23 - (tr(qb, "mobility") - 80) * 0.004 - (tr(qb, "decisions") - 80) * 0.002 + (depth === "deep" ? 0.06 : 0), 0.07, 0.42);
@@ -1348,26 +1403,42 @@ class GameSim {
     }
 
     // Who gets the ball.
-    const target = this.pickTarget(o, d, lu, depth);
-    const pos = PLAYER_BY_ID[target].position;
+    // Separation a target gets on his man or in his zone, for the first read and the second.
+    const sepOf = (id: string) => {
+      const pos = PLAYER_BY_ID[id].position;
+      // A defense whose plan is to take away the pass can shadow the top receiver with its best man corner.
+      const cover = this.coverFor(def, lu, id, man, man && d.plan?.stop === "pass" && (d.plan?.quality ?? 0) > 0.2);
+      const recv = depth === "deep" ? 0.45 * tr(id, "deep") + 0.35 * tr(id, "speed") + 0.2 * tr(id, "routes")
+        : depth === "screen" ? 0.5 * tr(id, "yac") + 0.5 * tr(id, "agility")
+          : depth === "inter" ? 0.6 * tr(id, pos === "WR" ? "routes" : "receiving") + 0.2 * tr(id, "hands") + 0.2 * tr(id, "agility")
+            : 0.6 * tr(id, pos === "WR" ? "routes" : "receiving") + 0.4 * tr(id, "agility");
+      const cpos = cover ? PLAYER_BY_ID[cover].position : "LB";
+      const coverSkill = !cover ? 40
+        : cpos === "CB" ? (man ? 0.6 * tr(cover, "man") + 0.25 * tr(cover, "press") + 0.15 * tr(cover, "speed") : 0.7 * tr(cover, "zone") + 0.3 * tr(cover, "speed"))
+          : cpos === "S" ? 0.6 * tr(cover, "coverage") + 0.4 * tr(cover, "range")
+            : 0.7 * tr(cover, "coverage") + 0.3 * tr(cover, "speed");
+      return { id, cover, cpos, sep: recv - coverSkill };
+    };
+    let read = sepOf(this.pickTarget(o, d, lu, depth));
+    // Reading the coverage: with a clean pocket, a quarterback who processes well comes off a covered first read.
+    if (!pressured && depth !== "screen" && read.sep < -3 && this.rng() < clamp(0.18 + (tr(qb, "decisions") - 80) * 0.02, 0.05, 0.5)) {
+      const next = sepOf(this.pickTarget(o, d, lu, depth));
+      if (next.id !== read.id && next.sep - 1.5 > read.sep) read = { ...next, sep: next.sep - 1.5 };
+    }
+    const target = read.id;
+    const cover = read.cover;
+    const cpos = read.cpos;
     this.rec.actors.t = target;
-    const cover = this.coverFor(def, lu, target, man);
-    const recv = depth === "deep" ? 0.45 * tr(target, "deep") + 0.35 * tr(target, "speed") + 0.2 * tr(target, "routes")
-      : depth === "screen" ? 0.5 * tr(target, "yac") + 0.5 * tr(target, "agility")
-        : depth === "inter" ? 0.6 * tr(target, pos === "WR" ? "routes" : "receiving") + 0.2 * tr(target, "hands") + 0.2 * tr(target, "agility")
-          : 0.6 * tr(target, pos === "WR" ? "routes" : "receiving") + 0.4 * tr(target, "agility");
-    const cpos = cover ? PLAYER_BY_ID[cover].position : "LB";
-    const coverSkill = !cover ? 40
-      : cpos === "CB" ? (man ? 0.6 * tr(cover, "man") + 0.25 * tr(cover, "press") + 0.15 * tr(cover, "speed") : 0.7 * tr(cover, "zone") + 0.3 * tr(cover, "speed"))
-        : cpos === "S" ? 0.6 * tr(cover, "coverage") + 0.4 * tr(cover, "range")
-          : 0.7 * tr(cover, "coverage") + 0.3 * tr(cover, "speed");
-    let sep = recv - coverSkill;
+    let sep = read.sep;
     if (man) sep += o.off.motion * 2.2;
     if (playAction) sep += 2.5 + (o.passLean < 0 ? 1.5 : 0);
     if (depth === "deep") sep += twoHigh ? -4 : 2;
     if (depth === "short" && twoHigh) sep += 1.5;
-    sep += base - d.adjPass;
-    const accuracy = depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy");
+    sep += base - d.adjPass + o.innov.pass - this.read * 1.4 + (pickedUp ? 1.5 : 0);
+    // Poise when the game is on the line: the quarterback's temperament, experience and the week's preparation.
+    const moment = bigMoment(this.q, this.clock, o.score - d.score, this.ot.active, this.game.type === "POST");
+    const calm = moment ? poise(this.state, qb, o.plan?.quality ?? 0) : 0;
+    const accuracy = (depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy")) + calm * 4;
     const baseComp = { screen: 0.88, short: 0.79, inter: 0.61, deep: 0.39 }[depth];
     const compressed = this.ydl >= 80 ? 0.11 : 0;
     let pComp = baseComp - compressed - this.cond.comp[depth] + sep * 0.008 + (accuracy - 80) * 0.006 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
@@ -1413,7 +1484,7 @@ class GameSim {
       return { yards: 0, ended: true, playTime: 0, clockStops: true, involved: [picker, target] };
     }
     if (r < pInt + (1 - pComp)) {
-      const broken = cover && this.rng() < 0.28 + (coverSkill - recv) * 0.01;
+      const broken = cover && this.rng() < 0.28 - read.sep * 0.01;
       if (broken) this.add(d, cover, "pd");
       // An incompletion can be ruled a catch; the booth or a challenge can take it back.
       const ruling = this.refs.rule("drop", this.callContext(o, d, 8));
@@ -1564,9 +1635,10 @@ class GameSim {
     return cands[0] ?? lu.qb;
   }
 
-  coverFor(def: DefLineup, lu: Lineup, target: string, man: boolean): string | undefined {
+  coverFor(def: DefLineup, lu: Lineup, target: string, man: boolean, shadow = false): string | undefined {
     const pos = PLAYER_BY_ID[target].position;
     const wrIndex = lu.wrs.indexOf(target);
+    if (shadow && wrIndex === 0 && def.cb.length) return [...def.cb].sort((a, b) => this.tr(b, "man") - this.tr(a, "man"))[0];
     if (wrIndex >= 0) {
       if (man || this.rng() < 0.65) return def.cb[wrIndex] ?? def.s[0] ?? def.cb[0];
       return def.s[Math.floor(this.rng() * def.s.length)] ?? def.cb[0];

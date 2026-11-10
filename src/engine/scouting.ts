@@ -7,6 +7,7 @@
 // What a report reveals grows with how well we know a player, and it is only
 // as accurate as our college scouting director's eye. Nothing here shows a
 // rating: grades come out as a round range and words.
+import { crossCheck, splitFactors } from "./scoutops";
 import { COLLEGE_TEAM, distanceTo, schoolName } from "./collegeData";
 import { addDays, weekday } from "./dates";
 import { send, money } from "./inbox";
@@ -199,7 +200,7 @@ export function scoutingDaily(state: GameState): void {
     }
     s.spent += q.cost;
     cost += q.cost;
-    const gain = gainFor(a.depth, q.players, us) * paceFactor(state);
+    const gain = gainFor(a.depth, q.players, us) * paceFactor(state) * splitFactors(state).gain;
     for (const p of matchProspects(state, a.filter)) {
       const k = s.know[p.id] ?? 0;
       if (!(p.id in before)) before[p.id] = k;
@@ -304,7 +305,9 @@ function errorSd(state: GameState, team: string, k: number, id?: string): number
   const dept = team === state.userTeam ? [1.15, 1, 0.92, 0.85][state.business?.budget.scouts ?? 1] : 1;
   // The scout who covers his position knows the group better.
   const spec = team === state.userTeam && id ? specialistFactor(state, draftClass(state.seed).byId[id]?.position ?? "K") : 1;
-  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept * spec * (team === state.userTeam ? fogOf(state) : 1);
+  // The budget split (video sharpens reads) and the national scout's cross-check on the top names.
+  const ops = team === state.userTeam ? splitFactors(state).error * (id ? crossCheck(state, id) : 1) : 1;
+  return ((3.2 + (100 - eye) / 14) * Math.max(0.12, 1 - k / 115) + 0.4) * dept * spec * ops * (team === state.userTeam ? fogOf(state) : 1);
 }
 
 /** The value a team's scouts put on a prospect (engine only: other teams use this on draft day). */
@@ -408,7 +411,8 @@ export function scoutReport(state: GameState, id: string, team = state.userTeam)
     const up = h.potential - h.overall + n("upside") * sd * 0.8;
     report.upside = up >= 8 ? "Raw, with a lot of room to grow." : up >= 5 ? "Should keep getting better." : up >= 2.5 ? "Close to a finished product." : "What you see is what you get.";
   }
-  if (k >= 85) {
+  // A bigger medical share of the scouting budget gets the doctors' file sooner.
+  if (k >= (team === state.userTeam ? splitFactors(state).medicalAt : 85)) {
     report.medical = h.medical ?? (h.durability + n("durability") * sd * 2 < 62 ? "Nagging injuries: has missed time every year." : "Clean medical history so far.");
   }
   report.next = k < 30 ? "Campus visits would get us his size, speed and more on his game."

@@ -9,6 +9,7 @@
 // a little each season with winning and losing. Post-game surveys read the
 // building. The league-wide economy and each market's other entertainment
 // move ticket demand, price sensitivity and sponsors.
+import { adopted } from "./analysts";
 import { business } from "./business";
 import { merchLift } from "./clubhouse";
 import { leagueYear } from "./contracts";
@@ -120,7 +121,8 @@ export function fanDemand(state: GameState, team: string): number {
   const trust = 1 + ((f.trust - TRUST0) / 100) * 0.15;
   const core = 1 + (f.core - f.core0) / 300;
   const sat = 1 + ((f.sat.casual + f.sat.families) / 2 - SAT0) / 500;
-  return market * trust * core * sat * (2 - f.competition);
+  // A promotion the analysts tested and the club adopted (analysts.ts).
+  return market * trust * core * sat * (2 - f.competition) * (1 + adopted(state, "promotion"));
 }
 
 /** How strongly single-game buyers respond to price: the segment mix, local incomes, other entertainment and the economy. */

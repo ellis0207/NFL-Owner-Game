@@ -203,13 +203,18 @@ export interface ReleaseCharges {
  * this year's share stays and the rest moves to next year.
  * During the season, base salary already paid has already counted.
  */
-export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: boolean; injured?: boolean; termPay?: boolean } = {}): ReleaseCharges {
+export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: boolean; injured?: boolean; termPay?: boolean; reason?: "skill" | "cap" } = {}): ReleaseCharges {
   if (!deal) return { thisYear: 0, nextYear: 0, savings: 0, cashOwed: 0, salaryThisYear: 0, salaryNextYear: 0 };
   const year = leagueYear(date);
   const cur = dealYear(deal, year);
   const later = deal.years.filter((y) => y.year > year);
   // Termination pay makes the whole season's salary owed, like a guarantee.
-  const guaranteeOf = (y: DealYear) => (opts.termPay && y.year === year ? Math.max(y.guaranteed, y.base) : y.guaranteed) + (opts.injured || (y.vests && y.vests <= date) ? y.injuryGuaranteed : 0);
+  // Skill guarantees protect against a release for football reasons, cap guarantees against one to clear room.
+  const partial = (y: DealYear) => (opts.reason === "cap" ? y.capGuaranteed ?? 0 : y.skillGuaranteed ?? 0);
+  const guaranteeOf = (y: DealYear) => {
+    const g = (opts.termPay && y.year === year ? Math.max(y.guaranteed, y.base) : y.guaranteed) + (opts.injured || (y.vests && y.vests <= date) ? y.injuryGuaranteed : 0);
+    return g + Math.min(partial(y), Math.max(0, y.base - g));
+  };
 
   let paid = 0;
   let salaryNow = 0;
@@ -255,6 +260,14 @@ export interface Terms {
   injuryGuaranteed: number;
   voidYears: number;
   shape: Shape;
+  /** Roster bonus each year after the first (moved out of base salary). */
+  rosterBonus?: number;
+  /** Option bonus, exercisable before the second year (moved out of that year's base). */
+  optionBonus?: number;
+  /** Guarantees against a release for skill or for cap room, filled after the full and injury guarantees. */
+  skillGuaranteed?: number;
+  capGuaranteed?: number;
+  noTrade?: boolean;
 }
 
 const SHAPE_WEIGHT: Record<Shape, (i: number, n: number) => number> = {
@@ -306,12 +319,48 @@ export function writeDeal(terms: Terms, opts: { team: string; date: string; kind
     }
   }
   const real = years.slice(carry.length).filter((y) => !y.void);
-  const total = sb + real.reduce((s, y) => s + y.base, 0);
+  // Skill and cap guarantees cover salary the full and injury guarantees don't.
+  let skill = Math.max(0, terms.skillGuaranteed ?? 0);
+  let capG = Math.max(0, terms.capGuaranteed ?? 0);
+  for (const y of real) {
+    const open = y.base - y.guaranteed - y.injuryGuaranteed;
+    const sg = Math.min(skill, open);
+    if (sg > 0) { y.skillGuaranteed = sg; skill -= sg; }
+    const cg = Math.min(capG, open);
+    if (cg > 0) { y.capGuaranteed = cg; capG -= cg; }
+  }
+  // Roster bonuses replace base salary in the years after the first: paid in a lump on the third day of the league year,
+  // so the club decides before then whether to keep him.
+  const rb = Math.max(0, terms.rosterBonus ?? 0);
+  if (rb) real.slice(1).forEach((y, i) => {
+    const min = minimumSalary(opts.yearsExp + carry.length + i + 1, y.year);
+    const move = Math.min(rb, Math.max(0, y.base - min));
+    y.base -= move;
+    y.bonus += move;
+    y.roster = move;
+    y.guaranteed = Math.min(y.guaranteed, y.base + move);
+  });
+  // An option bonus comes out of the second year's base: the club pays it to keep the later years.
+  let option: Deal["option"];
+  const ob = Math.max(0, terms.optionBonus ?? 0);
+  if (ob && real[1]) {
+    const y = real[1];
+    const min = minimumSalary(opts.yearsExp + carry.length + 1, y.year);
+    const move = Math.min(ob, Math.max(0, y.base - min));
+    if (move > 0) {
+      y.base -= move;
+      y.guaranteed = Math.min(y.guaranteed, y.base);
+      option = { year: y.year, amount: move, by: addDays(leagueYearStart(y.year), 4) };
+    }
+  }
+  const total = sb + real.reduce((s, y) => s + y.base + (y.roster ?? 0), 0) + (option?.amount ?? 0);
   return {
     team: opts.team, signed: opts.date, kind: opts.kind,
     signingBonus: sb, total, apy: Math.round(total / n),
     guaranteedAtSigning: Math.min(total, sb + real.reduce((s, y) => s + y.guaranteed, 0)),
     years,
+    ...(option ? { option } : {}),
+    ...(terms.noTrade ? { noTrade: true } : {}),
   };
 }
 

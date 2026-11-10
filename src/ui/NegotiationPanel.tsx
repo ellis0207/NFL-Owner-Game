@@ -13,6 +13,7 @@ import { teamStaff } from "../engine/staff";
 import type { GameState, Mandate, OfferTerms } from "../engine/types";
 import { ContractTable, dealSummary } from "./ContractTable";
 import { money } from "./format";
+import { cashVsCap } from "../engine/contractextras";
 
 const M = 1_000_000;
 const toM = (x: number) => Math.round((x / M) * 10) / 10;
@@ -26,16 +27,22 @@ export function termsLine(t: OfferTerms): string {
   if (t.perGame) parts.push(`${Math.round(t.perGame * 100)}% of salary per game`);
   if (t.workout) parts.push(`${money(t.workout)} workout bonus`);
   if (t.escalator) parts.push(`${money(t.escalator)} escalators`);
+  if (t.rosterBonus) parts.push(`${money(t.rosterBonus)} roster bonus a year`);
+  if (t.optionBonus) parts.push(`${money(t.optionBonus)} option bonus`);
+  if (t.skillGuaranteed) parts.push(`+${money(t.skillGuaranteed)} skill gtd`);
+  if (t.capGuaranteed) parts.push(`+${money(t.capGuaranteed)} cap gtd`);
+  if (t.noTrade) parts.push("no-trade clause");
   return parts.join(" · ");
 }
 
-interface Form { years: number; apy: number; bonus: number; gtd: number; injury: number; voids: number; incentives: number; perGame: number; workout: number; escalator: number; shape: OfferTerms["shape"] }
+interface Form { years: number; apy: number; bonus: number; gtd: number; injury: number; voids: number; incentives: number; perGame: number; workout: number; escalator: number; shape: OfferTerms["shape"]; roster: number; option: number; skill: number; capG: number; noTrade: boolean }
 
 function formFrom(t: OfferTerms, factor: number): Form {
   return {
     years: t.years, apy: toM((t.total / t.years) * factor), bonus: toM(t.signingBonus * factor), gtd: toM(t.guaranteed * factor),
     injury: toM(t.injuryGuaranteed), voids: t.voidYears, incentives: toM(t.incentives ?? 0), shape: t.shape,
     perGame: Math.round((t.perGame ?? 0) * 100), workout: Math.round((t.workout ?? 0) / 1000), escalator: toM(t.escalator ?? 0),
+    roster: toM(t.rosterBonus ?? 0), option: toM(t.optionBonus ?? 0), skill: toM(t.skillGuaranteed ?? 0), capG: toM(t.capGuaranteed ?? 0), noTrade: !!t.noTrade,
   };
 }
 
@@ -45,6 +52,7 @@ function termsFrom(f: Form): OfferTerms {
     years: f.years, total: Math.round(total * M), signingBonus: Math.round(f.bonus * M), guaranteed: Math.round(f.gtd * M),
     injuryGuaranteed: Math.round(f.injury * M), voidYears: f.voids, shape: f.shape, incentives: Math.round(f.incentives * M),
     perGame: Math.max(0, Math.min(25, f.perGame)) / 100, workout: Math.round(f.workout) * 1000, escalator: Math.round(f.escalator * M),
+    rosterBonus: Math.round(f.roster * M), optionBonus: Math.round(f.option * M), skillGuaranteed: Math.round(f.skill * M), capGuaranteed: Math.round(f.capG * M), noTrade: f.noTrade,
   };
 }
 
@@ -194,6 +202,11 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
               <label className="field" title="Part of each unguaranteed year's salary paid for each game he's on the game-day roster. The cap counts the games he dressed for last year. Agents for players who miss games want more for it.">Per-game share of salary (%)<input type="number" min={0} max={25} step={1} value={form.perGame} onChange={set("perGame")} /></label>
               <label className="field" title="Paid for taking part in the spring program, out of the salary. Skipped, it's forfeited and the cap gets it back.">Workout bonus ($K)<input type="number" min={0} step={25} value={form.workout} onChange={set("workout")} /></label>
               <label className="field" title="Next year's salary rises by this much each time he plays 65% of the snaps. Not on the cap until it's earned.">Escalator per year ($M)<input type="number" min={0} step={0.1} value={form.escalator} onChange={set("escalator")} /></label>
+              <label className="field" title="Paid in a lump on the third day of each league year after the first, out of that year's salary. Cut him before then and it's never owed.">Roster bonus per year ($M)<input type="number" min={0} step={0.1} value={form.roster} onChange={set("roster")} /></label>
+              <label className="field" title="Out of the second year's salary. We pay it by the fifth day of that league year to keep the later years, and the cap spreads it over the years left; decline it and he's a free agent.">Option bonus ($M)<input type="number" min={0} step={0.1} value={form.option} onChange={set("option")} /></label>
+              <label className="field" title="Salary owed if we cut him for football reasons. Doesn't cover injury, or a release to clear cap room.">Skill guarantee ($M)<input type="number" min={0} step={0.1} value={form.skill} onChange={set("skill")} /></label>
+              <label className="field" title="Salary owed if we cut him to save cap room while we're pressed against the cap.">Cap guarantee ($M)<input type="number" min={0} step={0.1} value={form.capG} onChange={set("capG")} /></label>
+              <label className="field" title="He has to agree to any trade. Players pay for it in their asking price, a little.">No-trade clause<input type="checkbox" checked={form.noTrade} onChange={(e) => setForm({ ...form, noTrade: e.target.checked })} /></label>
               <label className="field">Salary shape
                 <select value={form.shape} onChange={set("shape")}>
                   <option value="flat">Flat</option><option value="rising">Rising</option><option value="front">Front-loaded</option>
@@ -203,6 +216,17 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
             {preview && (
               <>
                 <ContractTable deal={preview.deal} from={Math.min(capYear, leagueYear(game.date))} />
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>Year</th><th className="num">Cash paid</th><th className="num">Cap charge</th><th className="num">Guaranteed</th></tr></thead>
+                    <tbody>
+                      {cashVsCap(preview.deal).filter((r) => r.year >= leagueYear(game.date)).map((r) => (
+                        <tr key={r.year}><td>{r.year}{r.void ? " (void)" : ""}</td><td className="num">{money(r.cash)}</td><td className="num">{money(r.cap)}</td><td className="num">{money(r.guaranteed)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {preview.deal.option && <span className="muted">Option bonus of {money(preview.deal.option.amount)} due by {preview.deal.option.by}.</span>}
                 <span className="muted">
                   {money((terms?.total ?? 0))} total. The {capYear} cap hit changes by {money(preview.check.capChange)}; {money(preview.check.cashNow)} cash due at signing.
                   {kind === "free-agent" && game.date < RULES.keyDates.newLeagueYear ? " Agreements in the negotiating window are signed when the league year opens." : ""}
