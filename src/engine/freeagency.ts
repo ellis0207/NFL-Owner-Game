@@ -13,6 +13,7 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { FORMAT } from "./format";
 import { loyaltyPull } from "./community";
 import { facilityPull } from "./facilities";
 import { franchiseReputation } from "./playercare";
@@ -20,7 +21,7 @@ import { attachBonuses } from "./bonuses";
 import { attachIncentives } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
 import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
-import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, salaryCap, writeDeal, writeMinimumDeal } from "./contracts";
+import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, salaryCap, writeDeal, writeMinimumDeal } from "./contracts";
 import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
 import { addMemo, apyLimit, areaLimit, guaranteeLimit, mode, noteDecision, openMemos, report } from "./delegation";
@@ -455,7 +456,7 @@ export function signStreetFreeAgent(state: GameState, team: string, id: string, 
   }
   if (opts.guaranteedWeeks) {
     const y = deal.years[0];
-    y.guaranteed = Math.max(y.guaranteed, Math.round((y.base * opts.guaranteedWeeks) / REG_WEEKS));
+    y.guaranteed = Math.max(y.guaranteed, Math.round((y.base * opts.guaranteedWeeks) / FORMAT.weeks));
     deal.guaranteedAtSigning = Math.max(deal.guaranteedAtSigning, y.guaranteed);
   }
   if (price > min * 1.3) {

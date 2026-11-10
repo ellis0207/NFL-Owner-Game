@@ -16,9 +16,10 @@
 // The league year (mid-March to mid-March) is the fiscal year. When it ends
 // the books close, the auditors sign off, the owner pays tax on the club's
 // income (ownership.ts) and next year's budget is approved.
+import { FORMAT } from "./format";
 import { late } from "./late";
 import { business, businessChief, cashBalance, CATEGORY, deferredRevenue, FINANCING, inflation, operatingEstimate, pnl, post, revenueEstimate, yearPlan } from "./business";
-import { dealOf, dealYear, leagueYear, leagueYearStart, REG_WEEKS, salaryCap } from "./contracts";
+import { dealOf, dealYear, leagueYear, leagueYearStart, salaryCap } from "./contracts";
 import { addDays, daysBetween } from "./dates";
 import { coverage, debt, debtService, drawn, facilityRate, leverage, loanRate, openLoans, totalDebt } from "./debt";
 import { cashOwedThisYear, cashNextYear } from "./finance";
@@ -59,9 +60,9 @@ function isExpense(cat: LedgerCat): boolean {
 /** Regular-season paychecks still to come this league year. */
 function weeksLeft(state: GameState): number {
   const k = RULES.keyDates;
-  if (leagueYear(state.date) !== RULES.season) return REG_WEEKS;
-  if (state.date < k.regularSeasonStart) return REG_WEEKS;
-  return Math.max(0, REG_WEEKS - Math.ceil(daysBetween(k.regularSeasonStart, state.date) / 7));
+  if (leagueYear(state.date) !== RULES.season) return FORMAT.weeks;
+  if (state.date < k.regularSeasonStart) return FORMAT.weeks;
+  return Math.max(0, FORMAT.weeks - Math.ceil(daysBetween(k.regularSeasonStart, state.date) / 7));
 }
 
 /** Player cash planned for a league year: what's been paid, what the contracts still owe, and room for the signings to come in the spring. */
@@ -167,7 +168,7 @@ export function elapsedShare(state: GameState, cat: LedgerCat, year: number): nu
     const played = games.filter((g) => g.date < state.date || (g.date === state.date && state.results[g.id])).length;
     const share = games.length ? played / games.length : 0;
     // Players: the spring's bonuses, then paychecks through the season.
-    return cat === "players" ? 0.3 + 0.7 * (1 - weeksLeft(state) / REG_WEEKS) : share;
+    return cat === "players" ? 0.3 + 0.7 * (1 - weeksLeft(state) / FORMAT.weeks) : share;
   }
   return Math.min(1, daysBetween(start, state.date) / 365);
 }

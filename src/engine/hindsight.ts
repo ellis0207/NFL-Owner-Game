@@ -9,6 +9,7 @@
 //
 // Production per season is what the honors voters use (production against a
 // Pro Bowl season at the position); linemen count starts by snap share.
+import { FORMAT } from "./format";
 import { addDays } from "./dates";
 import { news, send } from "./inbox";
 import { ELITE, production } from "./honors";
@@ -52,7 +53,7 @@ export function seasonValue(state: GameState, id: string, season: number): numbe
   // The season just played is still in the box scores until the league rolls over.
   const live = season === RULES.season ? seasonTotals(state, "REG")[id]?.line as Record<string, number> | undefined : undefined;
   if (LINE.has(p.position)) {
-    if (season === RULES.season) return live ? Math.min(1, (Number(live.offSnaps ?? 0) + Number(live.defSnaps ?? 0)) / (17 * 62) * 0.8) : 0;
+    if (season === RULES.season) return live ? Math.min(1, (Number(live.offSnaps ?? 0) + Number(live.defSnaps ?? 0)) / (FORMAT.games * 62) * 0.8) : 0;
     const s = p.snaps?.[String(season)];
     return s ? Math.min(1, Math.max(s.offShare, s.defShare) * 0.8 + s.stShare * 0.1) : 0;
   }

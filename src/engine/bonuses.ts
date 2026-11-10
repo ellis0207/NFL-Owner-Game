@@ -18,6 +18,7 @@
 // shortfall to its players after the period's last season. In the game the
 // periods start with 2027, the first league year a save sees from March on
 // (the 2026 bonuses were paid before the game begins).
+import { FORMAT } from "./format";
 import { dealOf, leagueYear, minimumSalary, salaryCap } from "./contracts";
 import { addDays } from "./dates";
 import { cashPaid, payCash } from "./finance";
@@ -28,7 +29,6 @@ import { capScale, rfaTender } from "./market";
 import { rngFor } from "./rng";
 import type { Deal, DealYear, GameState } from "./types";
 
-const REG_GAMES = 17;
 /** The share of the salary caps each club must pay in cash over a period. */
 export const CASH_FLOOR = 0.89;
 export const PERIOD_YEARS = 4;
@@ -73,7 +73,7 @@ export function attachBonuses(state: GameState, id: string, deal: Deal, fromYear
     esc = escalate ? Math.round(deal.apy * (0.03 + 0.05 * rng()) / 50_000) * 50_000 : 0;
   }
   if (!share && !wk && !esc) return;
-  const lastGames = Math.min(REG_GAMES, Number(seasonOf(state, id, fromYear - 1)?.line.g ?? 0));
+  const lastGames = Math.min(FORMAT.games, Number(seasonOf(state, id, fromYear - 1)?.line.g ?? 0));
   const real = deal.years.filter((y) => !y.void);
   const last = real[real.length - 1]?.year;
   for (const y of real) {
@@ -83,11 +83,11 @@ export function attachBonuses(state: GameState, id: string, deal: Deal, fromYear
     if (y.guaranteed > 0 || y.injuryGuaranteed > 0) continue;
     const floor = minimumSalary(p.yearsExp + Math.max(0, y.year - BASE_SEASON), y.year);
     if (share) {
-      const per = Math.round((y.base * share) / REG_GAMES / 1000) * 1000;
-      if (per >= 5000 && y.base - per * REG_GAMES >= floor) {
-        y.base -= per * REG_GAMES;
+      const per = Math.round((y.base * share) / FORMAT.games / 1000) * 1000;
+      if (per >= 5000 && y.base - per * FORMAT.games >= floor) {
+        y.base -= per * FORMAT.games;
         y.perGame = per;
-        y.perGameLikely = y.year === fromYear ? lastGames : REG_GAMES;
+        y.perGameLikely = y.year === fromYear ? lastGames : FORMAT.games;
       }
     }
     if (wk && y.base - wk >= floor) {
@@ -105,7 +105,7 @@ export function missRisk(state: GameState, id: string): number {
   const games = [season, season - 1].map((y) => Number(seasonOf(state, id, y)?.line.g ?? 0)).filter((g) => g >= 4);
   const played = games.length ? games.reduce((a, b) => a + b, 0) / games.length : 14;
   const age = season - Number((p?.birthDate ?? `${season - 27}`).slice(0, 4));
-  return Math.max(0.04, Math.min(0.5, 1 - played / REG_GAMES + Math.max(0, age - 30) * 0.02));
+  return Math.max(0.04, Math.min(0.5, 1 - played / FORMAT.games + Math.max(0, age - 30) * 0.02));
 }
 
 /**
@@ -136,13 +136,13 @@ function settleSeason(state: GameState): void {
     if (!deal) continue;
     const y = deal.years.find((x) => x.year === season && !x.void);
     if (y?.perGame && y.perGameSettled === undefined) {
-      const games = Math.min(REG_GAMES, Number(seasonOf(state, id, season)?.line.g ?? 0));
+      const games = Math.min(FORMAT.games, Number(seasonOf(state, id, season)?.line.g ?? 0));
       payCash(state, deal.team, y.perGame * games, season);
-      adjust(state, deal.team, season + 1, ((y.perGameLikely ?? REG_GAMES) - games) * y.perGame);
+      adjust(state, deal.team, season + 1, ((y.perGameLikely ?? FORMAT.games) - games) * y.perGame);
       y.perGameSettled = games;
       const next = deal.years.find((x) => x.year === season + 1 && !x.void);
       if (next?.perGame) next.perGameLikely = games;
-      if (deal.team === state.userTeam) ourLines.push(`${PLAYER_BY_ID[id].name}: ${games} of ${REG_GAMES} games, ${money(y.perGame * games)}`);
+      if (deal.team === state.userTeam) ourLines.push(`${PLAYER_BY_ID[id].name}: ${games} of ${FORMAT.games} games, ${money(y.perGame * games)}`);
     }
     if (y?.escalator && y.escalator.met === undefined) settleEscalator(state, id, deal, y);
     if (deal.kind === "rookie") escalator(state, id, deal);

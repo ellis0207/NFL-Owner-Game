@@ -3,6 +3,7 @@
  * sounding off in public, missed meetings, and the calls the owner makes about
  * them. Kept to policy matters on purpose: nothing criminal.
  */
+import { FORMAT } from "./format";
 import { changeMorale, priorities } from "./agents";
 import { disciplineCut } from "./community";
 import { gamblingCut } from "./departments";
@@ -66,10 +67,10 @@ function pickPlayer(state: GameState, rng: Rng, kind: IncidentKind): string | un
   return best;
 }
 
-/** One game check: a week of base salary (base is paid over the 18 weeks of the regular season). */
+/** One game check: a week of base salary (base is paid over the weeks of the regular season). */
 function gameCheck(state: GameState, id: string): number {
   const base = dealYear(dealOf(state, id), leagueYear(state.date))?.base ?? 0;
-  return Math.max(20_000, Math.round(base / 18 / 1000) * 1000);
+  return Math.max(20_000, Math.round(base / FORMAT.weeks / 1000) * 1000);
 }
 
 function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng: Rng): void {

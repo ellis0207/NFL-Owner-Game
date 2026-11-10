@@ -6,6 +6,7 @@
 // It also carries out what the owner delegated: the GM answering trade calls,
 // the coaches filling staff jobs, the revenue staff setting prices and signing
 // sponsors, stadium operations taking bookings, and the CFO refinancing loans.
+import { FORMAT } from "./format";
 import { resolveIncident } from "./departments";
 import { budgetVsActual, books } from "./books";
 import { answerOffer, business, PRICING_OPENS, post, setBudget, setNextSeasonPrices } from "./business";
@@ -358,7 +359,7 @@ function poaching(state: GameState): void {
 function coachReview(state: GameState): void {
   const r = standings(state)[state.userTeam];
   if (!r) return;
-  const exp = Math.round((staff(state).expect[state.userTeam] ?? 0.5) * 17);
+  const exp = Math.round((staff(state).expect[state.userTeam] ?? 0.5) * FORMAT.games);
   const wins = r.w + r.t / 2;
   const verdict = wins >= exp + 2 ? "beat expectations clearly" : wins >= exp - 1 ? "about met expectations" : "fell short of expectations";
   addMemo(state, {
@@ -404,7 +405,7 @@ export function execScores(state: GameState, year: number): Partial<Record<ExecR
   set("MKT", 60 + fanMove * 1.5, `Fan sentiment ${fanMove >= 0 ? "up" : "down"} ${Math.abs(Math.round(fanMove))} points over the year.`);
   set("CTO", 72 - incidents("systems") * 14, `${incidents("systems")} systems incident${incidents("systems") === 1 ? "" : "s"}.`);
   const r = standings(state)[state.userTeam];
-  if (r) set("FOPS", 60 + ((r.w + r.t / 2) - (staff(state).expect[state.userTeam] ?? 0.5) * 17) * 5, `The team went ${r.w}-${r.l}${r.t ? `-${r.t}` : ""}.`);
+  if (r) set("FOPS", 60 + ((r.w + r.t / 2) - (staff(state).expect[state.userTeam] ?? 0.5) * FORMAT.games) * 5, `The team went ${r.w}-${r.l}${r.t ? `-${r.t}` : ""}.`);
   // Reviews weigh whether the year met the mandate the owner set.
   for (const role of Object.keys(out) as ExecRole[]) {
     const md = mandateScore(state, role, year);

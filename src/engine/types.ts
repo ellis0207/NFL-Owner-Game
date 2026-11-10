@@ -1213,7 +1213,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal";
 
 export interface LedgerEntry {
   date: string;
@@ -1881,6 +1881,9 @@ export interface GameState {
   program?: ProgramState;
   /** The other owners, the league meeting and the rule changes adopted (owners.ts, rules.ts). */
   owners?: OwnersState;
+  leagueMoney?: LeagueMoneyState;
+  leagueOffice?: LeagueOfficeState;
+  compliance?: ComplianceState;
   /** Offseason grades, fan expectations and the season's storylines. */
   review?: ReviewState;
   /** The club's accounting: approved budgets, closed years and the reserve policy (books.ts). */
@@ -2017,6 +2020,16 @@ export interface RuleProposal {
   ourVote?: boolean;
   /** Lobbying pressure on each owner: positive toward yes (engine only). */
   lobby: Record<string, number>;
+  /** Narrowed to a one-season trial to win votes. */
+  amended?: boolean;
+  /** Back after failing in an earlier year, revised. */
+  revised?: boolean;
+  /** The league office's briefing, once asked for. */
+  briefing?: string;
+  /** Our owner made the case in committee. */
+  argued?: boolean;
+  /** Brought in our committee's name. */
+  viaUs?: boolean;
   votes?: Record<string, boolean>;
   yes?: number;
   passed?: boolean;
@@ -2035,10 +2048,41 @@ export interface LeagueMeeting {
   done?: boolean;
 }
 
+/** League money (leaguemoney.ts): media renewals, settled years and an open dispute. */
+export interface LeagueMoneyState {
+  tv: { optOut?: "out" | "stay"; renewals: { from: number; factor: number; text: string }[] };
+  /** League years whose audited true-up has been paid, and when. */
+  settled: Record<number, string>;
+  dispute?: { year: number; amount: number; opened: string; contested?: boolean; resolves?: string; outcome?: string };
+  log: { date: string; text: string }[];
+}
+
+export type Committee = "competition" | "finance" | "media" | "stadium" | "international";
+
+/** The league office (leagueoffice.ts): the commissioner, committees, coalitions, technology trials and schedule moves. */
+export interface LeagueOfficeState {
+  commissioner: { name: string; since: number; through: number; approval: number; renewal?: { year: number; ourVote?: boolean; yes?: number; passed?: boolean } };
+  committees: Record<Committee, string[]>;
+  /** A seat our owner asked for, decided at the next reshuffle. */
+  seatAsk?: Committee;
+  /** One coalition per issue our owner leads, with the clubs in it. */
+  coalitions: { issue: string; members: string[]; formed: string }[];
+  /** Technology trials run, by the season they ran in. */
+  trials: Record<string, number>;
+  moves: { game: string; date: string; kind: "flex" | "weather" | "facility"; text: string }[];
+  log: { date: string; text: string }[];
+}
+
+/** League discipline cases (compliance.ts): kept short here so the league's health can read them. */
+export interface LeagueCase { id: string; team: string; year: number; kind: string; opened: string; stage: string; sanction?: string; text: string }
+export interface ComplianceState { leagueCases: LeagueCase[] }
+
 export interface AdoptedRule {
   rule: string;
   /** The first season it's in force. */
   year: number;
+  /** A trial adopted as an amendment: the last season it's in force unless made permanent. */
+  until?: number;
   yes: number;
   sponsor: string;
 }

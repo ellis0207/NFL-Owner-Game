@@ -9,6 +9,7 @@ import { BID_LEVELS, bidWindow, canHostSuperBowl, hosting, submitBid, upcomingVo
 import { inflation } from "../../engine/business";
 import { money } from "../format";
 import type { GameState, RuleProposal } from "../../engine/types";
+import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
 
@@ -34,6 +35,8 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.
       </p>
       {said && <p className="notice">{said}</p>}
+
+      <LeagueOffice game={game} say={say} />
 
       <Hosting game={game} say={say} />
 
@@ -87,7 +90,7 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
       <section className="panel stack tight">
         <h3>The rulebook</h3>
         {o.rules.length === 0 ? <span className="muted">No changes since 2026.</span> : o.rules.map((r) => (
-          <span key={r.rule + r.year}>{r.year}: {RULE_BY_ID[r.rule].title} <span className="muted">({sponsorName(r.sponsor)}, {r.yes}-{32 - r.yes})</span></span>
+          <span key={r.rule + r.year}>{r.year}{r.until ? " (trial season)" : ""}: {RULE_BY_ID[r.rule].title} <span className="muted">({sponsorName(r.sponsor)}, {r.yes}-{32 - r.yes})</span></span>
         ))}
         {o.history.filter((h) => !h.passed).length > 0 && (
           <>
@@ -111,7 +114,7 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
     return (
       <div className="report">
         <strong>{c.title}</strong>
-        <span className={p.passed ? "good" : "bad"}>{p.passed ? "Approved" : "Voted down"}, {p.yes}-{32 - (p.yes ?? 0)}. We voted {p.votes?.[game.userTeam] ? "yes" : "no"}.</span>
+        <span className={p.passed ? "good" : "bad"}>{p.passed ? "Approved" : "Voted down"}, {p.yes}-{32 - (p.yes ?? 0)}{p.amended ? " (as a one-season trial)" : ""}. We voted {p.votes?.[game.userTeam] ? "yes" : "no"}.</span>
         <span className="muted">{sponsorName(p.sponsor)}</span>
       </div>
     );
@@ -132,6 +135,7 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
         Our read of the room: about {projected} yes, {w.no.length + (p.ourVote === false ? 1 : 0)} no, {w.undecided.length} undecided
         {projected >= VOTES_TO_PASS ? " — it looks like it passes." : projected + w.undecided.length >= VOTES_TO_PASS ? " — it could go either way." : " — it looks short."}
       </span>
+      <ProposalExtras game={game} p={p} say={say} />
       <div className="btn-row">
         <button className={`btn small${p.ourVote === true ? " primary" : ""}`} onClick={() => vote(true)}>Vote yes</button>
         {!ours && <button className={`btn small${p.ourVote === false ? " primary" : ""}`} onClick={() => vote(false)}>Vote no</button>}

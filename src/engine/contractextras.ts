@@ -9,6 +9,7 @@
 // the years left (up to five) like a signing bonus; declined, the later years
 // void and the player is a free agent, with the signing bonus he still had
 // coming accelerating onto this year's cap.
+import { FORMAT } from "./format";
 import { addDeadMoney, capSummary, invalidateRosters, teamPlayerIds } from "./cap";
 import { dealCapHit, lastYear, leagueYear, MAX_PRORATION_YEARS, salaryCap, writeDeal } from "./contracts";
 import { addDays, shortDate } from "./dates";
@@ -103,7 +104,7 @@ export function cashVsCap(deal: Deal): CashCapRow[] {
   const signedYear = leagueYear(deal.signed);
   return deal.years.map((y) => ({
     year: y.year,
-    cash: y.void ? 0 : Math.round(y.base * (y.weeks ?? 18) / 18 + Math.max(0, y.bonus) + (y.year === signedYear ? deal.signingBonus : 0) + (deal.option?.year === y.year ? deal.option.amount : 0)),
+    cash: y.void ? 0 : Math.round(y.base * (y.weeks ?? FORMAT.weeks) / FORMAT.weeks + Math.max(0, y.bonus) + (y.year === signedYear ? deal.signingBonus : 0) + (deal.option?.year === y.year ? deal.option.amount : 0)),
     cap: dealCapHit(deal, y.year),
     guaranteed: y.void ? 0 : y.guaranteed + (y.year === signedYear ? deal.signingBonus : 0),
     void: !!y.void,

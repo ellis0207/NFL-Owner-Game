@@ -22,13 +22,14 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { FORMAT } from "./format";
 import { changeRapport } from "./owners";
 import { lockedSpace } from "./capplan";
 import { redoStandoff } from "./redo";
 import { conditionalValue, conditionProblem, conditionsDaily, describeCondition, maybeAddCondition, openCondition, recordConditions } from "./conditions";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
-import { dealCapHit, dealOf, lastYear, leagueYear, REG_WEEKS, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
+import { dealCapHit, dealOf, lastYear, leagueYear, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
 import { gradeLean } from "./outlets";
@@ -201,8 +202,8 @@ export function outlook(state: GameState): Record<string, number> {
     const prior = Math.max(0.22, Math.min(0.78, 0.5 + ((strength[t.id] - mean) / sd) * 0.12));
     priors[t.id] = prior;
     const r = table[t.id];
-    const g = r ? Math.min(17, r.w + r.l + r.t) : 0;
-    wp[t.id] = r ? (r.w + 0.5 * r.t + prior * (17 - g)) / 17 : prior;
+    const g = r ? Math.min(FORMAT.games, r.w + r.l + r.t) : 0;
+    wp[t.id] = r ? (r.w + 0.5 * r.t + prior * (FORMAT.games - g)) / FORMAT.games : prior;
   }
   const rank = TEAMS.map((t) => t.id).sort((a, b) => wp[a] - wp[b] || a.localeCompare(b));
   strengthCache.set(state, { date: state.date, wp, prior: priors, rank });
@@ -359,7 +360,7 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
   const durability = eye === "public" ? 1 : Math.max(0.75, Math.min(1.05, 0.75 + dur / 300));
   // Weeks of football left this season, and how many of them the player can play.
   const inSeason = date > KEY.regularSeasonStart && leagueYear(date) === RULES.season;
-  const weeksLeft = inSeason ? Math.max(0, REG_WEEKS - weeksPaid(date)) : REG_WEEKS;
+  const weeksLeft = inSeason ? Math.max(0, FORMAT.weeks - weeksPaid(date)) : FORMAT.weeks;
   const inj = state.players[id]?.injury;
   let playable = weeksLeft;
   if (inj && inj.returnDate > date) playable = inj.seasonEnding ? 0 : Math.max(0, weeksLeft - Math.ceil(daysBetween(date, inj.returnDate) / 7));
@@ -379,7 +380,7 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
   };
   for (let k = 0; k < real.length && k < w.length; k++) {
     const s = seasonWorth(k);
-    const frac = k === 0 ? playable / REG_WEEKS : 1;
+    const frac = k === 0 ? playable / FORMAT.weeks : 1;
     const hit = dealCapHit(deal, real[k].year);
     const value = s.star * role * frac * (k === 0 ? holdout : 1) - hit;
     if (k === 0) worth0 = s.star * role;

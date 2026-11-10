@@ -3,12 +3,12 @@
 //
 // Original contracts come from the data (OverTheCap year-by-year lines) and are
 // converted on first use; contracts signed in the game are stored in the save.
+import { FORMAT } from "./format";
 import { addDays, daysBetween } from "./dates";
 import { keyDatesFor, newLeagueYearDate } from "./calendar";
 import { BASE_SEASON, KNOWN_CAPS, PLAYER_BY_ID, RULES } from "./league";
 import type { Deal, DealKind, DealYear, GameState, PlayerData } from "./types";
 
-export const REG_WEEKS = 18;
 /** Signing and option bonuses spread over at most five league years. */
 export const MAX_PRORATION_YEARS = 5;
 /** Veteran salary benefit: the most a qualifying minimum deal can add in bonus. */
@@ -37,8 +37,8 @@ export function isPostJune1(date: string): boolean {
 export function weeksPaid(date: string): number {
   const kd = keyDatesFor(leagueYear(date));
   if (date <= kd.regularSeasonStart) return 0;
-  if (date > kd.regularSeasonEnd) return REG_WEEKS;
-  return Math.min(REG_WEEKS, Math.floor(daysBetween(kd.regularSeasonStart, date) / 7) + 1);
+  if (date > kd.regularSeasonEnd) return FORMAT.weeks;
+  return Math.min(FORMAT.weeks, Math.floor(daysBetween(kd.regularSeasonStart, date) / 7) + 1);
 }
 
 // ---- Salary cap and minimums by year ----
@@ -160,11 +160,11 @@ export function dealYear(deal: Deal | null, year: number): DealYear | undefined 
 /** What one league year of a contract counts against the cap. */
 export function yearCapHit(y: DealYear | undefined): number {
   if (!y) return 0;
-  const weeks = y.weeks ?? REG_WEEKS;
+  const weeks = y.weeks ?? FORMAT.weeks;
   const likely = y.incentives?.reduce((s, i) => s + (i.likely ? i.amount : 0), 0) ?? 0;
   // Per-game roster bonuses count for the games the player dressed for last year; workout bonuses count in full.
-  const roster = (y.perGame ?? 0) * (y.perGameLikely ?? 17) * weeks / REG_WEEKS + (y.workout ?? 0);
-  return Math.round((y.base * weeks) / REG_WEEKS + y.proration + y.bonus + likely + roster);
+  const roster = (y.perGame ?? 0) * (y.perGameLikely ?? FORMAT.games) * weeks / FORMAT.weeks + (y.workout ?? 0);
+  return Math.round((y.base * weeks) / FORMAT.weeks + y.proration + y.bonus + likely + roster);
 }
 
 export function dealCapHit(deal: Deal | null, year: number): number {
@@ -219,12 +219,12 @@ export function releaseCharges(deal: Deal | null, date: string, opts: { june1?: 
   let paid = 0;
   let salaryNow = 0;
   if (cur && !cur.void) {
-    const weeks = cur.weeks ?? REG_WEEKS;
-    const paidWeeks = Math.max(0, Math.min(weeks, weeksPaid(date) - (REG_WEEKS - weeks)));
-    const paidBase = (cur.base * paidWeeks) / REG_WEEKS;
+    const weeks = cur.weeks ?? FORMAT.weeks;
+    const paidWeeks = Math.max(0, Math.min(weeks, weeksPaid(date) - (FORMAT.weeks - weeks)));
+    const paidBase = (cur.base * paidWeeks) / FORMAT.weeks;
     const paidBonus = date >= leagueYearStart(year) ? cur.bonus : 0;
     paid = paidBase + paidBonus;
-    salaryNow = paidBonus + Math.max(paidBase, Math.min(guaranteeOf(cur), (cur.base * weeks) / REG_WEEKS));
+    salaryNow = paidBonus + Math.max(paidBase, Math.min(guaranteeOf(cur), (cur.base * weeks) / FORMAT.weeks));
   }
   const prorationNow = cur?.proration ?? 0;
   const prorationLater = later.reduce((s, y) => s + y.proration, 0);
@@ -396,7 +396,7 @@ export function prorateFirstYear(deal: Deal, date: string): Deal {
   const first = deal.years[0];
   const paid = weeksPaid(date);
   if (!first || first.year !== leagueYear(date) || paid <= 0) return deal;
-  first.weeks = Math.max(1, REG_WEEKS - paid);
+  first.weeks = Math.max(1, FORMAT.weeks - paid);
   return deal;
 }
 
@@ -406,11 +406,11 @@ export function writeMinimumDeal(team: string, date: string, yearsExp: number, o
   const year = opts.year ?? leagueYear(date);
   const base = minimumSalary(yearsExp, year);
   const bonus = Math.min(opts.bonus ?? 0, VSB_MAX_BONUS);
-  const weeks = year > leagueYear(date) ? REG_WEEKS : REG_WEEKS - weeksPaid(date);
+  const weeks = year > leagueYear(date) ? FORMAT.weeks : FORMAT.weeks - weeksPaid(date);
   const vsb = yearsExp >= 4 ? base - minimumSalary(2, year) : 0;
   const y: DealYear = {
-    year, base, proration: bonus, bonus: -vsb * (Math.max(1, weeks) / REG_WEEKS), guaranteed: opts.guaranteed ? base : 0, injuryGuaranteed: 0,
-    ...(weeks < REG_WEEKS ? { weeks: Math.max(1, weeks) } : {}),
+    year, base, proration: bonus, bonus: -vsb * (Math.max(1, weeks) / FORMAT.weeks), guaranteed: opts.guaranteed ? base : 0, injuryGuaranteed: 0,
+    ...(weeks < FORMAT.weeks ? { weeks: Math.max(1, weeks) } : {}),
   };
   return {
     team, signed: date, kind: "minimum", signingBonus: bonus, total: base + bonus, apy: base + bonus,
@@ -428,11 +428,11 @@ export function practiceWeekly(accrued: number, year = RULES.season): number {
 /** A practice squad contract for the rest of the league year, paid by the week. */
 export function writePracticeDeal(team: string, date: string, accrued: number): Deal {
   const year = leagueYear(date);
-  const base = practiceWeekly(accrued, year) * REG_WEEKS;
-  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  const base = practiceWeekly(accrued, year) * FORMAT.weeks;
+  const weeks = Math.max(1, FORMAT.weeks - weeksPaid(date));
   return {
     team, signed: date, kind: "practice", signingBonus: 0, total: base, apy: base, guaranteedAtSigning: 0,
-    years: [{ year, base, proration: 0, bonus: 0, guaranteed: 0, injuryGuaranteed: 0, ...(weeks < REG_WEEKS ? { weeks } : {}) }],
+    years: [{ year, base, proration: 0, bonus: 0, guaranteed: 0, injuryGuaranteed: 0, ...(weeks < FORMAT.weeks ? { weeks } : {}) }],
   };
 }
 
@@ -444,14 +444,14 @@ export function writePracticeDeal(team: string, date: string, accrued: number): 
 export function claimedDeal(deal: Deal | null, team: string, date: string, yearsExp: number): Deal {
   const year = leagueYear(date);
   if (!deal) return writeMinimumDeal(team, date, yearsExp);
-  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  const weeks = Math.max(1, FORMAT.weeks - weeksPaid(date));
   const years = deal.years.filter((y) => y.year >= year && !y.void).map((y) => {
     const next: DealYear = { ...y, proration: 0 };
     if (y.year === year) {
       // Bonuses already earned this league year were paid by the old team.
       if (date >= leagueYearStart(year)) next.bonus = Math.min(0, y.bonus);
-      next.weeks = Math.min(y.weeks ?? REG_WEEKS, weeks);
-      if (next.weeks >= REG_WEEKS) delete next.weeks;
+      next.weeks = Math.min(y.weeks ?? FORMAT.weeks, weeks);
+      if (next.weeks >= FORMAT.weeks) delete next.weeks;
     }
     return next;
   });
@@ -479,9 +479,9 @@ export function tradeCharges(deal: Deal | null, date: string): { thisYear: numbe
   const cur = dealYear(deal, year);
   let paid = 0;
   if (cur && !cur.void) {
-    const weeks = cur.weeks ?? REG_WEEKS;
-    const paidWeeks = Math.max(0, Math.min(weeks, weeksPaid(date) - (REG_WEEKS - weeks)));
-    paid = (cur.base * paidWeeks) / REG_WEEKS + (date >= leagueYearStart(year) ? cur.bonus : 0);
+    const weeks = cur.weeks ?? FORMAT.weeks;
+    const paidWeeks = Math.max(0, Math.min(weeks, weeksPaid(date) - (FORMAT.weeks - weeks)));
+    paid = (cur.base * paidWeeks) / FORMAT.weeks + (date >= leagueYearStart(year) ? cur.bonus : 0);
   }
   const later = deal.years.filter((y) => y.year > year).reduce((s, y) => s + y.proration, 0);
   const split = isPostJune1(date);
@@ -498,13 +498,13 @@ export function tradeCharges(deal: Deal | null, date: string): { thisYear: numbe
  */
 export function tradedDeal(deal: Deal, team: string, date: string): Deal {
   const year = leagueYear(date);
-  const weeks = Math.max(1, REG_WEEKS - weeksPaid(date));
+  const weeks = Math.max(1, FORMAT.weeks - weeksPaid(date));
   const years = deal.years.filter((y) => y.year >= year && !y.void).map((y) => {
     const next: DealYear = { ...y, proration: 0 };
     if (y.year === year) {
       if (date >= leagueYearStart(year)) next.bonus = Math.min(0, y.bonus);
-      next.weeks = Math.min(y.weeks ?? REG_WEEKS, weeks);
-      if (next.weeks >= REG_WEEKS) delete next.weeks;
+      next.weeks = Math.min(y.weeks ?? FORMAT.weeks, weeks);
+      if (next.weeks >= FORMAT.weeks) delete next.weeks;
     }
     return next;
   });

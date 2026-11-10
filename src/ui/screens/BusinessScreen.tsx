@@ -24,6 +24,7 @@ import { Community } from "./BusinessCommunity";
 import { Books, Plan } from "./BusinessBooks";
 import { Financing } from "./BusinessFinancing";
 import { Journal, Treasury } from "./BusinessTreasury";
+import { LeagueMoney } from "./BusinessLeague";
 import { expectLabel } from "../../engine/review";
 
 const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League"] as const;
@@ -60,7 +61,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
       {tab === "Projects" && <Projects game={game} changed={changed} />}
       {tab === "Budget" && <Budget game={game} changed={changed} />}
-      {tab === "League" && <League game={game} />}
+      {tab === "League" && <><LeagueMoney game={game} changed={changed} /><League game={game} /></>}
     </section>
   );
 }

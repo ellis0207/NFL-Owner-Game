@@ -11,6 +11,7 @@
 // A position change takes time. The player plays below his level while he
 // learns the new spot, quicker if he picks things up fast, and some players
 // simply suit the new position better or worse than anyone could tell.
+import { LEAGUE_RULES } from "./rules";
 import { fatigueRisk, trainingResponse } from "./playercare";
 import { adopted } from "./analysts";
 import { emphasisFactors, type Emphasis } from "./gameweek";
@@ -138,7 +139,8 @@ export function riskFactor(state: GameState, id: string, team: string, practice:
 
 /** A concussion is less likely with the newest helmets. */
 export function concussionFactor(state: GameState, team: string): number {
-  return ours(state, team) && state.clubhouse?.programs.equipment ? 0.85 : 1;
+  // The club's own equipment program, and league-wide safety technology if the owners adopted it.
+  return (ours(state, team) && state.clubhouse?.programs.equipment ? 0.85 : 1) * (LEAGUE_RULES.safetyTech ? 0.88 : 1);
 }
 
 // ---- Development plans ----

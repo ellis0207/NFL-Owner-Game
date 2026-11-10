@@ -6,7 +6,8 @@
 // season's standings.
 import { bindBrand } from "./merch";
 import { bindLeases } from "./leases";
-import { bindRules } from "./rules";
+import { bindRules, bindSeasonFormat, rulesFor } from "./rules";
+import { scheduleDraw } from "./leagueoffice";
 import { bindHosts } from "./hosting";
 import { newStaffSeason } from "./carousel";
 import { ageStaff, bindStaff } from "./coaches";
@@ -65,6 +66,8 @@ export function patchPlayers(state: GameState): void {
 export function applySeason(state: GameState): void {
   const season = state.season ?? BASE_SEASON;
   const schedule = season === BASE_SEASON || !state.schedule ? BASE_SCHEDULE : state.schedule;
+  // The season's shape (games and byes) comes from the owners' votes, and the calendar is built on it.
+  bindSeasonFormat(state, season);
   setLeagueSeason(season, keyDatesFor(season), schedule, season === BASE_SEASON ? undefined : state.waiverOrder);
   bindCaps(state.league?.caps ?? {});
   bindRules(state);
@@ -252,7 +255,7 @@ export function startNewSeason(state: GameState): void {
   }
   prune(state, next);
 
-  state.schedule = buildSchedule(next, state.seed, record.place, record.champion);
+  state.schedule = buildSchedule(next, state.seed, record.place, record.champion, { draw: scheduleDraw(state, record.place, record.champion), intlExtra: rulesFor(state, next).intlExtra });
   state.waiverOrder = firstRound;
   state.season = next;
   applySeason(state);

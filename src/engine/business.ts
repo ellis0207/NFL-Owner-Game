@@ -15,6 +15,8 @@
 // 32 teams. Suites and the premium part of club seats aren't shared. Playoff
 // gates go to the league, and teams that give up a home game to play abroad
 // are made whole by the league.
+import { monthlyDistribution } from "./leaguemoney";
+import { LEAGUE_RULES } from "./rules";
 import { hostBlackout, hostEffects } from "./hosting";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { dealOf, dealYear, leagueYear, leagueYearStart, salaryCap } from "./contracts";
@@ -69,7 +71,10 @@ export function deptCost(d: Dept, level: number, year: number): number {
 }
 
 /** Gate sharing: 34% of general ticket money after a 15% stadium deduction. */
-const GATE_SHARE = 0.34 * 0.85;
+/** The visiting teams' share of each gate pooled by the league, after the 15% stadium deduction (owners can vote to change it). */
+function gateShare(): number {
+  return LEAGUE_RULES.gateShare * 0.85;
+}
 /** Share of seats that are suites and club seats. */
 const PREMIUM_SEATS = 0.12;
 const OPENING_CASH = 100 * M;
@@ -133,6 +138,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   naming: { label: "Stadium naming rights", side: "in" },
   events: { label: "Stadium events", side: "in" },
   intl: { label: "League compensation for home games abroad", side: "in" },
+  revenueShare: { label: "Revenue-sharing settlements and league true-ups", side: "in" },
   deposits: { label: "Season-ticket deposits for next season", side: "in" },
   capital: { label: "Capital from the owner", side: "in" },
   gateShare: { label: "Gate receipts sent to the league pool", side: "out" },
@@ -170,6 +176,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   venue: { label: "Game-day staffing and services beyond the budget", side: "out" },
   security: { label: "Team security", side: "out" },
   technology: { label: "Technology and data", side: "out" },
+  legal: { label: "Legal: defense costs, settlements and judgments", side: "out" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */
@@ -319,7 +326,7 @@ export function sponsorship(team: string): number {
   let gate = 0;
   for (const g of games) {
     const r = gateModel(team, g, { mood: 1, win: 1, marketing: 1, price: 1, concessions: team === "ATL" ? "value" : "standard", parking: 1, noise: 1, ticketIdx: 1, premiumIdx: 1 });
-    gate += r.tickets * (1 - GATE_SHARE) + r.premium + r.concessions + r.parking + r.merch;
+    gate += r.tickets * (1 - gateShare()) + r.premium + r.concessions + r.parking + r.merch;
   }
   const abroad = SCHEDULE.filter((g) => g.home === team && g.neutral && g.type === "REG").length;
   gate += abroad * (gate / Math.max(1, games.length));
@@ -516,7 +523,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
   // Every regular-season and preseason gate feeds the league pool.
   if (!g.neutral && (g.type === "PRE" || g.type === "REG")) {
     const gr = gateModel(home, g, inputs(state, home, rng, g), home === us ? b.holders : defaultHolders(home));
-    b.pool += gr.tickets * GATE_SHARE;
+    b.pool += gr.tickets * gateShare();
     if (home === us) homeGate(state, g, gr);
     // The Rams' owner is the Chargers' landlord.
     if (home === STADIUM_BY_TEAM[us].partner && STADIUM_BY_TEAM[us].structure === "owned") {
@@ -587,7 +594,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const mg = merchGame(state, g, gr.merch, bigGame(state, g) || gr.tier === "marquee");
   post(state, "merch", mg.net, what);
   if (gr.sale.resaleFee) post(state, "tickets", gr.sale.resaleFee, `${what}: fees on resales through the team exchange`);
-  post(state, "gateShare", -gr.tickets * GATE_SHARE, `${what}: 34% of the gate after the stadium deduction`);
+  post(state, "gateShare", -gr.tickets * gateShare(), `${what}: ${Math.round(LEAGUE_RULES.gateShare * 100)}% of the gate after the stadium deduction`);
   post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)) * (1 - cutShare(state, "gameday")), what);
   const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + mg.net + gr.sale.resaleFee;
   const sl = gr.sale;
@@ -599,7 +606,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   });
   afterHomeGame(state, g, sl);
   const vg = venueGame(state, g, {
-    attendance: gr.attendance, sold: gr.sold, comps: sl.comps, noShows: gr.noShows, revenue, gateShare: gr.tickets * GATE_SHARE,
+    attendance: gr.attendance, sold: gr.sold, comps: sl.comps, noShows: gr.noShows, revenue, gateShare: gr.tickets * gateShare(),
     concessions: gr.concessions, parking: gr.parking, merch: mg.net, merchShort: mg.short,
   });
   if (g.type === "PRE") return;
@@ -936,7 +943,7 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   const m = (x: number) => x / 12;
   const out: { cat: LedgerCat; amount: number; note?: string }[] = [];
   const add = (cat: LedgerCat, amount: number, note?: string) => out.push({ cat, amount, note });
-  add("national", m(nationalRevenue(year)), "Monthly distribution from the league");
+  add("national", monthlyDistribution(state, year), "Monthly distribution from the league (preliminary estimate, part held back until the audit)");
   const local = localIncome(state, year);
   add("sponsorship", m(local.sponsors));
   add("localMedia", m(local.media));
@@ -1024,11 +1031,11 @@ export function yearPlan(state: GameState, year: number): Partial<Record<LedgerC
       add("concessions", r.concessions * spend * pop);
       add("parking", r.parking * spend * pop);
       add("merch", r.merch * spend * pop);
-      add("gateShare", -tickets * GATE_SHARE);
+      add("gateShare", -tickets * gateShare());
       // The visiting-team pool comes back about even for a typical team.
-      add("gatePool", tickets * GATE_SHARE);
+      add("gatePool", tickets * gateShare());
       add("gameday", -deptCost("gameday", b.budget.gameday, year));
-      home += tickets * (1 - GATE_SHARE) + r.premium * pr + (r.concessions + r.parking + r.merch) * spend * pop;
+      home += tickets * (1 - gateShare()) + r.premium * pr + (r.concessions + r.parking + r.merch) * spend * pop;
       homeGames++;
     } else {
       add("travel", -(g.neutral ? 1.4 * M : g.type === "PRE" ? 0.35 * M : 0.45 * M) * inflation(year));

@@ -56,6 +56,14 @@ export function setLeagueSeason(season: number, keyDates: Record<string, string>
   for (const fn of seasonHooks) fn();
 }
 
+/** Rebuilds the lookups after the league moves a game to another date (flex or emergency). */
+export function reindexSchedule(): void {
+  for (const k of Object.keys(GAME_BY_ID)) delete GAME_BY_ID[k];
+  for (const g of SCHEDULE) GAME_BY_ID[g.id] = g;
+  for (const k of Object.keys(GAMES_BY_DATE)) delete GAMES_BY_DATE[k];
+  for (const g of SCHEDULE) (GAMES_BY_DATE[g.date] ??= []).push(g);
+}
+
 /** Salary caps the league has announced in the active save, by league year (the save's own object). */
 export let KNOWN_CAPS: Record<number, number> = {};
 
