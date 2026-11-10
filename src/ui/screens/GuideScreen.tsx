@@ -140,6 +140,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Compliance, crises and legal",
+    body: [
+      "The Legal page holds the compliance office: better staffing and yearly training mean fewer late filings, cleaner cap audits and fewer violations. Sign the league certifications each summer, and choose whether guaranteed pay is funded in cash or with a letter of credit.",
+      "When the league opens an inquiry, choose to cooperate, give only what's required, or contest it. Sanctions are fines and lost draft picks, heavier for repeat offenders, and can be appealed to the commissioner.",
+      "In a crisis, work the playbook: the first response, the fact-finding, who speaks, what you disclose and who you brief. Denials the facts contradict leave lasting damage; real fixes speed the recovery. Disputes go from negotiation to mediation to arbitration or court, and the exposure report shows what each could cost.",
+    ],
+  },
+  {
     title: "The league",
     body: [
       "Owners vote on rule changes at the March meeting; most need 24 of 32 votes. Relationships with other owners help with votes, trades and hosting bids.",

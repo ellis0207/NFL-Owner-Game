@@ -163,7 +163,7 @@ export function earningsBase(state: GameState): number {
 }
 
 /** Categories in operating income: everything but owner money, loans, construction, deposits and interest. */
-const NOT_OPERATING = new Set<LedgerCat>(["capital", "distribution", "deposits", "projects", "loanIn", "principal", "interest", "loanFees"]);
+const NOT_OPERATING = new Set<LedgerCat>(["capital", "distribution", "deposits", "projects", "loanIn", "principal", "interest", "loanFees", "escrow"]);
 const OPERATING = new Set<LedgerCat>((["national", "tickets", "premium", "concessions", "parking", "merch", "sponsorship", "localMedia", "naming", "events", "gatePool", "gateShare", "intl",
   "players", "staff", "staffOwed", "businessOps", "marketing", "gameday", "community", "medical", "facilities", "scouts", "scouting", "stadium", "rent", "debt", "travel", "benefits",
   "league", "fines", "hosting", "bids", "professional", "content", "brand", "venue", "security", "technology"] as LedgerCat[]).filter((c) => !NOT_OPERATING.has(c)));

@@ -23,6 +23,7 @@
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
 import { FORMAT } from "./format";
+import { tradePhysicals } from "./compliance";
 import { changeRapport } from "./owners";
 import { lockedSpace } from "./capplan";
 import { redoStandoff } from "./redo";
@@ -113,7 +114,7 @@ export function picksOf(state: GameState, team: string): string[] {
     for (let round = 1; round <= ROUNDS; round++) {
       for (const t of TEAMS) {
         const id = pickId(year, round, t.id);
-        if (pickOwner(state, id) === team && !pickUsed(state, id)) out.push(id);
+        if (pickOwner(state, id) === team && !pickUsed(state, id) && !state.compliance?.forfeited?.includes(id)) out.push(id);
       }
       for (const id of comp) {
         const p = parsePick(id);
@@ -908,6 +909,15 @@ export function completeTrade(state: GameState, deal: TradeDeal): TradeRecord {
     blockbuster: isBlockbuster(state, deal), grades: gradeTrade(state, deal, id),
     edge: Object.fromEntries(([0, 1] as const).map((s) => [deal.teams[s], Math.round(tradeBalance(state, "truth", deal, s).gain)])),
   };
+  // Players pass physicals with their new team before a trade with us is final; a failed one voids it.
+  const failed = official ? tradePhysicals(state, deal, id) : null;
+  if (failed) {
+    rec.status = "voided";
+    ts.log.unshift(rec);
+    news(state, `A trade between the ${teamLabel(deal.teams[0])} and ${teamLabel(deal.teams[1])} is called off: ${failed}`);
+    send(state, "transaction", gmOf(state.userTeam), "Trade voided", `The trade is off: ${failed}. Everyone stays where they were.`);
+    return rec;
+  }
   ts.log.unshift(rec);
   const text = headline(state, deal);
   if (official) execute(state, deal);

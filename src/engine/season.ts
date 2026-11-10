@@ -1,5 +1,8 @@
 // The game clock: starting a new game and moving the league forward one day.
 import { leagueMoneyDaily } from "./leaguemoney";
+import { complianceDaily } from "./compliance";
+import { crisisDaily } from "./crisis";
+import { legalDaily } from "./legal";
 import { leagueOfficeDaily } from "./leagueoffice";
 import { contractExtrasDaily } from "./contractextras";
 import { coachRoomDaily, ownerKeeps } from "./coachroom";
@@ -520,6 +523,9 @@ export function advanceDay(state: GameState): void {
   ownersDaily(state);
   leagueOfficeDaily(state);
   leagueMoneyDaily(state);
+  complianceDaily(state);
+  crisisDaily(state);
+  legalDaily(state);
   hostingDaily(state);
   disciplineDaily(state);
   draftDaily(state);

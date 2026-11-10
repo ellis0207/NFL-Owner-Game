@@ -44,7 +44,7 @@ export function ensureBooks(state: GameState): void {
 }
 
 /** Construction, loans and the owner's money: not operating cash. */
-const INVESTING: LedgerCat[] = ["projects"];
+const INVESTING: LedgerCat[] = ["projects", "escrow"];
 const FINANCING_CASH: LedgerCat[] = ["capital", "distribution", "loanIn", "principal", "loanFees"];
 const BORROWING: LedgerCat[] = ["interest", "loanFees"];
 
@@ -317,6 +317,7 @@ export function balanceSheet(state: GameState): BalanceSheet {
     { label: "Cash", amount: Math.max(0, cash) },
     { label: "Gate-pool share due from the league", amount: Math.round(business(state).pool / TEAMS.length) },
     { label: "Prepaid player bonuses (to be counted in later years)", amount: Math.round(acc.prepaid) },
+    { label: "Guaranteed pay funded in escrow with the league", amount: Math.round(state.compliance?.escrow ?? 0) },
     { label: "Construction in progress", amount: fa.inProgress },
     { label: "Stadium and facility improvements, net of depreciation", amount: Math.round(fa.cost - fa.accumulated) },
     { label: "Franchise and league membership, at the purchase price", amount: o.purchase },
