@@ -598,6 +598,29 @@ renews, who must sign off by size, counsel's review of major signings,
 privileged-records and retention policies, and disputes that go from
 negotiation to mediation to arbitration or court, with an exposure report.
 
+The economy, shocks and insurance (Batch N1). A national economy moves
+month by month (output against trend, unemployment, household income,
+corporate earnings, consumer confidence, inflation, building costs and real
+estate), and each club's metro has its own local trend and population drift.
+Recessions come out of those conditions (about one a decade at the default
+setting) rather than on a timer. Household income and confidence move ticket
+and store demand, corporate earnings move sponsor, suite and hospitality
+budgets, the labor market and inflation move staff pay, building costs move
+project prices, the cycle moves interest rates and the advertising market
+behind the TV deals, and rates and confidence move franchise multiples. The
+forecast shows revenue ranges that widen when the economy is shaky, a
+scenario tool tests growth, rates, prices and attendance, past years show in
+2026 dollars, and Settings has an economic volatility level. Stadium fires,
+floods, structural defects and power failures (about once a decade), sponsor
+collapses, attendance slumps, repair bills, inflation spikes and
+construction overruns can hit the club. Property, liability and
+business-interruption cover come with limits, deductibles and a flood rider,
+priced on risk controls; claims go through the adjuster, sometimes a dispute,
+and excluded losses are paid directly. An owner who can't fund the club puts
+it in distress: outside investors, refinancing or a control partner, and the
+league supervises a recovery plan if nothing changes. These live on the
+Business page's Economy and risk tab.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -642,6 +665,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
+  The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.

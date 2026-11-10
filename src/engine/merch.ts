@@ -10,6 +10,7 @@
 // lead time; it costs real money, makes the old stock obsolete, and lifts
 // sales for a few seasons. Throwback lines sell best around anniversaries, and
 // counterfeiters work the crowds at big games.
+import { demandFactor } from "./economy";
 import { business, businessChief, inflation, nationalRevenue, post } from "./business";
 import { teamPlayerIds } from "./cap";
 import { marketability } from "./clubhouse";
@@ -243,7 +244,7 @@ function onlineWeek(state: GameState): void {
   const month = Number(state.date.slice(5, 7));
   const holiday = month === 12 ? 2.2 : month === 11 ? 1.4 : month >= 9 || month <= 1 ? 1 : 0.45;
   const f = fanBase(state);
-  const gross = 90_000 * holiday * reachLift(state) * Math.pow(m.price, -1.2) * brandLift(state) * (0.9 + f.trust / 600) * inflation(leagueYear(state.date), 0.03) / inflation(2026, 0.03);
+  const gross = 90_000 * holiday * reachLift(state) * demandFactor(state, state.userTeam) * Math.pow(m.price, -1.2) * brandLift(state) * (0.9 + f.trust / 600) * inflation(leagueYear(state.date), 0.03) / inflation(2026, 0.03);
   const r = net(gross, m.online, 0.32, PARTNER_SHARE);
   s.gross += gross; s.online += gross; s.operatorShare += r.share;
   if (m.online === "inHouse") {

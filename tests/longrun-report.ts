@@ -14,6 +14,7 @@ import { compress, decompress } from "../src/save/codec";
 import type { GameState } from "../src/engine/types";
 import { reportStart } from "./fixtures";
 import { incentiveAdjustment } from "../src/engine/incentives";
+import { economy, shockEconomy } from "../src/engine/economy";
 
 const seasons = Number(process.argv[2] ?? 10);
 const seed = Number(process.argv[3] ?? 7);
@@ -77,6 +78,8 @@ for (let n = 0; n < seasons; n++) {
   let guard = 0;
   let checked = false;
   while ((state.season ?? 2026) === season && guard++ < 400) {
+    // RECESSION=<year>: force a downturn that January, so a long run is sure to pass through one.
+    if (process.env.RECESSION && state.date === `${process.env.RECESSION}-01-01`) shockEconomy(state, { gap: -4, confidence: -18 });
     advanceDay(state);
     // Just before free agency opens: what the market asks for the players under watch.
     if (!checked && state.date >= RULES.keyDates.negotiatingWindowOpens) {
@@ -85,6 +88,7 @@ for (let n = 0; n < seasons; n++) {
     }
   }
   console.log(`\n== after the ${season} season (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
+  if (state.economy) console.log(`  economy: gap ${economy(state).now.gap}%, unemployment ${economy(state).now.unemployment}%, recessions ${economy(state).recessions.map((r) => `${r.start}-${r.end ?? "now"}`).join(", ") || "none"}`);
   books(season);
   deals(season + 1);
   capLine("new season");

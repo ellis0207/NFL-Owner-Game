@@ -16,6 +16,7 @@
 // The league year (mid-March to mid-March) is the fiscal year. When it ends
 // the books close, the auditors sign off, the owner pays tax on the club's
 // income (ownership.ts) and next year's budget is approved.
+import { forecastBand } from "./economy";
 import { FORMAT } from "./format";
 import { late } from "./late";
 import { business, businessChief, cashBalance, CATEGORY, deferredRevenue, FINANCING, inflation, operatingEstimate, pnl, post, revenueEstimate, yearPlan } from "./business";
@@ -432,6 +433,9 @@ export interface ForecastYear {
   high: number;
   /** Money the low case needs from loans or the owner beyond the credit line. */
   shortfall: number;
+  /** Revenue's range: wider years out and when the economy is shaky (economy.ts). */
+  revLow: number;
+  revHigh: number;
 }
 
 /**
@@ -473,7 +477,7 @@ export function forecast(state: GameState, years: number): ForecastYear[] {
     const principal = plan.principal ?? 0;
     const delta = r.operating + (rest.interest ?? 0) + (rest.loanFees ?? 0) + (rest.principal ?? 0) + capex;
     cash += delta;
-    const u = 0.02 + 0.015 * i;
+    const u = forecastBand(state, i);
     const rateRisk = floating * Math.min(0.03, 0.005 * (i + 1));
     low += delta - r.revenue * u - rateRisk + capex * 0.15;
     high += delta + r.revenue * u * 0.8;
@@ -481,6 +485,7 @@ export function forecast(state: GameState, years: number): ForecastYear[] {
       year, revenue: Math.round(t.revenue), players: Math.round(playersAmt), otherCosts: Math.round(-(t.expenses + playersAmt)), operating: Math.round(t.operating),
       capex: Math.round(capex), interest: Math.round(interest), principal: Math.round(principal), cash: Math.round(cash), low: Math.round(low), high: Math.round(high),
       shortfall: Math.max(0, Math.round(-low - limit)),
+      revLow: Math.round(t.revenue * (1 - u)), revHigh: Math.round(t.revenue * (1 + u * 0.8)),
     });
   }
   return out;

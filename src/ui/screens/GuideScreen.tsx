@@ -140,6 +140,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "The economy and risk",
+    body: [
+      "The economy moves every month, and your metro has its own trend. Household incomes move ticket and store demand; corporate earnings move sponsors and suites. Recessions come from the conditions, about once a decade at normal volatility (Settings).",
+      "Business > Economy and risk shows the outlook, past years in 2026 dollars, a scenario tool, your insurance and claims, and any shocks. Better building upkeep, security and controls lower premiums. Flood needs its own rider, and wear and tear is never covered.",
+      "If you can't put money into the club when it needs it, you can sell a minority stake, refinance or bring in a partner. Otherwise the league supervises the club under a recovery plan.",
+    ],
+  },
+  {
     title: "Compliance, crises and legal",
     body: [
       "The Legal page holds the compliance office: better staffing and yearly training mean fewer late filings, cleaner cap audits and fewer violations. Sign the league certifications each summer, and choose whether guaranteed pay is funded in cash or with a letter of credit.",

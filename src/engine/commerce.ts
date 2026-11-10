@@ -5,6 +5,7 @@
 // the incumbent and rival companies make offers; what they'll pay depends on
 // how the team is doing, how fans feel and what the building offers. The
 // partner companies and stations are made up.
+import { corporateFactor } from "./economy";
 import { hostEffects } from "./hosting";
 import { inflation, business, businessChief, sponsorship } from "./business";
 import { leagueYear, leagueYearStart } from "./contracts";
@@ -73,8 +74,10 @@ function partners(state: GameState, cat: string): string[] {
 export function par(state: GameState, cat: string, year: number): number {
   if (cat === "naming") return STADIUM_BY_TEAM[state.userTeam].naming * inflation(year, 0.03);
   // A digital partner pays for our audience.
-  if (cat === "digital") return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share * audienceLift(state);
-  return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share;
+  // Corporate budgets in the metro move what partners will pay.
+  const corp = corporateFactor(state, state.userTeam);
+  if (cat === "digital") return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share * audienceLift(state) * corp;
+  return sponsorship(state.userTeam) * inflation(year, 0.05) * LOCAL_CATS[cat].share * corp;
 }
 
 /** What a deal pays in a league year (zero outside its term). */
@@ -134,7 +137,7 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
     else sponsors += v;
   }
   const mood = 0.9 + state.pressure.fans / 500;
-  sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.94, 1, 1.03, 1.05][b.budget.marketing] * mood;
+  sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.94, 1, 1.03, 1.05][b.budget.marketing] * mood * corporateFactor(state, state.userTeam);
   // The revenue chief's sales staff works the small partners harder (or not).
   sponsors *= 1 + 0.04 * execBoost(state, "CRO");
   // Partners who've lost confidence in the club spend less with it.

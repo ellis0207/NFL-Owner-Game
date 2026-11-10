@@ -3,6 +3,8 @@ import { leagueMoneyDaily } from "./leaguemoney";
 import { complianceDaily } from "./compliance";
 import { crisisDaily } from "./crisis";
 import { legalDaily } from "./legal";
+import { economyDaily } from "./economy";
+import { shocksDaily } from "./shocks";
 import { leagueOfficeDaily } from "./leagueoffice";
 import { contractExtrasDaily } from "./contractextras";
 import { coachRoomDaily, ownerKeeps } from "./coachroom";
@@ -575,7 +577,9 @@ export function advanceDay(state: GameState): void {
   }
   const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
+  economyDaily(state);
   businessDaily(state);
+  shocksDaily(state);
   commerceDaily(state);
   fansDaily(state);
   sponsorsDaily(state);
