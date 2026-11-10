@@ -26,6 +26,9 @@ import { rngFor } from "./rng";
 import { DEFENSE, OFFENSE } from "./schemes";
 import { staffEffects, teamSchemes } from "./staff";
 import type { GameState, ScheduledGame } from "./types";
+import { innovate, type Innovation } from "./simtactics";
+import { advanceBonus } from "./scoutops";
+import { analystEdge } from "./analysts";
 
 const M = 1_000_000;
 
@@ -71,6 +74,8 @@ export interface AnalyticsState {
   trends: { season: number; pass: number; twoHigh: number; passEpa: number; rushEpa: number }[];
   /** Fourth-down advice over the season: advised, followed, points left on the field when ignored. */
   advice: { advised: number; followed: number; lost: number };
+  /** New ideas clubs came up with, by season: an edge that fades as the league catches on (simtactics.ts). */
+  innovations?: Innovation[];
 }
 
 export function analytics(state: GameState): AnalyticsState {
@@ -185,13 +190,15 @@ export function gamePlan(state: GameState, team: string, opp: string, g: Schedul
   const rng = rngFor(state.seed, `plan:${g.id}:${team}`);
   const fx = staffEffects(team);
   const ours = team === state.userTeam;
-  const level = ours ? analytics(state).level : 1.5;
+  // Our analysts' quality and the tracking feed move the department's level a little either way.
+  const level = ours ? analytics(state).level + (analytics(state).level ? analystEdge(state) : 0) : 1.5;
   const focus = ours && analytics(state).priority === "game" ? 1 : 0;
   const prev = lastGameBefore(team, g.date);
   const rest = prev ? daysBetween(prev, g.date) : 7;
   // A short week cuts preparation; extra days help a little.
   const prepDays = rest <= 4 ? -4 : rest >= 10 ? 1.5 : 0;
-  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + emphasisPlanBonus(state, team) + (rng() + rng() + rng() - 1.5) * 6;
+  // Our pro scouts' advance report on the opponent adds to the preparation.
+  const raw = (fx.offCalling + fx.defCalling) / 2 + (level - 1.5) * 2.5 + focus * 1.5 + prepDays + emphasisPlanBonus(state, team) + (ours ? advanceBonus(state) : 0) + (rng() + rng() + rng() - 1.5) * 6;
   const quality = Math.max(-1, Math.min(1, (raw - 70) / 15));
 
   // What the film and the numbers say about them.
@@ -263,6 +270,11 @@ export function updateTrends(state: GameState): void {
   a.trends.push({ season: RULES.season, pass, twoHigh, passEpa: Math.round(passEpa * 1000) / 1000, rushEpa: Math.round(rushEpa * 1000) / 1000 });
   a.advice = { advised: 0, followed: 0, lost: 0 };
   a.plans = {};
+  // Ideas for next season: a few clubs try something new, and the league starts copying last year's.
+  a.innovations = innovate(state, RULES.season + 1);
+  for (const x of a.innovations.filter((i) => i.season === RULES.season + 1)) {
+    if (x.team === state.userTeam) send(state, "staff", "Offensive coordinator", "Something new for next season", `We're building ${x.idea}. Nobody in the league runs it the way we will, and it should catch defenses off guard until they study it.`);
+  }
 }
 
 // ---- The department's monthly report ----

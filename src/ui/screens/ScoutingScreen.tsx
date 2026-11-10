@@ -16,9 +16,10 @@ import { useUi } from "../ui";
 import { ScoutStaff } from "../ScoutStaff";
 import { CREWS, crewCost, proDays, sendCrew, upcomingProDays } from "../../engine/prodays";
 import type { ProDayCrew } from "../../engine/types";
+import { ScoutOpsPanel } from "./ScoutOpsPanel";
 
-type Tab = "plan" | "board" | "prodays" | "reports" | "staff";
-const TABS: [Tab, string][] = [["plan", "Scouting plan"], ["board", "Prospects"], ["prodays", "Pro days"], ["reports", "Weekly reports"], ["staff", "Our scouts"]];
+type Tab = "plan" | "board" | "prodays" | "reports" | "staff" | "ops";
+const TABS: [Tab, string][] = [["plan", "Scouting plan"], ["board", "Prospects"], ["prodays", "Pro days"], ["reports", "Weekly reports"], ["staff", "Our scouts"], ["ops", "Department"]];
 
 export function ScoutingScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [tab, setTab] = useState<Tab>("plan");
@@ -42,6 +43,7 @@ export function ScoutingScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "prodays" && <ProDays game={game} changed={changed} />}
       {tab === "reports" && <Reports game={game} />}
       {tab === "staff" && <ScoutStaff game={game} changed={changed} />}
+      {tab === "ops" && <ScoutOpsPanel game={game} changed={changed} />}
     </section>
   );
 }

@@ -17,6 +17,7 @@
 // Disability insurance on a big salary: the club pays a premium before the
 // season and, once a player has missed more than three straight weeks with a
 // football injury, the policy pays back most of his salary for the weeks after.
+import { diagnosisFactor } from "./playercare";
 import { post } from "./business";
 import { clubhouse, clubNote } from "./clubhouse";
 import { dealOf } from "./contracts";
@@ -61,7 +62,7 @@ export function diagnose(state: GameState, id: string, team: string, inj: Injury
   if (days >= 28) inj.mid = addDays(inj.date, Math.round(days / 2));
   if (days < 6 || inj.seasonEnding || inj.nonFootball) return;
   const rng = rngFor(state.seed, `dx:${id}:${inj.date}`);
-  const spread = [0.32, 0.25, 0.19, 0.14][medicalLevel(state, team)];
+  const spread = [0.32, 0.25, 0.19, 0.14][medicalLevel(state, team)] * (team === state.userTeam ? diagnosisFactor(state) : 1);
   const off = Math.round(days * spread * gaussian(rng));
   inj.est = addDays(inj.date, Math.max(2, days + off));
   inj.testsOn = addDays(inj.date, 2 + Math.floor(rng() * 3));

@@ -181,6 +181,22 @@ describe("saves from older versions", () => {
     expect(old.departments).toBeDefined();
   }, 90_000);
 
+  it("a save with the coach's room, scouting budget and analysts keeps them, and older saves start them", async () => {
+    const state = load("pr41-2027-03-15");
+    expect(state.coachRoom!.preseason).toBe("rest");
+    expect(state.coachRoom!.st!.punts).toBe("directional");
+    expect(state.scoutOps!.split.video).toBeCloseTo(0.4, 5);
+    expect(state.analysts!.feeds.tracking).toBe(true);
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    const back = await decompress(await compress(state));
+    expect(back.care!.doctors.length).toBe(4);
+    // A save from before has none of it; the first days create what's needed.
+    const old = load("pr40-2027-03-02");
+    expect(old.care).toBeUndefined();
+    for (let i = 0; i < 3; i++) advanceDay(old);
+    expect(old.care).toBeDefined();
+  }, 90_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

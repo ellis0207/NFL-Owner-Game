@@ -12,6 +12,9 @@ export const STAT_KEYS = [
   "fgm", "fga", "fgLong", "fgm40", "fga40", "fgm50", "fga50", "xpm", "xpa",
   "punts", "puntYds", "puntIn20", "puntTb", "puntLong",
   "kr", "krYds", "krTd", "pr", "prYds", "prTd", "twoPt",
+  // Added with the protection and contact model: dropbacks under pressure, pressures by a rusher,
+  // pressures a blocker gave up, and tackles a ball carrier broke.
+  "pressured", "pressures", "pressAllowed", "brkTkl",
 ] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
 export type StatLine = Partial<Record<StatKey | "g", number>>;

@@ -486,13 +486,17 @@ export function canTradePlayer(state: GameState, id: string, to?: string): Check
   return { ok: true };
 }
 
-export function hasNoTradeClause(id: string): boolean {
-  return NO_TRADE_CLAUSE.has(id);
+/** A no-trade clause: one of the real ones, or one written into his current deal. */
+export function hasNoTradeClause(id: string, state?: GameState): boolean {
+  if (NO_TRADE_CLAUSE.has(id)) return true;
+  if (!state) return false;
+  const d = state.contracts[id];
+  return !!d?.noTrade && state.players[id]?.team === d.team;
 }
 
 /** A player with a no-trade clause waives it for a place he wants to go. */
 function waivesNoTrade(state: GameState, id: string, to: string): boolean {
-  if (!NO_TRADE_CLAUSE.has(id)) return true;
+  if (!hasNoTradeClause(id, state)) return true;
   const rng = rngFor(state.seed, `ntc:${id}:${to}:${state.date}`);
   const unhappy = morale(state, id) < 45 || !!trades(state).requests[id];
   return unhappy ? rng() < 0.8 : outlook(state)[to] >= 0.6 && rng() < 0.35;
@@ -707,7 +711,7 @@ function candidates(state: GameState, deal: TradeDeal, payerSide: 0 | 1): { a: T
     out.push({ a, rv: pickValue(state, receiver, pick), pv: pickValue(state, payer, pick) });
   }
   for (const id of teamPlayerIds(state, payer)) {
-    if (used.has(id) || !canTradePlayer(state, id, receiver).ok || NO_TRADE_CLAUSE.has(id)) continue;
+    if (used.has(id) || !canTradePlayer(state, id, receiver).ok || hasNoTradeClause(id, state)) continue;
     // Only players a team would really put in a deal: not its quarterback, not someone it just got.
     if (payer !== state.userTeam && (justArrived(state, id) || cornerstone(state, payer, id))) continue;
     const mine = playerValue(state, "gm", payer, id, { date });
@@ -1030,7 +1034,7 @@ function tradeRate(date: string): number {
 /** Why a team might move a player, and how strongly. */
 function sellReasons(state: GameState, id: string, dir: Direction): number {
   const ps = state.players[id];
-  if (!canTradePlayer(state, id).ok || NO_TRADE_CLAUSE.has(id) || justArrived(state, id)) return 0;
+  if (!canTradePlayer(state, id).ok || hasNoTradeClause(id, state) || justArrived(state, id)) return 0;
   if (ps.injury?.seasonEnding) return 0;
   const p = PLAYER_BY_ID[id];
   const age = ageOn(p.birthDate, state.date) ?? 26;
@@ -1166,7 +1170,7 @@ function callsToOwner(state: GameState): void {
   // Unsolicited calls: a team wants one of ours, or has one to move.
   if (rng() < 0.05 * busy) {
     const team = cpu[Math.floor(rng() * cpu.length)];
-    const ours = teamPlayerIds(state, us).filter((id) => canTradePlayer(state, id, team).ok && !NO_TRADE_CLAUSE.has(id))
+    const ours = teamPlayerIds(state, us).filter((id) => canTradePlayer(state, id, team).ok && !hasNoTradeClause(id, state))
       .map((id) => ({ id, v: playerValue(state, "gm", team, id, { date: officialDate(state) }).points }))
       .filter((x) => x.v >= 20).sort((a, b) => b.v - a.v).slice(0, 6);
     const pick = ours[Math.floor(rng() * ours.length)];

@@ -87,6 +87,11 @@ export function apyLimit(state: GameState): number {
   return office(state).limits.contractApy * Math.pow(1.065, Math.max(0, RULES.season - 2026));
 }
 
+/** Guaranteed money the GM may commit on one contract without the owner's sign-off; grows with the cap like the APY limit. */
+export function guaranteeLimit(state: GameState): number {
+  return (office(state).limits.guaranteed ?? 40 * M) * Math.pow(1.065, Math.max(0, RULES.season - 2026));
+}
+
 /** Who answers for an area, by name. */
 export function areaOwner(state: GameState, area: DecisionArea, gm: string, hc: string): string {
   const who = AREAS[area].who;

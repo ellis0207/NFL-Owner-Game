@@ -10,6 +10,7 @@
 // Dates follow the real calendar: Pro Bowl rosters about three weeks before
 // the regular season ends, the All-Pro teams the week after it, the awards
 // and the Hall of Fame class three days before the Super Bowl.
+import { careerLines } from "./careerstats";
 import { addDays } from "./dates";
 import { news, send } from "./inbox";
 import { seasonOf } from "./incentives";
@@ -209,21 +210,24 @@ function presentAwards(state: GameState): void {
 // ---- Hall of Fame ----
 
 /**
- * A career as the selectors weigh it. The stats on file start in 2023, so
- * earlier seasons are estimated from the level he showed in the seasons we
- * have, as voters remember a long career; honors won in this save count on
- * top.
+ * A career as the selectors weigh it: every real season on file (back to the
+ * rookie year, careerstats.ts) and the seasons played in this save. Seasons
+ * the data doesn't cover (linemen have no stats, and nothing before 1999)
+ * are estimated from the level he showed, as voters remember a long career;
+ * honors won in this save count on top.
  */
 export function careerScore(state: GameState, id: string): number {
   const p = PLAYER_BY_ID[id];
   if (!p) return 0;
   const pos = p.position;
-  const seasons = (p.stats ?? []).filter((s) => Number(s.g ?? 0) > 0);
+  const seasons = careerLines(state, id).filter((s) => Number(s.g ?? 0) > 0);
   const scores = seasons.map((s) => Math.min(1.6, Math.max(0, production(pos, s as unknown as Record<string, number>) / ELITE[pos])));
   // Linemen have no stats: seasons as a starter stand in.
   const lineSeasons = Object.values(p.snaps ?? {}).filter((s) => Math.max(s.offShare, s.defShare) >= 0.8).length;
   const known = LINE.has(pos) ? lineSeasons * 0.55 : scores.reduce((a, b) => a + b, 0);
-  const firstOnFile = seasons.length ? Math.min(...seasons.map((s) => s.season)) : (p.rookieYear ?? 2023);
+  const firstOnFile = LINE.has(pos)
+    ? Math.min(2023, ...Object.keys(p.snaps ?? {}).map(Number))
+    : seasons.length ? Math.min(...seasons.map((s) => s.season)) : (p.rookieYear ?? 2023);
   const before = Math.max(0, firstOnFile - (p.rookieYear ?? firstOnFile));
   const peak = LINE.has(pos) ? 0.5 : Math.max(0, ...scores.slice(0, 3)) * 0.8;
   const h = honors(state);

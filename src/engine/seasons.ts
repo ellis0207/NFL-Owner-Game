@@ -136,7 +136,16 @@ export function seasonRecord(state: GameState): SeasonRecord {
     }
     if (best) leaders[key] = best;
   }
-  return { season: RULES.season, champion: champion ?? state.champion, runnerUp, records, place, seeds: state.seeds, playoffs, leaders };
+  // League passing per team game, for comparing eras (careerstats.ts).
+  let passYds = 0;
+  let games = 0;
+  for (const [id, box] of Object.entries(state.box)) {
+    if (GAME_BY_ID[id]?.type !== "REG") continue;
+    passYds += box.team.away.passYds + box.team.home.passYds;
+    games += 2;
+  }
+  const passPerGame = games ? Math.round(passYds / games) : undefined;
+  return { season: RULES.season, champion: champion ?? state.champion, runnerUp, records, place, seeds: state.seeds, playoffs, leaders, passPerGame, owner: state.ownerName };
 }
 
 /** Each team's offensive, defensive and special teams plays this regular season, for snap shares. */

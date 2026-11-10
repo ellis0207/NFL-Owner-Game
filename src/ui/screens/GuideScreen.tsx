@@ -115,6 +115,18 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Your analytics department is a budget line on the Analytics page. A bigger staff gives sharper advice, and you choose what they research. Advice only helps when the coaches use it: the head coach's openness and the staff's credibility decide how often fourth-down advice is taken.",
       "Every week the coaches build a plan for the next opponent: what to attack and what to take away. Better coaches, a stronger analytics staff and a full week of preparation make better plans. At halftime coordinators adjust to what worked. You can read the plan, but you don't call it.",
       "After each season the league copies what worked: if passing pays more than usual, teams throw more and defenses play more two-deep coverage.",
+      "The Analysts tab names the staff, the data feeds you buy (tracking, film, college charting, injury histories, fan data) and experiments. An experiment tries a change on half the roster or half the games; the result comes with a margin of error, and a result inside it tells you nothing. Assessments break down quarterbacks, blockers, defenders and special teams from the box scores.",
+      "Defenses read play-calling tendencies, so a staff that self-scouts stays harder to predict. Blitzes that aren't picked up turn into pressure fast, and quarterbacks differ in how they hold up late in close games.",
+    ],
+  },
+  {
+    title: "Contracts, camp and the draft room",
+    body: [
+      "A contract can carry roster bonuses due in March, an option bonus the club exercises to keep the later years (or declines to let him go), salary guaranteed only against a release for football reasons or only against one to clear cap room, and a no-trade clause. Agents value each of these. The Cap page plans five years ahead with trial deals, forecasts compensatory picks from the league's formula and lists the analysts' cap-saving moves.",
+      "From the new league year until a week before the draft you can sign another team's tendered restricted free agent to an offer sheet from his page. His team has five days to match; if it doesn't, he's yours and you owe the pick his tender calls for.",
+      "Camp's coach's room sets how long starters play in the preseason, who gets the backup snaps, the next-man-up order and the special teams plan. Five days before the cutdown the GM, the head coach and the analysts meet on the roster bubble; you can ask them to keep up to three players.",
+      "Scouting splits its budget across travel, video, medical and data. The Draft page's Boards tab sorts our reads by value, risk, scheme fit and expected value, adjusts college stats for schedule and system, and takes bonus offers for undrafted players, who weigh your money and their chance to make the roster against other teams' offers.",
+      "Two and four seasons after each draft and free agency period the staff grades them again on what players did; each season also gets a coaching grade against the talent on hand. Career stats go back to 2005.",
     ],
   },
   {

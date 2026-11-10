@@ -2,6 +2,7 @@
 // reserve and replacement signings. Every team's decisions are made by its
 // own staff from what they believe about players (true ability blurred by
 // how good their evaluators are); the owner only sees the outcome.
+import { applyContingency } from "./coachroom";
 import { posOf } from "./clubhouse";
 import { accruedSeasons, addDeadMoney, adjustRollover, capHit, capSummary, invalidateRosters, releaseCost, teamPlayerIds, chargeYear, yearsExpIn } from "./cap";
 import { dealOf, leagueYear, writeMinimumDeal, writePracticeDeal } from "./contracts";
@@ -436,6 +437,7 @@ export function depthChart(state: GameState, team: string, date = state.date): R
     view[id] = coachView(state, team, id);
   }
   for (const pos of POSITION_ORDER) chart[pos].sort((a, b) => view[b] - view[a]);
+  applyContingency(state, team, chart);
   return chart;
 }
 

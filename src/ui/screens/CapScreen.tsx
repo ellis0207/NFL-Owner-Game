@@ -6,8 +6,9 @@ import { BASE_SEASON, PLAYER_BY_ID } from "../../engine/league";
 import { isOffseason, NEXT } from "../../engine/offseason";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { CapTools } from "./CapTools";
 
-export function CapScreen({ game }: { game: GameState }) {
+export function CapScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const team = game.userTeam;
   // After the Super Bowl the owner plans for next season's cap.
   const year = isOffseason(game.date) ? NEXT : leagueYear(game.date);
@@ -74,6 +75,7 @@ export function CapScreen({ game }: { game: GameState }) {
           </tbody>
         </table>
       </div>
+      <CapTools game={game} changed={changed} />
     </section>
   );
 }

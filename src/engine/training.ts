@@ -11,6 +11,8 @@
 // A position change takes time. The player plays below his level while he
 // learns the new spot, quicker if he picks things up fast, and some players
 // simply suit the new position better or worse than anyone could tell.
+import { fatigueRisk, trainingResponse } from "./playercare";
+import { adopted } from "./analysts";
 import { emphasisFactors, type Emphasis } from "./gameweek";
 import { clubhouse, clubNote, personality, posOf } from "./clubhouse";
 import { ageOn, weekday } from "./dates";
@@ -101,7 +103,9 @@ export function growthFactor(state: GameState, id: string, mentored: boolean): n
     if (c?.plans[id]) f *= 1.18;
     const p = c?.programs;
     if (p) f *= { light: 0.9, normal: 1, heavy: 1.1 }[p.workload] * [0.97, 1, 1.02, 1.04][p.strength];
-    f *= emphasisFactors(state).growth;
+    // Each body answers the programs differently: the harder the program, the more that matters.
+    if (p) f *= 1 + (trainingResponse(state, id) - 1) * (0.25 + 0.15 * p.strength + (p.workload === "heavy" ? 0.15 : 0));
+    f *= emphasisFactors(state).growth * (1 + adopted(state, "practice"));
   }
   return f;
 }
@@ -116,10 +120,11 @@ export function offseasonFactor(state: GameState, id: string): number {
 
 /** How our programs change a player's injury risk, in games (practice = false) or practice. */
 export function riskFactor(state: GameState, id: string, team: string, practice: boolean): number {
-  let f = 1;
+  let f = fatigueRisk(state, id);
   const ps = state.players[id];
   if (ps?.fragile && ps.fragile > state.date) f *= 1.6;
   if (!ours(state, team)) return f;
+  f *= 1 - adopted(state, "conditioning");
   const p = state.clubhouse?.programs;
   if (!p) return f;
   f *= [1.05, 1, 0.97, 0.94][p.strength] * (p.nutrition ? 1 : 1.03) * (p.equipment ? 0.98 : 1) * (p.field ? 0.98 : 1);

@@ -11,6 +11,7 @@
 // Retirements are decided after the Super Bowl and announced over the next
 // weeks, mostly by older players, more often by those who are slipping or
 // have no contract. Free agents nobody signs by the spring mostly move on.
+import { retirementLean } from "./playercare";
 import { addDeadMoney, adjustRollover, chargeYear, invalidateRosters, releaseCost } from "./cap";
 import { dealOf } from "./contracts";
 import { addDays, ageOn } from "./dates";
@@ -136,6 +137,8 @@ function retireChance(state: GameState, id: string, date: string): number {
   const owed = deal?.years.filter((y) => y.year > RULES.season).reduce((sum, y) => sum + y.proration, 0) ?? 0;
   if (owed > 0.015 * RULES.salaryCap) chance *= 0.35;
   if (p.injury?.seasonEnding) chance *= 1.4;
+  // Money in the bank, a young family, and how much football is who he is (playercare.ts).
+  if (over >= -2) chance *= retirementLean(state, id, age).factor;
   // Now and then a young player walks away.
   return Math.min(0.95, chance + 0.003);
 }

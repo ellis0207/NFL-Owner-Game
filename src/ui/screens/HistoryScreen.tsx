@@ -8,9 +8,10 @@ import { history } from "../../engine/seasons";
 import { staff } from "../../engine/coaches";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { CareersTab, HindsightTab, PeopleTab } from "./HistoryMore";
 import { useUi } from "../ui";
 
-const TABS = ["Honors", "Hall of Fame", "Records", "Rivalries", "Trades", "Eras", "Timeline"] as const;
+const TABS = ["Honors", "Hall of Fame", "Records", "Careers", "Rivalries", "Trades", "Eras", "People", "Hindsight", "Timeline"] as const;
 type Tab = (typeof TABS)[number];
 
 export function HistoryScreen({ game }: { game: GameState }) {
@@ -27,6 +28,9 @@ export function HistoryScreen({ game }: { game: GameState }) {
       {tab === "Rivalries" && <Rivalries game={game} />}
       {tab === "Trades" && <Trades game={game} />}
       {tab === "Eras" && <Eras game={game} />}
+      {tab === "Careers" && <CareersTab game={game} />}
+      {tab === "People" && <PeopleTab game={game} />}
+      {tab === "Hindsight" && <HindsightTab game={game} />}
       {tab === "Timeline" && <Timeline game={game} />}
     </section>
   );

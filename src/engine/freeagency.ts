@@ -15,14 +15,16 @@
 // and needs; the owner bids through contract talks.
 import { loyaltyPull } from "./community";
 import { facilityPull } from "./facilities";
+import { franchiseReputation } from "./playercare";
 import { attachBonuses } from "./bonuses";
 import { attachIncentives } from "./incentives";
 import { agentFor, agentHidden, changeMorale, changeTrust, priorities, trustOf } from "./agents";
 import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from "./cap";
-import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, writeDeal, writeMinimumDeal } from "./contracts";
+import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, salaryCap, writeDeal, writeMinimumDeal } from "./contracts";
 import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
-import { addMemo, apyLimit, mode, openMemos, report } from "./delegation";
+import { addMemo, apyLimit, guaranteeLimit, mode, noteDecision, openMemos, report } from "./delegation";
+import { signer } from "./executives";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
@@ -185,7 +187,9 @@ export function teamPull(state: GameState, id: string, team: string, from: strin
     + (team === from ? 0.05 * pr.loyalty : 0)
     + 0.05 * ah.memory * (trustOf(state, agentFor(id).id, team) / 100)
     // Our buildings and player services, when they're better or worse than usual.
-    + (team === state.userTeam ? facilityPull(state) + (team === from ? loyaltyPull(state) : 0) : 0);
+    + (team === state.userTeam ? facilityPull(state) + (team === from ? loyaltyPull(state) : 0) : 0)
+    // Players who value loyalty lean toward stable, well-run clubs with good doctors and a fair owner.
+    + 0.03 * pr.loyalty * (franchiseReputation(state, team) - 0.45) * 2;
 }
 
 export function utility(state: GameState, fa: FreeAgent, team: string, t: OfferTerms): number {
@@ -589,8 +593,10 @@ function cpuStreetSignings(state: GameState): void {
 function gmMayOffer(state: GameState, fa: FreeAgent, terms: OfferTerms, hit: number): boolean {
   if (state.negotiations[fa.player]?.status === "open") return false;
   const apy = terms.total / terms.years;
-  if (mode(state, "signings") === "delegate" && apy <= apyLimit(state)) {
+  if (mode(state, "signings") === "delegate" && apy <= apyLimit(state) && terms.guaranteed <= guaranteeLimit(state)) {
     const p = PLAYER_BY_ID[fa.player];
+    // Material commitments carry the finance chief's countersignature in the record.
+    if (apy >= salaryCap(state, leagueYear(state.date)) * 0.05) noteDecision(state, "signings", `Countersigned the offer to ${p.name}`, apy, signer(state, "CFO"), "policy", "Over 5% of the cap: the finance chief signs off on cash and cap.");
     report(state, "signings", gmName(state), `Offer to ${p.position} ${p.name}`, `${terms.years} years, ${money(terms.total)} (${money(apy)} a year, ${money(terms.guaranteed)} guaranteed).`, { amount: apy });
     return true;
   }
@@ -609,7 +615,7 @@ function gmMayOffer(state: GameState, fa: FreeAgent, terms: OfferTerms, hit: num
       { label: "Make the offer", effect: "The GM sends these terms to the agent today.", evidence: "estimate" },
       { label: "Pass", effect: "We let the player go elsewhere." },
     ],
-    risks: [apy > apyLimit(state) ? `Above your ${money(apyLimit(state))} limit for the GM.` : "Other teams can still outbid us.", "Guaranteed money is owed even if he's cut."],
+    risks: [apy > apyLimit(state) ? `Above your ${money(apyLimit(state))} limit for the GM.` : terms.guaranteed > guaranteeLimit(state) ? `Over your ${money(guaranteeLimit(state))} guarantee limit for the GM.` : "Other teams can still outbid us.", "Guaranteed money is owed even if he's cut."],
     budget: `Fits the cap plan for next year by the GM's count.`,
     recommend: 0, deadline: addDays(state.date, 2), ifLate: "The player signs elsewhere.",
     payload: { player: fa.player, terms, hit },

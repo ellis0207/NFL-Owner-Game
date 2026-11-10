@@ -3,6 +3,11 @@ import type { AnalyticsState } from "./strategy";
 import type { ClubhouseState } from "./clubhouse";
 import type { GameWeekState } from "./gameweek";
 import type { ScoutStaffState } from "./scouts";
+import type { CoachRoomState } from "./coachroom";
+import type { ScoutOpsState } from "./scoutops";
+import type { HindsightState } from "./hindsight";
+import type { CareState } from "./playercare";
+import type { AnalystsState } from "./analysts";
 // Shapes of the generated league data (data/league-2026) and of a saved game.
 
 export type Position =
@@ -549,6 +554,11 @@ export interface DealYear {
   workoutEarned?: boolean;
   /** Escalator: next year's salary rises by the amount if he plays the share of snaps this year (bonuses.ts). */
   escalator?: { amount: number; share: number; met?: boolean };
+  /** Salary owed on a release for football reasons (skill) or to save cap room (cap), on top of the full guarantee. */
+  skillGuaranteed?: number;
+  capGuaranteed?: number;
+  /** The part of `bonus` that is a roster bonus, due on the third day of the league year. */
+  roster?: number;
 }
 
 export type IncentiveKind =
@@ -584,6 +594,10 @@ export interface Deal {
   restructured?: number;
   /** Rookie deals, rounds 3-7: qualifying seasons toward the proven performance escalator (bonuses.ts). */
   ppe?: { seasons: number; counted?: number; done?: boolean };
+  /** An option bonus: exercised by the date it is paid and prorated over the years left; declined, the years from `year` void. */
+  option?: { year: number; amount: number; by: string; exercised?: boolean; declined?: boolean };
+  /** A no-trade clause written into this deal. */
+  noTrade?: boolean;
 }
 
 /** @deprecated version 2 saves stored this shape; migrated to Deal. */
@@ -760,6 +774,15 @@ export interface OfferTerms {
   workout?: number;
   /** Raise to the next year's salary when he plays 65% of the snaps, each year but the last. */
   escalator?: number;
+  /** Roster bonus each year after the first, due on the third day of the league year (contractextras.ts). */
+  rosterBonus?: number;
+  /** Option bonus the club can exercise before the second league year; prorated from then on, or the later years void. */
+  optionBonus?: number;
+  /** Salary guaranteed against a release for football reasons, and against a release to save cap room. */
+  skillGuaranteed?: number;
+  capGuaranteed?: number;
+  /** A no-trade clause: he has to agree to any trade. */
+  noTrade?: boolean;
 }
 
 export interface NegotiationRound {
@@ -1724,6 +1747,10 @@ export interface SeasonRecord {
   playoffs: Record<string, string>;
   /** League leaders: stat key to [player, team, value]. */
   leaders: Record<string, [string, string, number]>;
+  /** League passing yards per team game, for comparing eras. */
+  passPerGame?: number;
+  /** The owner of the user's club that season, for eras by owner. */
+  owner?: string;
 }
 
 /** One draft, kept so its players can be rebuilt when a save loads. */
@@ -1874,6 +1901,16 @@ export interface GameState {
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
   news: { date: string; text: string }[];
+  /** The owner's say in the coach's room: preseason snaps, the bubble meeting, contingency lineups, special teams (coachroom.ts). */
+  coachRoom?: CoachRoomState;
+  /** The scouting operation: budget split, national and pro scouts, advance reports, undrafted offers (scoutops.ts). */
+  scoutOps?: ScoutOpsState;
+  /** Drafts and signings re-graded after two and four seasons, the scouts' record, coaching grades (hindsight.ts). */
+  hindsight?: HindsightState;
+  /** Playbook learning, snap load and the named medical staff (playercare.ts). */
+  care?: CareState;
+  /** Analysts by name, data feeds and experiments (analysts.ts). */
+  analysts?: AnalystsState;
 }
 
 // ---- Offseason program, training camp and discipline ----
@@ -2288,7 +2325,8 @@ export interface OfficeTask {
 export interface OfficeState {
   modes: Record<DecisionArea, DecisionMode>;
   /** Deals above these need the owner's sign-off even when delegated. */
-  limits: { contractApy: number; debt: number };
+  /** Dollar limits on what the staff may commit without the owner: average per year and guaranteed money on a contract, and borrowing. */
+  limits: { contractApy: number; debt: number; guaranteed?: number };
   /** How each area reports what it did: every action, a weekly summary, or only exceptions. */
   alerts: Record<DecisionArea, "every" | "weekly" | "exceptions">;
   /** Every consequential decision: who proposed it, who approved it and why. */
@@ -2366,4 +2404,6 @@ export interface RecordsState {
   h2h: Record<string, { games: number; wins: Record<string, number>; close: number; playoff: number; last: string }>;
   /** Each club's valuation at the end of each league year. */
   values: Record<number, Record<string, number>>;
+  /** Career milestones and records already marked, by player ("passYds:50000", "rec:record"). */
+  career?: Record<string, string[]>;
 }

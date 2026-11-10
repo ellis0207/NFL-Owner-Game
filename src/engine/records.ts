@@ -6,8 +6,14 @@
 // building, money and biggest contracts.
 import { addDays } from "./dates";
 import { news, send } from "./inbox";
-import { GAMES_BY_DATE, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
+import { BASE_SEASON, GAMES_BY_DATE, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
+import { localDeals } from "./commerce";
+import { partDefs } from "./facilities";
+import { money } from "./inbox";
+import { RULE_BY_ID } from "./rules";
+import { EXEC_ROLES } from "./executives";
 import { valuation } from "./business";
+import { checkCareerMarks } from "./careerstats";
 import { ELITE, production } from "./honors";
 import { history } from "./seasons";
 import { seasonTotals, unpack } from "./stats";
@@ -69,6 +75,7 @@ function checkGames(state: GameState): void {
     }
   }
   if (today.every((g) => g.type !== "REG")) return;
+  checkCareerMarks(state, played);
   const totals = seasonTotals(state, "REG");
   for (const pid of played) {
     const row = totals[pid];
@@ -260,7 +267,104 @@ export function clubTimeline(state: GameState, team = state.userTeam): { date: s
     }
   }
   for (const l of state.leases?.[team]?.log ?? []) out.push(l);
+  if (team === state.userTeam) {
+    // Naming rights: each stadium naming deal the club signed, and the name it put on the building.
+    for (const d of localDeals(state).deals.filter((x) => x.cat === "naming")) {
+      if (d.start > BASE_SEASON) out.push({ date: `${d.start}-03-01`, text: `Naming rights: ${d.partner} for ${d.years} years, ${money(d.value)} in the first year` });
+    }
+    const b = state.merch?.brand;
+    if (b && b.since > BASE_SEASON) out.push({ date: `${b.since}-04-01`, text: `New look: the ${b.name}` });
+    for (const x of state.facilities?.log ?? []) if (!x.auto && x.cost >= 5_000_000) out.push({ date: x.date, text: `Renovation: ${partDefs(team)[x.key]?.label ?? x.key} replaced (${money(x.cost)})` });
+  }
   return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ---- Executive biographies ----
+
+export interface ExecBio { name: string; role: string; from: number; to: number | null; record: string; decisions: string[]; honors: string[] }
+
+/**
+ * The people who ran a club in this save: head coaches and GMs with their
+ * records, and for the user's club the business executives too. The major
+ * decisions come from the club's own record: trades, big signings, first-round
+ * picks and the owner's audit trail.
+ */
+export function execBios(state: GameState, team = state.userTeam): ExecBio[] {
+  const hist = history(state);
+  const out: ExecBio[] = [];
+  for (const e of eras(state, team)) {
+    const years = (y: string) => Number(y.slice(0, 4)) >= e.from && Number(y.slice(0, 4)) <= e.to + 1;
+    const decisions: string[] = [];
+    if (e.role === "GM") {
+      for (const t of (state.trades?.log ?? []).filter((r) => r.status === "done" && r.teams.includes(team) && years(r.date)).slice(0, 4)) decisions.push(`${t.date.slice(0, 4)} trade with the ${teamLabel(t.teams[0] === team ? t.teams[1] : t.teams[0])}: ${t.send[t.teams[0] === team ? 1 : 0].filter((a) => a.kind === "player").map((a) => PLAYER_BY_ID[a.id]?.name ?? a.id).join(", ") || "picks"} in`);
+      for (const sg of state.signings.filter((x) => x.team === team && years(x.date) && x.apy >= 15_000_000).slice(0, 4)) decisions.push(`${sg.date.slice(0, 4)}: signed ${PLAYER_BY_ID[sg.player]?.name ?? sg.player}, ${money(sg.apy)} a year`);
+      for (const d of hist.drafts.filter((x) => x.year >= e.from && x.year <= e.to + 1)) {
+        const first = d.picks.find((p) => p[1] === team && p[2] === 1);
+        if (first) decisions.push(`${d.year} first round: ${PLAYER_BY_ID[first[0]]?.name ?? first[0]} (No. ${first[3]})`);
+      }
+    }
+    const honors: string[] = [];
+    if (e.titles) honors.push(`${e.titles} Super Bowl title${e.titles > 1 ? "s" : ""}`);
+    if (e.playoffWins) honors.push(`${e.playoffWins} playoff win${e.playoffWins > 1 ? "s" : ""}`);
+    const current = e.role === "HC" ? state.staff?.people && Object.values(state.staff.people).find((c) => c.team === team && c.role === "HC")?.name === e.name
+      : Object.values(state.staff?.people ?? {}).find((c) => c.team === team && c.role === "GM")?.name === e.name;
+    out.push({ name: e.name, role: e.role === "HC" ? "Head coach" : "General manager", from: e.from, to: current ? null : e.to, record: `${e.w}-${e.l}${e.t ? `-${e.t}` : ""}`, decisions, honors });
+  }
+  if (team === state.userTeam) {
+    for (const x of Object.values(state.execs?.people ?? {})) {
+      if (!x.role) continue;
+      const mine = (state.office?.trail ?? []).filter((t) => t.by.startsWith(x.name)).slice(0, 3).map((t) => `${t.date.slice(0, 4)}: ${t.what}`);
+      out.push({ name: x.name, role: EXEC_ROLES[x.role].label, from: Number((x.hired ?? String(BASE_SEASON)).slice(0, 4)), to: null, record: `${x.years} years in senior jobs; ${x.resume[0] ?? ""}`, decisions: mine, honors: [] });
+    }
+  }
+  return out;
+}
+
+// ---- Eras by owner and by rule set ----
+
+export interface RuleEra { label: string; from: number; to: number; rules: string[]; ppg: number; passPerGame: number }
+
+/**
+ * The league's seasons in this save grouped by the rulebook they were played
+ * under: a new era starts each year the owners adopt a rule change. Scoring
+ * and passing per team game show what each change did.
+ */
+export function ruleEras(state: GameState): RuleEra[] {
+  const hist = history(state);
+  const adopted = state.owners?.rules ?? [];
+  const out: RuleEra[] = [];
+  for (const s of hist.seasons) {
+    const changes = adopted.filter((a) => a.year === s.season).map((a) => RULE_BY_ID[a.rule]?.title ?? a.rule);
+    const pts = Object.values(s.records).reduce((t, r) => t + r[3], 0);
+    const games = Object.values(s.records).reduce((t, r) => t + r[0] + r[1] + r[2], 0);
+    const ppg = games ? pts / games : 0;
+    const last = out[out.length - 1];
+    if (!last || changes.length) out.push({ label: changes.length ? `After: ${changes.join(", ")}` : "The 2026 rulebook", from: s.season, to: s.season, rules: changes, ppg, passPerGame: s.passPerGame ?? 0 });
+    else {
+      const n = last.to - last.from + 1;
+      last.ppg = (last.ppg * n + ppg) / (n + 1);
+      last.passPerGame = (last.passPerGame * n + (s.passPerGame ?? 0)) / (n + 1);
+      last.to = s.season;
+    }
+  }
+  return out.map((e) => ({ ...e, ppg: Math.round(e.ppg * 10) / 10, passPerGame: Math.round(e.passPerGame) }));
+}
+
+/** The user club's seasons grouped by who owned it. */
+export function ownerEras(state: GameState, team = state.userTeam): { owner: string; from: number; to: number; w: number; l: number; t: number; playoffs: number; titles: number }[] {
+  const out: { owner: string; from: number; to: number; w: number; l: number; t: number; playoffs: number; titles: number }[] = [];
+  for (const s of history(state).seasons) {
+    const owner = s.owner ?? state.ownerName;
+    const r = s.records[team];
+    if (!r) continue;
+    let e = out[out.length - 1];
+    if (!e || e.owner !== owner) out.push((e = { owner, from: s.season, to: s.season, w: 0, l: 0, t: 0, playoffs: 0, titles: 0 }));
+    e.to = s.season;
+    e.w += r[0]; e.l += r[1]; e.t += r[2];
+    if (s.playoffs[team]) e.playoffs++;
+    if (s.champion === team) e.titles++;
+  }
+  return out;
 }
 
 // ---- Anniversaries and the yearly close ----

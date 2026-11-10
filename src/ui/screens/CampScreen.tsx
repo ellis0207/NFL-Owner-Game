@@ -7,6 +7,7 @@ import { PLAYER_BY_ID, RULES, teamLabel } from "../../engine/league";
 import { veteranReportDate } from "../../engine/season";
 import type { GameState, SpringPlan } from "../../engine/types";
 import { POSITION_NAMES } from "../format";
+import { CoachRoomPanel } from "./CoachRoomPanel";
 import { useUi } from "../ui";
 
 const REASON: Record<NonNullable<SpringPlan["reason"]>, string> = {
@@ -149,6 +150,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
           </>
         )}
       </section>
+      <CoachRoomPanel game={game} changed={changed} />
     </section>
   );
 }
