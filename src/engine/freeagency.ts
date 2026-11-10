@@ -23,7 +23,7 @@ import { capHit, capSummary, invalidateRosters, teamPlayerIds, yearsExpIn } from
 import { dealCapHit, dealOf, leagueYear, minimumSalary, prorateFirstYear, REG_WEEKS, salaryCap, writeDeal, writeMinimumDeal } from "./contracts";
 import { addDays, ageOn, daysBetween, weekday } from "./dates";
 import { payCash } from "./finance";
-import { addMemo, apyLimit, guaranteeLimit, mode, noteDecision, openMemos, report } from "./delegation";
+import { addMemo, apyLimit, areaLimit, guaranteeLimit, mode, noteDecision, openMemos, report } from "./delegation";
 import { signer } from "./executives";
 import { gradeDeal } from "./grades";
 import { money, news, send } from "./inbox";
@@ -593,7 +593,7 @@ function cpuStreetSignings(state: GameState): void {
 function gmMayOffer(state: GameState, fa: FreeAgent, terms: OfferTerms, hit: number): boolean {
   if (state.negotiations[fa.player]?.status === "open") return false;
   const apy = terms.total / terms.years;
-  if (mode(state, "signings") === "delegate" && apy <= apyLimit(state) && terms.guaranteed <= guaranteeLimit(state)) {
+  if (mode(state, "signings") === "delegate" && apy <= Math.min(apyLimit(state), areaLimit(state, "signings")) && terms.guaranteed <= guaranteeLimit(state)) {
     const p = PLAYER_BY_ID[fa.player];
     // Material commitments carry the finance chief's countersignature in the record.
     if (apy >= salaryCap(state, leagueYear(state.date)) * 0.05) noteDecision(state, "signings", `Countersigned the offer to ${p.name}`, apy, signer(state, "CFO"), "policy", "Over 5% of the cap: the finance chief signs off on cash and cap.");

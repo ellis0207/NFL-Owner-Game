@@ -75,6 +75,9 @@ import { mediaDaily } from "./media";
 import { pressDaily } from "./press";
 import { collegeDaily, newCollege } from "./college";
 import { scoutingDaily } from "./scouting";
+import { treasuryDaily } from "./treasury";
+import { peopleDaily } from "./people";
+import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
 
 const KEY = RULES.keyDates;
@@ -575,7 +578,10 @@ export function advanceDay(state: GameState): void {
   leasesDaily(state);
   debtDaily(state);
   booksDaily(state);
+  treasuryDaily(state);
   officeDaily(state);
+  peopleDaily(state);
+  standingDaily(state);
   gameOpsDaily(state);
   analyticsDaily(state);
   analystsDaily(state);

@@ -22,6 +22,7 @@ import { PLAYER_BY_ID, RULES } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { gaussian, rngFor } from "./rng";
 import { chartValue, pickOverall, trades } from "./trades";
+import { invested } from "./treasury";
 import type { GameState } from "./types";
 
 export type AnalystRole = "director" | "football" | "quant" | "engineer" | "research";
@@ -91,7 +92,7 @@ export function analystEdge(state: GameState): number {
   const s = state.analysts?.staff;
   if (!s?.length) return 0;
   const avg = s.reduce((t, a) => t + a.skill, 0) / s.length;
-  return (avg - 65) / 45 + (state.analysts!.feeds.tracking ? 0.3 : 0);
+  return (avg - 65) / 45 + (state.analysts!.feeds.tracking ? 0.3 : 0) + (invested(state, "compute") ? 0.15 : 0);
 }
 
 export function hasFeed(state: GameState, f: Feed): boolean {

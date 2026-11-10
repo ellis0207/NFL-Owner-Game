@@ -9,6 +9,7 @@
 // real: capital calls come out of it, distributions go into it, and the
 // owner pays the taxes on the club's income (NFL clubs are pass-through
 // entities, so the club itself pays no income tax).
+import { late } from "./late";
 import { communityScore } from "./community";
 import { billions, business, businessChief, cashBalance, pnl, valuation } from "./business";
 import { leagueYear } from "./contracts";
@@ -294,7 +295,7 @@ export function scorecard(state: GameState, rec?: SeasonRecord): { scores: Recor
   if (prev && tenure(state, season) <= o.patience && played >= 8) titles = Math.max(titles, 45 + (w - prev[0]) * 4);
   // Money: the operating margin of the league year the season was played in.
   // A season in progress is judged on the business office's projection for the full year.
-  const p = !rec && leagueYear(state.date) === season ? projected(state) : pnl(state, season);
+  const p = !rec && leagueYear(state.date) === season ? late.projected(state) : pnl(state, season);
   const pRev = "totalRevenue" in p ? p.totalRevenue : p.revenue;
   const margin = pRev > 0 ? p.operating / pRev : 0;
   const profit = pRev > 0 ? 50 + (margin - 0.18) * 220 : 50;
@@ -322,7 +323,7 @@ export function scorecard(state: GameState, rec?: SeasonRecord): { scores: Recor
   const calls = b.ledger.filter((e) => e.year === year && e.cat === "capital" && e.note?.startsWith("Capital call")).length;
   const broke = debt(state).tests.filter((x) => !x.ok && leagueYear(x.date) === year).length;
   const called = debt(state).loans.some((x) => x.accelerated && leagueYear(x.accelerated) >= year);
-  const reserve = state.books ? reserveFor(state) : 0;
+  const reserve = state.books ? late.reserve(state) : 0;
   const stability = 70 - calls * 15 - broke * 8 - (called ? 20 : 0) + (cashBalance(state) >= reserve ? 10 : -10) - (o.personalDebt > 0 ? 10 : 0);
   const scores: Record<OwnerGoal, number> = {
     titles: clamp(titles), profit: clamp(profit), value: clamp(valueScore), community: clamp(community), reputation: clamp(reputation), stability: clamp(stability),
@@ -332,13 +333,6 @@ export function scorecard(state: GameState, rec?: SeasonRecord): { scores: Recor
   return { scores, overall, record: `${w}-${l}${t ? `-${t}` : ""}`, playoffs };
 }
 
-// Late-bound to avoid a load-order loop with books.ts.
-let reserveFor: (state: GameState) => number = () => 0;
-let projected: (state: GameState) => { revenue: number; operating: number } = () => ({ revenue: 0, operating: 0 });
-export function bindBooks(reserve: typeof reserveFor, projection: typeof projected): void {
-  reserveFor = reserve;
-  projected = projection;
-}
 
 export function scoreWord(x: number): string {
   return x >= 80 ? "Outstanding" : x >= 62 ? "Strong" : x >= 45 ? "Solid" : x >= 30 ? "Disappointing" : "Poor";

@@ -5,10 +5,14 @@ import { EXEC_KEYS, EXEC_ROLES, execRole } from "../../engine/executives";
 import { assignTask, consistency, decideMemo, holdMeeting, researchMemo, stability, TASKS } from "../../engine/memos";
 import type { GameState, Memo } from "../../engine/types";
 import { money } from "../format";
+import { FOLLOW_UPS, followUp, memoPriority, type FollowUp } from "../../engine/desk";
+import { Evidence } from "../Help";
+import { AGENDA_TOPICS, agendaOrder, setAgenda } from "../../engine/people";
 
 export function Desk({ game, changed }: { game: GameState; changed: () => void }) {
   const o = office(game);
-  const open = o.memos.filter((m) => m.status === "open" || m.status === "researching");
+  // Most urgent first: deadline, money at stake, strategic weight, and calls only the owner holds.
+  const open = o.memos.filter((m) => m.status === "open" || m.status === "researching").sort((a, b) => memoPriority(game, b).score - memoPriority(game, a).score);
   const closed = o.memos.filter((m) => m.status === "decided" || m.status === "lapsed").slice(0, 15);
   return (
     <div className="stack">
@@ -34,7 +38,7 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
     <div className="panel stack tight">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h3>{m.title}</h3>
-        <span className={urgent ? "bad" : "muted"}>Due {shortDate(m.deadline)}</span>
+        <span className={urgent ? "bad" : "muted"}>Due {shortDate(m.deadline)} · {memoPriority(game, m).why.join(", ")}</span>
       </div>
       <span className="muted">From {m.from}, {shortDate(m.date)}</span>
       {msg && <p className="notice">{msg}</p>}
@@ -61,7 +65,11 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
             ))}
             <button className="btn small" onClick={() => { setMsg(researchMemo(game, m.id)); changed(); }}>Ask for more research</button>
           </div>
-          <span className="muted">{m.options.map((op) => `${op.label}: ${op.effect}${op.evidence ? ` (${op.evidence})` : ""}`).join(" ")}</span>
+          <div className="btn-row">
+            <span className="muted">Follow up:</span>
+            {(Object.keys(FOLLOW_UPS) as FollowUp[]).map((k) => <button key={k} className="btn small" onClick={() => { setMsg(followUp(game, m.id, k)); changed(); }}>{FOLLOW_UPS[k]}</button>)}
+          </div>
+          {m.options.map((op, i) => <span key={i} className="muted">{op.label}: {op.effect} {op.evidence && <Evidence kind={op.evidence} />}</span>)}
         </>
       )}
     </div>
@@ -81,6 +89,7 @@ export function Meetings({ game, changed }: { game: GameState; changed: () => vo
             <h3>Management meeting</h3>
             <button className="btn small" onClick={() => { holdMeeting(game); changed(); }}>Call a meeting now</button>
           </div>
+          <Agenda game={game} changed={changed} />
           {!last && <span className="muted">The executives meet on the first of every month.</span>}
           {last && (
             <>
@@ -203,6 +212,25 @@ export function Record({ game }: { game: GameState }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** The owner's agenda: topics in order; the meeting turns only the first three into work. */
+function Agenda({ game, changed }: { game: GameState; changed: () => void }) {
+  const order = agendaOrder(game, AGENDA_TOPICS);
+  const move = (i: number, d: number) => {
+    const next = [...order];
+    const j = i + d;
+    if (j < 0 || j >= next.length) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    setAgenda(game, next);
+    changed();
+  };
+  return (
+    <div className="stack tight">
+      <span className="muted">Agenda (the first three topics get the time to become tasks):</span>
+      <ol>{order.map((t, i) => <li key={t}>{t} <button className="link" onClick={() => move(i, -1)} aria-label={`Move ${t} up`}>up</button> <button className="link" onClick={() => move(i, 1)} aria-label={`Move ${t} down`}>down</button></li>)}</ol>
     </div>
   );
 }

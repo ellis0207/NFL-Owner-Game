@@ -534,7 +534,7 @@ export function businessGame(state: GameState, g: ScheduledGame, r: GameResult):
     post(state, "concessions", gr.concessions * 1.15, `${label(g)} vs ${teamLabel(oppTeam)}`);
     post(state, "parking", gr.parking * 1.2, `${label(g)} vs ${teamLabel(oppTeam)}`);
     post(state, "merch", gr.merch * 2, `${label(g)}: playoff merchandise`);
-    post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), `${label(g)}`);
+    post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)) * (1 - cutShare(state, "gameday")), `${label(g)}`);
     b.gates.unshift({ game: g.id, date: g.date, opp: oppTeam, type: "POST", capacity: stadium.capacity, sold: stadium.capacity, seasonHolders: b.holders, singleSeats: 0, singleSold: 0, price: 0, heat: 3, revenue: Math.round(gr.concessions * 1.15 + gr.parking * 1.2 + gr.merch * 2) });
   }
   if (g.neutral && g.home === us && g.type === "REG") {
@@ -588,7 +588,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   post(state, "merch", mg.net, what);
   if (gr.sale.resaleFee) post(state, "tickets", gr.sale.resaleFee, `${what}: fees on resales through the team exchange`);
   post(state, "gateShare", -gr.tickets * GATE_SHARE, `${what}: 34% of the gate after the stadium deduction`);
-  post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)), what);
+  post(state, "gameday", -deptCost("gameday", b.budget.gameday, leagueYear(state.date)) * (1 - cutShare(state, "gameday")), what);
   const revenue = gr.tickets + gr.premium + gr.concessions + gr.parking + mg.net + gr.sale.resaleFee;
   const sl = gr.sale;
   b.gates.unshift({
@@ -961,7 +961,7 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   // Strength staff, nutrition, player support, equipment and field care.
   const prog = programsCost(state);
   if (prog) add("medical", -m(prog * inflation(year, 0.03)), "Performance and player support programs");
-  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year)), BUDGET_LEVELS[b.budget[d]]);
+  for (const d of ["marketing", "community", "medical", "facilities", "scouts"] as Dept[]) add(d, -m(deptCost(d, b.budget[d], year) * (1 - cutShare(state, d))), BUDGET_LEVELS[b.budget[d]]);
   add("benefits", -m(BENEFITS * grow));
   add("league", -m(LEAGUE_DUES * inflation(year)));
   // Upkeep rises with costs; rent and debt service are fixed by their leases and loans.
@@ -972,11 +972,16 @@ function monthAmounts(state: GameState, year: number): { cat: LedgerCat; amount:
   return out;
 }
 
+/** The share of a department laid off (treasury.ts); read here directly so the modules don't load each other. */
+function cutShare(state: GameState, dept: Dept | "business"): number {
+  return state.treasury?.cuts[dept] ?? 0;
+}
+
 /** An owner who built a company runs a tighter business office. */
 function opsFactor(state: GameState): number {
   // A good operations chief runs leaner, and a savings drive trims more for the rest of the year.
   const savings = state.office?.savings?.year === leagueYear(state.date) ? 1 - state.office.savings.rate : 1;
-  return (state.owner?.background === "industry" ? 0.95 : 1) * (1 - 0.03 * execBoost(state, "COO")) * savings;
+  return (state.owner?.background === "industry" ? 0.95 : 1) * (1 - 0.03 * execBoost(state, "COO")) * savings * (1 - cutShare(state, "business"));
 }
 
 /**

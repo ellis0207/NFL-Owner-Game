@@ -23,6 +23,7 @@ import { seasonAdv } from "./strategy";
 import { seasonTotals } from "./stats";
 import { teamSchemes } from "./staff";
 import { OFFENSE } from "./schemes";
+import { cutQuality, invested } from "./treasury";
 import type { GameState, Position } from "./types";
 
 export interface ScoutSplit { travel: number; video: number; medical: number; data: number }
@@ -66,10 +67,10 @@ export function setSplit(state: GameState, split: ScoutSplit): void {
 export function splitFactors(state: GameState): { gain: number; error: number; medicalAt: number; data: number } {
   const s = state.scoutOps?.split ?? DEFAULT_SPLIT;
   return {
-    gain: 0.8 + s.travel * 0.5,
+    gain: (0.8 + s.travel * 0.5) * cutQuality(state, "scouts"),
     error: (1.06 - s.video * 0.2) * (state.analysts?.feeds.film ? 0.96 : 1),
     medicalAt: Math.max(60, Math.min(92, 85 - (s.medical - 0.15) * 110)),
-    data: (1.15 - s.data) * (state.analysts?.feeds.college ? 0.85 : 1),
+    data: (1.15 - s.data) * (state.analysts?.feeds.college ? 0.85 : 1) * (invested(state, "software") ? 0.93 : 1),
   };
 }
 

@@ -18,6 +18,7 @@ import { TEAM_BY_ID } from "./league";
 import { addStory, MEDIA_BY_ID } from "./outlets";
 import { gaussian, rngFor } from "./rng";
 import { execBoost } from "./executives";
+import { consulting, restatements } from "./treasury";
 import type { CreditFacility, DebtState, GameState, LedgerCat, Loan, LoanKind, LoanOffer, LoanTerms } from "./types";
 
 const M = 1_000_000;
@@ -238,7 +239,8 @@ export function requestLoan(state: GameState, req: LoanRequest): string {
   for (const lender of LENDERS) {
     if (lev > lender.walkAway) continue;
     const years = Math.min(req.years, lender.maxYears);
-    const margin = pricedMargin(state, lender, { ...req, years }, lev);
+    // Financing advisers (treasury.ts) shave a little off every quote; a restated year adds to it.
+    const margin = pricedMargin(state, lender, { ...req, years }, lev) - (consulting(state, "financing") ? 0.0015 : 0) + restatements(state) * 0.001;
     // Fixed money is priced off the market rate plus a term premium.
     const rate = req.kind === "fixed" ? Math.round((marketRate(state) + margin + 0.002 + years * 0.0004) * 10000) / 10000 : margin;
     const offer: LoanOffer = {

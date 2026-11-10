@@ -12,6 +12,8 @@ import { leagueYear } from "../engine/contracts";
 import { careNote, comparables, responseNote } from "../engine/playercare";
 import type { GameState } from "../engine/types";
 import { money } from "./format";
+import { showEstimates } from "../engine/desk";
+import { Evidence } from "./Help";
 
 export function PlayerExtras({ game, id, changed }: { game: GameState; id: string; changed: () => void }) {
   const [said, setSaid] = useState<string | null>(null);
@@ -20,7 +22,8 @@ export function PlayerExtras({ game, id, changed }: { game: GameState; id: strin
   const ours = game.players[id]?.team === game.userTeam;
   const deal = game.contracts[id];
   const option = ours && deal?.option && !deal.option.exercised && !deal.option.declined ? deal.option : null;
-  const analysts = (game.analytics?.level ?? 0) > 0;
+  // Models are estimates; with information limited to confirmed facts they stay hidden.
+  const analysts = (game.analytics?.level ?? 0) > 0 && showEstimates(game);
   const model = analysts ? contractModel(game, id) : null;
   const sheetOk = canOfferSheet(game, id);
   const tender = game.offseason?.tenders[id];
@@ -38,7 +41,7 @@ export function PlayerExtras({ game, id, changed }: { game: GameState; id: strin
       )}
       {(model || analysts) && (
         <p className="muted">
-          {model && <>Analysts' contract model: worth about {money(model.apy)} a year (likely {money(model.range[0])} to {money(model.range[1])}), from {model.basis}. </>}
+          {model && <><Evidence kind="estimate" /> Analysts' contract model: worth about {money(model.apy)} a year (likely {money(model.range[0])} to {money(model.range[1])}), from {model.basis}. </>}
           {analysts && <>Availability model: expect him to miss about {availabilityModel(game, id)} games next season.</>}
         </p>
       )}

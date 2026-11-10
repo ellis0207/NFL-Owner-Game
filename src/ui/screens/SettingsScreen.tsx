@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { GameState, Settings } from "../../engine/types";
+import { PlaySettings } from "./PlaySettings";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
 
 export const TODAY_PANELS = ["Your desk", "Staff", "Business", "Media", "Inbox"] as const;
@@ -80,6 +81,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           ))}
         </div>
       </div>
+      <PlaySettings game={game} changed={changed} />
     </section>
   );
 }

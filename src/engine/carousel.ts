@@ -24,6 +24,7 @@ import { clearStaffCaches, staffEffects, teamStaff } from "./staff";
 import { MARKETS } from "./stadiums";
 import { standings } from "./standings";
 import { outlook } from "./trades";
+import { noteFiring } from "./people";
 import type { Coach, DefenseScheme, GameState, InterviewReport, OffenseScheme, StaffOffer, StaffProposal, StaffRole, StaffSearch } from "./types";
 
 const KEY = RULES.keyDates;
@@ -444,9 +445,11 @@ export function fire(state: GameState, id: string, quiet = false): void {
   if (!c.team || !c.role) return;
   const team = c.team;
   const role = c.role;
+  // The guaranteed share of what's left is owed (all of it unless the agreement said less).
   if (c.contract && c.contract.through >= nextSeason(state)) {
-    s.owed.push({ id, team, salary: c.contract.salary, through: c.contract.through });
+    s.owed.push({ id, team, salary: Math.round(c.contract.salary * (c.contract.guaranteed ?? 1)), through: c.contract.through });
   }
+  if (team === state.userTeam) noteFiring(state, id);
   vacate(state, id, "fired");
   if (!quiet) {
     const text = `The ${teamLabel(team)} fire ${ROLE_NAME[role]} ${c.name}`;

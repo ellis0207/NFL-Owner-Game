@@ -130,6 +130,16 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Running the office",
+    body: [
+      "The Business page's Treasury tab sets how fast the club pays suppliers and collects what it's owed, how strong its financial controls are, and which outside firms it engages. Audit findings arrive after the books close; fix them or they come back worse, and a material weakness means restating the year. Equipment and technology requests all draw on one capital pool: cash above the reserve plus half the unused credit line.",
+      "Layoffs save money from the next bill on, cost severance now and make the work worse in proportion; everyone who stays notices. The Journal tab shows each ledger entry as a debit and a credit, with a trial balance that must tie.",
+      "The Front office People tab plans succession, hires quality-control coaches (a small edge in each game plan, and future position coaches), promotes from within, and extends coaches with part of the salary guaranteed: a fired coach is owed only the guaranteed share. A head coach on the hot seat coaches scared; a public vote of confidence settles him, but firing him soon after is remembered.",
+      "Eight audiences judge you: fans, players, staff, sponsors, the community, the league office, the press and lenders. Saying the football people decide while making the calls yourself tends to leak. Elected officials follow their voters more than they follow you.",
+      "Figures carry labels: confirmed (from the books or the record), an estimate (a model or forecast, with a range) or an opinion (a staff judgment). Settings sets play modes, the information you see, a full realism preset, or a sandbox that can't be turned back.",
+    ],
+  },
+  {
     title: "The league",
     body: [
       "Owners vote on rule changes at the March meeting; most need 24 of 32 votes. Relationships with other owners help with votes, trades and hosting bids.",

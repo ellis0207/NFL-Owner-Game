@@ -20,6 +20,7 @@ import { send } from "./inbox";
 import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
+import { invested } from "./treasury";
 import type { GameState, Position } from "./types";
 
 export type Workload = "light" | "normal" | "heavy";
@@ -125,6 +126,7 @@ export function riskFactor(state: GameState, id: string, team: string, practice:
   if (ps?.fragile && ps.fragile > state.date) f *= 1.6;
   if (!ours(state, team)) return f;
   f *= 1 - adopted(state, "conditioning");
+  if (invested(state, "trainingGear")) f *= 0.98;
   const p = state.clubhouse?.programs;
   if (!p) return f;
   f *= [1.05, 1, 0.97, 0.94][p.strength] * (p.nutrition ? 1 : 1.03) * (p.equipment ? 0.98 : 1) * (p.field ? 0.98 : 1);

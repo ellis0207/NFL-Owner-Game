@@ -25,6 +25,7 @@ import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
 import { ELITE, production } from "./honors";
+import { cutQuality, invested } from "./treasury";
 import type { GameState, Position } from "./types";
 
 export interface Physician { name: string; role: "physician" | "orthopedist" | "trainer" | "rehab"; skill: number; since: number }
@@ -201,7 +202,8 @@ export function rehabFactor(state: GameState): number {
   if (!d) return 1;
   const r = d.filter((x) => x.role === "rehab" || x.role === "trainer");
   const skill = r.reduce((t, x) => t + x.skill, 0) / Math.max(1, r.length);
-  return Math.max(0.9, Math.min(1.08, 1.06 - (skill - 40) / 400));
+  // New equipment shortens long rehabs a little; a cut medical staff stretches them.
+  return Math.max(0.9, Math.min(1.08, 1.06 - (skill - 40) / 400)) * (invested(state, "medicalEquip") ? 0.97 : 1) * (2 - cutQuality(state, "medical"));
 }
 
 export const DOCTOR_COST = 400_000;

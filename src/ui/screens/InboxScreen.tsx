@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
 import type { GameState } from "../../engine/types";
+import { messagePriority } from "../../engine/desk";
 import { useUi } from "../ui";
 
 export function InboxScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
   const [urgent, setUrgent] = useState(false);
   // Urgent first puts unread messages that need a decision soon at the top.
-  const list = urgent ? game.inbox.slice().sort((a, b) => Number(!b.read && (b.priority ?? 1) >= 2) - Number(!a.read && (a.priority ?? 1) >= 2)) : game.inbox;
+  // "Most urgent first" ranks by kind, urgency, age and whether it's been read (desk.ts).
+  const list = urgent ? game.inbox.slice().sort((a, b) => messagePriority(game, b).score - messagePriority(game, a).score) : game.inbox;
   const [open, setOpen] = useState<string | null>(game.inbox[0]?.id ?? null);
   function toggle(id: string) {
     const item = game.inbox.find((i) => i.id === id)!;

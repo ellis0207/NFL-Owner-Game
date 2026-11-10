@@ -21,6 +21,7 @@ import { projectEffects } from "./projects";
 import { gaussian, rngFor } from "./rng";
 import { DRAW, MARKETS, STADIUM_BY_TEAM } from "./stadiums";
 import { standings, winPct } from "./standings";
+import { cutShare, invested } from "./treasury";
 import type { FanSegment, FanState, GameState, ScheduledGame, Survey, SurveyItem } from "./types";
 
 interface Metro {
@@ -122,7 +123,8 @@ export function fanDemand(state: GameState, team: string): number {
   const core = 1 + (f.core - f.core0) / 300;
   const sat = 1 + ((f.sat.casual + f.sat.families) / 2 - SAT0) / 500;
   // A promotion the analysts tested and the club adopted (analysts.ts).
-  return market * trust * core * sat * (2 - f.competition) * (1 + adopted(state, "promotion"));
+  // A promotion the club adopted, a concourse upgrade and marketing cuts (treasury.ts) move demand a little.
+  return market * trust * core * sat * (2 - f.competition) * (1 + adopted(state, "promotion")) * (invested(state, "concourse") ? 1.006 : 1) * (1 - cutShare(state, "marketing") * 0.08);
 }
 
 /** How strongly single-game buyers respond to price: the segment mix, local incomes, other entertainment and the economy. */

@@ -88,6 +88,18 @@ export function apyLimit(state: GameState): number {
 }
 
 /** Guaranteed money the GM may commit on one contract without the owner's sign-off; grows with the cap like the APY limit. */
+/** The owner's dollar limit for one area's delegated decisions (no limit when not set). */
+export function areaLimit(state: GameState, area: DecisionArea): number {
+  return office(state).limits.areas?.[area] ?? Infinity;
+}
+
+export function setAreaLimit(state: GameState, area: DecisionArea, amount: number | null): void {
+  const l = office(state).limits;
+  l.areas ??= {};
+  if (amount === null || !Number.isFinite(amount)) delete l.areas[area];
+  else l.areas[area] = Math.max(0, Math.round(amount));
+}
+
 export function guaranteeLimit(state: GameState): number {
   return (office(state).limits.guaranteed ?? 40 * M) * Math.pow(1.065, Math.max(0, RULES.season - 2026));
 }

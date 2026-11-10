@@ -16,6 +16,7 @@
 // The league year (mid-March to mid-March) is the fiscal year. When it ends
 // the books close, the auditors sign off, the owner pays tax on the club's
 // income (ownership.ts) and next year's budget is approved.
+import { late } from "./late";
 import { business, businessChief, cashBalance, CATEGORY, deferredRevenue, FINANCING, inflation, operatingEstimate, pnl, post, revenueEstimate, yearPlan } from "./business";
 import { dealOf, dealYear, leagueYear, leagueYearStart, REG_WEEKS, salaryCap } from "./contracts";
 import { addDays, daysBetween } from "./dates";
@@ -23,7 +24,7 @@ import { coverage, debt, debtService, drawn, facilityRate, leverage, loanRate, o
 import { cashOwedThisYear, cashNextYear } from "./finance";
 import { money, send } from "./inbox";
 import { RULES, SCHEDULE, TEAMS } from "./league";
-import { bindBooks, closeOwnerYear, equityAtPurchase, owner } from "./ownership";
+import { closeOwnerYear, equityAtPurchase, owner } from "./ownership";
 import { PROJECT_BY_ID } from "./projects";
 import type { BooksState, GameState, LedgerCat, YearClose } from "./types";
 
@@ -405,7 +406,8 @@ export function projectedYear(state: GameState): { revenue: number; operating: n
   for (const r of budgetVsActual(state, leagueYear(state.date))) full[r.cat] = r.projected;
   return planTotals(full);
 }
-bindBooks(reserveTarget, projectedYear);
+late.reserve = reserveTarget;
+late.projected = projectedYear;
 
 export function setReserve(state: GameState, months: number): void {
   books(state).reserveMonths = Math.max(0, Math.min(6, Math.round(months)));
