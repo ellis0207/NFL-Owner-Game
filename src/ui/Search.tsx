@@ -3,7 +3,7 @@ import { staff } from "../engine/coaches";
 import { EXEC_ROLES } from "../engine/executives";
 import { PLAYERS, TEAMS, teamLabel } from "../engine/league";
 import type { GameState } from "../engine/types";
-import type { Screen } from "./GameShell";
+import { PAGE_HINT, SCREENS, groupOf, pageLabel, type Screen } from "./nav";
 import { useUi } from "./ui";
 
 interface Hit { label: string; detail: string; go: () => void }
@@ -16,8 +16,13 @@ export function SearchBox({ game, go }: { game: GameState; go: (s: Screen) => vo
     const t = q.trim().toLowerCase();
     if (t.length < 2) return [];
     const out: Hit[] = [];
+    // Pages come first, so typing "cap" or "tickets" jumps straight there.
+    for (const s of SCREENS) {
+      if (out.length >= 3) break;
+      if (`${s} ${pageLabel(s)} ${PAGE_HINT[s]}`.toLowerCase().includes(t)) out.push({ label: pageLabel(s), detail: `${groupOf(s).label} page`, go: () => go(s) });
+    }
     for (const p of PLAYERS) {
-      if (out.length >= 8) break;
+      if (out.length >= 11) break;
       if (!p.name.toLowerCase().includes(t)) continue;
       const st = game.players[p.id];
       if (!st) continue;
@@ -40,7 +45,7 @@ export function SearchBox({ game, go }: { game: GameState; go: (s: Screen) => vo
   }, [q, game, go, ui]);
   return (
     <div className="search-box">
-      <input type="search" aria-label="Search players, staff, executives, teams and messages" placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)}
+      <input type="search" aria-label="Search pages, players, staff, executives, teams and messages" placeholder="Search pages, players, staff…" value={q} onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Escape") setQ(""); if (e.key === "Enter" && hits[0]) { hits[0].go(); setQ(""); } }} />
       {hits.length > 0 && (
         <div className="search-results" role="listbox">

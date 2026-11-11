@@ -6,10 +6,14 @@ export interface Prefs {
   hidden: string[];
   /** Step through your own games a drive at a time when you play them from the Today page. */
   followGames: boolean;
+  /** Sidebar sections the owner has folded away. */
+  navClosed: string[];
+  /** Light or dark pages, or follow the device. */
+  theme: "auto" | "light" | "dark";
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, navClosed: [], theme: "auto" };
 
 export function readPrefs(): Prefs {
   try {
@@ -34,4 +38,6 @@ export function applyPrefs(p: Prefs = readPrefs()): void {
   root.style.fontSize = `${Math.round(16 * p.textSize)}px`;
   if (p.contrast === "high") root.setAttribute("data-contrast", "high");
   else root.removeAttribute("data-contrast");
+  if (p.theme === "light" || p.theme === "dark") root.setAttribute("data-theme", p.theme);
+  else root.removeAttribute("data-theme");
 }

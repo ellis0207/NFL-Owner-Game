@@ -85,12 +85,13 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 | Economy and shocks | `economy.ts` (national economy monthly with condition-driven recessions, metro economies, `demandFactor` (also sets `fans.economy`) / `corporateFactor` / `wageFactor` / `constructionFactor` / `rateLean` in `marketRate` / `broadcastLean` in the streaming walk / `multipleShift` in `valuation`, `cpiFor`/`realDollars`, `forecastBand` in the books forecast, `scenario`, `VOLATILITY` setting; `economyDaily` before `businessDaily`), `shocks.ts` (stadium disruptions with `disruptGate` in `homeGate`, revenue and cost shocks, insurance covers priced by `riskScore`, the `insurance` ledger line offset on the stadium line, claims with disputes, `liabilityShare` read by legal.ts, distress and league supervision blocking distributions; `shocksDaily` after `businessDaily`). `longrun-report` takes `RECESSION=<year>` to force a downturn | `economy.test.ts` |
 | Labor | `labor.ts` (the union, the 2020 CBA through 2030, talks with owners' and union proposals and `dealTerms` (the 18th game only for a 49.5%+ share), our stance and priorities weighted by the `labor` committee seat, hazard-paced deals (`laborOdds`: ~60% before the deadline, ~30% offseason lockout, ~5% lost games), lockouts that skip `contractsDaily`/`faDaily`/`tradesDaily`/`springDaily`/`campDaily` and block `checkOffer`/`proposeTrade`/`canSignAtMinimum`, cancelled games via `cancelGame` in `playGame` with deposit refunds and `distributionCut`, the 24-vote and ratification, `laborDrag` in the economy factors, grievances; `forceDeal`/`forceLockout` for tests; `laborDaily` after `leagueOfficeDaily`), `cbaterms.ts` (leaf: `termsFor(year)` read by `projectedCap`, `minimumSalary`, `rookieScale`, the benefits line, training risk/growth and the cash floor; bound by `bindLabor` in `applySeason`) | `labor.test.ts` |
 
-Settings (`state.settings`): `capRules`, `finances`, `scouting` (`fogOf` in `staff.ts` widens only the user's reads), `ironman`, `pause` (multi-day sims in `season.ts`). Display preferences (text size, contrast, Today panels) live in browser storage via `ui/prefs.ts`.
+Settings (`state.settings`): `capRules`, `finances`, `scouting` (`fogOf` in `staff.ts` widens only the user's reads), `ironman`, `pause` (multi-day sims in `season.ts`). Display preferences (text size, contrast, theme, folded sidebar groups, Today panels) live in browser storage via `ui/prefs.ts`.
 
-UI: `src/ui/GameShell.tsx` holds the nav (`SCREENS`) and renders
+UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
+for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,
 `PlayerPanel.tsx`, `ContractTable.tsx`. A new screen is a file in `screens/`,
-a name in `SCREENS`, and one render line.
+a name in a `NAV` group plus a `PAGE_HINT` line, and one render line.
 
 ## Reading big files
 

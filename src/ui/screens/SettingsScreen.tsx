@@ -70,6 +70,13 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
               {[0.9, 1, 1.15, 1.3, 1.5].map((v) => <option key={v} value={v}>{Math.round(v * 100)}%</option>)}
             </select>
           </label>
+          <label className="field"><span className="label">Theme</span>
+            <select value={prefs.theme} onChange={(e) => save({ ...prefs, theme: e.target.value as typeof prefs.theme })}>
+              <option value="auto">Match this device</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
           <label className="toggle">
             <input type="checkbox" checked={prefs.contrast === "high"} onChange={(e) => save({ ...prefs, contrast: e.target.checked ? "high" : "normal" })} />
             <span><strong>High contrast</strong><br /><span className="muted">Darker secondary text and table lines.</span></span>

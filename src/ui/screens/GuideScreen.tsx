@@ -2,6 +2,13 @@
 // anyone new to the cap, club finance or how a league is governed.
 const SECTIONS: { title: string; body: string[] }[] = [
   {
+    title: "Getting around",
+    body: [
+      "The sidebar groups every page by part of the job: your Desk (today, the calendar, inbox and media), the Team, Roster building, the Draft, the Owner's office (including the Business page), the League, and the Game itself. Fold away a group you rarely use by clicking its name; a folded group still shows how many things in it are waiting on you.",
+      "The search box finds pages as well as people: type \"cap\", \"tickets\" or a player's name. On a phone, the Menu button opens the same list, and the other pages in the section you're in sit just under the date.",
+    ],
+  },
+  {
     title: "What you see and what you don't",
     body: [
       "You never see a player's rating. You see what an owner sees: stats, contracts, and what your coaches and scouts tell you. Better staff give you better reads, and a staff can be wrong.",
