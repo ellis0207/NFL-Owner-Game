@@ -35,7 +35,7 @@ import { GameWeekScreen } from "./screens/GameWeekScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { SearchBox } from "./Search";
-import { applyPrefs, readPrefs } from "./prefs";
+import { applyPrefs, readPrefs, writePrefs } from "./prefs";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
 import { SaveScreen } from "./screens/SaveScreen";
@@ -50,9 +50,9 @@ import { AgreementsScreen } from "./screens/AgreementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
+import { NAV, PAGE_HINT, groupOf, pageLabel, type Screen } from "./nav";
 
-const SCREENS = ["Today", "Calendar", "Inbox", "Media", "Schedule", "Standings", "Roster", "Camp", "Free agents", "Trades", "College", "Scouting", "Draft", "Stats", "Contracts", "Business", "Owner", "Front office", "Football", "Agreements", "Legal", "Reports", "Analytics", "Clubhouse", "Game week", "Staff", "Cap", "League", "History", "Owners", "Settings", "Guide", "Save"] as const;
-export type Screen = (typeof SCREENS)[number];
+export type { Screen } from "./nav";
 
 export function phaseLabel(state: GameState): string {
   const d = state.date;
@@ -84,6 +84,19 @@ interface Props {
 
 export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [screen, setScreen] = useState<Screen>("Today");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [closed, setClosed] = useState<string[]>(() => readPrefs().navClosed);
+  const toggleGroup = (id: string) => {
+    const next = closed.includes(id) ? closed.filter((c) => c !== id) : [...closed, id];
+    setClosed(next);
+    writePrefs({ ...readPrefs(), navClosed: next });
+  };
+  // Changing pages closes the phone menu and starts the new page at the top.
+  const go = useCallback((s: Screen) => {
+    setScreen(s);
+    setMenuOpen(false);
+    window.scrollTo?.(0, 0);
+  }, []);
   // Text size and contrast are this browser's preferences.
   useEffect(() => applyPrefs(), []);
   const [busy, setBusy] = useState(false);
@@ -95,7 +108,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const openPlayer = useCallback((id: string) => { setTalks(null); setPlayer(id); }, []);
   const openTalks = useCallback((id: string) => { setPlayer(null); setTalks(id); }, []);
   const [tradeStart, setTradeStart] = useState<TradeStart | null>(null);
-  const openTrade = useCallback((id: string) => { setPlayer(null); setTradeStart({ player: id }); setScreen("Trades"); }, []);
+  const openTrade = useCallback((id: string) => { setPlayer(null); setTradeStart({ player: id }); go("Trades"); }, []);
   const [prospect, setProspect] = useState<string | null>(null);
   const [school, setSchool] = useState<string | null>(null);
   const openProspect = useCallback((id: string) => { setSchool(null); setProspect(id); }, []);
@@ -120,6 +133,16 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const offseason = isSeasonOver(game) || summer;
   const left = pendingEvents(game).length;
   const waiting = draftWaiting(game);
+  // Counts beside page names: things that are waiting on the owner.
+  const badges: Partial<Record<Screen, number | string>> = {};
+  if (unread) badges.Inbox = unread;
+  if (pressAsks) badges.Media = pressAsks;
+  if (tradeOffers) badges.Trades = tradeOffers;
+  if (bookings) badges.Business = bookings;
+  if (memos) badges["Front office"] = memos;
+  if (onTheClock(game)) badges.Draft = "On the clock";
+  const attention = unread + pressAsks + tradeOffers + bookings + memos + (badges.Draft ? 1 : 0);
+  const group = groupOf(screen);
 
   function step(fn: (s: GameState) => void) {
     setBusy(true);
@@ -134,26 +157,40 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   return (
     <UiContext.Provider value={ui}>
     <div className="shell">
-      <aside className="side">
-        <div>
-          <div className="team-city">{team.city}</div>
-          <div className="team-name">{team.name}</div>
+      <aside className={`side${menuOpen ? " open" : ""}`}>
+        <div className="side-team">
+          <div>
+            <div className="team-city">{team.city}</div>
+            <div className="team-name">{team.name}</div>
+          </div>
+          <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="main-nav" onClick={() => setMenuOpen((o) => !o)}>
+            {menuOpen ? "Close" : "Menu"}{!menuOpen && attention > 0 && <span className="badge">{attention}</span>}
+          </button>
         </div>
-        <SearchBox game={game} go={setScreen} />
-        <nav aria-label="Front office">
-          {SCREENS.map((s) => (
-            <button key={s} aria-current={screen === s ? "page" : undefined} onClick={() => setScreen(s)}>
-              {s}
-              {s === "Inbox" && unread > 0 && <span className="badge">{unread}</span>}
-              {s === "Media" && pressAsks > 0 && <span className="badge">{pressAsks}</span>}
-              {s === "Trades" && tradeOffers > 0 && <span className="badge">{tradeOffers}</span>}
-              {s === "Business" && bookings > 0 && <span className="badge">{bookings}</span>}
-              {s === "Front office" && memos > 0 && <span className="badge">{memos}</span>}
-              {s === "Draft" && onTheClock(game) && <span className="badge">On the clock</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="owner">Owner: {game.ownerName}</div>
+        <div className="side-body" id="main-nav">
+          <SearchBox game={game} go={go} />
+          <nav aria-label="Front office">
+            {NAV.map((g) => {
+              const shut = closed.includes(g.id) && !(g.pages as readonly Screen[]).includes(screen);
+              const waiting = (g.pages as readonly Screen[]).reduce((n, p) => n + (typeof badges[p] === "number" ? (badges[p] as number) : badges[p] ? 1 : 0), 0);
+              return (
+                <div key={g.id} className="nav-group">
+                  <button className="nav-head" aria-expanded={!shut} onClick={() => toggleGroup(g.id)}>
+                    <span>{g.label}</span>
+                    {shut && waiting > 0 ? <span className="badge">{waiting}</span> : <span className="chev" aria-hidden="true" />}
+                  </button>
+                  {!shut && (g.pages as readonly Screen[]).map((s) => (
+                    <button key={s} className="nav-item" aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>
+                      <span>{pageLabel(s)}</span>
+                      {badges[s] !== undefined && <span className="badge">{badges[s]}</span>}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </nav>
+          <div className="owner">Owner: {game.ownerName}</div>
+        </div>
       </aside>
       <div className="main">
         {game.sandbox && <div className="sandbox-banner" role="note">Sandbox game: unlimited money and no cap; results here are kept apart from realism games.</div>}
@@ -185,7 +222,20 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
         </header>
         <main className="content">
-          {screen === "Today" && <TodayScreen game={game} go={setScreen} busy={busy} play={(id, gameId) => step((s) => {
+          <div className="page-head">
+            <span className="crumb">{group.label}<span aria-hidden="true"> / </span>{pageLabel(screen)}</span>
+            <span className="hint">{PAGE_HINT[screen]}</span>
+          </div>
+          {group.pages.length > 1 && (
+            <div className="section-pages" role="group" aria-label={group.label}>
+              {(group.pages as readonly Screen[]).map((s) => (
+                <button key={s} aria-pressed={screen === s} onClick={() => go(s)}>
+                  {pageLabel(s)}{badges[s] !== undefined && <span className="badge">{badges[s]}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
             // Your own game can come in a drive at a time.
             if (gameId && s.pbp?.[gameId] && readPrefs().followGames) openBox(gameId, true);

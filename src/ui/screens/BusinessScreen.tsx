@@ -29,9 +29,17 @@ import { EconomyRisk } from "./BusinessEconomy";
 import { NewStadium } from "./BusinessNewStadium";
 import { International, Relocation } from "./BusinessMarkets";
 import { expectLabel } from "../../engine/review";
+import { GroupedTabs } from "../Tabs";
 
 const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium", "Relocation", "International"] as const;
 type Tab = (typeof TABS)[number];
+// The tabs by part of the business, so the page reads like a table of contents.
+const GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: "Money", tabs: ["Overview", "Books", "Journal", "Treasury", "Plan", "Budget", "Financing", "League"] },
+  { label: "Revenue", tabs: ["Tickets", "Fans", "Sponsors", "Store", "Media"] },
+  { label: "Operations", tabs: ["Game day", "Stadium", "Buildings", "Projects", "Community"] },
+  { label: "Growth and risk", tabs: ["Economy and risk", "New stadium", "Relocation", "International"] },
+];
 
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const offers = business(game).events.filter((e) => e.status === "offered").length;
@@ -39,14 +47,9 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
   const [tab, setTab] = useState<Tab>(offers ? "Stadium" : "Overview");
   return (
     <section className="stack">
-      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2>Business</h2>
-        <div className="tabs" role="group" aria-label="Business">
-          {TABS.map((t) => (
-            <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}{t === "Stadium" && offers ? ` (${offers})` : t === "Sponsors" && deals ? ` (${deals})` : ""}</button>
-          ))}
-        </div>
-      </div>
+      <h2>Business</h2>
+      <GroupedTabs label="Business" groups={GROUPS} value={tab} onChange={setTab}
+        note={(t) => t === "Stadium" && offers ? ` (${offers})` : t === "Sponsors" && deals ? ` (${deals})` : ""} />
       {tab === "New stadium" && <NewStadium game={game} changed={changed} />}
       {tab === "Relocation" && <Relocation game={game} changed={changed} />}
       {tab === "International" && <International game={game} changed={changed} />}

@@ -16,6 +16,12 @@ season day by day through Super Bowl LXI, then run the 2027 offseason and the
 2027 draft. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
 
+The pages are grouped in the sidebar by part of the job (Desk, Team, Roster
+building, Draft, Owner's office, League, Game); groups fold away and still
+show what's waiting in them. The search box finds pages as well as people.
+On a phone the sidebar becomes a Menu button with the section's other pages
+under the date. Settings has a light, dark or device theme.
+
 Every game is simulated play by play, with box scores and per-game stats for
 preseason, regular season and playoffs, plus season totals and league leaders. Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
@@ -747,7 +753,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
-- `src/ui/` React screens.
+- `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
 ## College data

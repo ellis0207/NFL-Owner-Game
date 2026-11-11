@@ -2,7 +2,11 @@ import { createRoot } from "react-dom/client";
 import type { GameState } from "./engine/types";
 import { migrate } from "./save/codec";
 import { App } from "./ui/App";
+import { applyPrefs } from "./ui/prefs";
 import "./ui/styles.css";
+
+// Text size, contrast and theme apply from the first screen.
+applyPrefs();
 
 type Hot = { ready?: (fn: (data: unknown) => void) => void; data?: unknown };
 const hot = (window as unknown as { claude?: { hot?: Hot } }).claude?.hot;
