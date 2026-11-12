@@ -466,26 +466,26 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
   .bug-time { font-size: 1.25rem; }
   .bug-dd { font-size: 1.1rem; }
 }
-.field { width: 100%; height: auto; display: block; border-radius: 8px; box-shadow: var(--shadow); background: #2f7a3d; }
-.field .turf { fill: #2f7a3d; }
-.field .turf.alt { fill: #2a7038; }
-.field .yard { stroke: rgb(255 255 255 / 0.75); stroke-width: 2; }
-.field .goal { stroke: #fff; stroke-width: 5; }
-.field .hash line { stroke: rgb(255 255 255 / 0.6); stroke-width: 1.5; }
-.field .yardno text { fill: rgb(255 255 255 / 0.8); font-family: var(--font-display); font-size: 44px; font-weight: 600; text-anchor: middle; }
-.field .endzone { font-family: var(--font-display); font-size: 58px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; text-anchor: middle; dominant-baseline: central; }
-.field .post { stroke: #f5c518; stroke-width: 6; stroke-linecap: round; }
-.field .edge { fill: none; stroke: #fff; stroke-width: 3; }
-.field .drive { fill: rgb(255 255 255 / 0.16); }
-.field .los { stroke: #2d7ff9; stroke-width: 5; }
-.field .togain { stroke: #f5c518; stroke-width: 5; }
-.field .trail { fill: none; stroke: #fff; stroke-width: 5; stroke-dasharray: 12 8; stroke-linecap: round; }
-.field .trail.score { stroke: #ffd84a; }
-.field .trail.turnover { stroke: #ff8a7d; }
-.field .ball ellipse { fill: #7a4521; stroke: #fff; stroke-width: 2.5; }
-.field .ball line { stroke: #fff; stroke-width: 2.5; }
-.field .tag text { font-family: var(--font-display); font-size: 24px; font-weight: 700; text-anchor: middle; }
-@media (prefers-reduced-motion: no-preference) { .field .ball { transition: transform 450ms ease-out; } }
+.gridiron { width: 100%; height: auto; display: block; border-radius: 8px; box-shadow: var(--shadow); background: #2f7a3d; }
+.gridiron .turf { fill: #2f7a3d; }
+.gridiron .turf.alt { fill: #2a7038; }
+.gridiron .yard { stroke: rgb(255 255 255 / 0.75); stroke-width: 2; }
+.gridiron .goal { stroke: #fff; stroke-width: 5; }
+.gridiron .hash line { stroke: rgb(255 255 255 / 0.6); stroke-width: 1.5; }
+.gridiron .yardno text { fill: rgb(255 255 255 / 0.8); font-family: var(--font-display); font-size: 44px; font-weight: 600; text-anchor: middle; }
+.gridiron .endzone { font-family: var(--font-display); font-size: 58px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; text-anchor: middle; dominant-baseline: central; }
+.gridiron .post { stroke: #f5c518; stroke-width: 6; stroke-linecap: round; }
+.gridiron .edge { fill: none; stroke: #fff; stroke-width: 3; }
+.gridiron .drive { fill: rgb(255 255 255 / 0.16); }
+.gridiron .los { stroke: #2d7ff9; stroke-width: 5; }
+.gridiron .togain { stroke: #f5c518; stroke-width: 5; }
+.gridiron .trail { fill: none; stroke: #fff; stroke-width: 5; stroke-dasharray: 12 8; stroke-linecap: round; }
+.gridiron .trail.score { stroke: #ffd84a; }
+.gridiron .trail.turnover { stroke: #ff8a7d; }
+.gridiron .ball ellipse { fill: #7a4521; stroke: #fff; stroke-width: 2.5; }
+.gridiron .ball line { stroke: #fff; stroke-width: 2.5; }
+.gridiron .tag text { font-family: var(--font-display); font-size: 24px; font-weight: 700; text-anchor: middle; }
+@media (prefers-reduced-motion: no-preference) { .gridiron .ball { transition: transform 450ms ease-out; } }
 .cast-wp { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center; font-size: 0.85rem; color: var(--muted); }
 .cast-wp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunk); gap: 2px; }
 .cast-play { display: grid; gap: 0.25rem; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--muted); border-radius: var(--radius); padding: 0.7rem 0.9rem; min-height: 5.2rem; align-content: start; }
