@@ -163,6 +163,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Your own money",
+    body: [
+      "Owner > Money holds everything outside the club: cash, stocks, bonds, real estate and your own businesses. They move month by month with the economy; recessions hit stocks and businesses hardest. Stocks and bonds sell in a day, property takes about three months and a business about six, at a discount.",
+      "You can borrow against your holdings at the market rate plus two points, but a deep fall in prices brings a margin call. Watch how much of your net worth is the team: a stake sale on the Ownership page spreads it out. The Money tab also compares your stake with what the same money would have earned in stocks.",
+      "A family office runs your holdings for a fee; a family trust keeps money in the family but out of the club's reach. Your own foundation, separate from the club's, cuts your taxes and pays out 5% a year in grants. Choose how public to be, and expect counsel's memos when one of your companies crosses paths with the club.",
+    ],
+  },
+  {
     title: "Partners and the board",
     body: [
       "You start owning the whole club. The Ownership page sells a stake: your shares (the money comes to you, less capital-gains tax) or new shares (the money goes into the club and everyone is diluted). Bids come back as a memo on Today, and the league vets every buyer. You must keep at least 30%, and private-equity funds can hold at most 10% together.",

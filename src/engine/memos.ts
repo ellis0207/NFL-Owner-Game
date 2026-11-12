@@ -38,6 +38,7 @@ import { consulting, invested } from "./treasury";
 import { agendaOrder, mandateScore, micromanagement, remember } from "./people";
 import { resolveStandingMemo } from "./standing";
 import { lapseInvestorMemo, resolveInvestorMemo } from "./investors";
+import { resolveWealthMemo } from "./wealth";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -143,7 +144,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "incident":
       return resolveIncident(state, p, choice);
     case "general":
-      return p.investors ? resolveInvestorMemo(state, m, choice) : resolveStandingMemo(state, m, choice);
+      return p.investors ? resolveInvestorMemo(state, m, choice) : p.wealth ? resolveWealthMemo(state, m, choice) : resolveStandingMemo(state, m, choice);
     default:
       return null;
   }

@@ -1911,6 +1911,7 @@ export interface GameState {
   /** Who the owner is: wealth, style, goals and the scorecard of each season (ownership.ts). */
   owner?: OwnerState;
   investors?: InvestorsState;
+  wealth?: WealthState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
@@ -2482,6 +2483,35 @@ export interface InvestorsState {
   bridges: { id: string; settled?: boolean }[];
   /** Capital calls less distributions of partners who have since left. */
   formerNet?: number;
+  log: { date: string; text: string }[];
+}
+
+// ---- The owner's own wealth (wealth.ts) ----
+
+export type Holding = "stocks" | "bonds" | "realEstate" | "business";
+
+export interface WealthState {
+  /** The owner's outside holdings by kind; together they make up `owner.outside`. */
+  holdings: Record<Holding, number>;
+  /** Sales of slow assets waiting to close: the cash lands on the date. */
+  pending: { kind: Holding; amount: number; proceeds: number; date: string }[];
+  /** A stock-market index since the owner took over (1 = then). */
+  index: number;
+  lastRealEstate?: number;
+  /** What the owner's money would be worth in the stock market instead, and the flows already counted. */
+  alt: number;
+  seen: { putIn: number; takenOut: number; proceeds: number };
+  /** A family office managing the holdings, and money moved into a family trust (no longer the owner's to spend). */
+  familyOffice: boolean;
+  trust: number;
+  /** The owner's own foundation, separate from the club's. */
+  foundation: { endowment: number; focus: "education" | "health" | "city" | "arts"; givenThisYear: number; granted: number };
+  /** How public the owner is, and the public's sense of them (0-100). */
+  visibility: "private" | "engaged" | "spotlight";
+  profile: number;
+  conflicts: { date: string; what: string; outcome: string }[];
+  /** Monthly net worth readings. */
+  history: { month: string; worth: number; team: number }[];
   log: { date: string; text: string }[];
 }
 

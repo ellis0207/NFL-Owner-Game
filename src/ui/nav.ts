@@ -44,7 +44,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   College: "College football, teams and polls",
   Scouting: "Assignments and scouting reports",
   Draft: "The draft room and boards",
-  Owner: "Your goals, money and standing",
+  Owner: "Your goals, standing, and your own money: investments, debt, family trust, foundation and public profile",
   Ownership: "Partners, the board, stake sales and returns",
   "Front office": "Executives, memos, meetings and culture",
   Business: "Books, tickets, sponsors, stadium and markets",

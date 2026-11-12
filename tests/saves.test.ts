@@ -329,6 +329,20 @@ describe("saves from older versions", () => {
     expect(ownerShare(old)).toBe(1);
   }, 120_000);
 
+  it("a save with the owner's wealth keeps its trust, foundation and pending sale; older saves split their holdings on load", async () => {
+    const state = load("pr51-2026-10-10");
+    expect(state.wealth!.trust).toBe(400_000_000);
+    expect(state.wealth!.pending.length).toBe(1);
+    for (let i = 0; i < 25; i++) advanceDay(state);
+    expect(state.wealth!.history.length).toBeGreaterThan(0);
+    const back = await decompress(await compress(state));
+    expect(back.wealth!.familyOffice).toBe(true);
+    const old = load("pr50-2026-10-10");
+    expect(old.wealth).toBeUndefined();
+    for (let i = 0; i < 25; i++) advanceDay(old);
+    expect(Math.round(Object.values(old.wealth!.holdings).reduce((t, v) => t + v, 0))).toBe(old.owner!.outside);
+  }, 120_000);
+
   it("an older save starts keeping play-by-play with its next games", () => {
     const state = load("pr32-2026-11-15");
     expect(state.pbp).toBeUndefined();

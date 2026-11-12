@@ -11,11 +11,12 @@
 // entities, so the club itself pays no income tax).
 import { late } from "./late";
 import { ownerShare } from "./investors";
+import { giftDeduction } from "./wealth";
 import { communityScore } from "./community";
 import { billions, business, businessChief, cashBalance, pnl, valuation } from "./business";
 import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
-import { acquisitionLoan, debt, marketRate, totalDebt } from "./debt";
+import { acquisitionLoan, debt, totalDebt } from "./debt";
 import { money, send } from "./inbox";
 import { RULES, TEAM_BY_ID } from "./league";
 import { owners, changeRapport } from "./owners";
@@ -244,10 +245,12 @@ export function closeOwnerYear(state: GameState, year: number, clubIncome: numbe
     o.carryforward -= used;
     taxable -= used;
   }
+  // Gifts to the owner's own foundation come off what's left, up to the limit (wealth.ts).
+  taxable -= giftDeduction(state, taxable);
   const tax = Math.round(taxable * TAX_RATE);
   o.taxesPaid += tax;
-  o.outside = Math.round(o.outside * 1.05);
-  o.liquid += Math.round(o.liquid * 0.03) - tax - Math.round(o.personalDebt * (marketRate(state) + 0.025));
+  // Holdings, cash interest and personal-debt interest move month by month in wealth.ts.
+  o.liquid -= tax;
   if (o.liquid < 0) {
     o.personalDebt += -o.liquid;
     o.liquid = 0;
