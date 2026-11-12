@@ -174,7 +174,10 @@ export function injuryDiscount(state: GameState, id: string): number {
 // ---- Market curves ----
 
 interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number; floorViews: number[]; floorShares: number[] }
-const curveCache = new WeakMap<GameState, Record<string, Curve>>();
+// Kept for one game day at most: the curves read rosters and the league's view of players,
+// which move from day to day, and a save loaded tomorrow has to price players the same
+// way a game left running would.
+const curveCache = new WeakMap<GameState, { date: string; curves: Record<string, Curve> }>();
 
 const VETERAN_KINDS = new Set(["veteran", "extension", "franchise", "transition"]);
 
@@ -208,8 +211,9 @@ function capAtSigning(state: GameState, deal: Deal): number {
  * a new top deal resets the market.
  */
 function curves(state: GameState): Record<string, Curve> {
-  let c = curveCache.get(state);
-  if (c) return c;
+  const kept = curveCache.get(state);
+  if (kept && kept.date === state.date) return kept.curves;
+  let c: Record<string, Curve>;
   const pts: Record<string, { v: number; s: number }[]> = {};
   for (const p of PLAYERS) {
     const deal = dealOf(state, p.id);
@@ -245,7 +249,7 @@ function curves(state: GameState): Record<string, Curve> {
     const near = NEIGHBORS[pos as Position] ?? [];
     if (near.length) curve.spill = 1 + 0.25 * near.reduce((sum, n) => sum + heat(n) - 1, 0) / near.length;
   }
-  curveCache.set(state, c);
+  curveCache.set(state, { date: state.date, curves: c });
   return c;
 }
 

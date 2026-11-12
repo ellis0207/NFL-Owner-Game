@@ -1,0 +1,7 @@
+{
+  "team": "DET",
+  "seed": 3,
+  "until": "franchiseTagWindowOpens",
+  "era": null,
+  "errors": ["duplicate-id: memos and causes made on one day after the lists were capped shared ids (fixed in PR #61)"]
+}

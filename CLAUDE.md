@@ -141,6 +141,19 @@ Calibration targets (what "healthy" looked like when each system shipped):
   CPU tags a year; market tops steady (QB top deal at most ~25% of the cap,
   set by `marketCeiling` in `market.ts`); league-wide player cash near 100%
   of the cap; every team at or over zero space at each rollover.
+- Release checks (`docs/balance.md`): `src/engine/invariants.ts` lists hard
+  errors (player on an unknown team, a contract for another team, more than 53
+  in season, non-numbers in cap or cash, two head coaches or GMs, one owner
+  controlling two clubs, repeated decision ids). `tests/balance-report.ts
+  <seasons> <seeds,...>` (env `ERA`, `RECESSION`, `OUT`) runs them at season
+  start, the trade deadline, the Super Bowl and season end, checks every club
+  is under the cap once the league year opens, and judges balance numbers
+  against the documented ranges as warnings. A hard error exits 1 and writes a
+  case to `tests/regressions/`, which `regressions.test.ts` replays;
+  `roundtrip.test.ts` checks a reloaded save plays on identically (caches kept
+  on the state object must not outlive the game day). CI
+  (`.github/workflows/ci.yml`) typechecks, tests and builds every pull request;
+  `long-run.yml` runs seeds, a historical start and a recession weekly.
 - Old saves: `saves.test.ts` loads gzipped saves made by earlier versions
   (`tests/saves/`). Add one when a step changes the save shape.
 - Decades (`decades-report.ts 50 7`, about 1.5 min a season): season time levels

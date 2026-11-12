@@ -1,0 +1,9 @@
+{
+  "team": "NYG",
+  "seed": 11,
+  "until": "2027-09-09",
+  "era": null,
+  "errors": [
+    "2027-09-09 roster-limit: ATL carries 54 players in season (activated a player from PUP and released a suspended player, who was already off the count)"
+  ]
+}
