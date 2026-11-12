@@ -93,6 +93,8 @@ import { treasuryDaily } from "./treasury";
 import { investorsDaily } from "./investors";
 import { wealthDaily } from "./wealth";
 import { franchiseDaily } from "./franchisemarket";
+import { eraStartControl, erasDaily } from "./eraevents";
+import { PACK } from "./pack";
 import { startAsBuyer, startAsMinority, takeoverDaily } from "./takeover";
 import { ensureSuccession, isOver, startAsHeir, successionDaily } from "./succession";
 import { rivalsDaily } from "./rivals";
@@ -151,8 +153,11 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     season: BASE_SEASON,
     league: { caps: {} },
     history: { seasons: [], drafts: [], stats: {}, snaps: {}, retired: {} },
+    // A historical start (eras.ts): the season it began, and whether history is left to the save.
+    ...(PACK ? { era: { start: BASE_SEASON, alt: !!settings.altHistory } } : {}),
   };
   applySeason(state);
+  eraStartControl(state);
   ensureStaff(state);
   ensureLeases(state);
   bindLeases(state);
@@ -195,7 +200,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     "Players who fit what we do will get every chance to win jobs. You'll hear from me after every game, and my read on any player is on their page.");
   const col = teamStaff(userTeam).COL;
   send(state, "staff", `${col?.name ?? "Director of college scouting"}, director of college scouting`, "Setting up our draft scouting",
-    "The college season kicks off at the end of August, and the 2027 draft class is out there now. Tell us where to look on the " +
+    `The college season kicks off at the end of August, and the ${BASE_SEASON + 1} draft class is out there now.` + " Tell us where to look on the " +
     "Scouting page: a region, a conference, a school, positions, a college system, or specific players. Narrow assignments get you " +
     "the full picture on a few players; broad ones get a little on a lot of them. Every trip comes out of our scouting budget, and " +
     "campuses far from here cost more to reach. I'll file a report every Sunday.");
@@ -624,6 +629,7 @@ export function advanceDay(state: GameState): void {
   investorsDaily(state);
   wealthDaily(state);
   franchiseDaily(state);
+  erasDaily(state);
   takeoverDaily(state);
   successionDaily(state);
   rivalsDaily(state);

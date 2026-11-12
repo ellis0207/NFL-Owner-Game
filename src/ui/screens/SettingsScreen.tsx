@@ -2,6 +2,7 @@ import { useState } from "react";
 import { VOLATILITY } from "../../engine/economy";
 import type { GameState, Settings } from "../../engine/types";
 import { PlaySettings } from "./PlaySettings";
+import { SettingsLeague } from "./SettingsLeague";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
 
 export const TODAY_PANELS = ["Your desk", "Staff", "Business", "Media", "Inbox"] as const;
@@ -61,6 +62,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           </label>
           <span className="muted">"Sim a week" in the header advances seven days, stopping early for the draft or (with pauses on) anything urgent. How much lands on your desk at all is set under Front office, Decision rights.</span>
         </div>
+        <SettingsLeague game={game} changed={changed} />
       </div>
       <div className="split">
         <div className="panel stack tight">

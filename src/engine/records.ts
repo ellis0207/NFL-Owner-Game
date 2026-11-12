@@ -342,7 +342,7 @@ export function ruleEras(state: GameState): RuleEra[] {
     const games = Object.values(s.records).reduce((t, r) => t + r[0] + r[1] + r[2], 0);
     const ppg = games ? pts / games : 0;
     const last = out[out.length - 1];
-    if (!last || changes.length) out.push({ label: changes.length ? `After: ${changes.join(", ")}` : "The 2026 rulebook", from: s.season, to: s.season, rules: changes, ppg, passPerGame: s.passPerGame ?? 0 });
+    if (!last || changes.length) out.push({ label: changes.length ? `After: ${changes.join(", ")}` : `The ${state.era ? state.era.start : 2026} rulebook`, from: s.season, to: s.season, rules: changes, ppg, passPerGame: s.passPerGame ?? 0 });
     else {
       const n = last.to - last.from + 1;
       last.ppg = (last.ppg * n + ppg) / (n + 1);

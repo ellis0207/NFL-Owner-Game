@@ -11,6 +11,14 @@ from preseason_2026 import HALL_OF_FAME_GAME, PLAYOFF_SLOTS, PRESEASON_GAMES, SU
 DIVISION = {t[0]: (t[3], t[4]) for t in TEAMS}
 
 
+def _roman(n: int) -> str:
+    out = ""
+    for v, r in ((50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")):
+        while n >= v:
+            out, n = out + r, n - v
+    return out
+
+
 def _weekday(iso: str) -> str:
     return date.fromisoformat(iso).strftime("%A")
 
@@ -71,6 +79,6 @@ def build_schedule(games: pd.DataFrame, stadiums: dict) -> list:
             game["conference"] = next(conference_order)
         if rnd == "SB":
             game.update(SUPER_BOWL_SITE)
-            game["label"] = "Super Bowl LXI"
+            game["label"] = f"Super Bowl {_roman(SEASON - 1965)}"
         out.append(game)
     return out

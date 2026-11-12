@@ -6,6 +6,7 @@
  * point means more missed kicks and more two-point tries.
  */
 import { addDays } from "./dates";
+import { eraRules, practiceSquadBase, ruleSeason } from "./eras";
 import { bindFormat, type SeasonFormat } from "./format";
 import { HIDDEN_RATINGS, RULES } from "./league";
 import { depthChart } from "./roster";
@@ -58,12 +59,14 @@ export interface RuleParams {
   gateShare: number;
   /** Share of premium-seating revenue pooled and split evenly. */
   premiumPool: number;
+  /** Clubs in the playoff field: 14 since 2020, 12 before. */
+  playoffTeams: number;
 }
 
 const DEFAULTS: RuleParams = {
   playClock: 40, touchback: 35, xpLine: 15, twoPointLine: 2, otMinutes: 10, dpiCap: 99, fourthAndTwenty: false,
   hipDropBan: true, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
-  games: 17, byes: 1, intlExtra: 0, skyJudge: false, safetyTech: false, gateShare: 0.34, premiumPool: 0,
+  games: 17, byes: 1, intlExtra: 0, skyJudge: false, safetyTech: false, gateShare: 0.34, premiumPool: 0, playoffTeams: 14,
 };
 
 /** The rules in force this season, bound per save (see bindRules). */
@@ -320,7 +323,8 @@ export const RULE_BY_ID: Record<string, RuleChange> = Object.fromEntries(RULE_CA
 
 /** The rules in force for a season: the 2026 rulebook plus every change adopted since, in order. */
 export function rulesFor(state: GameState, season = RULES.season): RuleParams {
-  const r = { ...DEFAULTS };
+  // A historical start begins from the rulebook of its season (eras.ts), then the owners' votes apply.
+  const r = state.era ? { ...DEFAULTS, ...eraRules(ruleSeason(state, season)) } : { ...DEFAULTS };
   for (const a of state.owners?.rules ?? []) if (a.year <= season && (a.until === undefined || a.until >= season)) RULE_BY_ID[a.rule]?.apply(r);
   return r;
 }
@@ -349,7 +353,7 @@ export function bindSeasonFormat(state: GameState, season = RULES.season): void 
 export function bindRules(state: GameState): void {
   LEAGUE_RULES = rulesFor(state);
   bindSeasonFormat(state);
-  RULES.rosterLimits.practiceSquad = 17 + LEAGUE_RULES.extraPracticeSquad;
+  RULES.rosterLimits.practiceSquad = (state.era ? practiceSquadBase(state, RULES.season) : 17) + LEAGUE_RULES.extraPracticeSquad;
   if (LEAGUE_RULES.deadlineShift) {
     const k = RULES.keyDates;
     k.tradeDeadline = addDays(k.tradeDeadline, LEAGUE_RULES.deadlineShift);

@@ -67,7 +67,7 @@ def build_free_agents(weekly: pd.DataFrame, camp: pd.DataFrame, master: pd.DataF
     retired_week1 = set(week1[week1.status == "RET"].gsis_id)
     on_2026 = set(weekly.gsis_id)
     master = master.drop_duplicates("gsis_id").set_index("gsis_id")
-    retired = {_norm(n) for n in RETIRED_2026}
+    retired = {_norm(n) for n in RETIRED_2026} if SEASON == 2026 else set()
 
     rows = []
     # 1. Signed during the 2026 season after sitting out cutdown: their weekly row has everything.

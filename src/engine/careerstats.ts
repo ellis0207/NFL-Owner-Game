@@ -11,7 +11,7 @@
 // then the save's own).
 import careerJson from "../../data/league-2026/career.json";
 import { news, send } from "./inbox";
-import { PLAYER_BY_ID, RULES } from "./league";
+import { BASE_SEASON, PLAYER_BY_ID, RULES } from "./league";
 import { ELITE, production } from "./honors";
 import { history } from "./seasons";
 import { seasonTotals } from "./stats";
@@ -41,7 +41,8 @@ export function careerLines(state: GameState | undefined, id: string, live = fal
   const p = PLAYER_BY_ID[id];
   const later = (p?.stats ?? []).filter((s) => !live || s.season < RULES.season);
   const first = later.length ? Math.min(...later.map((s) => s.season)) : Infinity;
-  const rows = [...earlyRows(id).filter((s) => s.season < first), ...later];
+  // A historical start knows only the seasons before it.
+  const rows = [...earlyRows(id).filter((s) => s.season < first && s.season < BASE_SEASON), ...later];
   if (live && state) {
     const now = seasonTotals(state, "REG")[id];
     if (now) rows.push({ season: RULES.season, team: now.team, ...(now.line as Record<string, number>) });

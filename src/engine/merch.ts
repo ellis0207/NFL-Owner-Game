@@ -26,6 +26,7 @@ import { gaussian, rngFor } from "./rng";
 import { standings, winPct } from "./standings";
 import { startSaga } from "./teammedia";
 import type { GameState, MerchChannel, MerchSeason, MerchState, RebrandKind, ScheduledGame } from "./types";
+import { ruleSeason, washingtonName } from "./eras";
 
 const JERSEY_PRICE = 130;
 const JERSEY_COST = 45;
@@ -56,6 +57,8 @@ export function merch(state: GameState): MerchState {
 /** Lays the save's team name over the league data (a renamed club), and puts the others back. */
 export function bindBrand(state: GameState): void {
   for (const [id, name] of Object.entries(ORIGINAL_NAMES)) TEAM_BY_ID[id].name = name;
+  // A historical start: Washington's name in that season (eras.ts).
+  if (state.era && TEAM_BY_ID.WAS) TEAM_BY_ID.WAS.name = washingtonName(ruleSeason(state, RULES.season));
   // Clubs the owner rebranded and later left keep their new names.
   for (const [id, name] of Object.entries(state.tenure?.brands ?? {})) if (TEAM_BY_ID[id]) TEAM_BY_ID[id].name = name;
   const m = state.merch;

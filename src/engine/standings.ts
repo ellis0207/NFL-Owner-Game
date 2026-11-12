@@ -97,7 +97,7 @@ export function seedConference(state: GameState, conference: "AFC" | "NFC"): str
   const wildcards = TEAMS.filter((t) => t.conference === conference && !winnerIds.has(t.id))
     .map((t) => table[t.id])
     .sort((a, b) => compare(a, b, false))
-    .slice(0, 3);
+    .slice(0, LEAGUE_RULES.playoffTeams / 2 - 4);
   // Under seeding by record, division winners are still in but a better wild card can pass them.
   if (LEAGUE_RULES.seedByRecord) return [...winners, ...wildcards].sort((a, b) => compare(a, b, false)).map((r) => r.team);
   return [...winners, ...wildcards].map((r) => r.team);
@@ -115,9 +115,10 @@ function winner(state: GameState, gameId: string): string | undefined {
 export function fillWildCard(state: GameState): void {
   const seeds = { AFC: seedConference(state, "AFC"), NFC: seedConference(state, "NFC") };
   state.seeds = seeds;
-  const pairs: ["AFC" | "NFC", number, number][] = [
-    ["AFC", 4, 5], ["NFC", 4, 5], ["AFC", 3, 6], ["NFC", 2, 7], ["AFC", 2, 7], ["NFC", 3, 6],
-  ];
+  // Before 2020 the field was 12: the top two seeds rested, 3v6 and 4v5.
+  const pairs: ["AFC" | "NFC", number, number][] = slots("WC").length === 4
+    ? [["AFC", 4, 5], ["NFC", 4, 5], ["AFC", 3, 6], ["NFC", 3, 6]]
+    : [["AFC", 4, 5], ["NFC", 4, 5], ["AFC", 3, 6], ["NFC", 2, 7], ["AFC", 2, 7], ["NFC", 3, 6]];
   slots("WC").forEach((g, i) => {
     const [conf, hi, lo] = pairs[i];
     state.playoffTeams[g.id] = { home: seeds[conf][hi - 1], away: seeds[conf][lo - 1] };
@@ -139,7 +140,8 @@ function survivors(state: GameState, round: PlayoffRound, conference: "AFC" | "N
 export function fillDivisional(state: GameState): void {
   const games: { home: string; away: string }[] = [];
   for (const conf of ["AFC", "NFC"] as const) {
-    const left = [state.seeds![conf][0], ...survivors(state, "WC", conf)].sort((a, b) => seedOf(state, a) - seedOf(state, b));
+    const byes = slots("WC").length === 4 ? 2 : 1;
+    const left = [...state.seeds![conf].slice(0, byes), ...survivors(state, "WC", conf)].sort((a, b) => seedOf(state, a) - seedOf(state, b));
     games.push({ home: left[0], away: left[3] }, { home: left[1], away: left[2] });
   }
   const order = [games[0], games[2], games[1], games[3]]; // alternate conferences across the weekend

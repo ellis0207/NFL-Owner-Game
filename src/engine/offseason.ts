@@ -23,6 +23,7 @@ import { teamStaff } from "./staff";
 import { seasonTotals } from "./stats";
 import { standings, winPct } from "./standings";
 import type { Deal, GameState, OffseasonState } from "./types";
+import { realCap } from "./eras";
 
 const KEY = RULES.keyDates;
 /** The league year the offseason builds toward. */
@@ -662,7 +663,8 @@ function setCap(state: GameState): void {
   const sd = NEXT === 2027 ? 0.012 : 0.02;
   // New national media deals and a longer or shorter season move the cap; so does how the league's business is doing overall.
   const media = capMediaBump(state, NEXT);
-  const cap = Math.round((projectedCap(NEXT) * (1 + media + leagueHealth(state) * 0.5 + Math.max(-0.05, Math.min(0.05, gaussian(rng) * sd)))) / 100_000) * 100_000;
+  // Real history sets the caps the league really set (eras.ts).
+  const cap = realCap(state, NEXT) ?? Math.round((projectedCap(NEXT) * (1 + media + leagueHealth(state) * 0.5 + Math.max(-0.05, Math.min(0.05, gaussian(rng) * sd)))) / 100_000) * 100_000;
   const league = (state.league ??= { caps: {} });
   league.caps[NEXT] = cap;
   invalidateMarket(state);

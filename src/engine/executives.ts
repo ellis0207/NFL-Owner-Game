@@ -21,6 +21,7 @@ import { RULES, TEAM_BY_ID, TEAMS } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { gaussian, rngFor, type Rng } from "./rng";
 import type { DecisionArea, Exec, ExecRole, ExecSearch, ExecState, GameState } from "./types";
+import { yearsFromMoneyYear } from "./pack";
 
 const M = 1_000_000;
 
@@ -179,7 +180,7 @@ export function execBoost(state: GameState, role: ExecRole): number {
 /** What a person expects to be paid in a job: the going rate, more for ability, more from a club with a bad name as an employer. */
 export function salaryAsk(state: GameState, e: Exec, role: ExecRole): number {
   const rep = state.execs?.reputation ?? 55;
-  const grow = Math.pow(1.04, Math.max(0, RULES.season - 2026));
+  const grow = Math.pow(1.04, yearsFromMoneyYear(RULES.season));
   return EXEC_ROLES[role].salary * grow * (0.75 + e.hidden.skill / 100 * 0.6) * (1 + Math.max(0, 50 - rep) / 150);
 }
 
@@ -187,7 +188,7 @@ export function salaryAsk(state: GameState, e: Exec, role: ExecRole): number {
 export function execPayrollOver(state: GameState): number {
   if (!state.execs) return 0;
   const x = execs(state);
-  const grow = Math.pow(1.04, Math.max(0, RULES.season - 2026));
+  const grow = Math.pow(1.04, yearsFromMoneyYear(RULES.season));
   let pay = 0;
   let budget = 0;
   for (const role of EXEC_KEYS) {

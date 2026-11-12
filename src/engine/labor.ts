@@ -24,6 +24,7 @@ import { inRecession } from "./economy";
 import { payCash } from "./finance";
 import { trustHit } from "./fans";
 import { formatFor } from "./format";
+import { CBA_2011 } from "./eras";
 import { money, news, send } from "./inbox";
 import { bindCaps, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { onCommittee } from "./leagueoffice";
@@ -100,7 +101,10 @@ export function labor(state: GameState): LaborState {
   const r = rngFor(state.seed, "union");
   const leader = `${FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(r() * LAST_NAMES.length)]}`;
   state.labor = {
-    agreements: [{ from: 2021, through: 2030, signed: "2020-03-15", terms: { ...BASE_TERMS } }],
+    // A start before 2021 opens under the 2011 agreement (eras.ts).
+    agreements: state.era && state.era.start <= 2020
+      ? [{ from: 2011, through: 2020, signed: "2011-08-04", terms: { ...CBA_2011 } }]
+      : [{ from: 2021, through: 2030, signed: "2020-03-15", terms: { ...BASE_TERMS } }],
     union: { leader, since: 2023, militancy: Math.round((0.3 + 0.4 * r()) * 100) / 100 },
     stance: "steady",
     priorities: { games18: true, rookie: false, share: true },
@@ -464,7 +468,16 @@ export function laborDaily(state: GameState): void {
   const l = labor(state);
   grievancesDaily(state);
   const cur = currentAgreement(state);
-  if (!l.talks && state.date >= `${cur.through - 1}-03-01` && state.date < deadline(cur.through)) openTalks(state);
+  // Real history: the 2020 agreement was ratified on March 15, 2020, and runs through 2030.
+  const real2020 = state.era && !state.era.alt && cur.through === 2020;
+  if (real2020 && state.date >= "2020-03-15") {
+    l.agreements.push({ from: 2021, through: 2030, signed: "2020-03-15", terms: { ...BASE_TERMS } });
+    bindLabor(state);
+    note(state, "The players ratified a new agreement through 2030: a 48.5% share with the 17th game, and bigger minimums.");
+    news(state, "Players ratify a new labor deal through 2030: a 17th game from 2021, an expanded playoff field and higher minimum salaries");
+    return;
+  }
+  if (!l.talks && !real2020 && state.date >= `${cur.through - 1}-03-01` && state.date < deadline(cur.through)) openTalks(state);
   const t = l.talks;
   if (!t) return;
   const r = rngFor(state.seed, `labor:${state.date}`);

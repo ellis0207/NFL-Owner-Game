@@ -9,15 +9,16 @@ import { staff } from "../../engine/coaches";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { CareersTab, HindsightTab, OwnersTab, PeopleTab } from "./HistoryMore";
+import { RulesTab } from "./HistoryRules";
 import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
 
-type Tab = "Honors" | "Hall of Fame" | "Records" | "Careers" | "Rivalries" | "Trades" | "Eras" | "Owners" | "People" | "Hindsight" | "Timeline";
+type Tab = "Honors" | "Hall of Fame" | "Records" | "Careers" | "Rivalries" | "Trades" | "Eras" | "Owners" | "People" | "Hindsight" | "Timeline" | "Rules";
 // Players first, then the club's own story, then how judgments held up.
 const GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: "Players", tabs: ["Honors", "Hall of Fame", "Records", "Careers"] },
   { label: "The club", tabs: ["Timeline", "Eras", "Owners", "Rivalries", "Trades"] },
-  { label: "Looking back", tabs: ["People", "Hindsight"] },
+  { label: "Looking back", tabs: ["People", "Hindsight", "Rules"] },
 ];
 
 export function HistoryScreen({ game }: { game: GameState }) {
@@ -37,6 +38,7 @@ export function HistoryScreen({ game }: { game: GameState }) {
       {tab === "Hindsight" && <HindsightTab game={game} />}
       {tab === "Timeline" && <Timeline game={game} />}
       {tab === "Owners" && <OwnersTab game={game} />}
+      {tab === "Rules" && <RulesTab game={game} />}
     </section>
   );
 }

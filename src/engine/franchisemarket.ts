@@ -38,7 +38,7 @@ import { wealth } from "./wealth";
 const M = 1_000_000;
 
 /** Real changes of control, approximately: headline price, buyer. */
-const REAL_SALES = [
+export const REAL_SALES = [
   { team: "CAR", date: "2018-07-09", price: 2_275 * M, pct: 1, buyer: "David Tepper", real: true },
   { team: "DEN", date: "2022-08-09", price: 4_650 * M, pct: 1, buyer: "the Walton-Penner group", real: true },
   { team: "WAS", date: "2023-07-20", price: 6_050 * M, pct: 1, buyer: "the Harris group", real: true },
@@ -55,7 +55,8 @@ export const REASONS: Record<Listing["reason"], string> = {
 const GROUPS = ["the Alder Ridge group", "the Harcastle partnership", "a group led by a technology founder", "the Pemberton family", "a group led by a hedge-fund founder", "the Vance & Sorel partnership", "a group led by a former team president"];
 
 export function franchise(state: GameState): FranchiseMarketState {
-  return (state.franchise ??= { listings: [], deals: [], sales: REAL_SALES.map((x) => ({ ...x })), control: {}, log: [] });
+  // A historical start knows only the sales before it; the later ones happen as the years come (eraevents.ts).
+  return (state.franchise ??= { listings: [], deals: [], sales: REAL_SALES.filter((x) => x.date < state.date).map((x) => ({ ...x })), control: {}, log: [] });
 }
 
 function rand(state: GameState, key: string) {

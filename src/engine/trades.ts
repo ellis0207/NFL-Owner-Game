@@ -47,6 +47,7 @@ import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside }
 import { standings } from "./standings";
 import type { GameState, Position, TradeAsset, TradeDeal, TradeOffer, TradeRecord, TradeState } from "./types";
 import { liveIds } from "./live";
+import { PACK } from "./pack";
 
 const KEY = RULES.keyDates;
 /** Picks in the next three drafts can be traded. */
@@ -76,7 +77,7 @@ export function inAgreedTrade(state: GameState, id: string): boolean {
 }
 
 export function trades(state: GameState): TradeState {
-  return (state.trades ??= { picks: { ...PRE_TRADED }, log: [], offers: [], block: [], requests: {}, talks: {} });
+  return (state.trades ??= { picks: PACK ? {} : { ...PRE_TRADED }, log: [], offers: [], block: [], requests: {}, talks: {} });
 }
 
 // ---- Draft picks ----

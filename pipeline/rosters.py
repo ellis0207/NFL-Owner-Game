@@ -26,13 +26,22 @@ def _clean(value):
 
 def _int(value):
     value = _clean(value)
-    return None if value is None else int(value)
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except ValueError:  # an odd entry in an old file (a jersey like "36D")
+        return None
 
 
 def build_camp_rosters(weekly: pd.DataFrame) -> pd.DataFrame:
     """The Week 1 snapshot lists every player a team had at final cutdown,
     including the ones it released. That is our 90-man camp roster."""
-    week1 = weekly[(weekly.season == SEASON) & (weekly.week == 1) & (weekly.game_type == "REG")]
+    reg = weekly[(weekly.season == SEASON) & (weekly.game_type == "REG")]
+    # Each team's first regular-season week: a game moved off Week 1 (Miami in
+    # 2017, after Hurricane Irma) leaves the team out of the Week 1 file.
+    first = reg.groupby("team").week.transform("min")
+    week1 = reg[reg.week == first]
     camp = week1[week1.status.isin(CAMP_STATUSES)].copy()
     # A handful of new signings have no gsis id yet; fall back to the ESB id.
     missing = camp.gsis_id.isna()
@@ -51,6 +60,15 @@ def _contract_for_2026(contracts: pd.DataFrame) -> dict:
     2026 season but the latest deal runs through 2026, cap hits are estimated
     from its APY. Returns lookups by gsis id and by normalized name."""
     by_id, by_name, dup_names, seen = {}, {}, set(), set()
+    # An earlier start sees only deals signed by then. A deal signed later
+    # (an extension) rewrote the cap years after it, so those years are
+    # estimated from the deal in force instead.
+    later_signed = {}
+    if SEASON != 2026:
+        for row in contracts[contracts.year_signed > SEASON].itertuples(index=False):
+            key = _clean(row.gsis_id) or ("name", _norm_name(row.player), _int(row.draft_overall))
+            later_signed[key] = min(later_signed.get(key, 9999), _int(row.year_signed) or 9999)
+        contracts = contracts[contracts.year_signed <= SEASON]
     ordered = contracts.sort_values("year_signed", ascending=False)
     for row in ordered.itertuples(index=False):
         key_id = _clean(row.gsis_id)
@@ -60,11 +78,15 @@ def _contract_for_2026(contracts: pd.DataFrame) -> dict:
             continue  # only the player's most recent contract counts
         seen.add(seen_key)
         history = row.season_history if row.season_history is not None else []
-        years = [y for y in history if str(y.get("year") or "").isdigit() and int(y["year"]) >= SEASON]
+        last_year = (_int(row.year_signed) or 0) + (_int(row.years) or 1) - 1
+        cutoff = later_signed.get(seen_key, 9999)
+        years = [y for y in history if str(y.get("year") or "").isdigit() and SEASON <= int(y["year"]) < cutoff
+                 and (SEASON == 2026 or int(y["year"]) <= last_year)]
         seasons = [_season(y) for y in sorted(years, key=lambda y: int(y["year"]))]
+        if SEASON != 2026 and seasons and cutoff <= last_year and _money(row.apy):
+            seasons += [_flat_season(year, _money(row.apy)) for year in range(max(cutoff, seasons[-1]["year"] + 1), last_year + 1)]
         source = "overthecap"
         if not any(s["year"] == SEASON for s in seasons):
-            last_year = (_int(row.year_signed) or 0) + (_int(row.years) or 1) - 1
             apy = _money(row.apy)
             if last_year < SEASON or not apy:
                 continue
@@ -151,7 +173,10 @@ def _estimated_minimum_contract(years_exp: int, rookie: bool) -> dict:
 
 
 def game_position(row, pass_rush_rate: float | None) -> str:
-    pos = DEPTH_TO_GAME_POSITION.get(_clean(row.depth_chart_position)) or FALLBACK_POSITION.get(row.position, row.position)
+    raw = row.position
+    # Older files leave the depth chart blank and give positions like DE, T or SS.
+    pos = (DEPTH_TO_GAME_POSITION.get(_clean(row.depth_chart_position)) or FALLBACK_POSITION.get(raw)
+           or DEPTH_TO_GAME_POSITION.get(raw) or {"KR": "WR", "PR": "WR"}.get(raw, raw))
     if pos == "OLB":
         if pass_rush_rate is not None:
             return "EDGE" if pass_rush_rate >= 0.45 else "LB"

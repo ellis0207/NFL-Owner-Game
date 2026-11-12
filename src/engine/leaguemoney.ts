@@ -24,6 +24,7 @@ import { gaussian, rngFor } from "./rng";
 import { LEAGUE_RULES } from "./rules";
 import { OPT_OUT, teamMedia, TV_DEALS } from "./teammedia";
 import type { GameState, LeagueMoneyState } from "./types";
+import { PACK } from "./pack";
 
 const M = 1_000_000;
 /** Share of each monthly distribution the league holds back until the audit. */
@@ -67,7 +68,7 @@ export function poolsFor(_state: GameState | undefined, year: number): Pools {
   const net = nationalRevenue(year);
   const gross = net / (1 - LEAGUE_COSTS);
   const tvAll = TV_DEALS.filter((d) => d.through >= Math.min(year, DEALS_END)).reduce((a, d) => a + d.annual, 0);
-  const media = Math.min(gross * 0.82, (tvAll / 32) * (net / nationalRevenue(BASE_SEASON)));
+  const media = Math.min(gross * 0.82, (tvAll / 32) * (net / nationalRevenue(PACK ? 2026 : BASE_SEASON)));
   const sponsorship = gross * 0.055;
   const licensing = gross * 0.06;
   return { media, sponsorship, licensing, other: gross - media - sponsorship - licensing, gross, costs: gross * LEAGUE_COSTS, net };

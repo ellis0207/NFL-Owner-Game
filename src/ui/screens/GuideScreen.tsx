@@ -197,6 +197,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Starting in another season",
+    body: [
+      "New game > When you start picks the season: 2026, or any season from 2011. An earlier start uses that year's real rosters (the Week 1 lists), contracts signed by then, the schedule, stadiums and city names (the Rams in St. Louis to 2015, the Chargers in San Diego to 2016, the Raiders in Oakland to 2019), head coaches, the salary cap, minimum salaries and that season's rules: 16 games before 2021, a 12-team playoff field before 2020, the 2011 labor deal until 2020. Coordinators, general managers and the preseason schedule are made up, and the game's dollar figures are scaled back to the era.",
+      "With real history the timeline plays out: rule changes come in their seasons, the 2020 labor deal arrives, the caps are the real ones, clubs move and are sold when they really did. Alternate history (New game, or Settings later) stops all of that: only your league's own votes, moves and sales change things. History > Rules lists the real rule archive and what this league adopted.",
+      "A custom league pack renames and repaints clubs: city, name and colors. Download the template on New game or Settings, edit it, and load it back; it's checked before it's applied. Each season's data loads when you pick it, so the page reloads once.",
+    ],
+  },
+  {
     title: "The other clubs",
     body: [
       "Owners > Clubs profiles every other club: its owner's approach (win now, builder, profit first or steady), who makes the football calls (the owner, a football president, the GM or the head coach), its budgets and money, and its reputation with candidates. Owners who fire coaches often or run long searches find candidates hesitate.",

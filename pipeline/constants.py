@@ -1,6 +1,10 @@
 """Static league facts that are not in the nflverse data, or that we pin by hand."""
 
-SEASON = 2026
+import os
+
+# The season a build describes. 2026 is the game's own start (data/league-2026);
+# history_pack.py sets NFL_SEASON to build an earlier start's data pack.
+SEASON = int(os.environ.get("NFL_SEASON", 2026))
 
 # Team abbreviations follow nflverse (LA = Rams, LV = Raiders, WAS = Commanders).
 TEAMS = [
@@ -40,6 +44,11 @@ TEAMS = [
 ]
 
 NICKNAME_TO_ABBR = {t[2]: t[0] for t in TEAMS}
+# Older names OverTheCap and nflverse use for the same clubs.
+NICKNAME_TO_ABBR.update({"Redskins": "WAS", "Football Team": "WAS"})
+# Legacy team codes in older nflverse files: the club's current id.
+TEAM_CODE_FIX = {"ARZ": "ARI", "BLT": "BAL", "CLV": "CLE", "HST": "HOU", "SL": "LA", "STL": "LA", "LAR": "LA",
+                 "SD": "LAC", "OAK": "LV"}
 
 # The schedule data still carries an old name for Houston's stadium.
 STADIUM_NAME_OVERRIDES = {"HOU00": "NRG Stadium"}

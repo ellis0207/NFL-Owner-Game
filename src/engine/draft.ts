@@ -38,6 +38,7 @@ import {
   chartValue, checkTrade, completeTrade, describe, parsePick, pickId, pickOverall, pickOwner, picksOf, projectedSlot, trades,
 } from "./trades";
 import type { Deal, DraftSelection, DraftState, GameState, MockDraft, PlayerData, Position, StaffPerson, TradeDeal } from "./types";
+import { PACK } from "./pack";
 
 const KEY = RULES.keyDates;
 export let DRAFT_YEAR = 0;
@@ -140,7 +141,7 @@ export function projectedOrder(state: GameState, rounds = 7): string[] {
 function awardCompPicks(state: GameState, quiet = false): void {
   const d = draftState(state);
   const count: Record<string, number> = {};
-  const list = DRAFT_YEAR === 2027 ? COMP_2027 : compPicksFor(state);
+  const list = DRAFT_YEAR === 2027 && !PACK ? COMP_2027 : compPicksFor(state);
   d.comp = list.map(([team, round, player, to]) => {
     const n = (count[`${team}-${round}`] = (count[`${team}-${round}`] ?? 0) + 1);
     return { pick: `${DRAFT_YEAR}-${round}-${team}-c${n}`, player, to };

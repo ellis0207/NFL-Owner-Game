@@ -18,6 +18,7 @@ import { RULES, TEAMS, teamLabel } from "./league";
 import { rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium } from "./stadiums";
 import type { GameState, LeaseAsk, LeaseOffer, LeaseState } from "./types";
+import { yearsFromMoneyYear } from "./pack";
 
 const M = 1_000_000;
 
@@ -97,7 +98,7 @@ function firstOffer(state: GameState, team: string): LeaseOffer {
   const g = generosity(state, team);
   const rng = rngFor(state.seed, `lease-offer:${team}:${nextSeason(state)}`);
   const age = nextSeason(state) - s.opened;
-  const scale = (1.03 ** Math.max(0, nextSeason(state) - 2026));
+  const scale = (1.03 ** yearsFromMoneyYear(nextSeason(state)));
   return {
     years: 10 + Math.floor(rng() * 4) * 5,
     rent: Math.round((Math.max(l.rent, 0.5 * M) * (1.5 - 0.4 * g)) / 50_000) * 50_000,

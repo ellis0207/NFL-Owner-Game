@@ -16,6 +16,7 @@ import { execs, EXEC_ROLES, execRole, signer } from "./executives";
 import { money, send } from "./inbox";
 import { RULES } from "./league";
 import type { DecisionArea, DecisionMode, ExecRole, GameState, InboxItem, Memo, OfficeState } from "./types";
+import { yearsFromMoneyYear } from "./pack";
 
 const M = 1_000_000;
 
@@ -84,7 +85,7 @@ export function mode(state: GameState, area: DecisionArea): DecisionMode {
 
 /** The contract limit grows with the cap, so a limit set in 2026 means the same in 2030. */
 export function apyLimit(state: GameState): number {
-  return office(state).limits.contractApy * Math.pow(1.065, Math.max(0, RULES.season - 2026));
+  return office(state).limits.contractApy * Math.pow(1.065, yearsFromMoneyYear(RULES.season));
 }
 
 /** Guaranteed money the GM may commit on one contract without the owner's sign-off; grows with the cap like the APY limit. */
@@ -101,7 +102,7 @@ export function setAreaLimit(state: GameState, area: DecisionArea, amount: numbe
 }
 
 export function guaranteeLimit(state: GameState): number {
-  return (office(state).limits.guaranteed ?? 40 * M) * Math.pow(1.065, Math.max(0, RULES.season - 2026));
+  return (office(state).limits.guaranteed ?? 40 * M) * Math.pow(1.065, yearsFromMoneyYear(RULES.season));
 }
 
 /** Who answers for an area, by name. */
