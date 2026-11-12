@@ -160,7 +160,19 @@ export function seasonRecord(state: GameState): SeasonRecord {
 }
 
 /** Each team's offensive, defensive and special teams plays this regular season, for snap shares. */
+// Kept for as long as the box scores behind it (seasonTotals' result is rebuilt when a game is added).
+const snapCache = new WeakMap<object, Record<string, [number, number, number]>>();
+
 export function teamSnapTotals(state: GameState): Record<string, [number, number, number]> {
+  const basis = seasonTotals(state, "REG");
+  const kept = snapCache.get(basis);
+  if (kept) return kept;
+  const made = buildSnapTotals(state);
+  snapCache.set(basis, made);
+  return made;
+}
+
+function buildSnapTotals(state: GameState): Record<string, [number, number, number]> {
   const teamSnaps: Record<string, [number, number, number]> = {};
   for (const [gameId, box] of Object.entries(state.box)) {
     if (GAME_BY_ID[gameId]?.type !== "REG") continue;

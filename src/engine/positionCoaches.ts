@@ -120,18 +120,25 @@ let teachCache: { key: string; map: Record<string, Partial<Record<CoachRoom, num
 export function teaching(state: GameState, team: string, room: CoachRoom): number {
   const key = `${state.seed}:${state.date}:${Object.keys(state.staff?.people ?? {}).length}`;
   if (teachCache?.key !== key) teachCache = { key, map: {} };
-  const m = (teachCache.map[team] ??= {});
-  if (m[room] !== undefined) return m[room]!;
-  const [lead, asst] = roomStaff(state, team)[room];
-  let v = 55;
-  if (lead) {
-    v = lead.hidden.development ?? 60;
-    if (asst) v += ((asst.hidden.development ?? 60) - 60) * 0.15;
-    const side = sideOf(room);
-    const run = side ? teamSchemes(team)[side] : null;
-    if (run && lead.scheme && lead.scheme !== run) v -= 3;
+  const m = teachCache.map[team];
+  if (m) return m[room]!;
+  // Every room of the team at once: one pass over the staff instead of one per room.
+  const rooms = roomStaff(state, team);
+  const out: Partial<Record<CoachRoom, number>> = {};
+  for (const r of ROOMS) {
+    const [lead, asst] = rooms[r];
+    let v = 55;
+    if (lead) {
+      v = lead.hidden.development ?? 60;
+      if (asst) v += ((asst.hidden.development ?? 60) - 60) * 0.15;
+      const side = sideOf(r);
+      const run = side ? teamSchemes(team)[side] : null;
+      if (run && lead.scheme && lead.scheme !== run) v -= 3;
+    }
+    out[r] = v;
   }
-  return (m[room] = v);
+  teachCache.map[team] = out;
+  return out[room]!;
 }
 
 /** The position coach's share of development: about a third of the head coach's pull, added to the staff rating. */
