@@ -10,12 +10,13 @@ import { execBios, ownerEras, ruleEras } from "../../engine/records";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const LEADER_KEYS: [string, string][] = [["passYds", "Passing yards"], ["passTd", "Passing TD"], ["rushYds", "Rushing yards"], ["rushTd", "Rushing TD"], ["rec", "Receptions"], ["recYds", "Receiving yards"], ["recTd", "Receiving TD"], ["sacks", "Sacks"], ["defInt", "Interceptions"], ["fgm", "Field goals"]];
 
 function Who({ id }: { id: string }) {
   const ui = useUi();
-  return PLAYER_BY_ID[id] ? <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button> : <>{id}</>;
+  return PLAYER_BY_ID[id] ? <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button> : <>{id}</>;
 }
 
 export function CareersTab({ game }: { game: GameState }) {

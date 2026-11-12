@@ -10,6 +10,7 @@ import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { DoctorsPanel, StandingPanel } from "./ClubhouseStanding";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const TABS = ["Locker room", "Development", "Medical"] as const;
 type Tab = (typeof TABS)[number];
@@ -33,7 +34,7 @@ export function ClubhouseScreen({ game, changed }: { game: GameState; changed: (
 
 function Name({ id }: { id: string }) {
   const ui = useUi();
-  return <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
+  return <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
 }
 
 function LockerTab({ game }: { game: GameState }) {

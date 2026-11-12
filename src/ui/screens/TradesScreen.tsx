@@ -11,8 +11,9 @@ import {
 } from "../../engine/trades";
 import type { GameState, PickCondition, TradeAsset, TradeDeal } from "../../engine/types";
 import { conditionNote, statMark } from "../../engine/conditions";
-import { money, recentSeasonLine } from "../format";
+import { money } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 type Tab = "make" | "offers" | "block" | "picks" | "league";
 const TABS: [Tab, string][] = [["make", "Make a trade"], ["offers", "Offers"], ["block", "Trade block"], ["picks", "Draft picks"], ["league", "League trades"]];
@@ -148,7 +149,7 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
               <dd>{money(check.cap[0].before)} → <span className={check.cap[0].space < 0 ? "bad" : undefined}>{money(check.cap[0].space)}</span></dd>
               <dt>Dead money we take on</dt>
               <dd>{money(check.cap[0].dead)}{check.cap[0].deadNext ? ` now, ${money(check.cap[0].deadNext)} in ${year + 1}` : ""}</dd>
-              <dt>{TEAM_BY_ID[partner].name} cap space</dt>
+              <dt {...tip("cap", partner)}>{TEAM_BY_ID[partner].name} cap space</dt>
               <dd>{money(check.cap[1].before)} → <span className={check.cap[1].space < 0 ? "bad" : undefined}>{money(check.cap[1].space)}</span></dd>
               <dt>Our roster after</dt>
               <dd>{check.roster[0].count} of {check.roster[0].limit}</dd>
@@ -234,7 +235,7 @@ function AssetList({ game, team, chosen, toggle, title, other }: { game: GameSta
                 const deal = dealOf(game, id);
                 const req = trades(game).requests[id];
                 return (
-                  <tr key={id} className="clickable" onClick={() => ui.openPlayer(id)} title={ok.ok ? recentSeasonLine(game, id) : ok.reason}>
+                  <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openPlayer(id)} title={ok.ok ? undefined : ok.reason}>
                     <td onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" aria-label={`Include ${p.name}`} disabled={!ok.ok && !picked.has(id)} checked={picked.has(id)} onChange={() => toggle({ kind: "player", id })} />
                     </td>
@@ -349,7 +350,7 @@ function Block({ game, changed }: { game: GameState; changed: () => void }) {
               const p = PLAYER_BY_ID[id];
               const ok = canTradePlayer(game, id);
               return (
-                <tr key={id} className="clickable" onClick={() => ui.openPlayer(id)}>
+                <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
                   <td onClick={(e) => e.stopPropagation()}>
                     <input type="checkbox" aria-label={`Shop ${p.name}`} disabled={!ok.ok} checked={ts.block.includes(id)} onChange={() => { toggleBlock(game, id); changed(); }} />
                   </td>
@@ -369,7 +370,7 @@ function Block({ game, changed }: { game: GameState; changed: () => void }) {
           <h3>Around the league: players who asked for a trade</h3>
           <ul>
             {requests.map(([id, date]) => (
-              <li key={id}><button className="btn small" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].position} {PLAYER_BY_ID[id].name}</button> <span className="muted">{TEAM_BY_ID[game.players[id].team!]?.name}, since {shortDate(date)}</span></li>
+              <li key={id}><button className="btn small" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].position} {PLAYER_BY_ID[id].name}</button> <span className="muted">{TEAM_BY_ID[game.players[id].team!]?.name}, since {shortDate(date)}</span></li>
             ))}
           </ul>
         </>
@@ -432,7 +433,7 @@ function LeagueTrades({ game }: { game: GameState }) {
             <div className="split">
               {t.teams.map((team) => (
                 <div key={team} className="stack tight">
-                  <span className="label">{TEAM_BY_ID[team].name}</span>
+                  <span className="label" {...tip("team", team)}>{TEAM_BY_ID[team].name}</span>
                   {t.grades![team].map((g) => <span key={g.outlet}><strong>{g.grade}</strong> <span className="muted">{g.outlet}: {g.take}</span></span>)}
                 </div>
               ))}

@@ -24,6 +24,7 @@ import { business, cashBalance, gateForecast } from "../../engine/business";
 import { fanMood } from "./BusinessScreen";
 import { openSearches, proposals } from "../../engine/carousel";
 import { ROLE_NAME, staff } from "../../engine/coaches";
+import { tip } from "../tip";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -133,7 +134,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
             {report.map(([id, st]) => (
               <div key={id}>
                 <span className={st === "Out" ? "bad" : "warn"}>{st}</span>{" "}
-                <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>{" "}
+                <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>{" "}
                 <span className="muted">{PLAYER_BY_ID[id].position} · {game.players[id].injury!.type}</span>
               </div>
             ))}
@@ -295,7 +296,7 @@ function BusinessToday({ game, go }: { game: GameState; go: (s: Screen) => void 
         <h2>Business</h2>
         <button className="btn small" onClick={() => go("Business")}>Open business</button>
       </div>
-      <span className="muted">Cash: {money(cashBalance(game))}. {fanMood(game.pressure.fans)}</span>
+      <span className="muted">Cash: <span {...tip("cash")}>{money(cashBalance(game))}</span>. {fanMood(game.pressure.fans)}</span>
       {today.map((e) => <div key={e.id}><span className="good">At the stadium today</span> {e.name}</div>)}
       {f && next && (
         <div>

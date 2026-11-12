@@ -15,6 +15,7 @@ import type { GameState } from "../../engine/types";
 import { claimOdds, claimOddsWord, subjectToWaivers } from "../../engine/waivers";
 import { useUi } from "../ui";
 import { rivalryHeat, rivalryWord } from "../../engine/records";
+import { tip } from "../tip";
 
 export function GameWeekScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
@@ -23,7 +24,7 @@ export function GameWeekScreen({ game, changed }: { game: GameState; changed: ()
   const m = g ? matchup(game, g) : null;
   const opp = m ? (m.away === us ? m.home : m.away) : null;
   const emph = clubhouse(game).programs.emphasis ?? "balanced";
-  const Name = ({ id }: { id: string }) => <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
+  const Name = ({ id }: { id: string }) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
   return (
     <section className="stack">
       <h2>Game week</h2>

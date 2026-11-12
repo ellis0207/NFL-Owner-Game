@@ -10,6 +10,7 @@ import { DriveChart, GameDay, KeyPlays, PlayByPlay, WinChart } from "./GameFeed"
 import { FollowGame } from "./GameCast";
 import { perPlay } from "../engine/analytics";
 import { clockText } from "../engine/playlog";
+import { tip } from "./tip";
 
 type Side = "away" | "home";
 
@@ -76,7 +77,7 @@ export function PlayerTables({ players }: { players: Record<string, number[]> })
                 <thead><tr><th>Player</th>{sec.cols.map((c, i) => <th key={i} className="num">{c.label}</th>)}</tr></thead>
                 <tbody>
                   {rows.map(([pid, v]) => (
-                    <tr key={pid} className="clickable" onClick={() => ui.openPlayer(pid)}>
+                    <tr key={pid} className="clickable" {...tip("player", pid)} onClick={() => ui.openPlayer(pid)}>
                       <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{PLAYER_BY_ID[pid].position}</span></td>
                       {sec.cols.map((c, i) => <td key={i} className="num">{c.value(v)}</td>)}
                     </tr>

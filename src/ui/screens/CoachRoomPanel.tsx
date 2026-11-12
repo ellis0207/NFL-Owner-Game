@@ -9,6 +9,7 @@ import { depthChart } from "../../engine/roster";
 import { PUNT_LABEL, RETURN_LABEL, stPlan, type PuntPlan, type ReturnPlan } from "../../engine/simtactics";
 import type { GameState } from "../../engine/types";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 export function CoachRoomPanel({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
@@ -24,7 +25,7 @@ export function CoachRoomPanel({ game, changed }: { game: GameState; changed: ()
     return (id: string) => order.indexOf(id) + 1;
   };
   const [gmR, hcR, anR] = [rank("gm"), rank("coach"), rank("analytics")];
-  const link = (id: string) => <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
+  const link = (id: string) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
 
   return (
     <section className="panel stack">

@@ -13,6 +13,7 @@ import { setAreaLimit } from "../../engine/delegation";
 import { Desk, Meetings, Record } from "./FrontOfficeDesk";
 import { People } from "./FrontOfficePeople";
 import { Culture } from "./FrontOfficeCulture";
+import { tip } from "../tip";
 
 const TABS = ["Executives", "People", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
@@ -70,7 +71,7 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
                 return (
                   <tr key={r}>
                     <td title={EXEC_ROLES[r].what}><strong>{EXEC_ROLES[r].label}</strong></td>
-                    <td>{e ? <>{e.name}<br /><span className="muted">{e.resume[0]}</span></> : <span className="muted">{EXEC_ROLES[r].optional ? "Not filled (optional)" : `Vacant${d ? `: ${d.name} acting` : ""}`}</span>}</td>
+                    <td>{e ? <><span {...tip("exec", e.id)}>{e.name}</span><br /><span className="muted">{e.resume[0]}</span></> : <span className="muted">{EXEC_ROLES[r].optional ? "Not filled (optional)" : `Vacant${d ? `: ${d.name} acting` : ""}`}</span>}</td>
                     <td>
                       {r === "PRES" ? "You" : !e && EXEC_ROLES[r].optional ? "" : (
                         <select value={x.reportsTo[r]} onChange={(ev) => run(() => setReportsTo(game, r, ev.target.value as ExecRole | "owner"))}>
@@ -126,7 +127,7 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
             const gone = s.declined.includes(id);
             return (
               <div key={id} className="stack tight" style={{ borderTop: "1px solid var(--line, #ddd)", paddingTop: 8 }}>
-                <strong>{c.name}</strong>
+                <strong {...tip("exec", c.id)}>{c.name}</strong>
                 <span className="muted">{RULES.season - c.born} years old; {c.years} years in senior jobs. {c.resume.join("; ")}.</span>
                 <span>{s.firm}: {readWord(s.read[id])}.</span>
                 {asked.map((a) => <span key={a.topic}><em>{INTERVIEW_TOPICS[a.topic]}</em> {a.answer}</span>)}
@@ -243,7 +244,7 @@ function OrgChart({ game }: { game: GameState }) {
     const area = EXEC_ROLES[r].area;
     return (
       <li key={r}>
-        <strong>{EXEC_ROLES[r].label}</strong>: {e ? e.name : <span className="muted">vacant{d ? `, ${d.name} acting` : ""}</span>}
+        <strong>{EXEC_ROLES[r].label}</strong>: {e ? <span {...tip("exec", e.id)}>{e.name}</span> : <span className="muted">vacant{d ? `, ${d.name} acting` : ""}</span>}
         {area && <span className="muted"> · {AREAS[area].label.toLowerCase()}: {mode(game, area) === "delegate" ? "decides" : mode(game, area) === "approve" ? "proposes" : "advises"}</span>}
         {r === "FOPS" && <span className="muted"> · the GM and head coach report here</span>}
         {kids.length > 0 && <ul className="org">{kids.map(node)}</ul>}

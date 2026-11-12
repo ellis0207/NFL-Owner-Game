@@ -16,6 +16,7 @@ import { canClaim, claimDueLabel, putInClaim, waiverOrder, withdrawClaim } from 
 import type { GameState, Position } from "../../engine/types";
 import { money, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 type Tab = "available" | "waivers" | "ps" | "wire";
 const TABS: [Tab, string][] = [["available", "Available"], ["waivers", "Waiver wire"], ["ps", "Practice squad"], ["wire", "Transactions"]];
@@ -124,7 +125,7 @@ function Available({ game, changed }: { game: GameState; changed: () => void }) 
               const talks = source === "street" && talksFor(game, us, id).ok;
               const price = source === "street" ? priceEstimate(game, us, id) : 0;
               return (
-                <tr key={id} className="clickable" onClick={() => ui.openPlayer(id)}>
+                <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
                   <td className="name">{p.name}</td>
                   <td>{p.position}</td>
                   <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
@@ -192,7 +193,7 @@ function Waivers({ game, changed }: { game: GameState; changed: () => void }) {
               const mine = w.claims.find((c) => c.team === us);
               const ok = canClaim(game, us, w.player);
               return (
-                <tr key={w.player} className="clickable" onClick={() => ui.openPlayer(w.player)}>
+                <tr key={w.player} className="clickable" {...tip("player", w.player)} onClick={() => ui.openPlayer(w.player)}>
                   <td className="name">{p.name}</td><td>{p.position}</td>
                   <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
                   <td>{w.from}</td>
@@ -262,7 +263,7 @@ function PracticeSquad({ game, changed }: { game: GameState; changed: () => void
               const p = PLAYER_BY_ID[id];
               const prot = isProtected(game, us, id) || protectedIds.includes(id);
               return (
-                <tr key={id} className="clickable" onClick={() => ui.openPlayer(id)}>
+                <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
                   <td className="name">{p.name}</td><td>{p.position}</td>
                   <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
                   <td className="num">{p.yearsExp === 0 ? "R" : p.yearsExp}</td>
@@ -312,7 +313,7 @@ function Wire({ game }: { game: GameState }) {
           <thead><tr><th>Date</th><th>Team</th><th>Move</th></tr></thead>
           <tbody>
             {rows.map((t, i) => (
-              <tr key={`${t.date}-${t.player}-${i}`} className="clickable" onClick={() => ui.openPlayer(t.player)}>
+              <tr key={`${t.date}-${t.player}-${i}`} className="clickable" {...tip("player", t.player)} onClick={() => ui.openPlayer(t.player)}>
                 <td>{shortDate(t.date)}</td><td>{t.team}</td><td>{t.text.charAt(0).toUpperCase() + t.text.slice(1)}</td>
               </tr>
             ))}

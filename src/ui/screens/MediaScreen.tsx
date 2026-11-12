@@ -10,6 +10,7 @@ import { draftClass } from "../../engine/prospects";
 import type { GameState, PressQuestion, Story, Storyline } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const TABS = ["News", "Press room", "Storylines", "Outlets"] as const;
 type Tab = (typeof TABS)[number];
@@ -122,7 +123,7 @@ export function StoryCard({ game, s, compact }: { game: GameState; s: Story; com
             <div className="btn-row related">
               {s.gameId && game.box[s.gameId] && <button className="btn small" onClick={() => ui.openBox(s.gameId!)}>Box score</button>}
               {[...new Set(s.players ?? [])].filter((id) => PLAYER_BY_ID[id]).map((id) => (
-                <button key={id} className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>
+                <button key={id} className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>
               ))}
               {dc && [...new Set(s.prospects ?? [])].filter((id) => dc.byId[id] && !PLAYER_BY_ID[id]).map((id) => (
                 <button key={id} className="link" onClick={() => ui.openProspect(id)}>{dc.byId[id].name}</button>
