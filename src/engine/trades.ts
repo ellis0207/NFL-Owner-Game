@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { nextId } from "./ids";
 import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
@@ -1166,7 +1167,7 @@ function callsToOwner(state: GameState): void {
 
   const make = (deal: TradeDeal, note: string) => {
     if (ts.offers.some((o) => o.status === "open" && o.teams[0] === deal.teams[0])) return;
-    const offer: TradeOffer = { ...deal, id: `offer-${state.date}-${ts.offers.length}`, date: state.date, expires, note, status: "open" };
+    const offer: TradeOffer = { ...deal, id: nextId(state, "offer"), date: state.date, expires, note, status: "open" };
     ts.offers.unshift(offer);
     if (ts.offers.length > 60) ts.offers.length = 60;
     const cpuTeam = deal.teams[0];

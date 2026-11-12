@@ -51,7 +51,12 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   `ensureX(state)` helpers that create a system's slice of state when it is
   missing. A new optional field on `GameState` needs an `ensureX` (or a `??=`
   where it's read) so old saves still load. Saves must not change format
-  without a migration.
+  without a migration. `save/local.ts` serializes autosave writes (merging
+  ones that queue up), keeps three rotating recovery copies and reports its
+  status to `SaveIndicator` (`ui/SaveGuard.tsx`); `holdAutosave` stops writes
+  after a failed step. `save/era.ts` reloads into another start season only
+  after a confirmed save. Ids in capped lists come from `nextId` (`ids.ts`),
+  never a list's length.
 - **Messages**: `send` (owner's inbox) and `news` (league wire) in `inbox.ts`;
   stories go through `addStory` in `outlets.ts`.
 

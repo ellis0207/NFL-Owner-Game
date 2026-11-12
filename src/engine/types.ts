@@ -1937,6 +1937,8 @@ export interface GameState {
   succession?: SuccessionState;
   rivals?: RivalsState;
   causes?: CauseEntry[];
+  /** Counter behind every id from ids.ts; only goes up. */
+  idSeq?: number;
   archive?: Record<string, YearRecord>;
   /** A historical start (engine/eras.ts): the season it began and whether history is left to the save. */
   era?: { start: number; alt: boolean; altFrom?: number };

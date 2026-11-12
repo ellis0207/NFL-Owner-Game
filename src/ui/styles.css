@@ -534,3 +534,10 @@ span.tip-name, [data-tip].tip-name { border-bottom: 1px dotted color-mix(in srgb
 .tip-flag { border-left: 3px solid var(--warn); padding-left: 0.45rem; }
 .tip-foot { color: var(--muted); font-size: 0.74rem; border-top: 1px solid var(--rule); padding-top: 0.25rem; }
 .tip-close { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; cursor: pointer; }
+
+/* Save status in the scoreboard and the panel after a failed simulation step (SaveGuard.tsx). */
+.save-state { font-size: 0.8rem; color: var(--muted); display: inline-flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.save-state.warn { color: var(--warn); }
+.save-state.bad { color: var(--bad); }
+.failure-panel { margin-bottom: 1rem; }
+.app-problem { display: flex; gap: 0.8rem; align-items: center; justify-content: space-between; margin: 0.5rem; }

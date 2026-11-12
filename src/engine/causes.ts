@@ -2,6 +2,7 @@
 // what they led to later through other systems (a signing's seasons, a
 // trade's verdict, a fired coach's successor). Shown as a report on Reports.
 
+import { nextId } from "./ids";
 import { leagueYear } from "./contracts";
 import { PLAYER_BY_ID, teamLabel } from "./league";
 import { tradeOutcomes } from "./records";
@@ -17,7 +18,7 @@ export function causeLog(state: GameState): CauseEntry[] {
 /** Record a decision and its immediate effects. Returns its id, for later effects. */
 export function cause(state: GameState, system: string, text: string, now: string[] = [], ref?: CauseEntry["ref"]): string {
   const log = causeLog(state);
-  const id = `c${state.date}-${log.length}`;
+  const id = nextId(state, "cause");
   log.unshift({ id, date: state.date, system, text, effects: now.map((t) => ({ date: state.date, text: t })), ref });
   if (log.length > KEEP) log.splice(KEEP);
   return id;
