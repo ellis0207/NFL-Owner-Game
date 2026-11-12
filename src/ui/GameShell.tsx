@@ -3,7 +3,9 @@ import { capSummary } from "../engine/cap";
 import { addDays, longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, advanceToNextEvent, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, simToNextGame, simWeek } from "../engine/season";
+import { advanceDay, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, type SimKind } from "../engine/season";
+import { runSim, warmSimWorker } from "../sim/runner";
+import { SimOverlay } from "./SimOverlay";
 import { draftDayOf, onTheClock } from "../engine/draft";
 import { DraftScreen } from "./screens/DraftScreen";
 import { standings } from "../engine/standings";
@@ -197,8 +199,33 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
     }, 0);
   }
 
+  // A multi-day sim runs off the click: in the worker when it's up, else a day at a time on the page.
+  // The page is covered while it runs, so nothing changes the game the sim is playing.
+  const [sim, setSim] = useState<{ kind: SimKind; date: string; days: number; stop: () => void; stopping: boolean } | null>(null);
+  useEffect(() => { const t = window.setTimeout(warmSimWorker, 1500); return () => window.clearTimeout(t); }, []);
+  function longStep(kind: SimKind) {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    const run = runSim(game, kind, (p) => setSim((x) => (x ? { ...x, date: p.date, days: p.days } : x)));
+    setSim({ kind, date: game.date, days: 0, stop: () => { run.cancel(); setSim((x) => (x ? { ...x, stopping: true } : x)); }, stopping: false });
+    run.done.then((r) => {
+      if (r.state !== game) onLoad(r.state);
+    }).catch((e) => {
+      console.error(e);
+      holdAutosave("A simulation step failed; the last good save is kept until you choose what to do.");
+      setFailure({ message: e instanceof Error ? e.message : String(e), date: longDate(game.date) });
+    }).finally(() => {
+      running.current = false;
+      setSim(null);
+      changed();
+      setBusy(false);
+    });
+  }
+
   return (
     <UiContext.Provider value={ui}>
+    {sim && <SimOverlay kind={sim.kind} date={sim.date} days={sim.days} stopping={sim.stopping} onStop={sim.stop} />}
     <div className="shell">
       <aside className={`side${menuOpen ? " open" : ""}`}>
         <div className="side-team">
@@ -259,10 +286,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               {left ? `Sim rest of day (${left})` : "Next day"}
             </button>
             {offseason
-              ? <button className="btn" disabled={busy || over || waiting} onClick={() => step(advanceToNextEvent)}
+              ? <button className="btn" disabled={busy || over || waiting} onClick={() => longStep("nextEvent")}
                 title={waiting ? "The draft is on: run it from the draft room, or use Sim rest of day to let the GM finish today's rounds." : undefined}>Advance to next event</button>
-              : <button className="btn" disabled={busy || over} onClick={() => step(simToNextGame)}>Sim to game day</button>}
-            <button className="btn" disabled={busy || over || waiting} onClick={() => step(simWeek)} title="Seven days, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">Sim a week</button>
+              : <button className="btn" disabled={busy || over} onClick={() => longStep("nextGame")}>Sim to game day</button>}
+            <button className="btn" disabled={busy || over || waiting} onClick={() => longStep("week")} title="Seven days, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">Sim a week</button>
           </div>
         </header>
         <main className="content">

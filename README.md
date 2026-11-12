@@ -940,10 +940,18 @@ rosters on the same scale, without changing anyone else's rating.
 - Agents, agencies and media outlets are made up. The 2027 cap is OverTheCap's
   projection (about $327M) until the league sets it in the game, within about
   1% of that.
-- The offseason doesn't model retirements, Pro Bowl tiers for fifth-year
-  options, or offer sheets from the owner's own team yet. The 2027
-  compensatory picks are NFL.com's projection, hand-entered in
-  `src/engine/draft.ts`; draft classes are generated per save.
+- The 2027 compensatory picks are NFL.com's projection, hand-entered in
+  `src/engine/draft.ts`; draft classes are generated per save. (Retirements,
+  Pro Bowl tiers for fifth-year options and the owner's own offer sheets to
+  other teams' restricted free agents are all in the game now: `careers.ts`,
+  `offseason.ts` with `honors.ts`, and `contractextras.ts`.)
+- Multi-day sims run in a background worker started from the page's own
+  script, with progress and a Stop button between days. Where a host blocks
+  such workers (or the page is opened from a file), the same sim runs on the
+  page a day at a time. The season's rules and schedule are still module-level
+  state in `league.ts`, bound from the save when it loads; moving them into an
+  explicit simulation context is the next step, and the precondition for
+  running a second game in the same page.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
   real league averages (`npx vite-node tests/calibrate.ts 4`).

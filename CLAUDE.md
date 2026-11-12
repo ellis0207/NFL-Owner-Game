@@ -93,6 +93,16 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 
 Settings (`state.settings`): `capRules`, `finances`, `scouting` (`fogOf` in `staff.ts` widens only the user's reads), `ironman`, `pause` (multi-day sims in `season.ts`). Display preferences (text size, contrast, theme, folded sidebar groups, Today panels) live in browser storage via `ui/prefs.ts`.
 
+Multi-day sims (`simDays` generator in `season.ts`: week, to game day, to the
+next event) run through `src/sim/runner.ts`: in a worker started from the
+page's own inline script (`main.tsx` calls `startSimWorker` when there's no
+`document`; a historical start's `PACK` is prefixed), else on the page a day
+at a time. Each run carries the save in and out, with progress and a stop
+between days; the UI covers the page with `SimOverlay` meanwhile. So no module
+may touch `document` or `window` at load time, and the build keeps
+`modulePreload.polyfill` off. Blob workers don't start from `file://`; test
+over http (`python3 -m http.server` in `dist/`).
+
 UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
 for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,

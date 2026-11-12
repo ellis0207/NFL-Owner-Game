@@ -872,17 +872,65 @@ export function draftWaiting(state: GameState): boolean {
   return !!draftDayOf(state.date) && !dayDone(state) && !isGameOver(state);
 }
 
+/** The multi-day sims the owner can run. */
+export type SimKind = "nextEvent" | "nextGame" | "week";
+
+/**
+ * One multi-day sim played a day at a time: each step plays a day and yields
+ * the new date, so a caller can report progress and stop between days (the
+ * sim runner in the page, which may run it in a worker). The plain functions
+ * below drain it.
+ */
+export function* simDays(state: GameState, kind: SimKind): Generator<string, void> {
+  if (kind === "nextEvent") {
+    // In the offseason: advance to the next key date, at most a week.
+    if (draftWaiting(state)) return;
+    const start = state.date;
+    const seen = state.inbox.length;
+    for (let i = 0; i < 7; i++) {
+      advanceDay(state);
+      yield state.date;
+      if (shouldPause(state, seen)) return;
+      if (offseasonStops(state).includes(state.date) && state.date !== start) return;
+      if (!isSeasonOver(state) && !isSummer(state)) return;
+    }
+    return;
+  }
+  if (kind === "nextGame") {
+    // To the morning of our next game, stopping there so the owner plays it from Today; early on the cutdown day or anything urgent.
+    const start = state.date;
+    if (isSeasonOver(state) || isSummer(state)) {
+      yield* simDays(state, "nextEvent");
+      return;
+    }
+    const seen = state.inbox.length;
+    const gameToday = () => pendingEvents(state).some((a) => a.action === "game");
+    for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
+      if (gameToday()) return;
+      if (state.date !== start && state.date === KEY.rosterCutdown) return;
+      advanceDay(state);
+      yield state.date;
+      if (shouldPause(state, seen)) return;
+    }
+    return;
+  }
+  // A week: seven days, or less if the draft is waiting on us or something urgent arrives.
+  const seen = state.inbox.length;
+  for (let i = 0; i < 7 && !isGameOver(state); i++) {
+    if (draftWaiting(state)) return;
+    advanceDay(state);
+    yield state.date;
+    if (shouldPause(state, seen)) return;
+  }
+}
+
+function drain(it: Generator<string, void>): void {
+  while (!it.next().done) { /* each step plays a day */ }
+}
+
 /** In the offseason: advance to the next key date, at most a week. */
 export function advanceToNextEvent(state: GameState): void {
-  if (draftWaiting(state)) return;
-  const start = state.date;
-  const seen = state.inbox.length;
-  for (let i = 0; i < 7; i++) {
-    advanceDay(state);
-    if (shouldPause(state, seen)) return;
-    if (offseasonStops(state).includes(state.date) && state.date !== start) return;
-    if (!isSeasonOver(state) && !isSummer(state)) return;
-  }
+  drain(simDays(state, "nextEvent"));
 }
 
 /**
@@ -890,26 +938,12 @@ export function advanceToNextEvent(state: GameState): void {
  * plays it from the Today page. Stops early on the cutdown day or anything urgent.
  */
 export function simToNextGame(state: GameState): void {
-  const start = state.date;
-  if (isSeasonOver(state) || isSummer(state)) return advanceToNextEvent(state);
-  const seen = state.inbox.length;
-  const gameToday = () => pendingEvents(state).some((a) => a.action === "game");
-  for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
-    if (gameToday()) return;
-    if (state.date !== start && state.date === KEY.rosterCutdown) return;
-    advanceDay(state);
-    if (shouldPause(state, seen)) return;
-  }
+  drain(simDays(state, "nextGame"));
 }
 
 /** A week at a time: seven days, or less if the draft is waiting on us or something urgent arrives. */
 export function simWeek(state: GameState): void {
-  const seen = state.inbox.length;
-  for (let i = 0; i < 7 && !isGameOver(state); i++) {
-    if (draftWaiting(state)) return;
-    advanceDay(state);
-    if (shouldPause(state, seen)) return;
-  }
+  drain(simDays(state, "week"));
 }
 
 /** With pauses on, a multi-day sim stops the day an urgent message lands (a memo due soon, a resignation, an incident). */
