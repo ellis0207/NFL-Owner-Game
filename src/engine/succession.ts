@@ -8,6 +8,8 @@
 // Gompertz curve, roughly an American adult's; estate tax is 40% above an
 // exemption of $15M (2026), indexed to prices.
 
+import { cause } from "./causes";
+import { atomic } from "./archive";
 import { billions, business, cashBalance, post, valuation } from "./business";
 import { addDays, daysBetween } from "./dates";
 import { debt, totalDebt } from "./debt";
@@ -303,7 +305,7 @@ function leagueVote(state: GameState): void {
   let yes = 0;
   for (let i = Object.keys(owners(state).relations).length; i > 0; i--) if (r() < 0.95) yes++;
   if (yes < 24) { failSale(state, `The owners voted it down, ${yes} to ${31 - yes}.`); return; }
-  closeSale(state, bid.name, bid.price);
+  atomic(state, () => closeSale(state, bid.name, bid.price));
 }
 
 function failSale(state: GameState, why: string): void {
@@ -334,6 +336,7 @@ function closeSale(state: GameState, buyer: string, price: number): void {
   t.stake = 0;
   t.controller = buyer;
   for (const a of AREA_KEYS) setMode(state, a, "delegate", true);
+  cause(state, "ownership", `Sold the ${TEAM_BY_ID[state.userTeam].name} to ${buyer} for ${billions(price)}.`, [`Netted ${billions(n.net)}: ${n.multiple.toFixed(1)} times the money put in.`], { kind: "club", id: state.userTeam });
   endTenure(state, "sale", `You sold the club to ${buyer}.`);
 }
 
@@ -563,7 +566,7 @@ export function resolveSuccessionMemo(state: GameState, m: Memo, choice: number)
   if (p.succession === "tenure") {
     if (!s.pending) return null;
     if (p.why === "sale") { if (choice === 1) endGame(state); else s.pending = undefined; return null; }
-    if (choice === 0) continueAsHeir(state);
+    if (choice === 0) atomic(state, () => continueAsHeir(state));
     else if (choice === 1) estateSells(state);
     else { endGame(state); }
     return null;

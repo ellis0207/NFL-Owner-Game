@@ -20,6 +20,7 @@ import { keepValue, releasePlayer, rosterCount, rosterLimit } from "./roster";
 import { settleMinicamp } from "./spring";
 import { teamStaff } from "./staff";
 import type { GameState, IncidentKind, OwnerDecision } from "./types";
+import { liveIds } from "./live";
 
 const KEY = RULES.keyDates;
 
@@ -189,7 +190,8 @@ function serveSuspensions(state: GameState): void {
     if (r && g.type === "REG") playing.add(r.away).add(r.home);
   }
   if (!playing.size) return;
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (!ps.suspended || !ps.team || !playing.has(ps.team)) continue;
     if (--ps.suspended.games > 0) continue;
     delete ps.suspended;

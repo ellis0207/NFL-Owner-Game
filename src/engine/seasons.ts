@@ -304,6 +304,12 @@ function prune(state: GameState, next: number): void {
   if (state.transactions && state.transactions.length > 1500) state.transactions.length = 1500;
   const signedCutoff = `${next - 4}-01-01`;
   state.signings = state.signings.filter((s) => s.date >= signedCutoff);
+  // Snap counts matter for the last few seasons (incentives, tenders, the stats pages); older ones go.
+  const hist = state.history;
+  if (hist) for (const [id, seasons] of Object.entries(hist.snaps)) {
+    for (const y of Object.keys(seasons)) if (Number(y) < next - 5) delete seasons[y];
+    if (!Object.keys(seasons).length) delete hist.snaps[id];
+  }
   const yearAgo = addDays(state.date, -365);
   for (const [id, n] of Object.entries(state.negotiations)) if (n.status !== "open" && n.opened < yearAgo) delete state.negotiations[id];
   if (state.fa) for (const [id, fa] of Object.entries(state.fa)) if (fa.status === "signed" || state.players[id]?.status === "retired") delete state.fa[id];

@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
 import { tradePhysicals } from "./compliance";
@@ -45,6 +46,7 @@ import { depthChart, logMove, releasePlayer, rosterLimit, rosterStatusNow, signR
 import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside } from "./staff";
 import { standings } from "./standings";
 import type { GameState, Position, TradeAsset, TradeDeal, TradeOffer, TradeRecord, TradeState } from "./types";
+import { liveIds } from "./live";
 
 const KEY = RULES.keyDates;
 /** Picks in the next three drafts can be traded. */
@@ -634,7 +636,8 @@ function margin(team: string, outValue: number): number {
 function justArrived(state: GameState, id: string): boolean {
   const deal = dealOf(state, id);
   if (deal && daysBetween(deal.signed, state.date) < 30 && deal.signed <= state.date) return true;
-  return trades(state).log.some((t) => t.status === "done" && daysBetween(t.date, state.date) < 30 && (playersIn(t.send[0]).includes(id) || playersIn(t.send[1]).includes(id)));
+  const since = addDays(state.date, -30);
+  return trades(state).log.some((t) => t.status === "done" && t.date > since && t.date <= state.date && (playersIn(t.send[0]).includes(id) || playersIn(t.send[1]).includes(id)));
 }
 
 /** A rookie drafted in the first three rounds this year: teams almost never give up on one this fast. */
@@ -903,6 +906,7 @@ export function completeTrade(state: GameState, deal: TradeDeal): TradeRecord {
   const ts = trades(state);
   const partner = deal.teams[0] === state.userTeam ? deal.teams[1] : deal.teams[1] === state.userTeam ? deal.teams[0] : null;
   if (partner) changeRapport(state, partner, 3);
+  if (partner) cause(state, "trades", `Traded with the ${teamLabel(partner)}.`, [`Our rapport with the ${teamLabel(partner)} owner rose.`], { kind: "trade", id: `trade-${state.date}-${trades(state).log.length}` });
   const official = tradeWindow(state).official;
   const id = `trade-${state.date}-${ts.log.length}`;
   const rec: TradeRecord = {
@@ -1125,7 +1129,8 @@ function tradeRequests(state: GameState): void {
   if (!tradeWindow(state).open && !isOffseason(state.date)) return;
   const ts = trades(state);
   const rng = rngFor(state.seed, `requests:${state.date}`);
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (!ps.team || ps.status === "fa" || ps.status === "ps" || ts.requests[id]) continue;
     const m = ps.morale ?? 70;
     // Unhappy players, and stars stuck in a long contract standoff, ask out.

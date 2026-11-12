@@ -6,6 +6,7 @@
 // It also carries out what the owner delegated: the GM answering trade calls,
 // the coaches filling staff jobs, the revenue staff setting prices and signing
 // sponsors, stadium operations taking bookings, and the CFO refinancing loans.
+import { cause } from "./causes";
 import { FORMAT } from "./format";
 import { resolveIncident } from "./departments";
 import { budgetVsActual, books } from "./books";
@@ -77,6 +78,7 @@ export function decideMemo(state: GameState, id: string, choice: number, why = "
   m.status = "decided";
   m.choice = choice;
   m.decided = state.date;
+  if (m.amount || m.kind === "general") cause(state, m.area ?? m.kind, `${m.title}: ${m.options[choice].label}.`, m.options[choice].effect ? [m.options[choice].effect] : []);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: ${m.options[choice].label}`, m.amount, m.from, "owner", why || undefined);
   // Executives notice whether their recommendations are taken.
   const role = roleOf(state, m);

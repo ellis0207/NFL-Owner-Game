@@ -1,4 +1,6 @@
 // The game clock: starting a new game and moving the league forward one day.
+import { causesDaily } from "./causes";
+import { archiveDaily } from "./archive";
 import { constructionDaily } from "./construction";
 import { politicsDaily } from "./politics";
 import { relocationDaily } from "./relocation";
@@ -93,6 +95,7 @@ import { wealthDaily } from "./wealth";
 import { franchiseDaily } from "./franchisemarket";
 import { startAsBuyer, startAsMinority, takeoverDaily } from "./takeover";
 import { ensureSuccession, isOver, startAsHeir, successionDaily } from "./succession";
+import { rivalsDaily } from "./rivals";
 import { peopleDaily } from "./people";
 import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
@@ -623,6 +626,9 @@ export function advanceDay(state: GameState): void {
   franchiseDaily(state);
   takeoverDaily(state);
   successionDaily(state);
+  rivalsDaily(state);
+  causesDaily(state);
+  archiveDaily(state);
   officeDaily(state);
   peopleDaily(state);
   standingDaily(state);

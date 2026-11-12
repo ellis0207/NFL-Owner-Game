@@ -564,11 +564,15 @@ export function moveGateFactor(state: GameState, date: string): number {
 
 // ---- Realignment ----
 
-/** After a move, ask the owners to swap our division with a club that fits geography better. */
+/**
+ * Ask the owners to swap our division with another club's. After a move the
+ * geography usually carries it; without one, owners weigh tradition and old
+ * rivalries against shorter trips, and most such proposals fail.
+ */
 export function proposeRealign(state: GameState, other: string): string | null {
   const us = state.userTeam;
-  if (!moveOf(state, us)) return "Realignment comes up only after a move.";
   if (other === us || !TEAM_BY_ID[other]) return "Pick another club.";
+  if (TEAM_BY_ID[other].conference === TEAM_BY_ID[us].conference && TEAM_BY_ID[other].division === TEAM_BY_ID[us].division) return "That club is already in our division.";
   const r = relocation(state);
   if (r.realign.some((x) => x.status === "proposed")) return "A realignment proposal is already on the agenda.";
   const vote = addDays(RULES.keyDates.annualLeagueMeeting, 2);
@@ -589,7 +593,9 @@ function realignVote(state: GameState, x: Realign): void {
   let yes = 1;
   for (const t of TEAMS) {
     if (t.id === x.team) continue;
-    const p = 0.45 + gain / 1500 + (t.id === x.with ? -0.2 : 0) + (owners(state).relations[t.id]?.rapport ?? 0) / 200;
+    // Without a move behind it, tradition weighs against breaking up divisions.
+    const tradition = moveOf(state, x.team) ? 0 : 0.12;
+    const p = 0.45 + gain / 1500 - tradition + (t.id === x.with ? -0.2 : 0) + (owners(state).relations[t.id]?.rapport ?? 0) / 200;
     if (rng() < Math.max(0.02, Math.min(0.97, p))) yes++;
   }
   x.yes = yes;

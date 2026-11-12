@@ -197,6 +197,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "The other clubs",
+    body: [
+      "Owners > Clubs profiles every other club: its owner's approach (win now, builder, profit first or steady), who makes the football calls (the owner, a football president, the GM or the head coach), its budgets and money, and its reputation with candidates. Owners who fire coaches often or run long searches find candidates hesitate.",
+      "Clubs change course after seasons that argue with their plan, new owners bring new approaches, and a club whose money runs short cuts spending, borrows and may look for a buyer. A few times a season an owner steps into football decisions. Scouts get hired away into bigger jobs, and coaches sometimes leave without warning.",
+      "Owners > Realignment asks the owners to swap our division with another club's. After a move geography usually carries it; otherwise tradition makes it a hard vote.",
+      "Reports shows cause and effect: big decisions, what followed right away and what they led to in later seasons, plus each league year's contracts, cap, books and rules as they closed. Signing memos carry the coaches' estimate of what a player adds in wins and playoff chances.",
+    ],
+  },
+  {
     title: "Moving the club",
     body: [
       "Business > Relocation compares markets. A move needs a study, an application between January 1 and February 15, and 24 owners' votes at the annual meeting. Owners want to see you tried to stay: a failed public vote or failed lease talks help.",

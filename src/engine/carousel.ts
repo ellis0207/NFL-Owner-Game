@@ -8,6 +8,8 @@
 // nobody joins a new team until his current team's season is over.
 // Head coaching interviews can't be blocked; a lateral move to another
 // coordinator job can, while the coach is under contract.
+import { cause } from "./causes";
+import { hiringFactor, patienceShift } from "./rivals";
 import { FORMAT } from "./format";
 import { changeRapport } from "./owners";
 import {
@@ -73,7 +75,7 @@ export function jobAppeal(state: GameState, team: string): number {
   const wp = outlook(state)[team] ?? 0.5;
   const market = Math.max(0, Math.min(1, (MARKETS[team].target - 700_000_000) / 400_000_000));
   const recent = staff(state).log.filter((l) => l.team === team && /fire/.test(l.text) && daysBetween(l.date, state.date) < 4 * 365).length;
-  const stable = Math.max(0, 1 - recent * 0.2);
+  const stable = Math.max(0, 1 - recent * 0.2) * hiringFactor(state, team);
   return Math.max(0.05, Math.min(1, 0.5 * (0.5 + (wp - 0.5) * 1.6) + 0.25 * market + 0.25 * stable));
 }
 
@@ -468,6 +470,7 @@ export function fireStaff(state: GameState, id: string): { ok: boolean; text: st
   const owed = c.contract && c.contract.through >= nextSeason(state) ? c.contract.salary * (c.contract.through - nextSeason(state) + 1) : 0;
   fire(state, id);
   const team = state.userTeam;
+  if (role === "HC" || role === "GM") cause(state, "staff", `Fired ${ROLE_NAME[role]} ${c.name}.`, [owed ? `${money(owed)} still owed on the contract.` : "Nothing left owed.", "Candidates notice firings; the club's pull with them slips."], { kind: "coach", id });
   if (role === "HC" && inSeason(state)) {
     // An interim for the rest of the season: the coordinator players respond to best.
     const pool = [holder(state, team, "OC"), holder(state, team, "DC")].filter((x): x is Coach => !!x);
@@ -766,6 +769,7 @@ export function fireChance(state: GameState, team: string, hc: Coach): number {
   const lastWp = last.length ? last.reduce((s, x) => s + (x.w + x.t / 2) / Math.max(1, x.w + x.l + x.t), 0) / last.length : 0.5;
   const playoffs = [...(state.seeds?.AFC ?? []), ...(state.seeds?.NFC ?? [])].includes(team);
   let z = (wp - expect) * 5 + (wp - 0.5) * 3 + (lastWp - 0.5) * 1.5 + (playoffs ? 1.6 : 0);
+  z += patienceShift(state, team);
   if (tenure <= 1) z += 2.2;
   else if (tenure === 2) z += 0.8;
   const p = 1.8 / (1 + Math.exp(z * 1.4 + 2.0));
