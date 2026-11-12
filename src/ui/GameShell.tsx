@@ -255,7 +255,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
           {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
-            // Your own game can come in a drive at a time.
+            // Your own game can come in a play at a time.
             if (gameId && s.pbp?.[gameId] && readPrefs().followGames) openBox(gameId, true);
           })} />}
           {screen === "Calendar" && <CalendarScreen game={game} />}

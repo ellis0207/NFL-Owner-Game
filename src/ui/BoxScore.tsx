@@ -6,7 +6,8 @@ import { gameTypeLabel } from "../engine/season";
 import { stat, type StatKey } from "../engine/stats";
 import type { GameState, TeamBox } from "../engine/types";
 import { useUi } from "./ui";
-import { DriveChart, FollowGame, GameDay, KeyPlays, PlayByPlay, WinChart } from "./GameFeed";
+import { DriveChart, GameDay, KeyPlays, PlayByPlay, WinChart } from "./GameFeed";
+import { FollowGame } from "./GameCast";
 import { perPlay } from "../engine/analytics";
 import { clockText } from "../engine/playlog";
 
@@ -80,7 +81,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
 
   return (
     <div className={`drawer-backdrop${following ? " solid" : ""}`} onClick={onClose}>
-      <aside className="drawer wide" role="dialog" aria-label="Box score" onClick={(e) => e.stopPropagation()}>
+      <aside className={`drawer wide${following ? " casting" : ""}`} role="dialog" aria-label={following ? "Play by play" : "Box score"} onClick={(e) => e.stopPropagation()}>
         <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
           <span className="label">{sched.label ?? gameTypeLabel(sched)} · {longDate(sched.date)} · {kickoff(sched.timeET)}</span>
           <button className="btn small" onClick={onClose}>Close</button>
@@ -97,6 +98,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
           {([["box", "Box score"], ["plays", "Play by play"], ["drives", "Drives"], ...(r.home === game.userTeam || r.away === game.userTeam ? [["gameday", "Game day"]] : [])] as [View, string][])
             .map(([k, label]) => <button key={k} aria-pressed={view === k} onClick={() => setView(k)}>{label}</button>)}
         </div>
+        {log && <div className="btn-row"><button className="btn small" onClick={() => setFollowing(true)}>Watch it play by play</button></div>}
         {(view === "plays" || view === "drives") && !log && <p className="muted">Full play-by-play is kept through the week after a game. This one keeps its box score and scoring plays.</p>}
         {view === "plays" && log && <><WinChart r={r} log={log} /><KeyPlays r={r} log={log} /><PlayByPlay r={r} log={log} /></>}
         {view === "drives" && log && <DriveChart r={r} log={log} />}

@@ -429,3 +429,68 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 .readonly .tabs button, .readonly .section-pages button, .readonly [data-view] select, .readonly [data-view] input { opacity: 1; cursor: pointer; }
 .field { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .btn-row > .field { flex: 1 1 12rem; }
+
+/* ---- Field view: one play at a time ---- */
+.drawer.wide.casting { width: 100%; border-left: 0; }
+.cast { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); align-items: start; }
+.cast-main { position: sticky; top: 0; min-width: 0; max-width: 1100px; width: 100%; justify-self: center; }
+.cast-feed { min-width: 0; }
+.cast-feed .plays li { grid-template-columns: 4.6rem 1fr auto; }
+@media (max-width: 980px) {
+  .cast { grid-template-columns: minmax(0, 1fr); }
+  .cast-main { position: static; }
+}
+/* The score graphic is dark in both themes, as it would be over a broadcast picture. */
+.bug { display: grid; grid-template-columns: 1fr 1fr auto minmax(9.5rem, auto); background: #0c1116; color: #f2f5f7; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-lift); font-family: var(--font-display); line-height: 1; border: 1px solid #000; }
+.bug-team { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0.8rem; min-width: 0; box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.18); }
+.bug-team + .bug-team { border-left: 2px solid #0c1116; }
+.bug-id { display: grid; gap: 0.3rem; }
+.bug-abbr { font-size: 1.7rem; font-weight: 700; letter-spacing: 0.03em; display: flex; align-items: center; gap: 0.4rem; }
+.bug-poss { width: 0.8rem; height: 0.5rem; border-radius: 50%; background: currentColor; display: inline-block; }
+.bug-to { display: flex; gap: 3px; }
+.bug-to i { width: 1rem; height: 4px; border-radius: 1px; background: currentColor; opacity: 0.25; }
+.bug-to i.on { opacity: 1; }
+.bug-pts { font-size: 2.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bug-clock { display: grid; align-content: center; justify-items: center; gap: 0.2rem; padding: 0.4rem 0.9rem; background: #1a222b; }
+.bug-q { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: #aab6c1; }
+.bug-time { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bug-down { display: grid; align-content: center; justify-items: center; gap: 0.2rem; padding: 0.4rem 0.9rem; background: #f2f5f7; color: #0c1116; text-align: center; }
+.bug-down.flag { background: #f5c518; }
+.bug-dd { font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.bug-spot { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; min-height: 0.9rem; color: #46525e; }
+@media (max-width: 620px) {
+  .bug { grid-template-columns: 1fr 1fr; }
+  .bug-abbr { font-size: 1.35rem; }
+  .bug-pts { font-size: 2rem; }
+  .bug-clock, .bug-down { grid-auto-flow: column; justify-content: center; align-items: baseline; gap: 0.5rem; }
+  .bug-time { font-size: 1.25rem; }
+  .bug-dd { font-size: 1.1rem; }
+}
+.field { width: 100%; height: auto; display: block; border-radius: 8px; box-shadow: var(--shadow); background: #2f7a3d; }
+.field .turf { fill: #2f7a3d; }
+.field .turf.alt { fill: #2a7038; }
+.field .yard { stroke: rgb(255 255 255 / 0.75); stroke-width: 2; }
+.field .goal { stroke: #fff; stroke-width: 5; }
+.field .hash line { stroke: rgb(255 255 255 / 0.6); stroke-width: 1.5; }
+.field .yardno text { fill: rgb(255 255 255 / 0.8); font-family: var(--font-display); font-size: 44px; font-weight: 600; text-anchor: middle; }
+.field .endzone { font-family: var(--font-display); font-size: 58px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; text-anchor: middle; dominant-baseline: central; }
+.field .post { stroke: #f5c518; stroke-width: 6; stroke-linecap: round; }
+.field .edge { fill: none; stroke: #fff; stroke-width: 3; }
+.field .drive { fill: rgb(255 255 255 / 0.16); }
+.field .los { stroke: #2d7ff9; stroke-width: 5; }
+.field .togain { stroke: #f5c518; stroke-width: 5; }
+.field .trail { fill: none; stroke: #fff; stroke-width: 5; stroke-dasharray: 12 8; stroke-linecap: round; }
+.field .trail.score { stroke: #ffd84a; }
+.field .trail.turnover { stroke: #ff8a7d; }
+.field .ball ellipse { fill: #7a4521; stroke: #fff; stroke-width: 2.5; }
+.field .ball line { stroke: #fff; stroke-width: 2.5; }
+.field .tag text { font-family: var(--font-display); font-size: 24px; font-weight: 700; text-anchor: middle; }
+@media (prefers-reduced-motion: no-preference) { .field .ball { transition: transform 450ms ease-out; } }
+.cast-wp { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center; font-size: 0.85rem; color: var(--muted); }
+.cast-wp-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--sunk); gap: 2px; }
+.cast-play { display: grid; gap: 0.25rem; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--muted); border-radius: var(--radius); padding: 0.7rem 0.9rem; min-height: 5.2rem; align-content: start; }
+.cast-play.score { border-left-color: var(--good); }
+.cast-play.turnover { border-left-color: var(--bad); }
+.cast-play.flag { border-left-color: var(--warn); }
+.cast-result { font-family: var(--font-display); font-size: 1.35rem; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; }
+.plays.feed li.score { font-family: inherit; font-size: inherit; }

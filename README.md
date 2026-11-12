@@ -434,8 +434,13 @@ Every game in the league has a play-by-play feed and a drive chart: each
 snap with the down, distance, spot, formation, personnel and coverage, who
 made the tackle, and every flag, review and score. Full plays are kept through
 the week after a game; after that a game keeps its box score and scoring
-plays. Your own game, played from the Today page, comes in a drive at a time,
-with a skip to the next quarter or the end. Pass rushers win or lose against
+plays. Your own game, played from the Today page, comes in one play at a
+time on a field view: a broadcast-style scoreboard (score, quarter, clock,
+down and distance, timeouts, possession) over a drawing of the field with the
+ball, the line of scrimmage, the line to gain, the drive so far and the path
+of the last play. You can skip to the next drive, the next quarter or the
+end, let it run on its own, or step back a play. Any game still holding its
+full plays can be watched the same way from its box score. Pass rushers win or lose against
 the blocker in front of them, so one weak tackle shows. Officials miss
 calls; coaches challenge (two a game, a third after winning both, a timeout
 lost on each failure), the booth reviews the last two minutes of each half
@@ -837,7 +842,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
-  The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
+  The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
   Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
 - `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page).
