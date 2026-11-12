@@ -9,9 +9,18 @@ import {
 import { TEAM_BY_ID, TEAMS } from "../../engine/league";
 import { owner } from "../../engine/ownership";
 import type { GameState, InvestorsState, Partner, StakeSale, StakeTerms } from "../../engine/types";
+import { franchise } from "../../engine/franchisemarket";
+import { inControl } from "../../engine/takeover";
 import { money } from "../format";
+import { GroupedTabs } from "../Tabs";
+import { Deals } from "./OwnershipDeals";
 
-type Tab = "stakes" | "board" | "investors" | "reports";
+type Tab = "Stakes" | "Board" | "Investors" | "Reports" | "Deals";
+// Partners and governance of the club you own, then buying and selling clubs.
+const GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: "Your club", tabs: ["Stakes", "Board", "Investors", "Reports"] },
+  { label: "Clubs", tabs: ["Deals"] },
+];
 type Say = (msg: string | null, ok?: string) => void;
 
 const KIND: Record<Partner["kind"], string> = { individual: "Individual", family: "Family office", fund: "Private-equity fund", celebrity: "Public figure" };
@@ -19,23 +28,19 @@ const pc = (x: number) => `${(x * 100).toFixed(1)}%`;
 const big = (x: number) => (Math.abs(x) >= 1e9 ? billions(x) : money(x));
 
 export function OwnershipScreen({ game, changed }: { game: GameState; changed: () => void }) {
-  const [tab, setTab] = useState<Tab>("stakes");
+  const [tab, setTab] = useState<Tab>(inControl(game) && !franchise(game).deal ? "Stakes" : "Deals");
   const [said, setSaid] = useState<string | null>(null);
   const say: Say = (msg, ok) => { setSaid(msg ?? ok ?? null); changed(); };
   return (
     <section className="stack">
       <h2>Ownership</h2>
-      <div className="tabs" role="group" aria-label="View">
-        <button aria-pressed={tab === "stakes"} onClick={() => setTab("stakes")}>Stakes</button>
-        <button aria-pressed={tab === "board"} onClick={() => setTab("board")}>Board</button>
-        <button aria-pressed={tab === "investors"} onClick={() => setTab("investors")}>Investors</button>
-        <button aria-pressed={tab === "reports"} onClick={() => setTab("reports")}>Reports</button>
-      </div>
+      <GroupedTabs label="Ownership" groups={inControl(game) ? GROUPS : [{ label: "Clubs", tabs: ["Deals"] }]} value={inControl(game) ? tab : "Deals"} onChange={setTab} />
       {said && <p className="notice">{said}</p>}
-      {tab === "stakes" && <Stakes game={game} say={say} />}
-      {tab === "board" && <Board game={game} say={say} />}
-      {tab === "investors" && <Investors game={game} say={say} />}
-      {tab === "reports" && <Reports game={game} />}
+      {inControl(game) && tab === "Stakes" && <Stakes game={game} say={say} />}
+      {inControl(game) && tab === "Board" && <Board game={game} say={say} />}
+      {inControl(game) && tab === "Investors" && <Investors game={game} say={say} />}
+      {inControl(game) && tab === "Reports" && <Reports game={game} />}
+      {(tab === "Deals" || !inControl(game)) && <Deals game={game} say={say} />}
     </section>
   );
 }

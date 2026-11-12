@@ -82,6 +82,13 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 {[1, 2, 3, 4, 5, 6].map((y) => <option key={y} value={y}>{y} season{y > 1 ? "s" : ""}</option>)}
               </select>
             </label>
+            <label className="field"><span className="label">How you come in</span>
+              <select value={profile.entry ?? "owner"} onChange={(e) => set({ entry: e.target.value as OwnerSetup["entry"] })}>
+                <option value="owner">Controlling owner: you bought the club and run it</option>
+                <option value="buyer">Buyer: the club is for sale, and you watch while you bid for it or another</option>
+                <option value="minority">Minority partner: you own 10% and get distributions, and can buy more</option>
+              </select>
+            </label>
             <label className="field"><span className="label">The club's finances when you take over</span>
               <select value={profile.scenario} onChange={(e) => set({ scenario: e.target.value as Scenario })}>
                 {Object.entries(SCENARIOS).map(([k, v]) => <option key={k} value={k}>{v.label}: {v.what}</option>)}

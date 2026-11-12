@@ -90,6 +90,8 @@ import { scoutingDaily } from "./scouting";
 import { treasuryDaily } from "./treasury";
 import { investorsDaily } from "./investors";
 import { wealthDaily } from "./wealth";
+import { franchiseDaily } from "./franchisemarket";
+import { startAsBuyer, startAsMinority, takeoverDaily } from "./takeover";
 import { peopleDaily } from "./people";
 import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
@@ -193,6 +195,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     "Scouting page: a region, a conference, a school, positions, a college system, or specific players. Narrow assignments get you " +
     "the full picture on a few players; broad ones get a little on a lot of them. Every trip comes out of our scouting budget, and " +
     "campuses far from here cost more to reach. I'll file a report every Sunday.");
+  if (profile.entry === "buyer") startAsBuyer(state);
+  else if (profile.entry === "minority") startAsMinority(state, 0.1);
   return state;
 }
 
@@ -614,6 +618,8 @@ export function advanceDay(state: GameState): void {
   treasuryDaily(state);
   investorsDaily(state);
   wealthDaily(state);
+  franchiseDaily(state);
+  takeoverDaily(state);
   officeDaily(state);
   peopleDaily(state);
   standingDaily(state);
