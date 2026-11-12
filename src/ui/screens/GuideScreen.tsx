@@ -179,6 +179,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Buying and selling clubs",
+    body: [
+      "Ownership > Deals lists clubs for sale and why: an estate, a family split, an owner who needs cash, a fight over control. Any club gets an appraisal from its revenue, market, stadium and debt, with comparable sales. A club changes hands only once every few years, at prices near the market multiple.",
+      "Pursuing a club starts a month of diligence that can turn up hidden debt, lawsuits, a bad lease, guarantees the cash won't cover or deferred repairs. Then bid against rival groups; a financing condition protects you but sellers like it less, and an owner who isn't selling wants a lot more. A winning bid gets 60 days of exclusivity.",
+      "Fund it with your money, the family trust, limited partners, a fund (10% at most) and debt within the league's limit, keeping at least 30%. The finance committee vets you and 24 owners must vote yes; lenders can pull out, and deals fail. You can control only one club, so the one you own is sold at closing, and you take over the new one as it stands, with any capital it needs.",
+      "New game can also start you as a buyer watching a club that's for sale, or as a 10% partner who gets distributions and can buy up to 49%. Until you control a club, its staff make the calls and its pages are read-only.",
+    ],
+  },
+  {
     title: "Moving the club",
     body: [
       "Business > Relocation compares markets. A move needs a study, an application between January 1 and February 15, and 24 owners' votes at the annual meeting. Owners want to see you tried to stay: a failed public vote or failed lease talks help.",

@@ -56,6 +56,8 @@ export function merch(state: GameState): MerchState {
 /** Lays the save's team name over the league data (a renamed club), and puts the others back. */
 export function bindBrand(state: GameState): void {
   for (const [id, name] of Object.entries(ORIGINAL_NAMES)) TEAM_BY_ID[id].name = name;
+  // Clubs the owner rebranded and later left keep their new names.
+  for (const [id, name] of Object.entries(state.tenure?.brands ?? {})) if (TEAM_BY_ID[id]) TEAM_BY_ID[id].name = name;
   const m = state.merch;
   if (m && m.brand.name !== ORIGINAL_NAMES[state.userTeam]) TEAM_BY_ID[state.userTeam].name = m.brand.name;
 }

@@ -1912,6 +1912,8 @@ export interface GameState {
   owner?: OwnerState;
   investors?: InvestorsState;
   wealth?: WealthState;
+  tenure?: TenureState;
+  franchise?: FranchiseMarketState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
@@ -2370,6 +2372,8 @@ export type OwnerBackground = "finance" | "realEstate" | "industry" | "family" |
 
 export interface ScoreSeason {
   season: number;
+  /** The club the season was with, once the owner has had more than one. */
+  team?: string;
   record: string;
   playoffs?: string;
   revenue: number;
@@ -2398,6 +2402,9 @@ export interface OwnerState {
   /** Capital put in and distributions taken since the purchase. */
   putIn: number;
   takenOut: number;
+  /** The owner's own equity at the purchase, and the club's equity then (price less debt), when bought with partners or debt in play. */
+  equityIn?: number;
+  clubEquityIn?: number;
   /** Pass-through taxes the owner paid on the club's income, and losses carried forward. */
   taxesPaid: number;
   carryforward: number;
@@ -2483,6 +2490,75 @@ export interface InvestorsState {
   bridges: { id: string; settled?: boolean }[];
   /** Capital calls less distributions of partners who have since left. */
   formerNet?: number;
+  log: { date: string; text: string }[];
+}
+
+// ---- Buying clubs (franchisemarket.ts, takeover.ts) ----
+
+/** How the player holds their club: in control, as a minority partner, or as a buyer still looking. */
+export interface TenureState {
+  role: "control" | "minority" | "buyer";
+  /** A minority partner's share. */
+  stake?: number;
+  /** Who controls the club when the player doesn't. */
+  controller?: string;
+  /** Every club the player has owned or held a stake in. */
+  clubs: { team: string; from: string; to?: string; how: string; price?: number; proceeds?: number; share?: number }[];
+  /** Names a club kept after the player rebranded it and left. */
+  brands?: Record<string, string>;
+}
+
+/** A club up for sale. */
+export interface Listing {
+  team: string;
+  since: string;
+  reason: "estate" | "family" | "liquidity" | "governance" | "offer";
+  seller: string;
+  ask: number;
+  status: "open" | "sold" | "withdrawn";
+  closes: string;
+  buyer?: string;
+  price?: number;
+}
+
+export interface Finding {
+  kind: "debt" | "lawsuit" | "lease" | "guarantees" | "capex" | "books";
+  text: string;
+  /** Extra debt or claims the buyer takes on, cash the club will need, and the hit to what it's worth. */
+  assumed: number;
+  cashNeed: number;
+  valueHit: number;
+}
+
+export interface RivalBid { name: string; price: number; cash: boolean; note: string }
+
+/** The player's purchase of a club, from interest to closing. */
+export interface ClubDeal {
+  id: string;
+  team: string;
+  opened: string;
+  stage: "diligence" | "bidding" | "exclusive" | "league" | "closed" | "failed";
+  /** When the current stage resolves. */
+  due: string;
+  costs: number;
+  findings: Finding[];
+  bid?: { price: number; financingOut: boolean; date: string };
+  rivals: RivalBid[];
+  financing?: { lp: number; pe: number; debt: number; trust: number; terms: StakeTerms };
+  vote?: { yes: number; needed: number };
+  failed?: string;
+  /** The closing statement, once it closes. */
+  closing?: { price: number; assumedDebt: number; claims: number; cash: number; equityPrice: number; costs: number; ownerEquity: number; partners: number; debt: number; trust: number; proceeds: number; share: number };
+}
+
+export interface FranchiseMarketState {
+  listings: Listing[];
+  deal?: ClubDeal;
+  deals: { team: string; opened: string; outcome: string }[];
+  /** Comparable sales: a few real ones and every sale in this league. */
+  sales: { team: string; date: string; price: number; pct: number; buyer: string; real?: boolean }[];
+  /** Who controls each club now, where it has changed hands. */
+  control: Record<string, string>;
   log: { date: string; text: string }[];
 }
 

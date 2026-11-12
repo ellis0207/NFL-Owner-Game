@@ -39,6 +39,8 @@ import { agendaOrder, mandateScore, micromanagement, remember } from "./people";
 import { resolveStandingMemo } from "./standing";
 import { lapseInvestorMemo, resolveInvestorMemo } from "./investors";
 import { resolveWealthMemo } from "./wealth";
+import { resolveFranchiseMemo } from "./franchisemarket";
+import { resolveTakeoverMemo } from "./takeover";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -144,6 +146,8 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "incident":
       return resolveIncident(state, p, choice);
     case "general":
+      if (p.franchise) return resolveFranchiseMemo(state, m, choice);
+      if (p.takeover) return resolveTakeoverMemo(state, m, choice);
       return p.investors ? resolveInvestorMemo(state, m, choice) : p.wealth ? resolveWealthMemo(state, m, choice) : resolveStandingMemo(state, m, choice);
     default:
       return null;
@@ -728,6 +732,7 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "complaint") carryOut(state, m, 2);
   if (m.kind === "incident") carryOut(state, m, m.recommend);
   if (m.kind === "general" && m.payload?.investors) lapseInvestorMemo(state, m);
+  if (m.kind === "general" && m.payload?.franchise) carryOut(state, m, 1);
   if (m.kind === "trade") declineOffer(state, m.payload?.offer as string);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: no answer by the deadline`, m.amount, m.from, "policy", m.ifLate);
   const role = roleOf(state, m);

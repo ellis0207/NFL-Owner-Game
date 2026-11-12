@@ -89,6 +89,8 @@ export interface OwnerSetup {
   weights: Record<OwnerGoal, number>;
   scenario: Scenario;
   custom?: CustomStart;
+  /** How the player comes in: as the controlling owner, a buyer of the club in view, or a minority partner. */
+  entry?: "owner" | "buyer" | "minority";
 }
 
 export const DEFAULT_SETUP: OwnerSetup = {
@@ -156,6 +158,7 @@ export function setupOwner(state: GameState, s: OwnerSetup): void {
 /** What the owner's own money bought at the takeover: the price less any acquisition debt. */
 export function equityAtPurchase(state: GameState): number {
   const o = owner(state);
+  if (o.equityIn !== undefined) return o.equityIn;
   const acq = debt(state).loans.find((l) => l.id.startsWith("L0-"));
   return o.purchase - (acq?.amount ?? 0);
 }
@@ -399,7 +402,7 @@ export function recordOwnerSeason(state: GameState, rec: SeasonRecord): void {
   const p = pnl(state, rec.season);
   const row: ScoreSeason = {
     season: rec.season, record: card.record, playoffs: card.playoffs, revenue: p.totalRevenue, operating: p.operating,
-    value: valuation(state, us), equity: ownerEquity(state), scores: card.scores, overall: card.overall,
+    team: us, value: valuation(state, us), equity: ownerEquity(state), scores: card.scores, overall: card.overall,
   };
   const t = o.coachTarget;
   if (t && t.season === rec.season && t.goal !== "none") {

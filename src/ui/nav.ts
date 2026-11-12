@@ -45,7 +45,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   Scouting: "Assignments and scouting reports",
   Draft: "The draft room and boards",
   Owner: "Your goals, standing, and your own money: investments, debt, family trust, foundation and public profile",
-  Ownership: "Partners, the board, stake sales and returns",
+  Ownership: "Partners, the board, stake sales, returns, and buying or selling a club",
   "Front office": "Executives, memos, meetings and culture",
   Business: "Books, tickets, sponsors, stadium and markets",
   Reports: "Saved reports and briefings",

@@ -329,6 +329,22 @@ describe("saves from older versions", () => {
     expect(ownerShare(old)).toBe(1);
   }, 120_000);
 
+  it("a save after a takeover and a CPU change of control keeps the new club, its partners and an open pursuit", async () => {
+    const state = load("pr52-2026-10-10");
+    expect(state.userTeam).toBe("JAX");
+    expect(state.franchise!.control.MIA).toBe("the Harcastle partnership");
+    expect(state.franchise!.deal!.stage).toBe("diligence");
+    expect(state.tenure!.clubs.map((c) => c.team)).toEqual(["DET", "JAX"]);
+    for (let i = 0; i < 40; i++) advanceDay(state);
+    expect(state.franchise!.deal!.stage).not.toBe("diligence");
+    const back = await decompress(await compress(state));
+    expect(back.investors!.partners.length).toBeGreaterThan(0);
+    const old = load("pr51-2026-10-10");
+    expect(old.tenure).toBeUndefined();
+    for (let i = 0; i < 5; i++) advanceDay(old);
+    expect(old.franchise!.listings).toBeDefined();
+  }, 120_000);
+
   it("a save with the owner's wealth keeps its trust, foundation and pending sale; older saves split their holdings on load", async () => {
     const state = load("pr51-2026-10-10");
     expect(state.wealth!.trust).toBe(400_000_000);

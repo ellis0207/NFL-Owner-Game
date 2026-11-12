@@ -51,9 +51,20 @@ import { AgreementsScreen } from "./screens/AgreementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
+import { inControl, tenure } from "../engine/takeover";
 import { NAV, PAGE_HINT, groupOf, pageLabel, type Screen } from "./nav";
 
 export type { Screen } from "./nav";
+
+/** Pages a buyer or minority partner can still act on: their own money, deals and the game itself. */
+const FREE_PAGES: Screen[] = ["Today", "Calendar", "Inbox", "Owner", "Ownership", "Guide", "Settings", "Save", "History", "League", "Standings", "Schedule", "Stats"];
+
+/** Stop action buttons and form changes on a read-only page; tabs and links still work. */
+function blockAction(e: { target: EventTarget; stopPropagation: () => void; preventDefault: () => void }): void {
+  const el = e.target as HTMLElement;
+  if (el.closest(".tabs, .section-pages, [data-view]")) return;
+  if (el.closest("button.btn, input, select, textarea")) { e.stopPropagation(); e.preventDefault(); }
+}
 
 export function phaseLabel(state: GameState): string {
   const d = state.date;
@@ -144,6 +155,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   if (onTheClock(game)) badges.Draft = "On the clock";
   const attention = unread + pressAsks + tradeOffers + bookings + memos + (badges.Draft ? 1 : 0);
   const group = groupOf(screen);
+  // A buyer or minority partner can look at every page but act only on their own.
+  const locked = !inControl(game) && !FREE_PAGES.includes(screen);
 
   function step(fn: (s: GameState) => void) {
     setBusy(true);
@@ -236,6 +249,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               ))}
             </div>
           )}
+          {locked && <p className="notice">You don't control this club: {tenure(game).role === "buyer" ? `you're a buyer watching it while ${tenure(game).controller} sells` : `${tenure(game).controller} runs it and you hold ${Math.round((tenure(game).stake ?? 0) * 100)}%`}. Its staff make the calls; this page is read-only. Deals are on the Ownership page.</p>}
+          <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
           {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
             // Your own game can come in a drive at a time.
@@ -274,6 +289,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
           {screen === "Guide" && <GuideScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
+          </div>
         </main>
       </div>
       {box && <BoxScore key={`${box}-${follow}`} game={game} id={box} follow={follow} changed={changed} onClose={() => setBox(null)} />}

@@ -727,6 +727,22 @@ family trust, a personal foundation (deductible, paying out 5% a year), a
 chosen public profile and memos on conflicts between the owner's
 businesses and the club round it out. None of it touches the club's books.
 
+Clubs change hands. Ownership > Deals lists clubs for sale with the
+seller's reason and appraises any club from revenue, market, stadium and
+debt against comparable sales (three real ones and every sale in the save);
+rival groups buy one to three clubs a decade. The player's own purchase runs
+through diligence (hidden debt, lawsuits, leases, guarantees, deferred
+repairs, dressed-up books), bids against rival groups with or without a
+financing condition, 60 days of exclusivity, funding from the owner, the
+family trust, limited partners, a fund and debt within the league limit,
+the finance committee and a 24-vote owners' meeting, and closing costs.
+Lenders can pull out and owners can vote it down. The player controls one
+club: the old one is sold at closing, and the new one is taken over as it
+stands, with a memo for any capital it needs. New game can start as a
+buyer watching a club that's for sale or as a 10% partner who collects
+distributions and can buy up to 49%; until they control a club, its staff
+decide and its pages are read-only.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -776,6 +792,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
   The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
   The owner's own wealth (holdings, personal debt, family office and trust, foundation, public profile, business conflicts) is `wealth.ts`.
+  The franchise market (appraisals, listings, diligence, bids, financing, the league vote) is `franchisemarket.ts`; closing a purchase, switching clubs and the buyer and minority starts `takeover.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

@@ -335,7 +335,7 @@ export function balanceSheet(state: GameState): BalanceSheet {
   const totalAssets = assets.reduce((t, a) => t + a.amount, 0);
   const totalLiabilities = liabilities.reduce((t, a) => t + a.amount, 0);
   const equity = totalAssets - totalLiabilities;
-  const contributed = equityAtPurchase(state) + o.putIn - o.takenOut + partnersContributed(state);
+  const contributed = (o.clubEquityIn ?? equityAtPurchase(state)) + o.putIn - o.takenOut + partnersContributed(state);
   return { assets, liabilities, totalAssets, totalLiabilities, equity, contributed, retained: equity - contributed };
 }
 

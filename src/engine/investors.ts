@@ -84,6 +84,9 @@ export function investors(state: GameState): InvestorsState {
 
 /** The owner's share of the club: everything the partners don't hold. */
 export function ownerShare(state: GameState): number {
+  // A buyer still looking owns none of the club in view; a minority partner owns their stake.
+  const t = state.tenure;
+  if (t && t.role !== "control") return t.stake ?? 0;
   const ps = state.investors?.partners;
   if (!ps?.length) return 1;
   return Math.max(0, 1 - ps.reduce((t, p) => t + p.pct, 0));
