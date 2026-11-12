@@ -1,5 +1,7 @@
+import { CompareToggle } from "../Comparison";
+import { setPricesTracked, ticketComparison } from "../../engine/compare";
 import { useState } from "react";
-import { business, CONCESSION_LABEL, gateForecast, PRICING_OPENS, RENEWAL_DEADLINE, setConcessions, setNextSeasonPrices, setParking, setSinglePrice } from "../../engine/business";
+import { business, CONCESSION_LABEL, gateForecast, PRICING_OPENS, RENEWAL_DEADLINE, setConcessions, setParking, setSinglePrice } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
 import { RULES, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { controlOf, MARKETS, STADIUM_BY_TEAM } from "../../engine/stadiums";
@@ -127,7 +129,8 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
                 <span className="label">Suites and clubs: {signed(premium - 1)}</span>
                 <input type="range" min={90} max={125} step={1} value={Math.round(premium * 100)} onChange={(e) => setPremium(Number(e.target.value) / 100)} aria-label="Premium change" />
               </label>
-              <button className="btn primary small" onClick={() => { setMsg(setNextSeasonPrices(game, season, premium)); changed(); }}>
+              <CompareToggle get={() => ticketComparison(game, [...new Set([Math.round((season - 1) * 100) / 100, 0, rec, Math.round((rec + 0.04) * 100) / 100])])} label="Compare price changes" />
+              <button className="btn primary small" onClick={() => { setMsg(setPricesTracked(game, season, premium)); changed(); }}>
                 {b.next?.announced ? "Announce new prices" : "Announce prices"}
               </button>
               {b.next?.announced && <span className="muted">Announced {shortDate(b.next.announced)}. Renewals are due {shortDate(RENEWAL_DEADLINE)}; until then you can change them, though fans notice every change.</span>}

@@ -1,7 +1,9 @@
+import { CompareToggle } from "../Comparison";
+import { acceptLoanTracked, financingComparison } from "../../engine/compare";
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
 import {
-  acceptLoan, coverage, debt, debtRoom, distributionsBlocked, drawn, earningsBase, facilityRate, LEAGUE_DEBT_LIMIT, LENDERS, leverage, loanRate, marketRate,
+  coverage, debt, debtRoom, distributionsBlocked, drawn, earningsBase, facilityRate, LEAGUE_DEBT_LIMIT, LENDERS, leverage, loanRate, marketRate,
   openLoans, prepay, pushLender, rateExposure, requestLoan, resizeFacility, trustWord, type LoanRequest,
 } from "../../engine/debt";
 import type { GameState, LoanKind } from "../../engine/types";
@@ -105,6 +107,7 @@ export function Financing({ game, changed }: { game: GameState; changed: () => v
           <button className="btn" onClick={() => act(requestLoan(game, req), "")}>Ask lenders for terms</button>
         </div>
         <span className="muted">{LENDERS.map((l) => `${l.name}: ${l.what}`).join(" ")}</span>
+        {d.offers.length > 0 && <CompareToggle get={() => financingComparison(game, d.offers)} label="Compare the offers: payments, rate risk, covenants in a recession" />}
         {d.offers.length > 0 && (
           <div className="table-wrap">
             <table>
@@ -117,7 +120,7 @@ export function Financing({ game, changed }: { game: GameState; changed: () => v
                     <td>{o.years}</td><td>{o.amort === "amortizing" ? "Monthly" : "At maturity"}</td><td>{pct(o.fee)} ({money(o.amount * o.fee)})</td>
                     <td>Coverage {o.minCoverage}x, debt {o.maxLeverage}x</td><td>{shortDate(o.expires)}</td>
                     <td className="btn-row">
-                      <button className="btn small primary" onClick={() => act(acceptLoan(game, o.id), `Signed with ${o.lender}. ${money(o.amount)} is in the bank.`)}>Sign</button>
+                      <button className="btn small primary" onClick={() => act(acceptLoanTracked(game, o.id), `Signed with ${o.lender}. ${money(o.amount)} is in the bank.`)}>Sign</button>
                       {!o.pushed && <button className="btn small" onClick={() => act(pushLender(game, o.id), "")}>Push for better</button>}
                     </td>
                   </tr>

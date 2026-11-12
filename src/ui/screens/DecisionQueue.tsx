@@ -2,6 +2,8 @@
 // system, with why it matters, when it runs out, who recommends what and what
 // happens if nothing is done. Most items can be answered right here; each one
 // also links to the exact page where the details are.
+import { CompareToggle } from "../Comparison";
+import { memoComparison } from "../../engine/compare";
 import { useState } from "react";
 import { answerOffer } from "../../engine/business";
 import { decideProposal } from "../../engine/carousel";
@@ -92,6 +94,7 @@ export function DecisionQueue({ game, changed, go }: { game: GameState; changed:
                 <div><span className="label">Why it matters</span> {i.why}</div>
                 {i.recommends && <div><span className="label">Recommendation</span> {i.recommends}</div>}
                 <div><span className="label">If you do nothing</span> {i.ifNothing}</div>
+                {i.memo && <CompareToggle get={() => memoComparison(game, i.memo!)} />}
                 <div className="btn-row">
                   {answers(i)}
                   {i.kind === "review" && <button className="btn small" onClick={() => act(() => markReviewed(game))}>Mark reviewed</button>}

@@ -1,3 +1,5 @@
+import { CompareToggle } from "../Comparison";
+import { memoComparison } from "../../engine/compare";
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
 import { office } from "../../engine/delegation";
@@ -52,6 +54,7 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
       {m.conditions && <span className="muted">Why: {m.conditions}</span>}
       {m.notes.map((n, i) => <span key={i}>{n}</span>)}
       <span className="muted">If you don't answer: {m.ifLate}</span>
+      <CompareToggle get={() => memoComparison(game, m.id)} recommend={m.kind === "pricing" ? m.recommend : m.kind === "signing" || m.kind === "street" ? 0 : undefined} />
       {m.status === "researching" ? <span className="muted">The staff is looking into it; back {shortDate(m.until!)}.</span> : (
         <>
           <label className="field"><span className="label">Your reason, for the record (optional)</span>

@@ -7,6 +7,7 @@
 // the coaches filling staff jobs, the revenue staff setting prices and signing
 // sponsors, stadium operations taking bookings, and the CFO refinancing loans.
 import { nextId } from "./ids";
+import { memoForecast } from "./compare";
 import { cause } from "./causes";
 import { FORMAT } from "./format";
 import { resolveIncident } from "./departments";
@@ -70,6 +71,8 @@ function football(state: GameState): string {
 export function decideMemo(state: GameState, id: string, choice: number, why = ""): string | null {
   const m = office(state).memos.find((x) => x.id === id);
   if (!m || (m.status !== "open" && m.status !== "researching")) return "That memo is closed.";
+  // The staff's forecast for the option taken, worked out before anything changes.
+  const forecast = memoForecast(state, m.id, choice);
   const err = carryOut(state, m, choice);
   if (err) {
     m.status = "lapsed";
@@ -79,7 +82,7 @@ export function decideMemo(state: GameState, id: string, choice: number, why = "
   m.status = "decided";
   m.choice = choice;
   m.decided = state.date;
-  if (m.amount || m.kind === "general") cause(state, m.area ?? m.kind, `${m.title}: ${m.options[choice].label}.`, m.options[choice].effect ? [m.options[choice].effect] : []);
+  if (m.amount || m.kind === "general" || forecast) cause(state, m.area ?? m.kind, `${m.title}: ${m.options[choice].label}.`, m.options[choice].effect ? [m.options[choice].effect] : [], undefined, forecast ?? undefined);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: ${m.options[choice].label}`, m.amount, m.from, "owner", why || undefined);
   // Executives notice whether their recommendations are taken.
   const role = roleOf(state, m);

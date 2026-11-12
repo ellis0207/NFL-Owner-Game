@@ -554,3 +554,9 @@ span.tip-name, [data-tip].tip-name { border-bottom: 1px dotted color-mix(in srgb
 .queue-body { display: grid; gap: 0.3rem; font-size: 0.92rem; }
 .queue-body .label { margin-right: 0.3rem; }
 
+
+/* Decision comparisons (Comparison.tsx). */
+.comparison th[scope="row"] { text-align: left; font-weight: 500; white-space: nowrap; }
+.comparison td, .comparison th { padding: 0.35rem 0.6rem; vertical-align: top; font-size: 0.88rem; }
+.comparison thead th { text-align: left; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
