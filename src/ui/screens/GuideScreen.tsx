@@ -188,6 +188,15 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Succession and the end of your tenure",
+    body: [
+      "You age a year each January, and your health slips faster past seventy. Ownership > Succession lets you step back to chair (the executives run things and you keep control) or, with an approved successor, retire from daily duties.",
+      "Heirs come with reports from the family office, the president and the GM: what they want, how they handle the business and the football, and how they get along. Reads are rough until an heir works at the club. Passing over one who wanted the job can split the family, and a split family can fight the transfer.",
+      "Name a successor and a trustee, and ask the league to pre-approve them. Estate tax is 40% above the exemption; the Succession tab shows what the estate would owe and what it could pay. Life insurance in a trust covers the gap; otherwise the heirs pay over ten years or sell part of the club. You can also buy partners out, or sell the whole club through bankers, a bidding round and the owners' vote, and see what you'd net and your total return.",
+      "When you die, hand the club on, or sell it, you choose: go on as the heir, with the same club, contracts and history; have the estate sell and buy another club; or end the game with a legacy review of winning, money, buildings, culture and the community. New game can also start you as an heir, with siblings as partners and estate tax to pay. History > Owners keeps the club's ownership history.",
+    ],
+  },
+  {
     title: "Moving the club",
     body: [
       "Business > Relocation compares markets. A move needs a study, an application between January 1 and February 15, and 24 owners' votes at the annual meeting. Owners want to see you tried to stay: a failed public vote or failed lease talks help.",

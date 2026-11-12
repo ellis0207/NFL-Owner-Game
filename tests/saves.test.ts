@@ -329,6 +329,21 @@ describe("saves from older versions", () => {
     expect(ownerShare(old)).toBe(1);
   }, 120_000);
 
+  it("a save after an inheritance keeps the new owner, the family partners and a sale under way; older saves age the owner from load", async () => {
+    const state = load("pr53-2026-10-10");
+    expect(state.succession!.generation).toBe(2);
+    expect(state.investors!.partners.some((p) => p.kind === "family")).toBe(true);
+    expect(state.tenure!.clubs.map((c) => c.how)).toContain("Handed on");
+    for (let i = 0; i < 80; i++) advanceDay(state);
+    expect(state.succession!.sale!.stage).not.toBe("marketing");
+    const back = await decompress(await compress(state));
+    expect(back.ownerName).toBe(state.ownerName);
+    const old = load("pr52-2026-10-10");
+    expect(old.succession).toBeUndefined();
+    advanceDay(old);
+    expect(old.succession!.heirs.length).toBeGreaterThan(1);
+  }, 120_000);
+
   it("a save after a takeover and a CPU change of control keeps the new club, its partners and an open pursuit", async () => {
     const state = load("pr52-2026-10-10");
     expect(state.userTeam).toBe("JAX");

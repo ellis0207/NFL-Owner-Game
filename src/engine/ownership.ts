@@ -90,7 +90,7 @@ export interface OwnerSetup {
   scenario: Scenario;
   custom?: CustomStart;
   /** How the player comes in: as the controlling owner, a buyer of the club in view, or a minority partner. */
-  entry?: "owner" | "buyer" | "minority";
+  entry?: "owner" | "buyer" | "minority" | "heir";
 }
 
 export const DEFAULT_SETUP: OwnerSetup = {

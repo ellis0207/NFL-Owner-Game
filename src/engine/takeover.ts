@@ -214,7 +214,7 @@ export function closeDeal(state: GameState, deal: ClubDeal): void {
 }
 
 /** The owner's part of a purchase: cash, then stocks and bonds, then property and businesses at a discount. */
-function payFromWealth(state: GameState, amount: number): void {
+export function payFromWealth(state: GameState, amount: number): void {
   const o = owner(state);
   syncHoldings(state);
   const h = wealth(state).holdings;

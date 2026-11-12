@@ -743,6 +743,21 @@ buyer watching a club that's for sale or as a 10% partner who collects
 distributions and can buy up to 49%; until they control a club, its staff
 decide and its pages are read-only.
 
+Owners age and die. Ownership > Succession tracks the owner's age and
+health, lets them step back to chair or retire from daily duties, and
+shows heirs only through what the family office, president and GM say
+about them (sharper once an heir works at the club). The owner names a
+successor and trustee for league pre-approval, plans for 40% estate tax
+with liquidity and life insurance, buys out partners, or sells the whole
+club through bankers, bids and the owners' vote, with net proceeds and
+total return. Passed-over heirs can split the family and contest the
+transfer. When the owner dies, hands on control or sells, the player goes
+on as the heir (same club, contracts and history, a stepped-up basis),
+has the estate sell and buys another club, or ends with a legacy review of
+winning, money, buildings, culture and community. New game can start as
+an heir with siblings as partners and estate tax owed; History > Owners
+keeps the club's ownership history.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -792,7 +807,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
   The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
   The owner's own wealth (holdings, personal debt, family office and trust, foundation, public profile, business conflicts) is `wealth.ts`.
-  The franchise market (appraisals, listings, diligence, bids, financing, the league vote) is `franchisemarket.ts`; closing a purchase, switching clubs and the buyer and minority starts `takeover.ts`.
+  The franchise market (appraisals, listings, diligence, bids, financing, the league vote) is `franchisemarket.ts`; closing a purchase, switching clubs and the buyer and minority starts `takeover.ts`; owner aging, heirs, the estate, selling the club, the end of a tenure and the legacy review `succession.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

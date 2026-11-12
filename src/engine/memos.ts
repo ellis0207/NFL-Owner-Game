@@ -41,6 +41,7 @@ import { lapseInvestorMemo, resolveInvestorMemo } from "./investors";
 import { resolveWealthMemo } from "./wealth";
 import { resolveFranchiseMemo } from "./franchisemarket";
 import { resolveTakeoverMemo } from "./takeover";
+import { resolveSuccessionMemo } from "./succession";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -148,6 +149,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "general":
       if (p.franchise) return resolveFranchiseMemo(state, m, choice);
       if (p.takeover) return resolveTakeoverMemo(state, m, choice);
+      if (p.succession) return resolveSuccessionMemo(state, m, choice);
       return p.investors ? resolveInvestorMemo(state, m, choice) : p.wealth ? resolveWealthMemo(state, m, choice) : resolveStandingMemo(state, m, choice);
     default:
       return null;
@@ -733,6 +735,11 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "incident") carryOut(state, m, m.recommend);
   if (m.kind === "general" && m.payload?.investors) lapseInvestorMemo(state, m);
   if (m.kind === "general" && m.payload?.franchise) carryOut(state, m, 1);
+  // Succession memos left unanswered: the heir goes on, a sale comes off the market, a family fight goes to court.
+  const sp = m.kind === "general" ? m.payload?.succession : undefined;
+  if (sp === "tenure") carryOut(state, m, 0);
+  if (sp === "bids") carryOut(state, m, 1);
+  if (sp === "dispute") carryOut(state, m, 2);
   if (m.kind === "trade") declineOffer(state, m.payload?.offer as string);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: no answer by the deadline`, m.amount, m.from, "policy", m.ifLate);
   const role = roleOf(state, m);

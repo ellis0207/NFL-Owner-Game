@@ -87,6 +87,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 <option value="owner">Controlling owner: you bought the club and run it</option>
                 <option value="buyer">Buyer: the club is for sale, and you watch while you bid for it or another</option>
                 <option value="minority">Minority partner: you own 10% and get distributions, and can buy more</option>
+                <option value="heir">Heir: you just inherited the club, with siblings as partners and estate tax to pay</option>
               </select>
             </label>
             <label className="field"><span className="label">The club's finances when you take over</span>

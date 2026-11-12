@@ -8,20 +8,24 @@ import { history } from "../../engine/seasons";
 import { staff } from "../../engine/coaches";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
-import { CareersTab, HindsightTab, PeopleTab } from "./HistoryMore";
+import { CareersTab, HindsightTab, OwnersTab, PeopleTab } from "./HistoryMore";
+import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
 
-const TABS = ["Honors", "Hall of Fame", "Records", "Careers", "Rivalries", "Trades", "Eras", "People", "Hindsight", "Timeline"] as const;
-type Tab = (typeof TABS)[number];
+type Tab = "Honors" | "Hall of Fame" | "Records" | "Careers" | "Rivalries" | "Trades" | "Eras" | "Owners" | "People" | "Hindsight" | "Timeline";
+// Players first, then the club's own story, then how judgments held up.
+const GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: "Players", tabs: ["Honors", "Hall of Fame", "Records", "Careers"] },
+  { label: "The club", tabs: ["Timeline", "Eras", "Owners", "Rivalries", "Trades"] },
+  { label: "Looking back", tabs: ["People", "Hindsight"] },
+];
 
 export function HistoryScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>("Honors");
   return (
     <section className="stack">
       <h2>History</h2>
-      <div className="tabs" role="group" aria-label="History">
-        {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
-      </div>
+      <GroupedTabs label="History" groups={GROUPS} value={tab} onChange={setTab} />
       {tab === "Honors" && <Honors game={game} />}
       {tab === "Hall of Fame" && <Hall game={game} />}
       {tab === "Records" && <Records game={game} />}
@@ -32,6 +36,7 @@ export function HistoryScreen({ game }: { game: GameState }) {
       {tab === "People" && <PeopleTab game={game} />}
       {tab === "Hindsight" && <HindsightTab game={game} />}
       {tab === "Timeline" && <Timeline game={game} />}
+      {tab === "Owners" && <OwnersTab game={game} />}
     </section>
   );
 }

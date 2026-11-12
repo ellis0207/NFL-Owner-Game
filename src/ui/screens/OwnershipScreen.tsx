@@ -14,12 +14,13 @@ import { inControl } from "../../engine/takeover";
 import { money } from "../format";
 import { GroupedTabs } from "../Tabs";
 import { Deals } from "./OwnershipDeals";
+import { Succession } from "./OwnershipSuccession";
 
-type Tab = "Stakes" | "Board" | "Investors" | "Reports" | "Deals";
+type Tab = "Stakes" | "Board" | "Investors" | "Reports" | "Succession" | "Deals";
 // Partners and governance of the club you own, then buying and selling clubs.
 const GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: "Your club", tabs: ["Stakes", "Board", "Investors", "Reports"] },
-  { label: "Clubs", tabs: ["Deals"] },
+  { label: "The future", tabs: ["Succession", "Deals"] },
 ];
 type Say = (msg: string | null, ok?: string) => void;
 
@@ -40,6 +41,7 @@ export function OwnershipScreen({ game, changed }: { game: GameState; changed: (
       {inControl(game) && tab === "Board" && <Board game={game} say={say} />}
       {inControl(game) && tab === "Investors" && <Investors game={game} say={say} />}
       {inControl(game) && tab === "Reports" && <Reports game={game} />}
+      {inControl(game) && tab === "Succession" && <Succession game={game} say={say} />}
       {(tab === "Deals" || !inControl(game)) && <Deals game={game} say={say} />}
     </section>
   );

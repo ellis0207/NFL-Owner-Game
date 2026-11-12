@@ -392,7 +392,7 @@ function closeSale(state: GameState, sale: StakeSale, vet = true): void {
 // ---- Partners who complain or want out ----
 
 /** The group buys a partner out with the owner's money, at a small discount to value. */
-function buyOut(state: GameState, p: Partner, discount: number): string | null {
+export function buyOut(state: GameState, p: Partner, discount: number): string | null {
   const price = Math.round(valuation(state, state.userTeam) * p.pct * (1 - discount));
   const o = owner(state);
   const real = state.settings.finances !== "relaxed";

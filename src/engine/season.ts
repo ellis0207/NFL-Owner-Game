@@ -92,6 +92,7 @@ import { investorsDaily } from "./investors";
 import { wealthDaily } from "./wealth";
 import { franchiseDaily } from "./franchisemarket";
 import { startAsBuyer, startAsMinority, takeoverDaily } from "./takeover";
+import { ensureSuccession, isOver, startAsHeir, successionDaily } from "./succession";
 import { peopleDaily } from "./people";
 import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
@@ -197,6 +198,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     "campuses far from here cost more to reach. I'll file a report every Sunday.");
   if (profile.entry === "buyer") startAsBuyer(state);
   else if (profile.entry === "minority") startAsMinority(state, 0.1);
+  else if (profile.entry === "heir") startAsHeir(state);
+  else ensureSuccession(state);
   return state;
 }
 
@@ -404,8 +407,7 @@ export function isSummer(state: GameState): boolean {
 
 /** The game never ends: after each draft the league moves on to the next season. */
 export function isGameOver(state: GameState): boolean {
-  void state;
-  return false;
+  return isOver(state);
 }
 
 /** The start of the day, before any event: injuries heal, waiver claims are awarded, Week 1 moves. Runs once a day. */
@@ -620,6 +622,7 @@ export function advanceDay(state: GameState): void {
   wealthDaily(state);
   franchiseDaily(state);
   takeoverDaily(state);
+  successionDaily(state);
   officeDaily(state);
   peopleDaily(state);
   standingDaily(state);
