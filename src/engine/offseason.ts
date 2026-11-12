@@ -447,10 +447,12 @@ function cpuCapWindow(state: GameState): void {
   for (const team of cpuTeams(state)) {
     const rng = rngFor(state.seed, `capwork:${team}:${state.date}`);
     const deadline = state.date === addDays(KEY.newLeagueYear, -1) || state.date === KEY.newLeagueYear;
-    if (rng() > 0.3 && !deadline) continue;
     // Room to work in free agency, as front offices clear it in February and March.
     const target = 10_000_000 + rng() * 20_000_000;
     let space = plannedSpace(state, team);
+    // A team still over the coming cap in the last ten days works on it every day, not now and then.
+    const late = space < 0 && state.date >= addDays(KEY.newLeagueYear, -10);
+    if (rng() > 0.3 && !deadline && !late) continue;
     if (space >= target) continue;
     // Restructures first once the league year opens: they only push money out.
     if (state.date >= KEY.newLeagueYear) {
@@ -467,7 +469,7 @@ function cpuCapWindow(state: GameState): void {
       }
     }
     if (space >= target) continue;
-    const mustComply = state.date >= KEY.newLeagueYear && capSummary(state, team, NEXT).space < 0;
+    const mustComply = state.date >= KEY.newLeagueYear && capSummary(state, team, NEXT).space < 0 || late;
     const cands = teamPlayerIds(state, team)
       .map((id) => {
         const hit = capHit(id, NEXT, state);
@@ -571,6 +573,11 @@ export function comply(state: GameState, team: string, floor = 60): void {
   for (const c of rest) {
     if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= Math.min(floor, 46)) break;
     cut(c.id);
+  }
+  // At the floor and still over: the league won't wait, so the biggest savings go, even below it.
+  for (const c of [...rest].sort((a, b) => b.saved - a.saved)) {
+    if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= 36) break;
+    if (state.players[c.id]?.team === team) cut(c.id);
   }
   if (capSummary(state, team).space < 0 && team !== state.userTeam && state.date === KEY.newLeagueYear) {
     news(state, `The ${teamLabel(team)} are still over the cap after the league year opened; the league won't approve a signing until they get under`);

@@ -40,6 +40,11 @@ export function keepValue(state: GameState, team: string, id: string): number {
 }
 
 /** Players counting against the roster limit (90 in camp, 53 after cutdown). */
+/** A suspended player sits on the reserve/suspended list from the cutdown through the season, off the roster count. */
+export function offTheCount(state: GameState, id: string): boolean {
+  return !!state.players[id].suspended && state.date >= RULES.keyDates.rosterCutdown && state.date <= RULES.keyDates.superBowl;
+}
+
 export function rosterCount(state: GameState, team: string): { roster: number; ps: number; ir: number } {
   let roster = 0;
   let ps = 0;
@@ -48,8 +53,7 @@ export function rosterCount(state: GameState, team: string): { roster: number; p
     const p = state.players[id];
     if (p.status === "ps") ps++;
     else if (p.status === "ir") ir++;
-    // A suspended player sits on the reserve/suspended list from the cutdown through the season, off the roster count.
-    else if (p.suspended && state.date >= RULES.keyDates.rosterCutdown && state.date <= RULES.keyDates.superBowl) continue;
+    else if (offTheCount(state, id)) continue;
     else if (p.status === "camp" || p.status === "active") roster++;
   }
   return { roster, ps, ir };
@@ -368,7 +372,8 @@ export function claimView(state: GameState, team: string, id: string): number {
  * preferring the incoming player's position.
  */
 export function weakestOnRoster(state: GameState, team: string, pos: Position): string | undefined {
-  const roster = teamPlayerIds(state, team).filter((id) => ["active", "camp"].includes(state.players[id].status));
+  // A suspended player off the count frees no spot when cut, so he isn't a candidate.
+  const roster = teamPlayerIds(state, team).filter((id) => ["active", "camp"].includes(state.players[id].status) && !offTheCount(state, id));
   // Positions are counted by healthy players, so a team never cuts its only healthy kicker.
   const counts: Partial<Record<Position, number>> = {};
   for (const id of roster) if (!isHurt(state, id)) counts[PLAYER_BY_ID[id].position] = (counts[PLAYER_BY_ID[id].position] ?? 0) + 1;
@@ -576,7 +581,8 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
     const pos = PLAYER_BY_ID[id].position;
     const list = p.reserve === "nfi" ? "the non-football injury list" : p.reserve === "pup" ? "the physically unable to perform list" : "injured reserve";
     moves.push({ team, text: `placed ${pos} ${PLAYER_BY_ID[id].name} on ${list} (${p.injury.type.toLowerCase()})` });
-    if (after) {
+    // The spot he leaves is filled; a suspended player held no spot, so there's nothing to fill.
+    if (after && rosterRoom(state, team) > 0) {
       const signed = signReplacement(state, team, pos);
       if (signed) moves.push(signed);
     }
@@ -604,14 +610,16 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
         continue;
       }
       if (!isHurt(state, id)) {
-        const cutId = weakestCuttable(state, team, PLAYER_BY_ID[id].position);
-        if (cutId) {
-          releasePlayer(state, cutId);
+        // With an open spot he simply comes back; otherwise someone on the 53 goes.
+        const room = rosterCount(state, team).roster < RULES.rosterLimits.regularSeason;
+        const cutId = room ? undefined : weakestCuttable(state, team, PLAYER_BY_ID[id].position);
+        if (room || cutId) {
+          if (cutId) releasePlayer(state, cutId);
           p.status = "active";
           delete p.irDate;
           delete p.irWindow;
           delete p.reserve;
-          moves.push({ team, text: `activated ${name} and released ${PLAYER_BY_ID[cutId].name}` });
+          moves.push({ team, text: cutId ? `activated ${name} and released ${PLAYER_BY_ID[cutId].name}` : `activated ${name}` });
           continue;
         }
       }
@@ -626,7 +634,8 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
 
 /** The least valuable healthy player on the 53, preferring the returning player's position. */
 function weakestCuttable(state: GameState, team: string, pos: Position): string | undefined {
-  const active = teamPlayerIds(state, team).filter((id) => state.players[id].status === "active");
+  // Suspended players are off the count: cutting one opens no spot.
+  const active = teamPlayerIds(state, team).filter((id) => state.players[id].status === "active" && !offTheCount(state, id));
   if (active.length < RULES.rosterLimits.regularSeason) return undefined;
   const counts: Partial<Record<Position, number>> = {};
   for (const id of active) counts[PLAYER_BY_ID[id].position] = (counts[PLAYER_BY_ID[id].position] ?? 0) + 1;

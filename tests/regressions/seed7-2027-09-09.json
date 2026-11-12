@@ -1,0 +1,9 @@
+{
+  "team": "NYG",
+  "seed": 7,
+  "until": "2027-09-09",
+  "era": null,
+  "errors": [
+    "2027-09-09 roster-limit: CLE carries 54 players in season (put a suspended player on IR and signed a replacement for a spot he never held)"
+  ]
+}

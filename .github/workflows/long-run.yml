@@ -1,0 +1,46 @@
+# The long-run release check (docs/balance.md): several seeds over several
+# seasons, a historical start and a forced recession. Hard errors fail the job
+# and leave regression cases in tests/regressions/ (uploaded with the
+# summaries); balance warnings are listed in the summary without failing it.
+name: Long run
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: Seasons per run
+        default: "6"
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: seeds
+            seeds: "7,11,19"
+            env: ""
+          - name: era-2015
+            seeds: "7"
+            env: "ERA=2015"
+          - name: recession
+            seeds: "23"
+            env: "RECESSION=2027"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Balance report
+        run: env ${{ matrix.env }} OUT=balance-${{ matrix.name }}.json npx vite-node tests/balance-report.ts ${{ github.event.inputs.seasons || '6' }} ${{ matrix.seeds }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-${{ matrix.name }}
+          path: |
+            balance-${{ matrix.name }}.json
+            tests/regressions/

@@ -105,7 +105,7 @@ describe("the free agent pool", () => {
       .sort((a, b) => a.floor - b.floor)[0].player;
     expect(talksFor(state, team, id).ok).toBe(true);
     const neg = openTalks(state, team, id, "free-agent", "owner");
-    const price = Math.max(neg.ask, freeAgentPrice(state, id)) * 1.1;
+    const price = Math.max(neg.ask, freeAgentPrice(state, id)) * 1.5;
     const terms = { years: 1, total: Math.round(price), signingBonus: 0, guaranteed: 0, injuryGuaranteed: 0, voidYears: 0, shape: "flat" as const };
     // The 53 is full: no room until someone goes.
     expect(sendOffer(state, id, terms).ok).toBe(false);
