@@ -6,7 +6,7 @@ export const NAV = [
   { id: "team", label: "Team", pages: ["Football", "Roster", "Schedule", "Game week", "Camp", "Clubhouse", "Staff", "Stats", "Analytics"] },
   { id: "moves", label: "Roster building", pages: ["Contracts", "Cap", "Free agents", "Trades"] },
   { id: "draft", label: "Draft", pages: ["College", "Scouting", "Draft"] },
-  { id: "office", label: "Owner's office", pages: ["Owner", "Front office", "Business", "Reports", "Agreements", "Legal"] },
+  { id: "office", label: "Owner's office", pages: ["Owner", "Ownership", "Front office", "Business", "Reports", "Agreements", "Legal"] },
   { id: "league", label: "League", pages: ["Standings", "League", "Owners", "History"] },
   { id: "game", label: "Game", pages: ["Settings", "Guide", "Save"] },
 ] as const;
@@ -45,6 +45,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   Scouting: "Assignments and scouting reports",
   Draft: "The draft room and boards",
   Owner: "Your goals, money and standing",
+  Ownership: "Partners, the board, stake sales and returns",
   "Front office": "Executives, memos, meetings and culture",
   Business: "Books, tickets, sponsors, stadium and markets",
   Reports: "Saved reports and briefings",

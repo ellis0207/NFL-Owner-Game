@@ -8,6 +8,7 @@ import {
 } from "../../engine/ownership";
 import type { GameState, OwnerGoal } from "../../engine/types";
 import { OwnerStanding } from "./OwnerStanding";
+import { ownerShare } from "../../engine/investors";
 import { money } from "../format";
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
@@ -58,6 +59,7 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
           <h3>Your stake</h3>
           <dl className="kv">
             <dt>Bought</dt><dd>{shortDate(o.since)} {o.since.slice(0, 4)} at {billions(o.purchase)}</dd>
+            {ownerShare(game) < 1 && <><dt>Your share of the club</dt><dd>{pct(ownerShare(game))} <span className="muted">(Ownership page)</span></dd></>}
             <dt>Your equity now</dt><dd>{billions(ownerEquity(game))}</dd>
             <dt>Put in since</dt><dd>{money(o.putIn)}</dd>
             <dt>Taken out</dt><dd>{money(o.takenOut)}</dd>

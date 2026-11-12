@@ -36,6 +36,7 @@ import { addStory, MEDIA_BY_ID } from "./outlets";
 import { startPolitics } from "./politics";
 import { gaussian, rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium, type Structure } from "./stadiums";
+import { reserved } from "./investors";
 import type { GameState } from "./types";
 
 const M = 1_000_000;
@@ -360,6 +361,8 @@ export function closeFinancing(state: GameState): string | null {
   f.league = Math.min(leagueLimit(state), Math.round(Math.max(0, ourShareOf(state, p)) * 0.25));
   const gap = fundingGap(state, p);
   if (gap > 0) return `The package is ${money(gap)} short of our share plus a 5% contingency.`;
+  const board = reserved(state, "stadium", 0, `Committing to ${p.name ?? "the new stadium"}`);
+  if (board) return board;
   if (f.equity > 0) {
     const e = ownerCash(state, f.equity);
     if (e) return e;

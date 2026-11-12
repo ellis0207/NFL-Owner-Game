@@ -41,7 +41,8 @@ import { roadTrip } from "./departments";
 import { upkeepLines } from "./facilities";
 import { creditLimit, distributionsBlocked, marketRate, noteCapitalCall, serviceDebt } from "./debt";
 import { reserveTarget } from "./books";
-import { fundCapitalCall, ownerMoney } from "./ownership";
+import { ownerMoney } from "./ownership";
+import { callCapital, shareDistribution } from "./investors";
 import { developmentCost } from "./culture";
 import { analyticsCost } from "./strategy";
 import { merchLift } from "./clubhouse";
@@ -1099,7 +1100,7 @@ function creditCheck(state: GameState): void {
   const need = Math.ceil((-bal - limit * 0.5) / (5 * M)) * 5 * M;
   post(state, "capital", need, state.settings.finances === "relaxed" ? "Automatic top-up" : "Capital call to stay inside the credit line");
   if (state.settings.finances === "relaxed") return;
-  const how = fundCapitalCall(state, need);
+  const how = callCapital(state, need, "To stay inside the credit line");
   noteCapitalCall(state);
   send(state, "business", businessChief(state), "We had to call capital",
     `We ran through our ${money(limit)} credit line, so ${money(need)} of your own money went into the team to keep the bills paid. ${how} ` +
@@ -1299,6 +1300,7 @@ export function ownerCash(state: GameState, amount: number): string | null {
     return "You don't have that much cash on hand. Sell some outside holdings first (Owner page).";
   }
   post(state, amount > 0 ? "capital" : "distribution", amount, amount > 0 ? "From the owner" : "To the owner");
-  ownerMoney(state, -amount, real);
+  // With partners, a distribution goes to everyone by their shares; the owner's pocket gets only theirs.
+  ownerMoney(state, amount < 0 ? shareDistribution(state, -amount) : -amount, real);
   return null;
 }

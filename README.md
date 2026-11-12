@@ -701,6 +701,21 @@ abroad can carry a full fan program. Each spring the International Player
 Pathway places a handful of overseas athletes with clubs, with an extra
 practice-squad spot; clubs that take part and scout abroad can ask for one.
 
+The owner can bring in partners. A new game starts with the owner holding
+the whole club; the Ownership page sells a stake, either the owner's own
+shares (the money goes to the owner, less capital-gains tax) or new shares
+(the money goes into the club and everyone is diluted). Made-up buyers bid,
+the league vets them, and its rules hold: the controlling owner keeps at
+least 30%, and private-equity funds hold at most 10% together. Partners
+share distributions and capital calls by their shares (one who misses a call
+is diluted), and the owner pays tax only on their own share. Below
+two-thirds of the shares, big borrowing, new shares, a new stadium, a move
+and deals with the owner need the board's vote. Partners read a quarterly
+report and grow content, restless or keen to leave; investor-friendly terms
+give them a put after seven years. The Reports tab tracks the club's
+enterprise value against the owner's equity, after inflation and against a
+hurdle that charges for debt and illiquidity.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -748,6 +763,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
   New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
   Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
+  The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

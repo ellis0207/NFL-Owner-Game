@@ -20,6 +20,7 @@ import { addStory, MEDIA_BY_ID } from "./outlets";
 import { gaussian, rngFor } from "./rng";
 import { execBoost } from "./executives";
 import { consulting, restatements } from "./treasury";
+import { reserved } from "./investors";
 import type { CreditFacility, DebtState, GameState, LedgerCat, Loan, LoanKind, LoanOffer, LoanTerms } from "./types";
 
 const M = 1_000_000;
@@ -289,6 +290,9 @@ export function acceptLoan(state: GameState, id: string): string | null {
   if (o.expires < state.date) return "That offer expired.";
   const refi = o.refinances ? d.loans.find((l) => l.id === o.refinances && !l.repaid) : undefined;
   if (o.amount > debtRoom(state, o.purpose) + (refi?.balance ?? 0)) return "That would put us over the league's debt limit.";
+  // Big new borrowing is a reserved matter for the ownership group's board (refinancing isn't new debt).
+  const board = refi ? null : reserved(state, "debt", o.amount, `Borrowing ${money(o.amount)} from ${o.lender}`);
+  if (board) return board;
   const loan: Loan = {
     ...o, id: `L${d.loans.length + 1}-${state.date}`, start: state.date, maturity: addDays(state.date, Math.round(o.years * 365.25)),
     balance: o.amount, stepUp: 0, breaches: 0, purpose: o.purpose,
