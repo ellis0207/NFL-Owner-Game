@@ -32,9 +32,11 @@ export let PACK_ERROR: string | null = null;
 
 async function fetchPack(season: number): Promise<LeaguePack | null> {
   try {
-    const res = await fetch(`packs/${season}.json.gz`);
-    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-    const text = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).text();
+    // Published as base64 text of the gzipped pack (scripts/artifact-page.mjs).
+    const res = await fetch(`packs/${season}.txt`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const bytes = Uint8Array.from(atob((await res.text()).trim()), (c) => c.charCodeAt(0));
+    const text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
     return JSON.parse(text) as LeaguePack;
   } catch (e) {
     PACK_ERROR = `The ${season} season's data didn't load (${e instanceof Error ? e.message : String(e)}).`;

@@ -1,7 +1,7 @@
 // Turns Vite's single-file build into a claude.ai Artifact page: the page is
 // published without its own <html>/<head>/<body> wrapper (the host adds one),
 // so the title, metadata, styles and script are written as plain content.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 
 const html = readFileSync("dist/index.html", "utf8");
 const head = html.match(/<head>([\s\S]*?)<\/head>/i)?.[1] ?? "";
@@ -14,3 +14,10 @@ const title = keep.match(/<title>[\s\S]*?<\/title>/i)?.[0] ?? "";
 const page = `${title}\n${keep.replace(title, "").trim()}\n${body.trim()}\n`;
 writeFileSync("dist/game.html", page);
 console.log(`dist/game.html ${(page.length / 1024 / 1024).toFixed(2)} MB`);
+
+// The historical season packs go out beside the page. Artifacts don't serve
+// .gz files, so each gzipped pack is written as base64 text (pack.ts decodes it).
+mkdirSync("dist/packs", { recursive: true });
+const packs = readdirSync("data/packs").filter((f) => f.endsWith(".json.gz"));
+for (const f of packs) writeFileSync(`dist/packs/${f.replace(".json.gz", ".txt")}`, readFileSync(`data/packs/${f}`).toString("base64"));
+console.log(`dist/packs: ${packs.length} season packs`);
