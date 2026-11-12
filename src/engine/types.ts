@@ -1815,6 +1815,13 @@ export interface History {
   retired: Record<string, number>;
 }
 
+/** What the owner has changed: garages built, lots leased, seats converted to premium. */
+export interface GroundsState {
+  garages: { id: string; spaces: number; acres: number; cost: number; started: string; opens: string }[];
+  leases: { id: string; name: string; spaces: number; rent: number; through: number }[];
+  premium: { id: string; seats: number; cost: number; started: string; opens: string; phased: boolean }[];
+}
+
 export interface GameState {
   version: 3;
   id: string;
@@ -1898,6 +1905,8 @@ export interface GameState {
   staff?: StaffState;
   /** The business side: the team's books, ticket prices, the stadium calendar and budgets. */
   business?: BusinessState;
+  /** What the owner changed around the stadium: garages, leased lots, seats rebuilt as clubs (grounds.ts). */
+  grounds?: GroundsState;
   /** The fan base and the market (fans.ts). */
   fans?: FanState;
   /** Batch J: the store and the brand (merch.ts), team media (teammedia.ts) and the venue (venue.ts). */

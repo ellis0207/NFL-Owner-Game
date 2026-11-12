@@ -22,6 +22,14 @@ show what's waiting in them. The search box finds pages as well as people.
 On a phone the sidebar becomes a Menu button with the section's other pages
 under the date. Settings has a light, dark or device theme.
 
+Business > Grounds draws the stadium from above: the seating bowl by section,
+the club's land, its lots and garages, the independent lots nearby and how fans
+arrive. It's the same model the gate uses. Parking pays only for cars in lots
+we own or lease, at our share, so independent lots help fans get in but earn
+nothing. Building a garage, leasing a lot or rebuilding seats as clubs (with
+the section closed while the work goes on) changes the drawing and the next
+home game's money together.
+
 Hover cards work everywhere: rest the mouse on a player, team, coach,
 executive, game, cap figure or money line to see a card drawn from the live
 game (a budget line lists the payments behind it and how it stands against
@@ -857,7 +865,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
-  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
+  Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, the stadium's grounds (seating sections, parking lots, transit, closures for work) `grounds.ts`, and offseason grades, fan expectations and storylines `review.ts`.
   Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
 - `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page). Hover cards: `tip.ts` (`tip(kind, ...)` marks an element), `tips.tsx` (each card, read from live state), `TipLayer.tsx` (hover, nested cards, long press, plain `title` text in the same style).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.

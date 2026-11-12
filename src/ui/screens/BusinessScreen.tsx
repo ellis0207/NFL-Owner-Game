@@ -21,6 +21,7 @@ import { Store } from "./BusinessStore";
 import { Media } from "./BusinessMedia";
 import { GameDay } from "./BusinessVenue";
 import { Buildings } from "./BusinessBuildings";
+import { Grounds } from "./BusinessGrounds";
 import { Community } from "./BusinessCommunity";
 import { Books, Plan } from "./BusinessBooks";
 import { Financing } from "./BusinessFinancing";
@@ -33,13 +34,13 @@ import { expectLabel } from "../../engine/review";
 import { GroupedTabs } from "../Tabs";
 import { tip } from "../tip";
 
-const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium", "Relocation", "International"] as const;
+const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Grounds", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium", "Relocation", "International"] as const;
 type Tab = (typeof TABS)[number];
 // The tabs by part of the business, so the page reads like a table of contents.
 const GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: "Money", tabs: ["Overview", "Books", "Journal", "Treasury", "Plan", "Budget", "Financing", "League"] },
   { label: "Revenue", tabs: ["Tickets", "Fans", "Sponsors", "Store", "Media"] },
-  { label: "Operations", tabs: ["Game day", "Stadium", "Buildings", "Projects", "Community"] },
+  { label: "Operations", tabs: ["Game day", "Stadium", "Grounds", "Buildings", "Projects", "Community"] },
   { label: "Growth and risk", tabs: ["Economy and risk", "New stadium", "Relocation", "International"] },
 ];
 
@@ -69,6 +70,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Buildings" && <Buildings game={game} changed={changed} />}
       {tab === "Community" && <Community game={game} changed={changed} />}
       {tab === "Stadium" && <Stadium game={game} changed={changed} />}
+      {tab === "Grounds" && <Grounds game={game} changed={changed} />}
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
       {tab === "Projects" && <Projects game={game} changed={changed} />}
       {tab === "Budget" && <Budget game={game} changed={changed} />}
