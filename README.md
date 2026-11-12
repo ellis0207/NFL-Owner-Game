@@ -716,6 +716,17 @@ give them a put after seven years. The Reports tab tracks the club's
 enterprise value against the owner's equity, after inflation and against a
 hurdle that charges for debt and illiquidity.
 
+The owner's own money lives on Owner > Money. Outside holdings split into
+stocks, bonds, real estate and the owner's own businesses, earning returns
+month by month from the economy, with recessions hitting stocks and
+businesses hardest; slow assets take months to sell. Personal debt costs
+the market rate plus two points, borrowing against holdings risks a margin
+call, and the page warns when the team is most of what the owner is worth
+and compares the stake with the same money in stocks. A family office, a
+family trust, a personal foundation (deductible, paying out 5% a year), a
+chosen public profile and memos on conflicts between the owner's
+businesses and the club round it out. None of it touches the club's books.
+
 Long careers hold together. CPU teams use the franchise tag about as often
 as real teams do, on starters they can't replace at the price, and clear the
 room afterwards. Contract prices follow the going rate for players the league
@@ -764,6 +775,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
   Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
   The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
+  The owner's own wealth (holdings, personal debt, family office and trust, foundation, public profile, business conflicts) is `wealth.ts`.
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.

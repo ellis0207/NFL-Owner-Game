@@ -3,11 +3,13 @@ import { billions } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
 import { RULES } from "../../engine/league";
 import {
-  BACKGROUNDS, COACH_TARGETS, GOAL_KEYS, GOALS, owner, ownerEquity, ownerReturn, repayPersonal, scorecard, scoreWord, sellHoldings, setCoachTarget, setPatience,
+  BACKGROUNDS, COACH_TARGETS, GOAL_KEYS, GOALS, owner, ownerEquity, ownerReturn, scorecard, scoreWord, setCoachTarget, setPatience,
   setWeights, SPENDING, STYLES, takeSuggestion,
 } from "../../engine/ownership";
 import type { GameState, OwnerGoal } from "../../engine/types";
 import { OwnerStanding } from "./OwnerStanding";
+import { OwnerMoney } from "./OwnerMoney";
+import { concentrationWord, netWorth } from "../../engine/wealth";
 import { ownerShare } from "../../engine/investors";
 import { money } from "../format";
 
@@ -17,14 +19,21 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
   const o = owner(game);
   const card = scorecard(game);
   const ret = ownerReturn(game);
+  const nw = netWorth(game);
   const [msg, setMsg] = useState<string | null>(null);
+  const [tab, setTab] = useState<"overview" | "money" | "standing">("overview");
   const target = o.coachTarget?.season === RULES.season ? o.coachTarget.goal : "none";
   const weight = (g: OwnerGoal, v: number) => { setWeights(game, { ...o.weights, [g]: v }); changed(); };
   return (
     <section className="stack">
       <h2>Owner's office</h2>
+      <div className="tabs" role="group" aria-label="View">
+        <button aria-pressed={tab === "overview"} onClick={() => setTab("overview")}>Overview</button>
+        <button aria-pressed={tab === "money"} onClick={() => setTab("money")}>Money</button>
+        <button aria-pressed={tab === "standing"} onClick={() => setTab("standing")}>Standing</button>
+      </div>
       {msg && <p className="notice">{msg}</p>}
-      {o.suggestion && (
+      {tab === "overview" && o.suggestion && (
         <div className="panel stack tight">
           <h3>Rethinking your priorities</h3>
           <span>{o.suggestion.why}</span>
@@ -35,7 +44,7 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
           </div>
         </div>
       )}
-      <div className="split">
+      {tab === "overview" && <div className="split">
         <div className="panel stack tight">
           <h3>{RULES.season} scorecard so far</h3>
           <div className="table-wrap">
@@ -68,26 +77,8 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
           </dl>
           <span className="muted">The return counts what the stake is worth, what you took out and what you put in. Borrowing raises it in good years and lowers it in bad ones.</span>
         </div>
-      </div>
-      <div className="split">
-        <div className="panel stack tight">
-          <h3>Your money</h3>
-          <dl className="kv">
-            <dt>Cash on hand</dt><dd>{money(o.liquid)}</dd>
-            <dt>Other holdings</dt><dd>{billions(o.outside)}</dd>
-            {o.personalDebt > 0 && <><dt>Personal debt</dt><dd className="bad">{money(o.personalDebt)}</dd></>}
-            <dt>Taxes paid on the club</dt><dd>{money(o.taxesPaid)}</dd>
-            {o.carryforward > 0 && <><dt>Losses carried forward</dt><dd>{money(o.carryforward)}</dd></>}
-          </dl>
-          <div className="btn-row">
-            <button className="btn small" onClick={() => { setMsg(sellHoldings(game, 100_000_000) ?? "Sold $100M of holdings (3% in costs)."); changed(); }}>Sell $100M of holdings</button>
-            {o.personalDebt > 0 && <button className="btn small" onClick={() => { setMsg(repayPersonal(game) ?? "Paid down your personal debt."); changed(); }}>Pay down personal debt</button>}
-          </div>
-          <span className="muted">
-            Capital you put in comes from your cash; a capital call you can't cover sells holdings at a 10% discount, then borrows against your name.
-            The club is a pass-through: you pay tax on its income, less a write-off of most of the purchase price over 15 years.
-          </span>
-        </div>
+      </div>}
+      {tab === "overview" && <div className="split">
         <div className="panel stack tight">
           <h3>Who you are</h3>
           <dl className="kv">
@@ -107,7 +98,16 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
             </select>
           </label>
         </div>
-      </div>
+        <div className="panel stack tight">
+          <h3>Your wealth</h3>
+          <dl className="kv">
+            <dt>Net worth</dt><dd>{billions(nw.total)}</dd>
+            <dt>In the team</dt><dd>{Math.round(nw.concentration * 100)}%</dd>
+          </dl>
+          <span className="muted">{concentrationWord(nw.concentration)}. Your holdings, family arrangements, foundation and public profile are on the Money tab.</span>
+        </div>
+      </div>}
+      {tab === "overview" && <>
       <div className="panel stack tight">
         <h3>Your priorities</h3>
         <div className="table-wrap">
@@ -154,7 +154,9 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
           {o.log.slice(0, 12).map((l, i) => <span key={i}>{shortDate(l.date)} {l.date.slice(0, 4)}: {l.text}</span>)}
         </div>
       )}
-      <OwnerStanding game={game} changed={changed} />
+      </>}
+      {tab === "money" && <OwnerMoney game={game} say={(m) => { setMsg(m); changed(); }} />}
+      {tab === "standing" && <OwnerStanding game={game} changed={changed} />}
     </section>
   );
 }

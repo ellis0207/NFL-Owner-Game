@@ -89,6 +89,7 @@ import { collegeDaily, newCollege } from "./college";
 import { scoutingDaily } from "./scouting";
 import { treasuryDaily } from "./treasury";
 import { investorsDaily } from "./investors";
+import { wealthDaily } from "./wealth";
 import { peopleDaily } from "./people";
 import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
@@ -612,6 +613,7 @@ export function advanceDay(state: GameState): void {
   booksDaily(state);
   treasuryDaily(state);
   investorsDaily(state);
+  wealthDaily(state);
   officeDaily(state);
   peopleDaily(state);
   standingDaily(state);
