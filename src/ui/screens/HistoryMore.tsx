@@ -4,7 +4,8 @@
 import { useMemo, useState } from "react";
 import { careerLeaders, eraRankings } from "../../engine/careerstats";
 import { hindsight } from "../../engine/hindsight";
-import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
+import { CONTROL } from "../../engine/investors";
+import { PLAYER_BY_ID, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { execBios, ownerEras, ruleEras } from "../../engine/records";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
@@ -92,6 +93,57 @@ export function HindsightTab({ game }: { game: GameState }) {
         );
       })}
       {!h.drafts.length && !h.signings.length && !h.coaching.length && <p className="muted">Nothing to grade yet. The first coaching grade comes after this season's Super Bowl, and draft re-grades two seasons after each draft.</p>}
+    </div>
+  );
+}
+
+const big = (x: number) => (Math.abs(x) >= 1e9 ? `$${(x / 1e9).toFixed(2)}B` : money(x));
+const years = (from: string, to?: string) => (!to ? `${from.slice(0, 4)} on` : from.slice(0, 4) === to.slice(0, 4) ? from.slice(0, 4) : `${from.slice(0, 4)}-${to.slice(0, 4)}`);
+
+/** Who has owned the club, the player's own clubs, and changes of control around the league. */
+export function OwnersTab({ game }: { game: GameState }) {
+  const eras = ownerEras(game);
+  const t = game.tenure;
+  const s = game.succession;
+  const f = game.franchise;
+  const before = CONTROL[game.userTeam];
+  return (
+    <div className="stack">
+      <div className="panel stack tight">
+        <h3>Owners of the {TEAM_BY_ID[game.userTeam].name}</h3>
+        <ul className="plain">
+          {before && <li>Before 2026: {before}.</li>}
+          {(t?.clubs ?? []).filter((c) => c.team === game.userTeam).map((c, i) => <li key={i}>{years(c.from, c.to)}: {c.how}{c.price ? ` for ${big(c.price)}` : ""}.</li>)}
+          {(f?.sales ?? []).filter((x) => x.team === game.userTeam && !x.real).map((x, i) => <li key={`s${i}`}>{x.date.slice(0, 4)}: sold to {x.buyer} for {big(x.price)}.</li>)}
+        </ul>
+        {eras.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Owner</th><th>Seasons</th><th className="num">Record</th><th className="num">Playoffs</th><th className="num">Titles</th></tr></thead>
+              <tbody>{eras.map((o) => <tr key={o.owner + o.from}><td>{o.owner}</td><td>{o.from === o.to ? o.from : `${o.from}-${o.to}`}</td><td className="num">{o.w}-{o.l}{o.t ? `-${o.t}` : ""}</td><td className="num">{o.playoffs}</td><td className="num">{o.titles}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
+        <span className="muted">Contracts, records and relationships carry over when the club changes hands.</span>
+      </div>
+      {t && t.clubs.length > 0 && (
+        <div className="panel stack tight">
+          <h3>Your family's clubs</h3>
+          <ul className="plain">{t.clubs.map((c, i) => <li key={i}>{TEAM_BY_ID[c.team]?.name ?? c.team}: {c.how}, {years(c.from, c.to)}{c.proceeds ? `; netted ${big(c.proceeds)}` : ""}.</li>)}</ul>
+        </div>
+      )}
+      {s && s.history.length > 0 && (
+        <div className="panel stack tight">
+          <h3>Succession</h3>
+          <ul className="plain muted">{s.history.slice(0, 12).map((h, i) => <li key={i}>{h.date}: {h.text}</li>)}</ul>
+        </div>
+      )}
+      {f && f.sales.length > 0 && (
+        <div className="panel stack tight">
+          <h3>Changes of control around the league</h3>
+          <ul className="plain">{[...f.sales].reverse().map((x, i) => <li key={i}>{x.date.slice(0, 4)}: the {TEAM_BY_ID[x.team]?.name ?? x.team} to {x.buyer}, {big(x.price)}.</li>)}</ul>
+        </div>
+      )}
     </div>
   );
 }

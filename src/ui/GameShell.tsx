@@ -52,6 +52,7 @@ import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
 import { inControl, tenure } from "../engine/takeover";
+import { GameOver } from "./screens/OwnershipSuccession";
 import { NAV, PAGE_HINT, groupOf, pageLabel, type Screen } from "./nav";
 
 export type { Screen } from "./nav";
@@ -249,6 +250,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               ))}
             </div>
           )}
+          {over && screen === "Today" && <GameOver game={game} />}
           {locked && <p className="notice">You don't control this club: {tenure(game).role === "buyer" ? `you're a buyer watching it while ${tenure(game).controller} sells` : `${tenure(game).controller} runs it and you hold ${Math.round((tenure(game).stake ?? 0) * 100)}%`}. Its staff make the calls; this page is read-only. Deals are on the Ownership page.</p>}
           <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
           {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {

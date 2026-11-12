@@ -1913,6 +1913,7 @@ export interface GameState {
   investors?: InvestorsState;
   wealth?: WealthState;
   tenure?: TenureState;
+  succession?: SuccessionState;
   franchise?: FranchiseMarketState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
@@ -2560,6 +2561,71 @@ export interface FranchiseMarketState {
   /** Who controls each club now, where it has changed hands. */
   control: Record<string, string>;
   log: { date: string; text: string }[];
+}
+
+// ---- Succession and the end of a tenure (succession.ts) ----
+
+/** A possible heir (made up). The owner sees them only through reports; the numbers are engine only. */
+export interface Heir {
+  id: string;
+  name: string;
+  relation: "child" | "spouse" | "niece or nephew";
+  age: number;
+  /** Engine only, 0 to 1: wanting to run the club, business sense, football sense, steadiness. */
+  interest: number;
+  acumen: number;
+  football: number;
+  temper: number;
+  /** Working at the club: learning, and seen more clearly. */
+  role: boolean;
+  /** Engine only, 0-100: resentment at being passed over. */
+  grudge: number;
+}
+
+/** The player's sale of the whole club. */
+export interface OwnerSale {
+  stage: "marketing" | "bids" | "league" | "closed" | "failed";
+  opened: string;
+  due: string;
+  bids: { name: string; price: number; cash: boolean }[];
+  chosen?: string;
+  failed?: string;
+  net?: { price: number; debt: number; cash: number; fees: number; partners: number; tax: number; net: number; paidIn: number; out: number; multiple: number; annual: number; years: number };
+}
+
+export interface LegacyReview {
+  date: string;
+  owner: string;
+  clubs: string[];
+  overall: number;
+  parts: { area: string; score: number; text: string }[];
+  verdict: string;
+}
+
+export interface SuccessionState {
+  /** The controlling owner's birth year and health (0-100, shown in words). */
+  born: number;
+  health: number;
+  involvement: "full" | "chair" | "retired";
+  heirs: Heir[];
+  successor?: string;
+  trustee?: string;
+  /** The league's pre-approval of the successor, and a pending review's date. */
+  approved?: boolean;
+  review?: string;
+  /** Engine only, 0-100: how united the family is. */
+  cohesion: number;
+  /** Life insurance held for estate taxes (face amount). */
+  insurance: number;
+  generation: number;
+  sale?: OwnerSale;
+  /** The estate being settled after a death or hand-over. */
+  estate?: { date: string; tax: number; paid: number; short: number; owner: string };
+  /** A tenure that just ended, waiting on the player's choice. */
+  pending?: { date: string; why: "death" | "sale" | "stepdown" };
+  /** The game's end, with its legacy review. */
+  ended?: LegacyReview;
+  history: { date: string; text: string }[];
 }
 
 // ---- The owner's own wealth (wealth.ts) ----
