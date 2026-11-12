@@ -27,6 +27,7 @@ import { merch, REBRAND } from "./merch";
 import { owners, VOTES_TO_PASS } from "./owners";
 import { gaussian, rngFor } from "./rng";
 import { MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadiums";
+import { reserved } from "./investors";
 import type { GameState } from "./types";
 
 const M = 1_000_000;
@@ -287,6 +288,9 @@ export function fileRelocation(state: GameState, id: string, opts: { identity?: 
   if (r.bids.some((b) => b.team === us && b.status === "filed")) return "Our application is already with the league.";
   if (moveOf(state, us) && moveOf(state, us)!.season > RULES.season - 3) return "We just moved; the league won't hear another application so soon.";
   if (!r.studies.some((s) => s.market === id && daysBetween(s.date, state.date) < 730)) return "The league requires a market study first.";
+  // Moving the club is a reserved matter for the ownership group's board.
+  const board = reserved(state, "relocation", 0, `Applying to move to ${m.city}`);
+  if (board) return board;
   const identity = opts.identity ?? "keep";
   const name = opts.name?.trim();
   if (identity !== "keep" && !name) return "Pick the new name.";

@@ -163,6 +163,14 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
+    title: "Partners and the board",
+    body: [
+      "You start owning the whole club. The Ownership page sells a stake: your shares (the money comes to you, less capital-gains tax) or new shares (the money goes into the club and everyone is diluted). Bids come back as a memo on Today, and the league vets every buyer. You must keep at least 30%, and private-equity funds can hold at most 10% together.",
+      "With partners, distributions and capital calls go to everyone by their shares, and you pay tax only on your share. A partner who misses a capital call is diluted. Below two-thirds of the shares, big borrowing, new shares, a new stadium, a move and deals with you need the board's vote.",
+      "Partners read a quarterly report and grow content or restless with results, the club's value and the money they get back. Unhappy ones complain; very unhappy ones want out, and investor-friendly terms give them a put after seven years. The Reports tab shows your equity's return against inflation and against a hurdle that charges for debt and illiquidity.",
+    ],
+  },
+  {
     title: "Moving the club",
     body: [
       "Business > Relocation compares markets. A move needs a study, an application between January 1 and February 15, and 24 owners' votes at the annual meeting. Owners want to see you tried to stay: a failed public vote or failed lease talks help.",

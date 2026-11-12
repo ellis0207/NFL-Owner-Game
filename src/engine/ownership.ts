@@ -10,6 +10,7 @@
 // owner pays the taxes on the club's income (NFL clubs are pass-through
 // entities, so the club itself pays no income tax).
 import { late } from "./late";
+import { ownerShare } from "./investors";
 import { communityScore } from "./community";
 import { billions, business, businessChief, cashBalance, pnl, valuation } from "./business";
 import { leagueYear } from "./contracts";
@@ -158,9 +159,9 @@ export function equityAtPurchase(state: GameState): number {
   return o.purchase - (acq?.amount ?? 0);
 }
 
-/** The owner's stake today: the club's value less its debt, plus the cash in it. */
+/** The owner's stake today: the club's value less its debt, plus the cash in it, times the owner's share. */
 export function ownerEquity(state: GameState): number {
-  return valuation(state, state.userTeam) - totalDebt(state) + Math.max(0, cashBalance(state));
+  return (valuation(state, state.userTeam) - totalDebt(state) + Math.max(0, cashBalance(state))) * ownerShare(state);
 }
 
 // ---- The owner's own money ----
@@ -230,8 +231,10 @@ const AMORTIZED_SHARE = 0.85;
 export function closeOwnerYear(state: GameState, year: number, clubIncome: number): { tax: number; taxable: number; writeOff: number } {
   const o = owner(state);
   const years = daysBetween(o.since, state.date) / 365;
-  const writeOff = years <= 15.5 ? o.purchase * AMORTIZED_SHARE / 15 : 0;
-  let taxable = clubIncome - writeOff;
+  // Partners pay tax on their own shares; the owner on theirs, with the write-off on the part they still hold.
+  const share = ownerShare(state);
+  const writeOff = years <= 15.5 ? o.purchase * AMORTIZED_SHARE / 15 * share : 0;
+  let taxable = clubIncome * share - writeOff;
   // Losses carry forward to shelter later years.
   if (taxable < 0) {
     o.carryforward += -taxable;
@@ -347,7 +350,7 @@ export function ownerReturn(state: GameState): { annual: number; years: number; 
   const o = owner(state);
   const years = Math.max(0.25, daysBetween(o.since, state.date) / 365);
   const start = equityAtPurchase(state) + o.putIn;
-  const end = ownerEquity(state) + o.takenOut;
+  const end = ownerEquity(state) + o.takenOut + (state.investors?.proceeds ?? 0);
   const annual = start > 0 && end > 0 ? Math.pow(end / start, 1 / years) - 1 : -1;
   return { annual, years, benchmark: 0.07, leverage: totalDebt(state) / Math.max(1, valuation(state, state.userTeam)) };
 }

@@ -1,3 +1,4 @@
+import { ownerShare } from "../src/engine/investors";
 import { readFileSync } from "node:fs";
 import { termsFor } from "../src/engine/cbaterms";
 import { rulesFor } from "../src/engine/rules";
@@ -313,6 +314,19 @@ describe("saves from older versions", () => {
     const old = load("pr47-2026-10-10");
     expect(old.relocation).toBeUndefined();
     expect(TEAM_BY_ID.DET.city).toBe("Detroit");
+  }, 120_000);
+
+  it("a save made after a stake sale keeps its partners, and older saves own the whole club", async () => {
+    const state = load("pr50-2026-10-10");
+    expect(state.investors!.partners.length).toBe(2);
+    expect(ownerShare(state)).toBeCloseTo(0.72, 6);
+    for (let i = 0; i < 25; i++) advanceDay(state);
+    expect(state.investors!.reports.length).toBeGreaterThan(0);
+    const back = await decompress(await compress(state));
+    expect(ownerShare(back)).toBeCloseTo(0.72, 6);
+    const old = load("pr48-2026-10-10");
+    expect(old.investors).toBeUndefined();
+    expect(ownerShare(old)).toBe(1);
   }, 120_000);
 
   it("an older save starts keeping play-by-play with its next games", () => {

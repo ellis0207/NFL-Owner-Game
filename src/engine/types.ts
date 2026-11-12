@@ -1910,6 +1910,7 @@ export interface GameState {
   debt?: DebtState;
   /** Who the owner is: wealth, style, goals and the scorecard of each season (ownership.ts). */
   owner?: OwnerState;
+  investors?: InvestorsState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
   /** Who decides what: decision rights, limits, alerts and the record of decisions (delegation.ts). */
@@ -2403,6 +2404,84 @@ export interface OwnerState {
   legacy: ScoreSeason[];
   /** New priorities suggested by how things have gone, for the owner to take or leave. */
   suggestion?: { weights: Record<OwnerGoal, number>; why: string; date: string };
+  log: { date: string; text: string }[];
+}
+
+// ---- The ownership group (investors.ts) ----
+
+/** Terms in an investor agreement: who can sell to whom, and what a partner can force. */
+export type StakeTerms = "owner" | "standard" | "investor";
+
+/** A limited partner in the club (made-up people and funds). */
+export interface Partner {
+  id: string;
+  name: string;
+  kind: "individual" | "family" | "fund" | "celebrity";
+  /** Share of the club, 0 to 1. */
+  pct: number;
+  since: string;
+  /** What they paid for the stake, capital calls met, and distributions received. */
+  paid: number;
+  calls: number;
+  distributions: number;
+  /** How the partner feels about the club, 0 to 100. The owner hears it in words, from calls and meetings. */
+  mood: number;
+  board: boolean;
+  terms: StakeTerms;
+  /** When a put right lets the partner make the group buy them out (investor-friendly terms). */
+  putFrom?: string;
+  complaints: number;
+  background: string;
+  /** The value of the club when they came in, for their own return. */
+  entryValue: number;
+}
+
+export interface StakeBid {
+  id: string;
+  name: string;
+  kind: Partner["kind"];
+  background: string;
+  price: number;
+  board: boolean;
+}
+
+/** Selling part of the club: marketing, bids, the league's review, closing. */
+export interface StakeSale {
+  id: string;
+  opened: string;
+  /** Secondary: the seller's own shares (money to the seller). Primary: new shares (money into the club). */
+  kind: "primary" | "secondary";
+  pct: number;
+  terms: StakeTerms;
+  /** A partner selling out, when the stake is theirs. */
+  seller?: string;
+  stage: "marketing" | "bids" | "league" | "closed" | "failed";
+  bidsDue: string;
+  bids: StakeBid[];
+  chosen?: string;
+  closes?: string;
+}
+
+export interface InvestorsState {
+  partners: Partner[];
+  former: { name: string; pct: number; left: string; how: string }[];
+  sale?: StakeSale;
+  sales: { date: string; kind: string; pct: number; price: number; buyer: string }[];
+  /** How much the quarterly report tells the partners. */
+  disclosure: "full" | "standard" | "minimal";
+  reports: { date: string; period: string; lines: string[] }[];
+  minutes: { date: string; matter: string; yes: number; passed: boolean; text: string }[];
+  reviews: { date: string; what: string; amount: number; outcome: string }[];
+  /** What happens to control if the owner can no longer run the club. */
+  succession: "trust" | "named" | "sale";
+  /** Money the owner received from selling shares, and capital-gains tax paid on it. */
+  proceeds: number;
+  gainsTax: number;
+  calls: { date: string; amount: number; ours: number; why: string }[];
+  /** Bridge loans from the owner to the club: the loan ids already settled with the owner. */
+  bridges: { id: string; settled?: boolean }[];
+  /** Capital calls less distributions of partners who have since left. */
+  formerNet?: number;
   log: { date: string; text: string }[];
 }
 

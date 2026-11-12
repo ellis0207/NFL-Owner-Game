@@ -28,6 +28,7 @@ import { LeagueScreen } from "./screens/LeagueScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
+import { OwnershipScreen } from "./screens/OwnershipScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
 import { AnalyticsScreen } from "./screens/AnalyticsScreen";
 import { ClubhouseScreen } from "./screens/ClubhouseScreen";
@@ -261,6 +262,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "History" && <HistoryScreen game={game} />}
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}
           {screen === "Owner" && <OwnerScreen game={game} changed={changed} />}
+          {screen === "Ownership" && <OwnershipScreen game={game} changed={changed} />}
           {screen === "Front office" && <FrontOfficeScreen game={game} changed={changed} />}
           {screen === "Football" && <FootballScreen game={game} />}
           {screen === "Agreements" && <AgreementsScreen game={game} />}

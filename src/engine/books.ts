@@ -27,6 +27,7 @@ import { cashOwedThisYear, cashNextYear } from "./finance";
 import { money, send } from "./inbox";
 import { RULES, SCHEDULE, TEAMS } from "./league";
 import { closeOwnerYear, equityAtPurchase, owner } from "./ownership";
+import { partnersContributed } from "./investors";
 import { PROJECT_BY_ID } from "./projects";
 import type { BooksState, GameState, LedgerCat, YearClose } from "./types";
 
@@ -334,7 +335,7 @@ export function balanceSheet(state: GameState): BalanceSheet {
   const totalAssets = assets.reduce((t, a) => t + a.amount, 0);
   const totalLiabilities = liabilities.reduce((t, a) => t + a.amount, 0);
   const equity = totalAssets - totalLiabilities;
-  const contributed = equityAtPurchase(state) + o.putIn - o.takenOut;
+  const contributed = equityAtPurchase(state) + o.putIn - o.takenOut + partnersContributed(state);
   return { assets, liabilities, totalAssets, totalLiabilities, equity, contributed, retained: equity - contributed };
 }
 
