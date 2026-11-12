@@ -8,6 +8,7 @@ import { AREA_KEYS, noteDecision, office, setMode } from "./delegation";
 import { daysBetween } from "./dates";
 import { money } from "./inbox";
 import { consulting } from "./treasury";
+import { alternativeText, memoComparison, sensitivityText } from "./compare";
 import { remember } from "./people";
 import type { DecisionArea, GameState, InboxItem, Memo } from "./types";
 
@@ -82,13 +83,19 @@ export function followUp(state: GameState, id: string, kind: FollowUp): string |
       a = amount ? `The ${money(amount)} is ${cash.length ? `paid ${cash.map((c) => `${money(c.amount)} on ${c.when}`).join(", ")}` : "the total commitment"}. ${m.budget}` : `There's no direct cost. ${m.budget}`;
       break;
     case "sensitivity": {
+      const c = memoComparison(state, m.id);
+      if (c) { a = sensitivityText(c, m.recommend); break; }
       if (!amount) { a = "Little money is at stake; the risk is in the relationships and the story, which the options describe."; break; }
       const low = Math.round(amount * 0.8), high = Math.round(amount * 1.25);
       a = `If our assumptions are 20% optimistic the real cost is closer to ${money(high)}; if they're cautious, ${money(low)}. ${m.risks[0] ?? ""} The recommendation holds unless the high case would break the budget.`;
       break;
     }
-    default:
+    default: {
+      const c = memoComparison(state, m.id);
+      const alt = c ? alternativeText(c, m.recommend) : "";
+      if (alt) { a = `The genuinely different option, worked out the same way: ${alt}`; break; }
       a = amount ? `A smaller version: about ${money(Math.round(amount * 0.65))} for most of the benefit, with less certainty it works. We'd still recommend "${m.options[m.recommend].label}".` : `Waiting is the other option: ${m.ifLate}`;
+    }
   }
   m.notes.push(`Q: ${FOLLOW_UPS[kind]}`, `A: ${a}`);
   if (!consulting(state, "strategy")) {

@@ -95,9 +95,16 @@ function CauseEffect({ game }: { game: GameState }) {
       <h3>Cause and effect</h3>
       <span className="muted">Big decisions, what happened right away, and what came of them in later seasons.</span>
       {log.length === 0 && <span className="muted">Nothing yet: signings, trades, firings, deals and memo decisions show up here.</span>}
+      {(() => {
+        const checked = (game.causes ?? []).filter((c) => c.outcome);
+        if (!checked.length) return null;
+        const inside = checked.filter((c) => c.outcome!.within).length;
+        return <span>Staff forecasts checked against results: {inside} of {checked.length} landed inside the staff's range. A result is what was observed; the note on each says how much of it the decision itself can be credited with.</span>;
+      })()}
       {log.map((c) => (
         <div key={c.id}>
           <strong>{shortDate(c.date)} {c.date.slice(0, 4)}:</strong> {c.text}
+          {c.forecast && <div className="muted small">Forecast ({c.forecast.option}): {c.forecast.metric.toLowerCase()}. {c.outcome ? (c.outcome.within ? "Result inside the range." : "Result outside the range.") : "Not yet measured."} Attribution: {c.forecast.attribution === "direct" ? "direct" : c.forecast.attribution === "partial" ? "partly the decision" : "observed only, not credited to the decision"}.</div>}
           {c.effects.length > 0 && <ul className="plain muted">{c.effects.map((e, i) => <li key={i}>{e.text}</li>)}</ul>}
         </div>
       ))}

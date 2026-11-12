@@ -2606,6 +2606,13 @@ export interface CauseEntry {
   /** What to follow into later seasons. */
   ref?: { kind: "player" | "trade" | "coach" | "club"; id: string };
   followed?: number[];
+  /** What the staff expected (compare.ts), checked against what happened. */
+  forecast?: {
+    metric: string; unit: "wins" | "money" | "holders" | "pct" | "games"; low: number; mid: number; high: number;
+    attribution: "direct" | "partial" | "weak"; option: string; measure: "teamWins" | "holders" | "interest" | "revenue"; baseline: number; key?: string;
+  };
+  /** The forecast against the result, once a season has played out. */
+  outcome?: { season: number; observed: number; within: boolean; text: string };
 }
 
 /** One league year as it closed: our contracts, cap, statement and the rules in force. */

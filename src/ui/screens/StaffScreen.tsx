@@ -1,3 +1,5 @@
+import { CompareToggle } from "../Comparison";
+import { dismissalComparison } from "../../engine/compare";
 import { useState } from "react";
 import {
   askFor, available, candidates, decideProposal, delegateSearch, extendStaff, extensionAsk, fireStaff, makeOffer, openSearches,
@@ -236,6 +238,7 @@ function OurStaff({ game, act, searches }: { game: GameState; act: (r: { ok: boo
                 </div>
               ) : confirm === c.id ? (
                 <div className="stack tight">
+                  {(role === "HC" || role === "GM") && <CompareToggle get={() => dismissalComparison(game, role)} label="Compare keeping and firing" />}
                   <span className="warn">Let {c.name} go?{k && k.through >= RULES.season + (game.date > RULES.keyDates.regularSeasonEnd ? 1 : 0) ? ` We keep paying the contract (${money(k.salary)} a year through ${k.through}) unless another team hires them.` : ""}</span>
                   <div className="btn-row">
                     <button className="btn small" onClick={() => { act(fireStaff(game, c.id)); setConfirm(null); }}>Yes, let go</button>

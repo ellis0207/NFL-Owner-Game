@@ -1,3 +1,5 @@
+import { CompareToggle } from "../Comparison";
+import { renovationComparison, startProjectTracked } from "../../engine/compare";
 import { useState } from "react";
 import { builtReport, projectPayback } from "../../engine/facilities";
 import { leagueYear } from "../../engine/contracts";
@@ -6,7 +8,7 @@ import { dropPartner, INVENTORY, keepPartner, namingIncome, receivables, rightsC
 import { tix } from "../../engine/ticketing";
 import { RULES } from "../../engine/league";
 import { shortDate } from "../../engine/dates";
-import { PROJECTS, projects, projectTerms, startProject } from "../../engine/projects";
+import { PROJECTS, projects, projectTerms } from "../../engine/projects";
 import { STADIUM_BY_TEAM } from "../../engine/stadiums";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
@@ -132,7 +134,8 @@ export function Projects({ game, changed }: { game: GameState; changed: () => vo
             {(() => { const pb = projectPayback(game, p.id); const built = mine?.opened ? builtReport(game).find((x) => x.id === p.id) : undefined; return <span className="muted">{built ? `Brought in about ${money(built.earned)} since it opened, against ${money(built.cost)}.` : pb.years ? `At last year's numbers: about ${money(pb.yearly)} a year, paid back in ${pb.years} years.` : "No direct payback; it shows up elsewhere."}</span>; })()}
             {mine ? <span className={mine.opened ? "good" : ""}>{mine.opened ? `Opened ${shortDate(mine.opens)}.` : `Under way: ${money(mine.paid)} of ${money(mine.cost)} paid, opens ${shortDate(mine.opens)}.`}</span>
               : t.blocked ? <span className="muted">{t.blocked}</span>
-              : <div><button className="btn small primary" onClick={() => { setMsg(startProject(game, p.id)); changed(); }}>Start it ({money(t.ours)} our share)</button></div>}
+              : <div className="stack tight"><div><button className="btn small primary" onClick={() => { setMsg(startProjectTracked(game, p.id)); changed(); }}>Start it ({money(t.ours)} our share)</button></div>
+                <CompareToggle get={() => renovationComparison(game, p.id)} label="Compare cash, borrowing and waiting" /></div>}
           </div>
         );
       })}

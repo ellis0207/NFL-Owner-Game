@@ -121,16 +121,28 @@ const CASE_WEIGHT: Partial<Record<Position, number>> = { QB: 3, EDGE: 1.3, OT: 1
  * change in playoff chances, and for linemen the sacks it should save. It is
  * their estimate from their own read of him against the starter he'd replace.
  */
-export function coachCase(state: GameState, team: string, id: string): { wins: number; before: number; after: number; sacks: number; text: string } {
+/**
+ * How much better than our weakest starter at his position one evaluator
+ * thinks a player is, and the wins a season that's worth. The coaches judge
+ * by default; the GM and the pro scouts read the same player their own way,
+ * which is how the staff come to disagree (engine numbers, shown as wins).
+ */
+export function winsAdded(state: GameState, team: string, id: string, who: "coach" | "gm" | "pro" = "coach"): { wins: number; delta: number } {
   const p = PLAYER_BY_ID[id];
   const n = STARTERS.find(([pos]) => pos === p.position)?.[1] ?? 1;
-  const eye = staffEffects(team).coachEval;
-  const chart = depthChart(state, team);
-  const starters = (chart[p.position] ?? []).filter((x) => x !== id).slice(0, n);
-  const weakest = starters.length < n ? 50 : Math.min(...starters.map((x) => perceivedAbility(state, x, `coach:${team}`, eye)));
-  const delta = Math.max(0, perceivedAbility(state, id, `coach:${team}`, eye) - weakest);
+  const fx = staffEffects(team);
+  const eye = who === "coach" ? fx.coachEval : who === "gm" ? fx.gmEval : fx.proScouting;
+  const read = (x: string) => perceivedAbility(state, x, `${who}:${team}`, eye);
+  const starters = (depthChart(state, team)[p.position] ?? []).filter((x) => x !== id).slice(0, n);
+  const weakest = starters.length < n ? 50 : Math.min(...starters.map(read));
+  const delta = Math.max(0, read(id) - weakest);
+  return { wins: Math.round(FORMAT.games * 0.03 * (CASE_WEIGHT[p.position] ?? 0.5) * delta / 10 * 10) / 10, delta };
+}
+
+export function coachCase(state: GameState, team: string, id: string): { wins: number; before: number; after: number; sacks: number; text: string } {
+  const p = PLAYER_BY_ID[id];
+  const { wins, delta } = winsAdded(state, team, id);
   const games = FORMAT.games;
-  const wins = Math.round(games * 0.03 * (CASE_WEIGHT[p.position] ?? 0.5) * delta / 10 * 10) / 10;
   const rec = standings(state)[team];
   const played = rec ? rec.w + rec.l + rec.t : 0;
   const base = (played ? winPct(rec.w, rec.l, rec.t) : 0.5) * games;
