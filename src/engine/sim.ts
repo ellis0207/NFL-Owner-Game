@@ -10,10 +10,10 @@
 import { joinedToday } from "./gameweek";
 import { chemistryEdge } from "./clubhouse";
 import { gameConditions, type Conditions } from "./gameday";
-import { addLine, pack, type StatKey, type StatLine } from "./stats";
+import { addLine, pack, stat, type StatKey, type StatLine } from "./stats";
 import { teamPlayerIds } from "./cap";
 import { injure, injuryRisk, isHurt } from "./injuries";
-import { PLAYER_BY_ID, RULES } from "./league";
+import { PLAYER_BY_ID, RULES, SCHEDULE } from "./league";
 import { depthChart, isHoldingOut, isSuspended } from "./roster";
 import { LEAGUE_RULES } from "./rules";
 import { gaussian, rngFor, type Rng } from "./rng";
@@ -75,6 +75,8 @@ interface Team {
   /** The emergency third quarterback: inactive, but he can play if both active quarterbacks are out. */
   emergency?: string;
   out: Set<string>;
+  /** The quarterback who took the last snap, for the feed's note when he changes. */
+  qbNow?: string;
   form: number;
   timeouts: number;
   stats: Record<string, StatLine>;
@@ -377,6 +379,7 @@ class GameSim {
   add(team: Team, id: string | undefined, key: StatKey, v = 1): void {
     if (!id) return;
     const line = (team.stats[id] ??= {});
+    this.rec.credit(team.side, id, key, v);
     if (key === "passLong" || key === "rushLong" || key === "recLong" || key === "fgLong" || key === "puntLong") line[key] = Math.max(line[key] ?? 0, v);
     else line[key] = (line[key] ?? 0) + v;
   }
@@ -439,6 +442,7 @@ class GameSim {
     const away = this.t.away;
     const home = this.t.home;
     this.receivedFirst = this.rng() < 0.5 ? "away" : "home";
+    this.pregameNotes();
     this.kickoff(this.other(this.receivedFirst));
     let guard = 0;
     while (!this.over && guard++ < 400) this.snap();
@@ -462,6 +466,74 @@ class GameSim {
       ...(this.cond.weather.indoor ? {} : { weather: this.cond.weather }),
     };
     return { result, box, log: this.rec.log(this.game.date) };
+  }
+
+  // ---- Storylines in the feed ----
+
+  /** The quarterback who threw the most passes in this club's last game that counted, if it has played one. */
+  lastStarter(team: string): string | undefined {
+    let last: ScheduledGame | undefined;
+    for (const g of SCHEDULE) {
+      if (g.type === "PRE" || g.date >= this.game.date || (g.away !== team && g.home !== team) || !this.state.box[g.id]) continue;
+      if (!last || g.date > last.date) last = g;
+    }
+    const r = last && this.state.results[last.id];
+    if (!last || !r) return undefined;
+    const lines = this.state.box[last.id].players[r.away === team ? "away" : "home"];
+    let best: string | undefined;
+    for (const [id, v] of Object.entries(lines)) if (stat(v, "att") > (best ? stat(lines[best], "att") : 0)) best = id;
+    return best;
+  }
+
+  /** Before kickoff: who starts at quarterback, and whether that is a change from last week. */
+  pregameNotes(): void {
+    for (const side of ["away", "home"] as const) {
+      const t = this.t[side];
+      const qb = this.pool(t, "QB")[0];
+      if (!qb) continue;
+      const was = this.pre ? undefined : this.lastStarter(t.id);
+      if (!was || was === qb) {
+        this.rec.note(this, `${this.name(qb)} starts at quarterback for ${t.id}.`);
+        continue;
+      }
+      const why = t.inactive.includes(was) || isHurt(this.state, was, this.game.date) ? `${this.name(was)} is out injured`
+        : !this.isOn(t, was) ? `${this.name(was)} is no longer with the club`
+        : `the coaches have benched ${this.name(was)}`;
+      this.rec.alert(this, side, `Quarterback change: ${this.name(qb)} starts for ${t.id}; ${why}.`);
+    }
+  }
+
+  /** A new quarterback under center during the game. */
+  noteQb(o: Team, qb: string): void {
+    const was = o.qbNow;
+    o.qbNow = qb;
+    if (!was || was === qb) return;
+    const why = o.out.has(was) ? `${this.name(was)} is out of the game with an injury`
+      : this.pre ? `${this.name(was)} is done for the day` : `${this.name(was)} goes to the bench`;
+    this.rec.alert(this, o.side, `Quarterback change: ${this.name(qb)} takes over for ${o.id}; ${why}.`);
+  }
+
+  /**
+   * What the crowd saw on a snap wiped out by a foul during the play. The
+   * sim settles the down from the foul alone, so the gain described here is
+   * for the feed only and comes from the feed's own random stream.
+   */
+  calledBack(o: Team, offense: boolean, what: string): string {
+    const qb = this.name(o.qbNow ?? this.pool(o, "QB")[0]);
+    const rb = this.name(this.pool(o, "RB")[0]);
+    const wr = this.name(this.rec.pick(this.pool(o, "WR").slice(0, 3)));
+    const n = 4 + Math.floor(this.rec.flavor() * 18);
+    const gain = n >= 100 - this.ydl ? "into the end zone" : `for ${n} yards`;
+    const back = n >= 100 - this.ydl ? "but there is a flag down and the touchdown comes back" : "but there is a flag down and it comes back";
+    if (offense) {
+      if (what === "Offensive pass interference") return `${qb} pass complete to ${wr} ${gain}, ${back}.`;
+      if (what === "Offensive holding" && this.rec.flavor() < 0.5) return `${qb} pass complete to ${wr} ${gain}, ${back}.`;
+      return `${rb} runs ${gain}, ${back}.`;
+    }
+    if (what === "Defensive pass interference") return `${qb} pass deep intended for ${wr} falls incomplete, with a flag on the coverage.`;
+    if (what === "Defensive holding" || what === "Illegal contact") return `${qb} pass intended for ${wr} is incomplete, with a flag in the secondary.`;
+    if (what === "Roughing the passer") return `${qb} throws it away and is hit late.`;
+    return `${rb} is stopped for no gain, with a flag on the tackle.`;
   }
 
   /** What the officials need to weigh a ruling and a challenge. */
@@ -953,6 +1025,7 @@ class GameSim {
       x[1]++;
     }
     const lineup = this.offenseLineup(o, personnel);
+    this.noteQb(o, lineup.qb);
     const pkg: Package = this.down >= 3 && this.dist >= 7 ? "dime" : personnel === "12" || personnel === "13" || personnel === "21" ? "base" : "nickel";
     const def = this.defenseLineup(d, pkg);
     const onField = [lineup.qb, ...lineup.rbs, ...lineup.wrs, ...lineup.tes, lineup.fb, ...lineup.ol];
@@ -1020,9 +1093,11 @@ class GameSim {
       if (lateHalf && lead > 0 && d.timeouts > 0 && this.q >= 4 && d.fx.gameManagement > 45) {
         d.timeouts--;
         runoff = 0;
+        this.rec.note(this, `Timeout, ${d.id}. It has ${d.timeouts} left.`);
       } else if (lateHalf && lead <= 0 && o.timeouts > 0 && this.clock < 60) {
         o.timeouts--;
         runoff = 0;
+        this.rec.note(this, `Timeout, ${o.id}. It has ${o.timeouts} left.`);
       }
     }
     this.tick(Math.min(runoff, Math.max(0, this.clock)));
@@ -1054,6 +1129,7 @@ class GameSim {
     this.down++;
     this.dist++;
     const timeoutStop = d.timeouts > 0 && this.q === 4 && (d.timeouts--, true);
+    if (timeoutStop) this.rec.note(this, `Timeout, ${d.id}. It has ${d.timeouts} left.`);
     this.tick(timeoutStop ? 2 : 40);
     if (this.down > 4) {
       this.rec.why = "Downs";
@@ -1139,6 +1215,8 @@ class GameSim {
     const offense = r < offRate;
     const kind = this.rng();
     const team = offense ? o : d;
+    // Fouls before the snap stop the play; the rest happen during one that then doesn't count.
+    const live = kind >= (offense ? 0.33 : 0.35);
     let yards: number;
     let autoFirst = false;
     let replay = true;
@@ -1192,8 +1270,9 @@ class GameSim {
     void replay;
     team.box.penalties++;
     team.box.penYds += yards;
-    this.rec.say(`Penalty on ${team.id}: ${what}, ${yards} yards${!offense && autoFirst ? ", automatic first down" : ""}.`, F.penalty);
-    this.rec.look = "No play";
+    const ruling = `Penalty on ${team.id}: ${what}, ${yards} yards${!offense && autoFirst ? ", automatic first down" : ""}.`;
+    this.rec.say(live ? `${this.calledBack(o, offense, what)} ${ruling} The play doesn't count.` : ruling, F.penalty);
+    this.rec.look = live ? "Play called back" : "No play";
     this.refs.flag(this.callContext(o, d, yards), team.id, what, yards);
     return true;
   }
@@ -1747,8 +1826,17 @@ class GameSim {
     if (this.rng() > Math.min(1, 0.75 * injuryRisk(this.state, id, team.id))) return;
     const { injury, days } = injure(this.state, id, team.id, this.rng);
     this.injuries.push({ player: id, team: team.id, type: injury.type });
-    if (days <= 3 && this.rng() < 0.55) return; // shook it off and returned
+    const who = `${this.name(id)} (${team.id} ${PLAYER_BY_ID[id]?.position ?? ""})`.replace(" )", ")");
+    const hurt = `INJURY: ${who} is down after the play, ${injury.type.toLowerCase()}.`;
+    if (days <= 3 && this.rng() < 0.55) {
+      // Shook it off and returned.
+      this.rec.more(` ${hurt} He walks off and is expected back.`, F.injury);
+      return;
+    }
     team.out.add(id);
+    const spot = (Object.keys(team.chart) as Position[]).find((p) => team.chart[p].includes(id));
+    const next = spot ? this.pool(team, spot)[0] : undefined;
+    this.rec.more(` ${hurt} He is out for the rest of the game${next && next !== id ? `; ${this.name(next)} replaces him` : ""}.`, F.injury);
   }
 
   isOn(team: Team, id: string): boolean {

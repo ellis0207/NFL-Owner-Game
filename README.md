@@ -439,7 +439,15 @@ time on a field view: a broadcast-style scoreboard (score, quarter, clock,
 down and distance, timeouts, possession) over a drawing of the field with the
 ball, the line of scrimmage, the line to gain, the drive so far and the path
 of the last play. You can skip to the next drive, the next quarter or the
-end, let it run on its own, or step back a play. Any game still holding its
+end, let it run on its own, or step back a play. The feed says exactly
+what happened: who was hurt on a play, whether he is coming back and who
+replaced him; plays wiped out by a flag, with what the play was before it
+came back; every timeout; and alerts for a change at quarterback, before
+kickoff (injury, or the coaches benching last week's starter) or during the
+game. Storylines are called out as they happen: lead changes, runs of
+unanswered points, turnovers piling up, a passer over 300 yards or a back
+over 100, the end of each quarter. The box score so far (line score, leaders,
+team totals, every player's line) stays beside the field the whole time. Any game still holding its
 full plays can be watched the same way from its box score. Pass rushers win or lose against
 the blocker in front of them, so one weak tackle shows. Officials miss
 calls; coaches challenge (two a game, a third after winning both, a timeout

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
-import { castAt, nextDriveStop, nextQuarterStop, type Cast } from "../engine/gamecast";
-import { TEAM_BY_ID } from "../engine/league";
+import { useEffect, useMemo, useState } from "react";
+import { boxAt, castAt, nextDriveStop, nextQuarterStop, storylines, type Cast, type RunningBox } from "../engine/gamecast";
+import { PLAYER_BY_ID, TEAM_BY_ID } from "../engine/league";
+import { stat, type StatKey } from "../engine/stats";
 import { downText, PLAY_FLAGS as F, spotText } from "../engine/playlog";
 import { TEAM_COLORS } from "../engine/teamColors";
-import type { GameLog, GameResult } from "../engine/types";
+import type { BoxScore as FinalBox, GameLog, GameResult } from "../engine/types";
+import { PlayerTables, TEAM_ROWS } from "./BoxScore";
 import { onColor } from "./format";
 import { PlayLine } from "./GameFeed";
 
@@ -134,17 +136,94 @@ export function Field({ r, cast }: { r: GameResult; cast: Cast }) {
   );
 }
 
+type Side = "away" | "home";
+const SIDES: Side[] = ["away", "home"];
+
+/** The player with the most of a stat on one side, and his line in a few words. */
+function leader(players: Record<string, number[]>, by: StatKey, line: (v: number[]) => string): string | null {
+  let best: [string, number[]] | null = null;
+  for (const e of Object.entries(players)) if (stat(e[1], by) > (best ? stat(best[1], by) : 0)) best = e;
+  return best ? `${PLAYER_BY_ID[best[0]]?.name ?? "?"}: ${line(best[1])}` : null;
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const LEADERS: [string, StatKey, (v: number[]) => string][] = [
+  ["Passing", "att", (v) => `${stat(v, "cmp")}/${stat(v, "att")}, ${stat(v, "passYds")} yds${stat(v, "passTd") ? `, ${stat(v, "passTd")} TD` : ""}${stat(v, "int") ? `, ${stat(v, "int")} INT` : ""}`],
+  ["Rushing", "rushYds", (v) => `${plural(stat(v, "car"), "carry").replace("carrys", "carries")}, ${stat(v, "rushYds")} yds${stat(v, "rushTd") ? `, ${stat(v, "rushTd")} TD` : ""}`],
+  ["Receiving", "recYds", (v) => `${stat(v, "rec")} rec, ${stat(v, "recYds")} yds${stat(v, "recTd") ? `, ${stat(v, "recTd")} TD` : ""}`],
+  ["Tackles", "tklSolo", (v) => `${stat(v, "tklSolo") + stat(v, "tklAst")} tkl${stat(v, "sacks") ? `, ${plural(stat(v, "sacks"), "sack")}` : ""}${stat(v, "defInt") ? `, ${stat(v, "defInt")} INT` : ""}`],
+];
+
+/** The box score as it stands at this point in the game: line score, leaders, team totals and every player's line. */
+export function RunningBoxScore({ r, box, final, period, injuries }: { r: GameResult; box: RunningBox | null; final: boolean; period: number; injuries: string[] }) {
+  const [side, setSide] = useState<Side>("away");
+  if (!box) return <aside className="cast-box stack tight"><h3>Box score</h3><p className="muted">This game was played before the box score was kept play by play. The full box score opens when you reach the end.</p></aside>;
+  const periods = Math.max(4, box.quarters.away.length, box.quarters.home.length);
+  const total = (s: Side) => box.quarters[s].reduce((a, b) => a + b, 0);
+  return (
+    <aside className="cast-box stack tight" aria-label="Running box score">
+      <h3>Box score <span className="muted small">{final ? "final" : "so far"}</span></h3>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Team</th>{Array.from({ length: periods }, (_, i) => <th key={i} className="num">{i < 4 ? i + 1 : "OT"}</th>)}<th className="num">T</th></tr></thead>
+          <tbody>
+            {SIDES.map((s) => (
+              <tr key={s}><td className="name">{r[s]}</td>{Array.from({ length: periods }, (_, i) => <td key={i} className="num">{final || i < period ? box.quarters[s][i] ?? 0 : ""}</td>)}<td className="num"><strong>{total(s)}</strong></td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="cast-leaders">
+        {SIDES.map((s) => (
+          <div key={s} className="stack tight">
+            <span className="label">{r[s]}</span>
+            {LEADERS.map(([title, by, line]) => {
+              const text = leader(box.players[s], by, line);
+              return text && <span key={title} className="small"><span className="muted">{title}</span> {text}</span>;
+            })}
+            {!Object.keys(box.players[s]).length && <span className="muted small">No stats yet.</span>}
+          </div>
+        ))}
+      </div>
+      <div className="table-wrap">
+        <table className="dense">
+          <thead><tr><th></th><th className="num">{r.away}</th><th className="num">{r.home}</th></tr></thead>
+          <tbody>
+            {TEAM_ROWS.map(([label, f]) => <tr key={label}><td>{label}</td><td className="num">{f(box.team.away)}</td><td className="num">{f(box.team.home)}</td></tr>)}
+          </tbody>
+        </table>
+      </div>
+      {injuries.length > 0 && <p className="small"><span className="label">Injuries</span> {injuries.join("; ")}</p>}
+      <details>
+        <summary>Every player's line</summary>
+        <div className="stack">
+          <div className="tabs" role="group" aria-label="Team">
+            {SIDES.map((s) => <button key={s} aria-pressed={side === s} onClick={() => setSide(s)}>{TEAM_BY_ID[r[s]]?.name ?? r[s]}</button>)}
+          </div>
+          <PlayerTables players={box.players[side]} />
+        </div>
+      </details>
+    </aside>
+  );
+}
+
 /**
  * Follows a game one play at a time, as if it were coming in live: the score
  * graphic and the field on the left, the plays so far on the right. The result
  * is already decided; this only holds back what you haven't reached yet.
  */
-export function FollowGame({ r, log, onDone }: { r: GameResult; log: GameLog; onDone: () => void }) {
+export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void }) {
   const total = log.plays.length;
   const [at, setAt] = useState(0);
   const [auto, setAuto] = useState(false);
   const cast = castAt(log, at);
   const done = at >= total;
+  const stories = useMemo(() => storylines(log, [r.away, r.home]), [log, r.away, r.home]);
+  // At the end the finished box score takes over, so the totals match it to the yard.
+  const running = useMemo(() => (at >= total && box && log.box ? box : boxAt(log, at)), [log, at, total, box]);
+  const hurt = useMemo(() => log.plays.slice(0, at).filter((p) => p[8] & F.injury)
+    .map((p) => /INJURY: (.*?) is down after the play, ([^.]*)\./.exec(p[7])).filter((m) => m).map((m) => `${m![1]}, ${m![2]}`), [log, at]);
+  const alerts = at > 0 ? stories[at - 1] : [];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -182,9 +261,12 @@ export function FollowGame({ r, log, onDone }: { r: GameResult; log: GameLog; on
         <div className={`cast-play ${last?.tone ?? ""}`} aria-live="polite">
           {last ? (
             <>
-              {last.label && <strong className="cast-result">{last.label}</strong>}
+              {(last.label || (last.row[8] & F.injury) !== 0) && (
+                <strong className="cast-result">{last.label}{(last.row[8] & F.injury) !== 0 && <> <span className="pill inj">Injury</span></>}</strong>
+              )}
               <span>{last.row[7]}</span>
               {last.row[11] && <span className="muted small">{last.row[11]}</span>}
+              {alerts.map((a, i) => <span key={i} className="cast-alert">{a}</span>)}
             </>
           ) : <span className="muted">{r.away} at {r.home}. Press Next play for the opening kickoff.</span>}
         </div>
@@ -199,10 +281,11 @@ export function FollowGame({ r, log, onDone }: { r: GameResult; log: GameLog; on
         </div>
         <span className="muted small">Play {at} of {total}. The right and left arrow keys step forward and back.</span>
       </div>
+      <RunningBoxScore r={r} box={running} final={done} period={Math.min(cast.q, 5)} injuries={hurt} />
       <div className="cast-feed stack tight">
         <h3>Plays so far</h3>
         {shown.length === 0 && <p className="muted">Nothing yet.</p>}
-        <ol className="plays feed">{shown.map((p, i) => <PlayLine key={at - i} r={r} p={p} />)}</ol>
+        <ol className="plays feed">{shown.map((p, i) => <PlayLine key={at - i} r={r} p={p} alerts={stories[at - i - 1]} />)}</ol>
       </div>
     </section>
   );

@@ -11,19 +11,23 @@ function quarterName(q: number): string {
   return q <= 4 ? ["", "First quarter", "Second quarter", "Third quarter", "Fourth quarter"][q] : q === 5 ? "Overtime" : `Overtime ${q - 4}`;
 }
 
-/** One play, as the feed shows it. */
-export function PlayLine({ r, p }: { r: GameResult; p: PlayRow }) {
+/** One play, as the feed shows it, with any storylines that came out of it. */
+export function PlayLine({ r, p, alerts }: { r: GameResult; p: PlayRow; alerts?: string[] }) {
   const [off, def] = teams(r, [p[2]]);
-  const cls = p[8] & F.score ? "play score" : p[8] & F.turnover ? "play turnover" : "play";
+  const story = (p[8] & F.story) !== 0;
+  const cls = p[8] & F.score ? "play score" : p[8] & F.turnover ? "play turnover" : story ? "play story" : "play";
   return (
     <li className={cls}>
       <span className="num muted">{clockText(p[0], p[1])}</span>
       <span>
-        <span className="muted">{off}{p[3] ? ` · ${downText(p[3], p[4], p[5])} at ${spotText(p[5], off, def)}` : ""}</span>
+        {!(p[8] & F.note) && <span className="muted">{off}{p[3] ? ` · ${downText(p[3], p[4], p[5])} at ${spotText(p[5], off, def)}` : ""}</span>}
+        {story && <span className="pill ps">Alert</span>}
         {(p[8] & F.review) !== 0 && <> <span className="pill">Review</span></>}
-        {(p[8] & F.penalty) !== 0 && <> <span className="pill ps">Flag</span></>}
-        <br />{p[7]}
+        {(p[8] & F.penalty) !== 0 && <> <span className="pill ps">{p[11] === "Play called back" ? "Called back" : "Flag"}</span></>}
+        {(p[8] & F.injury) !== 0 && <> <span className="pill inj">Injury</span></>}
+        {!(p[8] & F.note) && <br />}{story ? " " : ""}{p[7]}
         {p[11] && <><br /><span className="muted small">{p[11]}</span></>}
+        {alerts?.map((a, i) => <span key={i} className="cast-alert">{a}</span>)}
       </span>
       <span className="num">{p[8] & F.score ? `${p[9]}-${p[10]}` : ""}</span>
     </li>

@@ -667,10 +667,21 @@ export type PlayRow = [number, number, 0 | 1, number, number, number, number, st
 /** One drive: [offense (0 away, 1 home), quarter, clock, start yard line, plays, yards, seconds of possession, how it ended]. */
 export type DriveRow = [0 | 1, number, number, number, number, number, number, string];
 
+/**
+ * What one row of the play-by-play changed in the box score, or 0 for nothing:
+ * [team totals as (side, TEAM_BOX_KEYS index, change) triples,
+ *  player stats as (side, index into GameLog.ids for that side, STAT_KEYS index, amount) quads].
+ * A longest-play stat carries the new length instead of a change.
+ */
+export type RowStats = [number[], number[]] | 0;
+
 export interface GameLog {
   date: string;
   plays: PlayRow[];
   drives: DriveRow[];
+  /** The running box score, one entry per row of `plays` (absent in logs written before it was kept). */
+  ids?: [string[], string[]];
+  box?: RowStats[];
 }
 
 /** A call the officials got wrong, or one a team disputed. Whether it was wrong is known only to the league office. */

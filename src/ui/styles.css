@@ -432,13 +432,13 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 
 /* ---- Field view: one play at a time ---- */
 .drawer.wide.casting { width: 100%; border-left: 0; }
-.cast { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); align-items: start; }
-.cast-main { position: sticky; top: 0; min-width: 0; max-width: 1100px; width: 100%; justify-self: center; }
-.cast-feed { min-width: 0; }
+.cast { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); grid-template-areas: "main box" "feed box"; align-items: start; }
+.cast-main { grid-area: main; min-width: 0; max-width: 1100px; width: 100%; justify-self: center; }
+.cast-feed { grid-area: feed; min-width: 0; max-width: 1100px; width: 100%; justify-self: center; }
 .cast-feed .plays li { grid-template-columns: 4.6rem 1fr auto; }
 @media (max-width: 980px) {
-  .cast { grid-template-columns: minmax(0, 1fr); }
-  .cast-main { position: static; }
+  .cast { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "box" "feed"; }
+  .cast-box { position: static; max-height: none; }
 }
 /* The score graphic is dark in both themes, as it would be over a broadcast picture. */
 .bug { display: grid; grid-template-columns: 1fr 1fr auto minmax(9.5rem, auto); background: #0c1116; color: #f2f5f7; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow-lift); font-family: var(--font-display); line-height: 1; border: 1px solid #000; }
@@ -494,3 +494,11 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 .cast-play.flag { border-left-color: var(--warn); }
 .cast-result { font-family: var(--font-display); font-size: 1.35rem; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; }
 .plays.feed li.score { font-family: inherit; font-size: inherit; }
+/* The running box score stays in view beside the field while the plays scroll. */
+.cast-box { grid-area: box; position: sticky; top: 0; max-height: calc(100vh - 5rem); overflow-y: auto; min-width: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.75rem 0.9rem; box-shadow: var(--shadow); }
+.cast-box table.dense td, .cast-box table.dense th { padding-block: 0.18rem; }
+.cast-box details summary { cursor: pointer; font-weight: 600; padding: 0.3rem 0; }
+.cast-leaders { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding: 0.3rem 0; }
+.cast-alert { display: block; margin-top: 0.3rem; padding: 0.25rem 0.5rem; border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); font-size: 0.9rem; font-weight: 500; }
+.cast-play.story { border-left-color: var(--warn); }
+.plays.feed li.story { background: color-mix(in srgb, var(--warn) 8%, transparent); }

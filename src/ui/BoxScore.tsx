@@ -17,7 +17,7 @@ function top(sec: number): string {
   return `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 }
 
-const TEAM_ROWS: [string, (t: TeamBox) => string][] = [
+export const TEAM_ROWS: [string, (t: TeamBox) => string][] = [
   ["First downs", (t) => `${t.firstDowns}`],
   ["Total yards", (t) => `${t.yards}`],
   ["Passing", (t) => `${t.passYds - t.sackYds}`],
@@ -57,10 +57,43 @@ const SECTIONS: { title: string; has: StatKey; sort: StatKey; cols: Col[] }[] = 
     { label: "KR", value: g("kr") }, { label: "Yds", value: g("krYds") }, { label: "PR", value: g("pr") }, { label: "Yds", value: g("prYds") }, { label: "TD", value: (v) => stat(v, "krTd") + stat(v, "prTd") }] },
 ];
 
+/** Every player's line for one team, section by section; a row opens the player. */
+export function PlayerTables({ players }: { players: Record<string, number[]> }) {
+  const ui = useUi();
+  return (
+    <>
+      {SECTIONS.map((sec) => {
+        const rows = Object.entries(players).filter(([, v]) => stat(v, sec.has) > 0 && (sec.title !== "Defense" || stat(v, "tklSolo") + stat(v, "tklAst") + stat(v, "sacks") + stat(v, "defInt") + stat(v, "pd") > 0));
+        if (!rows.length) return null;
+        rows.sort((a, b) => sec.title === "Defense"
+          ? stat(b[1], "tklSolo") + stat(b[1], "tklAst") - stat(a[1], "tklSolo") - stat(a[1], "tklAst")
+          : stat(b[1], sec.sort) - stat(a[1], sec.sort));
+        return (
+          <div key={sec.title} className="stack tight">
+            <h3>{sec.title}</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Player</th>{sec.cols.map((c, i) => <th key={i} className="num">{c.label}</th>)}</tr></thead>
+                <tbody>
+                  {rows.map(([pid, v]) => (
+                    <tr key={pid} className="clickable" onClick={() => ui.openPlayer(pid)}>
+                      <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{PLAYER_BY_ID[pid].position}</span></td>
+                      {sec.cols.map((c, i) => <td key={i} className="num">{c.value(v)}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 type View = "box" | "plays" | "drives" | "gameday";
 
 export function BoxScore({ game, id, onClose, follow, changed }: { game: GameState; id: string; onClose: () => void; follow?: boolean; changed: () => void }) {
-  const ui = useUi();
   const log = game.pbp?.[id];
   const [following, setFollowing] = useState(!!follow && !!log);
   const [view, setView] = useState<View>("box");
@@ -86,7 +119,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
           <span className="label">{sched.label ?? gameTypeLabel(sched)} · {longDate(sched.date)} · {kickoff(sched.timeET)}</span>
           <button className="btn small" onClick={onClose}>Close</button>
         </div>
-        {following && log && r && <FollowGame r={r} log={log} onDone={() => setFollowing(false)} />}
+        {following && log && r && <FollowGame r={r} log={log} box={box} onDone={() => setFollowing(false)} />}
         {!following && <>
         <header className="box-head">
           <div className={r.awayScore > r.homeScore ? "win" : ""}><span className="label">{teams.away.city}</span><strong>{teams.away.name}</strong><span className="pts">{r.awayScore}</span></div>
@@ -155,31 +188,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
               <div className="tabs" role="group" aria-label="Team">
                 {(["away", "home"] as Side[]).map((s) => <button key={s} aria-pressed={side === s} onClick={() => setSide(s)}>{teams[s].name}</button>)}
               </div>
-              {SECTIONS.map((sec) => {
-                const rows = Object.entries(box.players[side]).filter(([, v]) => stat(v, sec.has) > 0 && (sec.title !== "Defense" || stat(v, "tklSolo") + stat(v, "tklAst") + stat(v, "sacks") + stat(v, "defInt") + stat(v, "pd") > 0));
-                if (!rows.length) return null;
-                rows.sort((a, b) => sec.title === "Defense"
-                  ? stat(b[1], "tklSolo") + stat(b[1], "tklAst") - stat(a[1], "tklSolo") - stat(a[1], "tklAst")
-                  : stat(b[1], sec.sort) - stat(a[1], sec.sort));
-                return (
-                  <div key={sec.title} className="stack tight">
-                    <h3>{sec.title}</h3>
-                    <div className="table-wrap">
-                      <table>
-                        <thead><tr><th>Player</th>{sec.cols.map((c, i) => <th key={i} className="num">{c.label}</th>)}</tr></thead>
-                        <tbody>
-                          {rows.map(([pid, v]) => (
-                            <tr key={pid} className="clickable" onClick={() => ui.openPlayer(pid)}>
-                              <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{PLAYER_BY_ID[pid].position}</span></td>
-                              {sec.cols.map((c, i) => <td key={i} className="num">{c.value(v)}</td>)}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })}
+              <PlayerTables players={box.players[side]} />
               {(box.inactives[side].length > 0 || box.injuries.some((i) => i.team === r[side])) && (
                 <div className="stack tight">
                   {box.injuries.some((i) => i.team === r[side]) && (
