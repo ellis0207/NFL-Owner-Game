@@ -7,6 +7,7 @@ import { conversionsFor, FOCUS, grownTo, retrain, retrainWord, setPlan, type Foc
 import type { GameState, Position } from "../engine/types";
 import { personalityWords } from "./screens/ClubhouseScreen";
 import { useUi } from "./ui";
+import { tip } from "./tip";
 
 /** The player page's clubhouse lines, and for our own players the owner's few levers. */
 export function PlayerClubhouse({ game, id, changed }: { game: GameState; id: string; changed: () => void }) {
@@ -29,7 +30,7 @@ export function PlayerClubhouse({ game, id, changed }: { game: GameState; id: st
         {mine && <><dt>Coaches</dt><dd>{trustWord(trustOf(game, id))}</dd></>}
         <dt>Profile</dt><dd>{marketWord(marketability(game, id))}</dd>
         {mine && words.length > 0 && <><dt>Staff notes</dt><dd>{words.join("; ")}</dd></>}
-        {mentor && <><dt>Mentor</dt><dd><button className="link" onClick={() => ui.openPlayer(mentor)}>{PLAYER_BY_ID[mentor].name}</button></dd></>}
+        {mentor && <><dt>Mentor</dt><dd><button className="link" {...tip("player", mentor)} onClick={() => ui.openPlayer(mentor)}>{PLAYER_BY_ID[mentor].name}</button></dd></>}
         {mine && expectsToStart(game, id) && <><dt>Role</dt><dd>Expects to start</dd></>}
         {ps.retrain && <><dt>Position</dt><dd>Moved from {ps.retrain.from} to {posOf(game, id)}: {retrainWord(game, id)}</dd></>}
       </dl>

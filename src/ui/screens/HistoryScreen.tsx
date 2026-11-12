@@ -12,6 +12,7 @@ import { CareersTab, HindsightTab, OwnersTab, PeopleTab } from "./HistoryMore";
 import { RulesTab } from "./HistoryRules";
 import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 type Tab = "Honors" | "Hall of Fame" | "Records" | "Careers" | "Rivalries" | "Trades" | "Eras" | "Owners" | "People" | "Hindsight" | "Timeline" | "Rules";
 // Players first, then the club's own story, then how judgments held up.
@@ -47,7 +48,7 @@ export function HistoryScreen({ game }: { game: GameState }) {
 function Name({ id, game }: { id: string; game?: GameState }) {
   const ui = useUi();
   if (!PLAYER_BY_ID[id]) return <>{game ? staff(game).people[id]?.name ?? id : id}</>;
-  return <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
+  return <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
 }
 
 function Honors({ game }: { game: GameState }) {

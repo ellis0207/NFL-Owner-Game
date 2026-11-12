@@ -3,6 +3,7 @@ import { PLAYER_BY_ID, RULES, TEAM_BY_ID, teamLabel } from "../../engine/league"
 import { seasonTotals, teamTotals, type SeasonLine, type StatKey, type StatLine } from "../../engine/stats";
 import type { GameState, GameType } from "../../engine/types";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const PHASES: [GameType, string][] = [["PRE", "Preseason"], ["REG", "Regular season"], ["POST", "Playoffs"]];
 type View = "leaders" | "team" | "league";
@@ -84,7 +85,7 @@ export function StatsScreen({ game }: { game: GameState }) {
                   <table>
                     <tbody>
                       {top.map(([pid, s], i) => (
-                        <tr key={pid} className={`clickable ${s.team === game.userTeam ? "mine" : ""}`} onClick={() => ui.openPlayer(pid)}>
+                        <tr key={pid} className={`clickable ${s.team === game.userTeam ? "mine" : ""}`} {...tip("player", pid)} onClick={() => ui.openPlayer(pid)}>
                           <td className="num muted">{i + 1}</td>
                           <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{s.team}</span>{cat.fmt && <div className="muted" style={{ fontWeight: 400 }}>{cat.fmt(s.line)}</div>}</td>
                           <td className="num"><strong>{cat.value(s.line)}</strong></td>
@@ -108,7 +109,7 @@ export function StatsScreen({ game }: { game: GameState }) {
               {entries.filter(([, s]) => s.team === game.userTeam)
                 .sort((a, b) => v(b[1].line, "offSnaps") + v(b[1].line, "defSnaps") - v(a[1].line, "offSnaps") - v(a[1].line, "defSnaps"))
                 .map(([pid, s]) => (
-                  <tr key={pid} className="clickable" onClick={() => ui.openPlayer(pid)}>
+                  <tr key={pid} className="clickable" {...tip("player", pid)} onClick={() => ui.openPlayer(pid)}>
                     <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{PLAYER_BY_ID[pid].position}</span></td>
                     {TEAM_COLS.map((c) => <td key={c.label} className={c.label === "G" || c.label === "Snaps" ? "num" : "muted"}>{c.has(s.line) ? c.value(s.line) : ""}</td>)}
                   </tr>

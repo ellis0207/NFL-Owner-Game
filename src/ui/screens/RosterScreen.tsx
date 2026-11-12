@@ -13,6 +13,7 @@ import { outLabel } from "../../engine/season";
 import type { GameState, PlayerState, Position } from "../../engine/types";
 import { money, POSITION_NAMES, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 /** Which reserve list, and whether his practice window is open. */
 function reserveLabel(p: PlayerState): string {
@@ -93,7 +94,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
           {hurt.map((id) => {
             const inj = game.players[id].injury!;
             return (
-              <button key={id} className="link" style={{ textDecoration: "none" }} onClick={() => ui.openPlayer(id)}>
+              <button key={id} className="link" style={{ textDecoration: "none" }} {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
                 <strong>{PLAYER_BY_ID[id].name}</strong> <span className="muted">{PLAYER_BY_ID[id].position}</span> · {inj.type} · {outLabel(game.date, knownReturn(game, inj), inj.seasonEnding)}
                 {game.players[id].status === "ir" ? " · on IR" : ""}
               </button>
@@ -146,7 +147,7 @@ function PositionGroup(props: {
         const injured = isHurt(game, id);
         const note = campNote(game, game.userTeam, id);
         return (
-          <tr key={id} className="clickable" onClick={() => onOpen(id)}>
+          <tr key={id} className="clickable" {...tip("player", id)} onClick={() => onOpen(id)}>
             <td className="num">{p.jersey ?? ""}</td>
             <td className="name">{p.name}{note && <span className="muted"> · {note}</span>}</td>
             <td>{status === "ps" ? "PS" : status === "ir" ? reserveLabel(game.players[id]) : injured ? <span className="bad">Inj</span> : `${pos}${depthIndex[id] ?? ""}`}</td>

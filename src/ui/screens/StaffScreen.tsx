@@ -11,6 +11,7 @@ import { DEFENSE_LABEL, OFFENSE_LABEL } from "../../engine/schemes";
 import { decideRoom, ROOM_TITLE, ROOMS, roomLine, roomProposals, roomSalary, roomStaff } from "../../engine/positionCoaches";
 import { playCaller, teamSchemes, teamStaff } from "../../engine/staff";
 import type { Coach, CoachSeason, DefenseScheme, GameState, OffenseScheme, StaffRole, StaffSearch } from "../../engine/types";
+import { tip } from "../tip";
 
 const ROLES: StaffRole[] = ["HC", "OC", "DC", "STC", "GM", "TRN", "PRO", "COL"];
 const TITLE: Record<StaffRole, string> = {
@@ -159,7 +160,7 @@ function PositionCoaches({ game }: { game: GameState }) {
             {ROOMS.flatMap((r) => rooms[r].map((c, i) => (
               <tr key={c.id}>
                 <td>{i === 0 ? ROOM_TITLE[r].replace(/ coach$/, "") : ""}</td>
-                <td>{c.name}<div className="muted">{roomLine(c)}</div></td>
+                <td><span {...tip("coach", c.id)}>{c.name}</span><div className="muted">{roomLine(c)}</div></td>
                 <td>{ageText(c)}</td>
                 <td>{c.contract?.through ?? "-"}</td>
                 <td>{c.contract ? money(c.contract.salary) : "-"}</td>
@@ -212,7 +213,7 @@ function OurStaff({ game, act, searches }: { game: GameState; act: (r: { ok: boo
           return (
             <div key={role} className="card">
               <span className="role">{TITLE[role]}{c.interimFrom ? " (interim)" : ""}</span>
-              <span className="who">{c.name}</span>
+              <span className="who" {...tip("coach", c.id)}>{c.name}</span>
               <span className="muted">Age {ageText(c)} · {c.hiredYear >= RULES.season ? "First season in the job" : `In the job since ${c.hiredYear}`}</span>
               {k && <span><span className="label">Contract</span> {money(k.salary)} a year through {k.through}{expiring ? <span className="warn"> · expiring</span> : ""}</span>}
               {scheme && <span><span className="label">Scheme</span> {scheme}</span>}
@@ -312,7 +313,7 @@ function Search({ game, search, act }: { game: GameState; search: StaffSearch; a
           return (
             <div key={c.id} className="report">
               <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-                <strong>{c.name}</strong>
+                <strong {...tip("coach", c.id)}>{c.name}</strong>
                 <span className="muted">{jobLabel(c, team)} · age {ageText(c)}</span>
               </div>
               {schemeText(c) && <span className="muted">{schemeText(c)}</span>}
@@ -389,12 +390,12 @@ function League({ game }: { game: GameState }) {
               const def = playCaller(t.id, "defense");
               return (
                 <tr key={t.id} className={t.id === game.userTeam ? "mine" : undefined}>
-                  <td className="name">{TEAM_BY_ID[t.id].name}</td>
-                  <td>{st.HC?.name ?? <span className="muted">open</span>}</td>
-                  <td>{OFFENSE_LABEL[schemes.offense]}<div className="muted">OC {st.OC?.name ?? "none"}</div></td>
-                  <td>{DEFENSE_LABEL[schemes.defense]}<div className="muted">DC {st.DC?.name ?? "none"}</div></td>
+                  <td className="name"><span {...tip("team", t.id)}>{TEAM_BY_ID[t.id].name}</span></td>
+                  <td>{st.HC ? <span {...tip("coach", st.HC.id)}>{st.HC.name}</span> : <span className="muted">open</span>}</td>
+                  <td>{OFFENSE_LABEL[schemes.offense]}<div className="muted">OC {st.OC ? <span {...tip("coach", st.OC.id)}>{st.OC.name}</span> : "none"}</div></td>
+                  <td>{DEFENSE_LABEL[schemes.defense]}<div className="muted">DC {st.DC ? <span {...tip("coach", st.DC.id)}>{st.DC.name}</span> : "none"}</div></td>
                   <td className="muted">O: {off?.name}<br />D: {def?.name}</td>
-                  <td>{st.GM?.name ?? <span className="muted">open</span>}</td>
+                  <td>{st.GM ? <span {...tip("coach", st.GM.id)}>{st.GM.name}</span> : <span className="muted">open</span>}</td>
                 </tr>
               );
             })}

@@ -502,3 +502,35 @@ tr.highlight td { background: color-mix(in srgb, var(--team-2) 14%, transparent)
 .cast-alert { display: block; margin-top: 0.3rem; padding: 0.25rem 0.5rem; border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); font-size: 0.9rem; font-weight: 500; }
 .cast-play.story { border-left-color: var(--warn); }
 .plays.feed li.story { background: color-mix(in srgb, var(--warn) 8%, transparent); }
+
+/* Hover cards (TipLayer.tsx): a small panel that hangs under whatever the
+   mouse rests on. Names inside a card open their own card, like a game's
+   nested tooltips. */
+[data-tip] { -webkit-touch-callout: none; }
+span.tip-name, [data-tip].tip-name { border-bottom: 1px dotted color-mix(in srgb, var(--muted) 70%, transparent); cursor: help; }
+.tip {
+  position: fixed; max-width: min(360px, calc(100vw - 16px)); max-height: min(70vh, 560px); overflow-y: auto;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-top: 3px solid var(--team);
+  border-radius: var(--radius); box-shadow: var(--shadow-lift); padding: 0.55rem 0.7rem; font-size: 0.82rem; line-height: 1.4;
+  display: grid; gap: 0.3rem; animation: tip-in 90ms ease-out;
+}
+.tip.plain { border-top-width: 1px; max-width: min(300px, calc(100vw - 16px)); }
+@keyframes tip-in { from { opacity: 0; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .tip { animation: none; } }
+.tip-title { font-family: var(--font-display); font-weight: 700; font-size: 1.08rem; line-height: 1.15; padding-right: 1.2rem; }
+.tip.plain .tip-title { display: none; }
+.tip-sub { color: var(--muted); }
+.tip-body { display: grid; gap: 0.3rem; }
+.tip-head { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.74rem; color: var(--muted); margin-top: 0.2rem; border-bottom: 1px solid var(--rule); }
+.tip-rows { border-collapse: collapse; width: 100%; background: none; font-size: inherit; }
+.tip-rows th, .tip-rows td { border: 0; background: none; height: auto; }
+.tip-rows tbody tr:hover td { background: none; }
+.tip-rows th { position: static; }
+.tip-rows th { text-align: left; font: inherit; text-transform: none; letter-spacing: normal; font-weight: 400; color: var(--muted); padding: 1px 0.8rem 1px 0; vertical-align: top; white-space: nowrap; }
+.tip-rows td { padding: 1px 0; vertical-align: top; }
+.tip-rows td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tip-rows .link { font-size: inherit; padding: 0; }
+.tip-note { margin: 0; }
+.tip-flag { border-left: 3px solid var(--warn); padding-left: 0.45rem; }
+.tip-foot { color: var(--muted); font-size: 0.74rem; border-top: 1px solid var(--rule); padding-top: 0.25rem; }
+.tip-close { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; cursor: pointer; }

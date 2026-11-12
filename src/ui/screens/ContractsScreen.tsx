@@ -15,6 +15,7 @@ import { teamValue } from "../../engine/market";
 import type { GameState, Position } from "../../engine/types";
 import { money, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 type Tab = "talks" | "expiring" | "fa" | "extensions" | "league" | "ours" | "market";
 const TABS: [Tab, string][] = [["talks", "Our talks"], ["expiring", "Our free agents"], ["fa", "Free agency"], ["extensions", "Extension candidates"], ["league", "League deals"], ["ours", "Our deals"], ["market", "Market"]];
@@ -52,7 +53,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
                     const last = n.rounds[n.rounds.length - 1];
                     const status = n.status === "agreed" ? "Signed" : n.status === "ended" ? "Ended" : n.pending ? `Waiting on agent${n.replyOn ? ` (by ${shortDate(n.replyOn)})` : ""}` : last.from === "agent" ? "Our move" : "Open";
                     return (
-                      <tr key={n.player} className="clickable" onClick={() => ui.openTalks(n.player)}>
+                      <tr key={n.player} className="clickable" {...tip("player", n.player)} onClick={() => ui.openTalks(n.player)}>
                         <td className="name">{PLAYER_BY_ID[n.player].name}</td>
                         <td>{PLAYER_BY_ID[n.player].position}</td>
                         <td>{shortDate(n.opened)}</td>
@@ -78,7 +79,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
             <thead><tr><th>Date</th><th>Player</th><th>Team</th><th className="num">Years</th><th className="num">Total</th><th className="num">Per year</th><th className="num">Guaranteed</th><th>Grades</th></tr></thead>
             <tbody>
               {game.signings.slice(0, 200).map((s) => (
-                <tr key={s.id} className="clickable" onClick={() => ui.openPlayer(s.player)}>
+                <tr key={s.id} className="clickable" {...tip("player", s.player)} onClick={() => ui.openPlayer(s.player)}>
                   <td>{shortDate(s.date)}</td>
                   <td className="name">{PLAYER_BY_ID[s.player].name} <span className="muted">{PLAYER_BY_ID[s.player].position}</span></td>
                   <td>{s.team}</td>
@@ -133,7 +134,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
         <dl className="kv">
           <dt>Paid to players in {year}</dt><dd>{money(cashPaid(game, us, year))}</dd>
           <dt>Owed in {year + 1} under current deals</dt><dd>{money(cashNextYear(game, us))}</dd>
-          <dt>Cash in the bank</dt><dd>{money(cashBalance(game))}</dd>
+          <dt>Cash in the bank</dt><dd {...tip("cash")}>{money(cashBalance(game))}</dd>
         </dl>
         <span className="muted">Cash is not the cap: signing bonuses are paid when the deal is signed even though the cap spreads them over up to five years. The full books are on the Business page.</span>
       </div>
@@ -161,7 +162,7 @@ function Extensions({ game }: { game: GameState }) {
               const n = game.negotiations[id];
               const status = n?.team === us ? (n.status === "open" ? "In talks" : n.status === "agreed" ? "Signed" : "Talks ended") : elig.ok ? "Eligible" : elig.reason;
               return (
-                <tr key={id} className="clickable" onClick={() => ui.openTalks(id)}>
+                <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openTalks(id)}>
                   <td className="name">{PLAYER_BY_ID[id].name}{game.players[id].holdout ? <span className="pill inj" style={{ marginLeft: 6 }}>{game.players[id].holdout!.kind === "holdout" ? "Holdout" : "Hold-in"}</span> : null}</td>
                   <td>{PLAYER_BY_ID[id].position}</td>
                   <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
@@ -192,7 +193,7 @@ function OurDeals({ game }: { game: GameState }) {
           <thead><tr><th>Signed</th><th>Player</th><th className="num">Years</th><th className="num">Per year</th><th>Grades at signing</th><th>Public view now</th></tr></thead>
           <tbody>
             {mine.map((s) => (
-              <tr key={s.id} className="clickable" onClick={() => ui.openPlayer(s.player)}>
+              <tr key={s.id} className="clickable" {...tip("player", s.player)} onClick={() => ui.openPlayer(s.player)}>
                 <td>{shortDate(s.date)}</td>
                 <td className="name">{PLAYER_BY_ID[s.player].name}</td>
                 <td className="num">{s.years}</td><td className="num">{money(s.apy)}</td>
@@ -290,7 +291,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
                   const canTd = canTender(game, us, id);
                   const lv = level[id] ?? (cls === "ERFA" ? "erfa" : "original");
                   return (
-                    <tr key={id} className="clickable" onClick={() => ui.openTalks(id)}>
+                    <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openTalks(id)}>
                       <td className="name">{PLAYER_BY_ID[id].name}</td>
                       <td>{PLAYER_BY_ID[id].position}</td>
                       <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
@@ -337,7 +338,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
               <thead><tr><th>Player</th><th>Pos</th><th>Status</th></tr></thead>
               <tbody>
                 {gone.map((f) => (
-                  <tr key={f.player} className="clickable" onClick={() => ui.openTalks(f.player)}>
+                  <tr key={f.player} className="clickable" {...tip("player", f.player)} onClick={() => ui.openTalks(f.player)}>
                     <td className="name">{PLAYER_BY_ID[f.player].name}</td><td>{PLAYER_BY_ID[f.player].position}</td>
                     <td>{faStatus(game, f.player)}</td>
                   </tr>
@@ -454,7 +455,7 @@ function FreeAgencyBoard({ game, changed }: { game: GameState; changed: () => vo
               const talking = game.negotiations[id]?.team === us && game.negotiations[id].status === "open";
               const mine = from(id) === us;
               return (
-                <tr key={id} className="clickable" onClick={() => (open || mine ? ui.openTalks(id) : ui.openPlayer(id))}>
+                <tr key={id} className="clickable" {...tip("player", id)} onClick={() => (open || mine ? ui.openTalks(id) : ui.openPlayer(id))}>
                   <td className="num">{rank}</td>
                   <td className="name">{PLAYER_BY_ID[id].name}</td>
                   <td>{PLAYER_BY_ID[id].position}</td>

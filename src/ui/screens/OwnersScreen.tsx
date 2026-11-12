@@ -12,6 +12,7 @@ import type { GameState, RuleProposal } from "../../engine/types";
 import { LaborPanel } from "./LaborPanel";
 import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
 import { ClubProfiles, Realignment } from "./OwnersClubs";
+import { tip } from "../tip";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
 
@@ -84,7 +85,7 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
                 const word = relationWord(r);
                 return (
                   <tr key={t.id}>
-                    <td>{teamLabel(t.id)}</td>
+                    <td><span {...tip("team", t.id)}>{teamLabel(t.id)}</span></td>
                     <td className={word === "Ally" || word === "Close" ? "good" : word === "Rival" || word === "Hostile" ? "bad" : ""}>{word}</td>
                     <td>
                       {r.ally ? <button className="btn small" onClick={() => say(endAlliance(game, t.id))}>End alliance</button>

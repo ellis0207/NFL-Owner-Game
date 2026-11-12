@@ -24,6 +24,7 @@ import { PlayerClubhouse } from "./PlayerClubhouse";
 import { PlayerExtras } from "./PlayerExtras";
 import { knownReturn } from "../engine/medical";
 import { honorsOf } from "../engine/honors";
+import { tip } from "./tip";
 
 const CONTRACT_SOURCE = {
   overthecap: "Year-by-year figures from OverTheCap.",
@@ -171,7 +172,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
                     const theirs = row.home ? r.awayScore : r.homeScore;
                     const g = GAME_BY_ID[row.gameId];
                     return (
-                      <tr key={row.gameId} className="clickable" onClick={() => ui.openBox(row.gameId)}>
+                      <tr key={row.gameId} className="clickable" {...tip("game", row.gameId)} onClick={() => ui.openBox(row.gameId)}>
                         <td>{g.type === "REG" ? `Wk ${g.week}` : gameTypeLabel(g)} <span className="muted">{shortDate(g.date)}</span></td>
                         <td>{row.home ? "vs" : "@"} {row.opp}</td>
                         <td className={`num ${ours > theirs ? "good" : ours < theirs ? "bad" : ""}`}>{ours > theirs ? "W" : ours < theirs ? "L" : "T"} {ours}-{theirs}</td>

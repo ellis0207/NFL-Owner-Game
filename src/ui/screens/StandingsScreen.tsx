@@ -4,6 +4,7 @@ import { SCHEDULE } from "../../engine/league";
 import { gameTypeLabel } from "../../engine/season";
 import type { GameState } from "../../engine/types";
 import { Score } from "../Score";
+import { tip } from "../tip";
 
 export function StandingsScreen({ game }: { game: GameState }) {
   const divisions = divisionStandings(game);
@@ -16,7 +17,7 @@ export function StandingsScreen({ game }: { game: GameState }) {
             <div key={c} className="panel stack">
               <h2>{c} playoff seeds</h2>
               <ol style={{ margin: 0, paddingLeft: "1.2rem" }}>
-                {game.seeds![c].map((t) => <li key={t} className={t === game.userTeam ? "good" : undefined}>{TEAM_BY_ID[t].city} {TEAM_BY_ID[t].name}</li>)}
+                {game.seeds![c].map((t) => <li key={t} className={t === game.userTeam ? "good" : undefined} {...tip("team", t)}>{TEAM_BY_ID[t].city} {TEAM_BY_ID[t].name}</li>)}
               </ol>
             </div>
           ))}
@@ -39,7 +40,7 @@ export function StandingsScreen({ game }: { game: GameState }) {
               <tbody>
                 {d.rows.map((r) => (
                   <tr key={r.team} className={r.team === game.userTeam ? "mine" : undefined}>
-                    <td className="name">{TEAM_BY_ID[r.team].name}</td>
+                    <td className="name"><span {...tip("team", r.team)}>{TEAM_BY_ID[r.team].name}</span></td>
                     <td className="num">{r.w}</td><td className="num">{r.l}</td><td className="num">{r.t}</td>
                     <td className="num">{r.pf}</td><td className="num">{r.pa}</td>
                     <td className="num">{r.divW}-{r.divL}{r.divT ? `-${r.divT}` : ""}</td>

@@ -6,6 +6,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     body: [
       "The sidebar groups every page by part of the job: your Desk (today, the calendar, inbox and media), the Team, Roster building, the Draft, the Owner's office (including the Business page), the League, and the Game itself. Fold away a group you rarely use by clicking its name; a folded group still shows how many things in it are waiting on you.",
       "The search box finds pages as well as people: type \"cap\", \"tickets\" or a player's name. On a phone, the Menu button opens the same list, and the other pages in the section you're in sit just under the date.",
+      "Rest the mouse on almost anything to see its card: a player (contract, injury, the coaches' read), a team (record, next game, coach, owner, cap space), a coach or executive, a game, the cap space in the header, or any money line (the payments behind it and how it stands against the budget). Move into a card and rest on a name there for that name's card. On a phone, press and hold; tap anywhere else to close.",
     ],
   },
   {

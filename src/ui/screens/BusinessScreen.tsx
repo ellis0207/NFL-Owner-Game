@@ -30,6 +30,7 @@ import { NewStadium } from "./BusinessNewStadium";
 import { International, Relocation } from "./BusinessMarkets";
 import { expectLabel } from "../../engine/review";
 import { GroupedTabs } from "../Tabs";
+import { tip } from "../tip";
 
 const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium", "Relocation", "International"] as const;
 type Tab = (typeof TABS)[number];
@@ -98,11 +99,11 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
         <div className="panel stack tight">
           <h3>The bank</h3>
           <dl className="kv">
-            <dt>Cash</dt><dd className={cash < 0 ? "bad" : undefined}>{money(cash)}{cash < 0 ? " (on the credit line)" : ""}</dd>
+            <dt>Cash</dt><dd className={cash < 0 ? "bad" : undefined} {...tip("cash")}>{money(cash)}{cash < 0 ? " (on the credit line)" : ""}</dd>
             <dt>Credit line</dt><dd>{money(creditLimit(game))}</dd>
             <dt>Loans</dt><dd>{money(openLoans(game).reduce((t, l) => t + l.balance, 0))}{(() => { const n = openLoans(game).slice().sort((x, y) => (x.accelerated ?? x.maturity).localeCompare(y.accelerated ?? y.maturity))[0]; return n ? <span className="muted"> (next due {shortDate(n.accelerated ?? n.maturity)} {(n.accelerated ?? n.maturity).slice(0, 4)})</span> : null; })()}</dd>
             <dt>This year</dt><dd>{(() => { const p = projectedYear(game); return `${money(p.operating)} operating income on ${money(p.revenue)} of revenue, on the current pace`; })()}</dd>
-            <dt>Franchise value</dt><dd>{billions(valuation(game, us))} <span className="muted">(Gridiron Ledger estimate)</span></dd>
+            <dt>Franchise value</dt><dd {...tip("team", us)}>{billions(valuation(game, us))} <span className="muted">(Gridiron Ledger estimate)</span></dd>
             <dt>Fans</dt><dd>{fanMood(game.pressure.fans)}</dd>
             {game.review?.expect && game.review.season === RULES.season && <><dt>They expect</dt><dd>About {game.review.expect.wins} wins. {expectLabel(game.review.expect.wins)}.</dd></>}
           </dl>
@@ -126,31 +127,31 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
             )}
           </div>
           <dl className="kv">
-            <dt>Revenue</dt><dd>{money(p.totalRevenue)}</dd>
-            <dt>Expenses</dt><dd>{money(p.totalExpenses)}</dd>
-            <dt>Operating income</dt><dd className={p.operating < 0 ? "bad" : "good"}>{money(p.operating)}</dd>
+            <dt>Revenue</dt><dd {...tip("pnl", year, "revenue")}>{money(p.totalRevenue)}</dd>
+            <dt>Expenses</dt><dd {...tip("pnl", year, "expenses")}>{money(p.totalExpenses)}</dd>
+            <dt>Operating income</dt><dd className={p.operating < 0 ? "bad" : "good"} {...tip("pnl", year, "operating")}>{money(p.operating)}</dd>
           </dl>
           <span className="muted">The league year runs from mid-March to mid-March. Lines marked "before you took over" are the months before you bought the team.</span>
         </div>
       </div>
       <div className="split">
-        <Statement title="Revenue" rows={p.revenue} />
-        <Statement title="Expenses" rows={p.expenses} />
+        <Statement title="Revenue" rows={p.revenue} year={year} />
+        <Statement title="Expenses" rows={p.expenses} year={year} />
       </div>
-      {p.financing.length > 0 && <Statement title="Other cash" rows={p.financing} />}
+      {p.financing.length > 0 && <Statement title="Other cash" rows={p.financing} year={year} />}
       <Ledger game={game} year={year} />
     </div>
   );
 }
 
-function Statement({ title, rows }: { title: string; rows: { cat: keyof typeof CATEGORY; amount: number }[] }) {
+function Statement({ title, rows, year }: { title: string; rows: { cat: keyof typeof CATEGORY; amount: number }[]; year: number }) {
   return (
     <div className="panel stack tight">
       <h3>{title}</h3>
       <div className="table-wrap">
         <table>
           <tbody>
-            {rows.map((r) => <tr key={r.cat}><td>{CATEGORY[r.cat].label}</td><td className="num">{money(Math.abs(r.amount))}{r.amount < 0 && title === "Revenue" ? " out" : ""}</td></tr>)}
+            {rows.map((r) => <tr key={r.cat} {...tip("ledger", r.cat, year)}><td>{CATEGORY[r.cat].label}</td><td className="num">{money(Math.abs(r.amount))}{r.amount < 0 && title === "Revenue" ? " out" : ""}</td></tr>)}
           </tbody>
         </table>
       </div>
@@ -170,7 +171,7 @@ function Ledger({ game, year }: { game: GameState; year: number }) {
           <tbody>
             {rows.slice(0, shown).map((e, i) => (
               <tr key={i}>
-                <td>{shortDate(e.date)}</td><td>{CATEGORY[e.cat].label}</td><td className="muted">{e.note ?? ""}</td>
+                <td>{shortDate(e.date)}</td><td {...tip("ledger", e.cat, e.year)}>{CATEGORY[e.cat].label}</td><td className="muted">{e.note ?? ""}</td>
                 <td className={`num ${e.amount < 0 ? "bad" : "good"}`}>{money(e.amount)}</td>
               </tr>
             ))}
@@ -276,8 +277,8 @@ function Budget({ game, changed }: { game: GameState; changed: () => void }) {
       {(Object.keys(DEPTS) as Dept[]).map((d) => (
         <div key={d} className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-            <strong>{DEPTS[d].label}</strong>
-            <span className="muted">{money(deptCost(d, b.budget[d], leagueYear(game.date)))}{DEPTS[d].perGame ? " a home game" : " a year"}</span>
+            <strong {...tip("dept", d)}>{DEPTS[d].label}</strong>
+            <span className="muted" {...tip("dept", d)}>{money(deptCost(d, b.budget[d], leagueYear(game.date)))}{DEPTS[d].perGame ? " a home game" : " a year"}</span>
           </div>
           <span className="muted">{DEPTS[d].what}</span>
           <div className="tabs" role="group" aria-label={DEPTS[d].label}>

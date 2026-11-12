@@ -22,6 +22,12 @@ show what's waiting in them. The search box finds pages as well as people.
 On a phone the sidebar becomes a Menu button with the section's other pages
 under the date. Settings has a light, dark or device theme.
 
+Hover cards work everywhere: rest the mouse on a player, team, coach,
+executive, game, cap figure or money line to see a card drawn from the live
+game (a budget line lists the payments behind it and how it stands against
+the plan). Names inside a card open their own card. On a phone, press and
+hold instead.
+
 Every game is simulated play by play, with box scores and per-game stats for
 preseason, regular season and playoffs, plus season totals and league leaders. Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
@@ -853,7 +859,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
   Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
-- `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page).
+- `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page). Hover cards: `tip.ts` (`tip(kind, ...)` marks an element), `tips.tsx` (each card, read from live state), `TipLayer.tsx` (hover, nested cards, long press, plain `title` text in the same style).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
 ## College data

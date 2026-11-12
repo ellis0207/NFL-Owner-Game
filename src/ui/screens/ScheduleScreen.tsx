@@ -5,6 +5,7 @@ import { scheduleReleaseDate, scheduleReleased } from "../../engine/seasons";
 import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 export function ScheduleScreen({ game }: { game: GameState }) {
   const ui = useUi();
@@ -48,10 +49,10 @@ export function ScheduleScreen({ game }: { game: GameState }) {
               }
               const isToday = g.date === game.date;
               return (
-                <tr key={g.id} className={`${isToday ? "mine" : ""} ${r ? "clickable" : ""}`} onClick={r ? () => ui.openBox(g.id) : undefined}>
+                <tr key={g.id} className={`${isToday ? "mine" : ""} ${r ? "clickable" : ""}`} {...tip("game", g.id)} onClick={r ? () => ui.openBox(g.id) : undefined}>
                   <td>{g.type === "REG" ? g.week : gameTypeLabel(g)}</td>
                   <td className="num">{g.weekday.slice(0, 3)} {shortDate(g.date)}</td>
-                  <td className="name">{g.neutral ? "vs" : home ? "vs" : "at"} {teamLabel(opp)}</td>
+                  <td className="name">{g.neutral ? "vs" : home ? "vs" : "at"} <span {...tip("team", opp)}>{teamLabel(opp)}</span></td>
                   <td className="num">{kickoff(g.timeET)}</td>
                   <td>{g.stadium}{g.city ? `, ${g.city}` : ""}</td>
                   <td className={`num ${cls}`}>{result}</td>

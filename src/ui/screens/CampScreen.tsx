@@ -9,6 +9,7 @@ import type { GameState, SpringPlan } from "../../engine/types";
 import { POSITION_NAMES } from "../format";
 import { CoachRoomPanel } from "./CoachRoomPanel";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const REASON: Record<NonNullable<SpringPlan["reason"]>, string> = {
   contract: "Staying away over his contract",
@@ -51,7 +52,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
     setSaid(answerDecision(game, id, key));
     changed();
   }
-  const link = (id: string) => <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
+  const link = (id: string) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
 
   return (
     <section className="stack">

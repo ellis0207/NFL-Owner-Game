@@ -4,6 +4,7 @@ import { gameTypeLabel } from "../engine/season";
 import { matchup } from "../engine/standings";
 import type { GameState } from "../engine/types";
 import { useUi } from "./ui";
+import { tip } from "./tip";
 
 export function Score({ game, id }: { game: GameState; id: string }) {
   const ui = useUi();
@@ -15,11 +16,11 @@ export function Score({ game, id }: { game: GameState; id: string }) {
   const homeWin = r && r.homeScore > r.awayScore;
   const body = (
     <>
-      <div className={`row ${awayWin ? "win" : ""}`}><span>{m.away}</span><span>{r ? r.awayScore : ""}</span></div>
-      <div className={`row ${homeWin ? "win" : ""}`}><span>{g.neutral ? m.home : `@${m.home}`}</span><span>{r ? r.homeScore : ""}</span></div>
+      <div className={`row ${awayWin ? "win" : ""}`}><span {...tip("team", m.away)}>{m.away}</span><span>{r ? r.awayScore : ""}</span></div>
+      <div className={`row ${homeWin ? "win" : ""}`}><span {...tip("team", m.home)}>{g.neutral ? m.home : `@${m.home}`}</span><span>{r ? r.homeScore : ""}</span></div>
       <div className="meta">{r ? (r.overtime ? "Final/OT" : "Final") : kickoff(g.timeET)} · {g.label ?? gameTypeLabel(g)}{r && game.box[id] ? " · Box score" : ""}</div>
     </>
   );
-  if (r) return <button className="score clickable" onClick={() => ui.openBox(id)} aria-label={`Box score: ${m.away} ${r.awayScore}, ${m.home} ${r.homeScore}`}>{body}</button>;
-  return <div className="score">{body}</div>;
+  if (r) return <button className="score clickable" {...tip("game", id)} onClick={() => ui.openBox(id)} aria-label={`Box score: ${m.away} ${r.awayScore}, ${m.home} ${r.homeScore}`}>{body}</button>;
+  return <div className="score" {...tip("game", id)}>{body}</div>;
 }

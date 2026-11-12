@@ -15,6 +15,7 @@ import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
 import { entityFor, TERMS } from "../../engine/legal";
+import { tip } from "../tip";
 
 interface Agreement { kind: string; party: string; what: string; amount: number; ends: number; status: string; player?: string; signed?: string; starts?: number }
 
@@ -82,7 +83,7 @@ function Center({ game }: { game: GameState }) {
       <div className="table-wrap"><table>
         <thead><tr><th>Kind</th><th>Counterparty</th><th>What</th><th className="num">Amount</th><th>Signed</th><th>Runs</th><th>Status</th><th>Club company</th><th>Exit</th><th>Renewal</th></tr></thead>
         <tbody>{rows.slice(0, 150).map((a, i) => (
-          <tr key={i}><td>{a.kind}</td><td className="name">{a.player ? <button className="link" onClick={() => ui.openPlayer(a.player!)}>{a.party}</button> : a.party}</td><td>{a.what}</td><td className="num">{money(a.amount)}</td><td>{a.signed ?? ""}</td><td>{a.starts ? `${a.starts} to ${a.ends}` : `to ${a.ends}`}</td><td>{a.status}</td><td>{entityFor(game, a.kind).split(",")[0]}</td><td className="muted">{TERMS[a.kind]?.exit ?? ""}</td><td className="muted">{TERMS[a.kind]?.renewal ?? ""}</td></tr>
+          <tr key={i}><td>{a.kind}</td><td className="name">{a.player ? <button className="link" {...tip("player", a.player!)} onClick={() => ui.openPlayer(a.player!)}>{a.party}</button> : a.party}</td><td>{a.what}</td><td className="num">{money(a.amount)}</td><td>{a.signed ?? ""}</td><td>{a.starts ? `${a.starts} to ${a.ends}` : `to ${a.ends}`}</td><td>{a.status}</td><td>{entityFor(game, a.kind).split(",")[0]}</td><td className="muted">{TERMS[a.kind]?.exit ?? ""}</td><td className="muted">{TERMS[a.kind]?.renewal ?? ""}</td></tr>
         ))}</tbody>
       </table></div>
     </div>

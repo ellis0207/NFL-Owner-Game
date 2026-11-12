@@ -51,6 +51,8 @@ import { AgreementsScreen } from "./screens/AgreementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
+import { TipLayer } from "./TipLayer";
+import { tip } from "./tip";
 import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
 import { NAV, PAGE_HINT, groupOf, pageLabel, type Screen } from "./nav";
@@ -175,7 +177,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
       <aside className={`side${menuOpen ? " open" : ""}`}>
         <div className="side-team">
           <div>
-            <div className="team-city">{team.city}</div>
+            <div className="team-city" {...tip("team", game.userTeam)}>{team.city}</div>
             <div className="team-name">{team.name}</div>
           </div>
           <button className="menu-toggle" aria-expanded={menuOpen} aria-controls="main-nav" onClick={() => setMenuOpen((o) => !o)}>
@@ -215,9 +217,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <span className="phase">{phaseLabel(game)}</span>
           </div>
           <div className="figures">
-            <div className="figure"><span className="label">{last ? `${last.season} record` : isSeasonOver(game) ? `${RULES.season} record` : "Record"}</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
+            <div className="figure" {...tip("team", game.userTeam)}><span className="label">{last ? `${last.season} record` : isSeasonOver(game) ? `${RULES.season} record` : "Record"}</span><strong>{rec.w}-{rec.l}{rec.t ? `-${rec.t}` : ""}</strong></div>
             <div className="figure"><span className="label">Roster</span><strong>{counts.roster}{counts.ps ? ` + ${counts.ps} PS` : ""}{counts.ir ? ` · ${counts.ir} IR` : ""}</strong></div>
-            <div className="figure">
+            <div className="figure" {...(game.settings.capRules === "off" ? {} : tip("cap", game.userTeam, capYear))}>
               <span className="label">{capYear ? `${capYear} cap space` : "Cap space"}</span>
               <strong className={cap.space < 0 && game.settings.capRules === "real" ? "bad" : undefined}>
                 {game.settings.capRules === "off" ? "No cap" : money(cap.space)}
@@ -299,6 +301,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
       {prospect && <ProspectPanel game={game} id={prospect} onClose={() => setProspect(null)} changed={changed} />}
       {school && <SchoolPanel game={game} id={school} onClose={() => setSchool(null)} />}
       {talks && <NegotiationPanel game={game} id={talks} onClose={() => setTalks(null)} changed={changed} />}
+      <TipLayer game={game} />
     </div>
     </UiContext.Provider>
   );

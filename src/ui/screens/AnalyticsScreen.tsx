@@ -11,6 +11,7 @@ import {
 import type { GameState } from "../../engine/types";
 import { AnalyticsStaffTab, AssessmentsTab } from "./AnalyticsLab";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 const TABS = ["Team", "Players", "Assessments", "Game plan", "Department", "Analysts", "Outlook", "Trends"] as const;
 type Tab = (typeof TABS)[number];
@@ -97,7 +98,7 @@ function PlayersTab({ game }: { game: GameState }) {
                   <thead><tr><th>Player</th><th className="num">Plays</th><th className="num">EPA</th><th className="num">Success</th></tr></thead>
                   <tbody>
                     {list.map((p) => (
-                      <tr key={p.id} className={`clickable${game.players[p.id]?.team === game.userTeam ? " highlight" : ""}`} onClick={() => ui.openPlayer(p.id)}>
+                      <tr key={p.id} className={`clickable${game.players[p.id]?.team === game.userTeam ? " highlight" : ""}`} {...tip("player", p.id)} onClick={() => ui.openPlayer(p.id)}>
                         <td className="name">{PLAYER_BY_ID[p.id].name} <span className="muted">{game.players[p.id]?.team ?? ""}</span></td>
                         <td className="num">{p.n}</td>
                         <td className="num">{f2(p.epa / p.n)}</td>
@@ -222,7 +223,7 @@ function OutlookTab({ game }: { game: GameState }) {
         <span className="muted">Starters getting old for their position, or whose contracts run out within two seasons.</span>
         {!rows.length && <span>No starter is aging out or near the end of a deal.</span>}
         {rows.map((r) => (
-          <span key={r.id}><button className="link" onClick={() => ui.openPlayer(r.id)}>{PLAYER_BY_ID[r.id].name}</button> <span className="muted">{r.pos}{r.age !== null ? `, ${r.age}` : ""}</span>: {r.flags.join("; ")}.</span>
+          <span key={r.id}><button className="link" {...tip("player", r.id)} onClick={() => ui.openPlayer(r.id)}>{PLAYER_BY_ID[r.id].name}</button> <span className="muted">{r.pos}{r.age !== null ? `, ${r.age}` : ""}</span>: {r.flags.join("; ")}.</span>
         ))}
       </div>
     </div>

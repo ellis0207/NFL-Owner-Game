@@ -9,6 +9,7 @@ import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { CapTools } from "./CapTools";
 import { Help } from "../Help";
+import { tip } from "../tip";
 
 export function CapScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const team = game.userTeam;
@@ -31,9 +32,9 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
           <dl className="kv">
             <dt>{year} adjusted cap</dt><dd>{money(cap.limit)}</dd>
             {incentiveAdjustment(game, team, year) !== 0 && <><dt>Incentive settlement</dt><dd className={incentiveAdjustment(game, team, year) < 0 ? "bad" : "good"}>{money(incentiveAdjustment(game, team, year))}</dd></>}
-            <dt>Players</dt><dd>{money(cap.players)}</dd>
+            <dt>Players</dt><dd {...tip("cap", team, year)}>{money(cap.players)}</dd>
             <dt>Dead money <Help k="deadMoney" /></dt><dd>{money(cap.dead)}</dd>
-            <dt>Cap space <Help k="capSpace" /></dt><dd className={cap.space < 0 ? "bad" : "good"}>{money(cap.space)}</dd>
+            <dt>Cap space <Help k="capSpace" /></dt><dd className={cap.space < 0 ? "bad" : "good"} {...tip("cap", team, year)}>{money(cap.space)}</dd>
           </dl>
           <div className="meter" aria-hidden="true">
             <span style={{ width: pct(cap.players), background: "var(--team)" }} />
@@ -67,7 +68,7 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
           <tbody>
             {top.map((id) => (
               <tr key={id}>
-                <td className="name">{PLAYER_BY_ID[id].name}</td>
+                <td className="name"><span {...tip("player", id)}>{PLAYER_BY_ID[id].name}</span></td>
                 <td>{PLAYER_BY_ID[id].position}</td>
                 <td className="num">{money(capHit(id, year, game))}</td>
                 <td className="num">{((capHit(id, year, game) / cap.limit) * 100).toFixed(1)}%</td>

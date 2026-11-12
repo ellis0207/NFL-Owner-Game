@@ -15,6 +15,7 @@ import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { Evidence, Help } from "../Help";
 import { useUi } from "../ui";
+import { tip } from "../tip";
 
 export function FootballScreen({ game }: { game: GameState }) {
   const ui = useUi();
@@ -32,7 +33,7 @@ export function FootballScreen({ game }: { game: GameState }) {
   const c = game.culture ? culture(game) : null;
   const adv = game.scoutOps ? scoutOps(game).advance[0] : undefined;
   const hot = hotSeat(game);
-  const link = (id: string) => <button className="link" onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
+  const link = (id: string) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
   return (
     <section className="stack">
       <h2>Football overview</h2>

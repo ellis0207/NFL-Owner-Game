@@ -6,6 +6,7 @@ import { shortDate } from "../../engine/dates";
 import { creditLimit } from "../../engine/debt";
 import type { GameState, LedgerCat } from "../../engine/types";
 import { money } from "../format";
+import { tip } from "../tip";
 
 /** The statements: accrual income statement, balance sheet, cash flow, ratios, with any line opening its ledger entries. */
 export function Books({ game }: { game: GameState }) {
@@ -18,7 +19,7 @@ export function Books({ game }: { game: GameState }) {
   const current = year === leagueYear(game.date);
   const line = (cat: LedgerCat, amount: number) => (
     <tr key={cat}>
-      <td><button className="link" onClick={() => setDrill(drill === cat ? null : cat)}>{CATEGORY[cat].label}</button></td>
+      <td><button className="link" {...tip("ledger", cat, year)} onClick={() => setDrill(drill === cat ? null : cat)}>{CATEGORY[cat].label}</button></td>
       <td className={`num ${amount < 0 ? "bad" : ""}`}>{money(amount)}</td>
     </tr>
   );
@@ -38,7 +39,7 @@ export function Books({ game }: { game: GameState }) {
           <div className="table-wrap">
             <table>
               <tbody>
-                <tr><td>Revenue</td><td className="num">{money(inc.revenue)}</td></tr>
+                <tr {...tip("pnl", year, "revenue")}><td>Revenue</td><td className="num">{money(inc.revenue)}</td></tr>
                 <tr><td>Player pay, as the cap counts it</td><td className="num bad">{money(inc.players)}</td></tr>
                 <tr><td>Everything else the club spends</td><td className="num bad">{money(inc.otherExpenses)}</td></tr>
                 <tr><td><strong>Operating income before depreciation</strong></td><td className="num"><strong>{money(inc.ebitda)}</strong></td></tr>
@@ -179,7 +180,7 @@ export function Plan({ game, changed }: { game: GameState; changed: () => void }
           <dl className="kv">
             <dt>Policy</dt><dd>{b.reserveMonths} month{b.reserveMonths === 1 ? "" : "s"} of costs and debt service</dd>
             <dt>Keep on hand</dt><dd>{money(reserve)}</dd>
-            <dt>Cash now</dt><dd className={cashBalance(game) < reserve ? "bad" : "good"}>{money(cashBalance(game))}</dd>
+            <dt>Cash now</dt><dd className={cashBalance(game) < reserve ? "bad" : "good"} {...tip("cash")}>{money(cashBalance(game))}</dd>
           </dl>
           <div className="tabs" role="group" aria-label="Reserve">
             {[0, 1, 2, 3, 4, 6].map((m) => <button key={m} aria-pressed={b.reserveMonths === m} onClick={() => { setReserve(game, m); changed(); }}>{m ? `${m} mo` : "None"}</button>)}
@@ -195,7 +196,7 @@ export function Plan({ game, changed }: { game: GameState; changed: () => void }
             <tbody>
               {rows.filter((r) => r.plan || r.actual).map((r) => (
                 <tr key={r.cat}>
-                  <td>{CATEGORY[r.cat].label}</td>
+                  <td {...tip("ledger", r.cat, year)}>{CATEGORY[r.cat].label}</td>
                   <td className="num">{money(r.plan)}</td>
                   <td className="num muted">{MONTHLY_LINES.has(r.cat) ? money(r.plan / 12) : ""}</td>
                   <td className="num">{money(r.toDate)}</td>
