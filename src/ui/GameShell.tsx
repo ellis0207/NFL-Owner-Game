@@ -50,10 +50,11 @@ import { FootballScreen } from "./screens/FootballScreen";
 import { AgreementsScreen } from "./screens/AgreementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
-import { UiContext } from "./ui";
+import { UiContext, wantTab } from "./ui";
 import { TipLayer } from "./TipLayer";
 import { FailurePanel, PageBoundary, SaveIndicator, type ActionFailure } from "./SaveGuard";
 import { holdAutosave } from "../save/local";
+import { decisionQueue } from "../engine/queue";
 import { tip } from "./tip";
 import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
@@ -109,7 +110,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
     writePrefs({ ...readPrefs(), navClosed: next });
   };
   // Changing pages closes the phone menu and starts the new page at the top.
-  const go = useCallback((s: Screen) => {
+  const [visit, setVisit] = useState(0);
+  const go = useCallback((s: Screen, tab?: string) => {
+    wantTab(s, tab);
+    setVisit((v) => v + 1);
     setScreen(s);
     setMenuOpen(false);
     window.scrollTo?.(0, 0);
@@ -152,6 +156,8 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const waiting = draftWaiting(game);
   // Counts beside page names: things that are waiting on the owner.
   const badges: Partial<Record<Screen, number | string>> = {};
+  const queued = decisionQueue(game).length;
+  if (queued) badges.Today = queued;
   if (unread) badges.Inbox = unread;
   if (pressAsks) badges.Media = pressAsks;
   if (tradeOffers) badges.Trades = tradeOffers;
@@ -276,9 +282,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {failure && <FailurePanel failure={failure} game={game} onLoad={onLoad} onClose={() => { setFailure(null); changed(); }} />}
           {over && screen === "Today" && <GameOver game={game} />}
           {locked && <p className="notice">You don't control this club: {tenure(game).role === "buyer" ? `you're a buyer watching it while ${tenure(game).controller} sells` : `${tenure(game).controller} runs it and you hold ${Math.round((tenure(game).stake ?? 0) * 100)}%`}. Its staff make the calls; this page is read-only. Deals are on the Ownership page.</p>}
-          <PageBoundary key={screen} onHome={() => go("Today")}>
+          <PageBoundary key={`${screen}:${visit}`} onHome={() => go("Today")}>
           <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
-          {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {
+          {screen === "Today" && <TodayScreen game={game} go={go} changed={changed} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
             // Your own game can come in a play at a time.
             if (gameId && s.pbp?.[gameId] && readPrefs().followGames) openBox(gameId, true);

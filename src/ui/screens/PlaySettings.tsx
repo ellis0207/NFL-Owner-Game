@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { fullRealism, isRealism, makeSandbox, MODES, setPlayMode } from "../../engine/desk";
 import type { GameState } from "../../engine/types";
+import { INVOLVEMENT, involvement, setInvolvement, type Involvement } from "../../engine/queue";
 
 export function PlaySettings({ game, changed }: { game: GameState; changed: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -20,6 +21,12 @@ export function PlaySettings({ game, changed }: { game: GameState; changed: () =
         </select>
       </label>
       <span className="muted">{MODES[s.mode ?? "owner"].what} You can still change any area on the Front office page.</span>
+      <label className="field"><span className="label">How involved you are</span>
+        <select value={involvement(game)} onChange={(e) => { setInvolvement(game, e.target.value as Involvement); changed(); }}>
+          {Object.entries(INVOLVEMENT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+      </label>
+      <span className="muted">{INVOLVEMENT[involvement(game)].what}</span>
       <label className="field"><span className="label">Information you see</span>
         <select value={s.info ?? "real"} onChange={(e) => { s.info = e.target.value as NonNullable<typeof s.info>; changed(); }}>
           <option value="real">The usual: facts, staff estimates and opinions, labeled</option>

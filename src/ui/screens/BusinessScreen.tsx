@@ -1,3 +1,4 @@
+import { initialTab } from "../ui";
 import { useState } from "react";
 import {
   answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, deptCost, DEPTS, nationalRevenue,
@@ -45,7 +46,7 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
 export function BusinessScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const offers = business(game).events.filter((e) => e.status === "offered").length;
   const deals = new Set(business(game).local?.offers.map((o) => o.cat)).size;
-  const [tab, setTab] = useState<Tab>(offers ? "Stadium" : "Overview");
+  const [tab, setTab] = useState<Tab>(() => initialTab("Business", TABS, offers ? "Stadium" : "Overview"));
   return (
     <section className="stack">
       <h2>Business</h2>

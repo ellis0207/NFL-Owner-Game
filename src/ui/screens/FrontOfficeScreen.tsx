@@ -1,3 +1,4 @@
+import { initialTab } from "../ui";
 import { useState } from "react";
 import { Departments } from "./FrontOfficeDepartments";
 import { shortDate } from "../../engine/dates";
@@ -20,7 +21,7 @@ type Tab = (typeof TABS)[number];
 
 export function FrontOfficeScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const memos = openMemos(game).filter((m) => m.status === "open").length;
-  const [tab, setTab] = useState<Tab>(memos ? "Memos" : "Executives");
+  const [tab, setTab] = useState<Tab>(() => initialTab("Front office", TABS, memos ? "Memos" : "Executives"));
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

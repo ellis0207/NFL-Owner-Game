@@ -541,3 +541,16 @@ span.tip-name, [data-tip].tip-name { border-bottom: 1px dotted color-mix(in srgb
 .save-state.bad { color: var(--bad); }
 .failure-panel { margin-bottom: 1rem; }
 .app-problem { display: flex; gap: 0.8rem; align-items: center; justify-content: space-between; margin: 0.5rem; }
+
+/* The decision queue on Today (DecisionQueue.tsx). */
+.decision-queue .inline-field { display: inline-flex; gap: 0.4rem; align-items: center; }
+.queue-item { border-left: 3px solid var(--rule); padding: 0.4rem 0 0.4rem 0.7rem; display: grid; gap: 0.35rem; }
+.queue-item.major { border-left-color: var(--team); }
+.queue-item.problem, .queue-item.deadline { border-left-color: var(--warn); }
+.queue-head { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+.queue-kind { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.queue-kind.problem, .queue-kind.deadline { color: var(--warn); }
+.queue-title { font-weight: 600; }
+.queue-body { display: grid; gap: 0.3rem; font-size: 0.92rem; }
+.queue-body .label { margin-right: 0.3rem; }
+

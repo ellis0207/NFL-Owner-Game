@@ -14,7 +14,6 @@ import { Score } from "../Score";
 import { gamesOn, latestPoll } from "../../engine/college";
 import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
-import { briefing } from "../../engine/memos";
 import { readPrefs } from "../prefs";
 import { CollegeScore } from "./CollegeScreen";
 import { openQuestions } from "../../engine/press";
@@ -25,6 +24,7 @@ import { fanMood } from "./BusinessScreen";
 import { openSearches, proposals } from "../../engine/carousel";
 import { ROLE_NAME, staff } from "../../engine/coaches";
 import { tip } from "../tip";
+import { DecisionQueue } from "./DecisionQueue";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -33,13 +33,14 @@ const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
 
 interface Props {
   game: GameState;
-  go: (s: Screen) => void;
+  go: (s: Screen, tab?: string) => void;
+  changed: () => void;
   busy: boolean;
   /** Plays out one of today's events. */
   play: (id: string, gameId?: string) => void;
 }
 
-export function TodayScreen({ game, go, busy, play }: Props) {
+export function TodayScreen({ game, go, changed, busy, play }: Props) {
   const ui = useUi();
   const hidden = readPrefs().hidden;
   const items = agenda(game);
@@ -75,6 +76,7 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </p>
         </section>
       )}
+      {!hidden.includes("Decision queue") && <DecisionQueue game={game} changed={changed} go={go} />}
       {(isSeasonOver(game) || summer) && (
         <section className="panel stack tight">
           <h2>Coming up</h2>
@@ -170,15 +172,6 @@ export function TodayScreen({ game, go, busy, play }: Props) {
           </section>
         );
       })()}
-      {!hidden.includes("Your desk") && briefing(game).length > 0 && (
-        <section className="panel stack tight">
-          <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-            <h2>Your desk</h2>
-            <button className="btn small" onClick={() => go("Front office")}>Open front office</button>
-          </div>
-          {briefing(game).map((l, i) => <span key={i}>{l}</span>)}
-        </section>
-      )}
       {!hidden.includes("Staff") && <StaffToday game={game} go={go} />}
       {!hidden.includes("Business") && <BusinessToday game={game} go={go} />}
       {!hidden.includes("Media") && <MediaToday game={game} go={go} />}
