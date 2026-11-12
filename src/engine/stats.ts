@@ -21,6 +21,9 @@ export type StatLine = Partial<Record<StatKey | "g", number>>;
 
 const INDEX = Object.fromEntries(STAT_KEYS.map((k, i) => [k, i])) as Record<StatKey, number>;
 const LONGS = new Set<StatKey>(["passLong", "rushLong", "recLong", "fgLong", "puntLong"]);
+/** Where each stat sits in a packed line, and which ones are a longest play (kept as a maximum, not a sum). */
+export const STAT_INDEX = INDEX;
+export const STAT_LONGS: ReadonlySet<number> = new Set([...LONGS].map((k) => INDEX[k]));
 
 export function pack(line: StatLine): number[] {
   const out = STAT_KEYS.map((k) => line[k] ?? 0);

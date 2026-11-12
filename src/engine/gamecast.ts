@@ -5,8 +5,10 @@
 // Field positions are yards from the away team's goal line: the away team
 // drives from 0 toward 100 and the home team the other way, the same
 // convention as the drive chart. The end zones run from -10 to 0 and 100 to 110.
-import { PLAY_FLAGS as F } from "./playlog";
-import type { GameLog, PlayRow } from "./types";
+import { PLAYER_BY_ID } from "./league";
+import { PLAY_FLAGS as F, TEAM_BOX_KEYS } from "./playlog";
+import { STAT_INDEX, STAT_KEYS, STAT_LONGS, type StatKey } from "./stats";
+import type { GameLog, PlayRow, TeamBox } from "./types";
 
 export interface CastPlay {
   /** The play's row in the log. */
@@ -17,7 +19,7 @@ export interface CastPlay {
   to: number | null;
   /** The result in a word or two, as a broadcast graphic would put it. */
   label: string;
-  tone: "score" | "turnover" | "flag" | "";
+  tone: "score" | "turnover" | "flag" | "story" | "";
 }
 
 export interface Cast {
@@ -56,7 +58,8 @@ export function fieldX(offense: 0 | 1, ydl: number): number {
 function resultOf(row: PlayRow, next: PlayRow | null, offPts: number, defPts: number): Pick<CastPlay, "to" | "label" | "tone"> {
   const o = row[2];
   const text = row[7];
-  if (row[8] & F.note) return { to: null, label: "", tone: "" };
+  if (row[8] & F.story) return { to: null, label: "Alert", tone: "story" };
+  if (row[8] & F.note) return { to: null, label: /^Timeout/.test(text) ? "Timeout" : "", tone: "" };
   // Points first: the ball ends up in an end zone or through the uprights.
   if (offPts >= 6) return { to: fieldX(o, 104), label: "Touchdown", tone: "score" };
   if (offPts === 3) return { to: fieldX(o, 110), label: "Field goal", tone: "score" };
@@ -73,7 +76,7 @@ function resultOf(row: PlayRow, next: PlayRow | null, offPts: number, defPts: nu
   if (/Turnover on downs/.test(text)) return { to, label: "Turnover on downs", tone: "turnover" };
   if (row[3] === 0) return { to, label: /onside/.test(text) ? "Onside kick" : "Kickoff", tone: "" };
   if (/ punts /.test(text)) return { to, label: "Punt", tone: "" };
-  if (row[8] & F.penalty) return { to, label: "Flag", tone: "flag" };
+  if (row[8] & F.penalty) return { to, label: row[11] === "Play called back" ? "Called back" : "Flag", tone: "flag" };
   if (next && next[3] > 0 && next[2] === o) {
     if (/ incomplete/.test(text)) return { to, label: "Incomplete", tone: "" };
     if (/ sacked /.test(text)) return { to, label: `Sack · loss of ${Math.abs(Math.round(next[5] - row[5]))}`, tone: "" };
@@ -150,4 +153,137 @@ export function nextQuarterStop(log: GameLog, at: number): number {
   let i = at;
   while (i < rows.length && rows[i][0] === q) i++;
   return Math.max(i, at + 1);
+}
+
+/** The box score as it stood partway through a game. */
+export interface RunningBox {
+  quarters: { away: number[]; home: number[] };
+  team: { away: TeamBox; home: TeamBox };
+  /** Stat lines in STAT_KEYS order, like a finished box score's. */
+  players: { away: Record<string, number[]>; home: Record<string, number[]> };
+}
+
+const SIDES = ["away", "home"] as const;
+const DEF_FROM = STAT_INDEX.tklSolo, DEF_TO = STAT_INDEX.defTd;
+
+function emptyBox(): RunningBox {
+  const team = () => Object.fromEntries(TEAM_BOX_KEYS.map((k) => [k, 0])) as unknown as TeamBox;
+  return { quarters: { away: [0, 0, 0, 0], home: [0, 0, 0, 0] }, team: { away: team(), home: team() }, players: { away: {}, home: {} } };
+}
+
+/** Adds one row's changes to a running box score. Returns the players it touched as [side, id] pairs. */
+function applyRow(box: RunningBox, log: GameLog, i: number): [0 | 1, string][] {
+  const row = log.plays[i];
+  const was = i > 0 ? log.plays[i - 1] : null;
+  const period = Math.min(row[0], 5) - 1;
+  const pts = [row[9] - (was?.[9] ?? 0), row[10] - (was?.[10] ?? 0)];
+  for (const s of [0, 1] as const) {
+    const gained = pts[s];
+    const q = box.quarters[SIDES[s]];
+    while (q.length <= period) q.push(0);
+    q[period] += gained;
+  }
+  const touched: [0 | 1, string][] = [];
+  const d = log.box?.[i];
+  if (!d || !log.ids) return touched;
+  const [team, players] = d;
+  for (let j = 0; j < team.length; j += 3) {
+    const t = box.team[SIDES[team[j]]];
+    const k = TEAM_BOX_KEYS[team[j + 1]];
+    t[k] = Math.round((t[k] + team[j + 2]) * 10) / 10;
+  }
+  for (let j = 0; j < players.length; j += 4) {
+    const s = players[j] as 0 | 1;
+    const id = log.ids[s][players[j + 1]];
+    const k = players[j + 2];
+    const line = (box.players[SIDES[s]][id] ??= STAT_KEYS.map(() => 0));
+    line[k] = STAT_LONGS.has(k) ? Math.max(line[k], players[j + 3]) : line[k] + players[j + 3];
+    // Snap counts aren't kept play by play; mark a defender as having played so his line shows.
+    if (k >= DEF_FROM && k <= DEF_TO) line[STAT_INDEX.defSnaps] = 1;
+    touched.push([s, id]);
+  }
+  return touched;
+}
+
+/** The box score after the first `at` rows, or null for a log written before it was kept row by row. */
+export function boxAt(log: GameLog, at: number): RunningBox | null {
+  if (!log.box || !log.ids) return null;
+  const box = emptyBox();
+  const n = Math.max(0, Math.min(log.plays.length, Math.floor(at)));
+  for (let i = 0; i < n; i++) applyRow(box, log, i);
+  return box;
+}
+
+const ORDINAL = ["", "first", "second", "third", "fourth"];
+
+/** Individual marks worth a line when a player reaches them. */
+const MARKS: { key: StatKey; at: number[]; say: (name: string, n: number) => string }[] = [
+  { key: "passYds", at: [300, 400, 500], say: (p, n) => `${p} is over ${n} yards passing.` },
+  { key: "passTd", at: [3, 4, 5, 6], say: (p, n) => `${p} has thrown ${n} touchdown passes.` },
+  { key: "int", at: [2, 3, 4], say: (p, n) => `${p} has thrown ${n} interceptions.` },
+  { key: "rushYds", at: [100, 150, 200], say: (p, n) => `${p} is over ${n} yards rushing.` },
+  { key: "rushTd", at: [2, 3, 4], say: (p, n) => `${p} has run for ${n} touchdowns.` },
+  { key: "recYds", at: [100, 150, 200], say: (p, n) => `${p} is over ${n} yards receiving.` },
+  { key: "recTd", at: [2, 3, 4], say: (p, n) => `${p} has caught ${n} touchdown passes.` },
+  { key: "sacks", at: [2, 3, 4], say: (p, n) => `${p} has ${n} sacks.` },
+  { key: "defInt", at: [2, 3], say: (p, n) => `${p} has intercepted ${n} passes.` },
+];
+
+/**
+ * Storylines read off the play-by-play: for each row, the lines worth saying
+ * once it has happened. Lead changes, runs of unanswered points, turnovers
+ * piling up, individual marks and the ends of quarters. `teams` is [away, home].
+ */
+export function storylines(log: GameLog, teams: [string, string]): string[][] {
+  const rows = log.plays;
+  const out: string[][] = rows.map(() => []);
+  const box = emptyBox();
+  const before: Record<string, number[]> = {};
+  let run = null as { side: 0 | 1; pts: number; said: number } | null;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const was = [i > 0 ? rows[i - 1][9] : 0, i > 0 ? rows[i - 1][10] : 0];
+    const now = [row[9], row[10]];
+    const giveaways = [box.team.away.turnovers, box.team.home.turnovers];
+    const touched = applyRow(box, log, i);
+    const say = (text: string) => out[i].push(text);
+
+    // The score: a new leader, a tie, a run of unanswered points.
+    for (const s of [0, 1] as const) {
+      const pts = now[s] - was[s];
+      if (pts <= 0) continue;
+      const lead = now[s] - now[1 - s], led = was[s] - was[1 - s];
+      if (lead > 0 && led <= 0 && was[0] + was[1] > 0) say(`${teams[s]} takes the lead, ${now[s]}-${now[1 - s]}.`);
+      else if (lead === 0) say(`Tied at ${now[s]}.`);
+      if (run?.side === s) run.pts += pts;
+      else run = { side: s, pts, said: 0 };
+      if (run.pts >= 14 && run.pts - run.said >= 7 && now[1 - s] > 0) {
+        say(`${teams[s]} has scored ${run.pts} straight points.`);
+        run.said = run.pts;
+      }
+    }
+    for (const s of [0, 1] as const) {
+      const n = box.team[SIDES[s]].turnovers;
+      if (n > giveaways[s] && n >= 3) say(`${teams[s]} has turned the ball over ${n} times.`);
+    }
+    // Individual marks, checked for the players this row touched.
+    for (const [s, id] of touched) {
+      const line = box.players[SIDES[s]][id];
+      const old = (before[id] ??= STAT_KEYS.map(() => 0));
+      for (const m of MARKS) {
+        const k = STAT_INDEX[m.key];
+        const hit = m.at.filter((n) => old[k] < n && line[k] >= n).at(-1);
+        if (hit) say(m.say(PLAYER_BY_ID[id]?.name ?? "A player", hit));
+        old[k] = line[k];
+      }
+    }
+    // The end of a period.
+    const next = rows[i + 1];
+    if (next && next[0] !== row[0]) {
+      say(row[0] === 2 ? `Halftime: ${teams[0]} ${now[0]}, ${teams[1]} ${now[1]}.`
+        : row[0] === 4 ? `End of regulation, tied at ${now[0]}. Overtime.`
+        : row[0] < 4 ? `End of the ${ORDINAL[row[0]]} quarter.` : "End of the overtime period.");
+    }
+  }
+  return out;
 }

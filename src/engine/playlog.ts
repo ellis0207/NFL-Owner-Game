@@ -8,10 +8,17 @@
 import { emptyAdv, expectedPoints, winProbHome, type Adv } from "./analytics";
 import { addDays } from "./dates";
 import { rngFor, type Rng } from "./rng";
-import type { DriveRow, GameLog, GameState, PlayRow } from "./types";
+import { STAT_INDEX, type StatKey } from "./stats";
+import type { DriveRow, GameLog, GameState, PlayRow, RowStats, TeamBox } from "./types";
 
 /** Bit flags on a play row. */
-export const PLAY_FLAGS = { score: 1, turnover: 2, penalty: 4, review: 8, kick: 16, big: 32, note: 64 } as const;
+export const PLAY_FLAGS = { score: 1, turnover: 2, penalty: 4, review: 8, kick: 16, big: 32, note: 64, injury: 128, story: 256 } as const;
+
+/** The team totals a box score keeps, in the order the running box score stores changes to them. */
+export const TEAM_BOX_KEYS = [
+  "firstDowns", "plays", "yards", "passYds", "rushYds", "rushAtt", "passAtt", "cmp", "sacked", "sackYds",
+  "thirdConv", "thirdAtt", "fourthConv", "fourthAtt", "turnovers", "penalties", "penYds", "top", "redZoneTd", "redZoneAtt",
+] as const;
 
 /** Full play-by-play is dropped this many days after a game: through the following week's games. */
 export const KEEP_DAYS = 9;
@@ -27,7 +34,7 @@ export interface LiveGame {
   dist: number;
   ydl: number;
   over: boolean;
-  t: Record<Side, { id: string; score: number; timeouts: number; box: { top: number } }>;
+  t: Record<Side, { id: string; score: number; timeouts: number; box: TeamBox }>;
 }
 
 interface OpenDrive {
@@ -79,6 +86,16 @@ export class Recorder {
   tail = "";
   /** How the open drive is ending, set by the play that ends it. */
   why = "";
+  /**
+   * The running box score: what each row changed. Players are numbered per
+   * side in `ids`; `credited` holds stats added since the last row, and
+   * `seen` the team totals as of that row.
+   */
+  ids: [string[], string[]] = [[], []];
+  idIndex: [Record<string, number>, Record<string, number>] = [{}, {}];
+  credited: number[] = [];
+  seen: [number[], number[]] = [TEAM_BOX_KEYS.map(() => 0), TEAM_BOX_KEYS.map(() => 0)];
+  box: RowStats[] = [];
 
   constructor(seed: number, gameId: string) {
     this.flavor = rngFor(seed, `pbp:${gameId}`);
@@ -86,6 +103,37 @@ export class Recorder {
 
   pick<T>(list: readonly T[]): T {
     return list[Math.floor(this.flavor() * list.length)];
+  }
+
+  /** A stat credited to a player, kept for the running box score. Snap counts are left out. */
+  credit(side: Side, id: string, key: StatKey, v: number): void {
+    const k = STAT_INDEX[key];
+    if (k < 3) return;
+    const s = side === "away" ? 0 : 1;
+    let i = this.idIndex[s][id];
+    if (i === undefined) {
+      i = this.idIndex[s][id] = this.ids[s].length;
+      this.ids[s].push(id);
+    }
+    this.credited.push(s, i, k, v);
+  }
+
+  /** Writes a row down, with what changed in the box score since the row before it. */
+  push(g: LiveGame, row: PlayRow): void {
+    this.plays.push(row);
+    const team: number[] = [];
+    for (const s of [0, 1] as const) {
+      const box = g.t[s === 0 ? "away" : "home"].box;
+      for (let k = 0; k < TEAM_BOX_KEYS.length; k++) {
+        const v = box[TEAM_BOX_KEYS[k]];
+        if (v !== this.seen[s][k]) {
+          team.push(s, k, Math.round((v - this.seen[s][k]) * 10) / 10);
+          this.seen[s][k] = v;
+        }
+      }
+    }
+    this.box.push(team.length || this.credited.length ? [team, this.credited] : 0);
+    this.credited = [];
   }
 
   begin(g: LiveGame): void {
@@ -116,12 +164,14 @@ export class Recorder {
     if (this.text) {
       const p = this.pre;
       const epa = p.dn > 0 ? this.value(g) : undefined;
-      this.plays.push([p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
+      this.push(g, [p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
         epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g), this.timeouts(g)]);
       if (this.drive && p.dn > 0 && this.drive.o === (p.o === 0 ? "away" : "home")) this.drive.plays++;
     }
-    for (const row of this.queue) row[13] ??= this.wp(g);
-    this.plays.push(...this.queue);
+    for (const row of this.queue) {
+      row[13] ??= this.wp(g);
+      this.push(g, row);
+    }
     this.queue = [];
   }
 
@@ -186,18 +236,24 @@ export class Recorder {
     return epa;
   }
 
-  /** A line in the feed that isn't a play: halftime adjustments. */
-  note(g: LiveGame, text: string): void {
-    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, PLAY_FLAGS.note, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
+  /** A line in the feed that isn't a play: halftime adjustments, timeouts. */
+  note(g: LiveGame, text: string, flags = 0): void {
+    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, flags | PLAY_FLAGS.note, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
     if (this.inPlay) this.queue.push(row);
-    else this.plays.push(row);
+    else this.push(g, row);
+  }
+
+  /** A storyline alert, written ahead of the play in progress: a quarterback change, a lineup note before kickoff. */
+  alert(g: LiveGame, side: Side, text: string): void {
+    this.push(g, [g.q, Math.max(0, Math.round(g.clock)), side === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, PLAY_FLAGS.note | PLAY_FLAGS.story,
+      g.t.away.score, g.t.home.score, "", undefined, this.plays.at(-1)?.[13] ?? 0.5, this.timeouts(g)]);
   }
 
   /** A kick: written after the play it follows (a kickoff after a touchdown), or now. */
   kick(g: LiveGame, kicking: Side, text: string, flags = 0): PlayRow {
     const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), kicking === "away" ? 0 : 1, 0, 0, 35, this.driveNo, text, flags | PLAY_FLAGS.kick, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
     if (this.inPlay) this.queue.push(row);
-    else this.plays.push(row);
+    else this.push(g, row);
     return row;
   }
 
@@ -220,7 +276,7 @@ export class Recorder {
   }
 
   log(date: string): GameLog {
-    return { date, plays: this.plays, drives: this.drives };
+    return { date, plays: this.plays, drives: this.drives, ids: this.ids, box: this.box };
   }
 }
 

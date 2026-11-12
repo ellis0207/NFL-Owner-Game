@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { askLeague, gameDayOps, gameOps, gameOpsDaily } from "../src/engine/gameops";
 import { addDays } from "../src/engine/dates";
 import { SCHEDULE } from "../src/engine/league";
-import { castAt, nextDriveStop, nextQuarterStop } from "../src/engine/gamecast";
+import { boxAt, castAt, nextDriveStop, nextQuarterStop, storylines } from "../src/engine/gamecast";
+import { STAT_KEYS } from "../src/engine/stats";
 import { KEEP_DAYS, PLAY_FLAGS as F } from "../src/engine/playlog";
 import { business } from "../src/engine/business";
 import { advanceDay, newGame } from "../src/engine/season";
@@ -40,6 +41,7 @@ describe("play-by-play", () => {
       const n = log.plays.length;
       const start = castAt(log, 0);
       expect([start.away, start.home, start.q, start.clock, start.down]).toEqual([0, 0, 1, 900, 0]);
+      expect(start.ball).not.toBeNull();
       expect(start.timeouts).toEqual([3, 3]);
       expect(start.last).toBeNull();
       let prev = start;
@@ -90,6 +92,59 @@ describe("play-by-play", () => {
         expect(hops).toBeGreaterThanOrEqual(4);
       }
     }
+  }, 60_000);
+
+  it("keeps a running box score that ends where the final one does", () => {
+    const s = fresh();
+    for (const g of regular.slice(0, 8)) {
+      const { box, log } = simulateGame(s, g, g.away, g.home);
+      expect(log.box!.length).toBe(log.plays.length);
+      expect(boxAt(log, 0)!.team.away.yards).toBe(0);
+      const half = boxAt(log, Math.floor(log.plays.length / 2))!;
+      expect(half.team.away.plays + half.team.home.plays).toBeGreaterThan(20);
+      const end = boxAt(log, log.plays.length)!;
+      for (const side of ["away", "home"] as const) {
+        for (const [k, v] of Object.entries(box.team[side])) expect(end.team[side][k as keyof typeof box.team.away], k).toBeCloseTo(v, 1);
+        expect(end.quarters[side].reduce((a, b) => a + b, 0)).toBe(box.quarters[side].reduce((a, b) => a + b, 0));
+        // Every player's line matches, apart from snap counts, which aren't kept play by play.
+        for (const [id, line] of Object.entries(box.players[side])) {
+          const mine = end.players[side][id] ?? [];
+          for (let k = 3; k < STAT_KEYS.length; k++) expect(mine[k] ?? 0, `${id} ${STAT_KEYS[k]}`).toBe(line[k] ?? 0);
+        }
+      }
+    }
+  }, 60_000);
+
+  it("writes down injuries, plays called back, timeouts and who is at quarterback", () => {
+    const s = fresh();
+    let hurt = 0, back = 0, timeouts = 0, lines = 0;
+    for (const g of regular.slice(0, 16)) {
+      const { box, log } = simulateGame(s, g, g.away, g.home);
+      const text = log.plays.map((p) => p[7]);
+      // Both starting quarterbacks are named before the opening kickoff.
+      expect(text.slice(0, 2).every((t) => /quarterback/i.test(t))).toBe(true);
+      expect(log.plays[2][8] & F.kick).toBeTruthy();
+      // Every injury in the box score is in the feed, on the play it happened.
+      const flagged = log.plays.filter((p) => p[8] & F.injury);
+      expect(flagged.length).toBeGreaterThanOrEqual(Math.min(1, box.injuries.length));
+      for (const p of flagged) expect(p[7]).toMatch(/INJURY: .+ is down after the play/);
+      hurt += flagged.length;
+      const nullified = log.plays.filter((p) => p[11] === "Play called back");
+      for (const p of nullified) {
+        expect(p[8] & F.penalty).toBeTruthy();
+        expect(p[7]).toMatch(/Penalty on [A-Z]+: .+ The play doesn't count\.$/);
+      }
+      back += nullified.length;
+      timeouts += text.filter((t) => t.startsWith("Timeout, ")).length;
+      const stories = storylines(log, [g.away, g.home]);
+      expect(stories.length).toBe(log.plays.length);
+      expect(stories.flat().some((t) => t.startsWith("Halftime"))).toBe(true);
+      lines += stories.flat().length;
+    }
+    expect(hurt).toBeGreaterThan(8);
+    expect(back).toBeGreaterThan(40);
+    expect(timeouts).toBeGreaterThan(8);
+    expect(lines).toBeGreaterThan(16 * 5);
   }, 60_000);
 
   it("is the same game every time from the same seed", () => {
