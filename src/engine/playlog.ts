@@ -27,7 +27,7 @@ export interface LiveGame {
   dist: number;
   ydl: number;
   over: boolean;
-  t: Record<Side, { id: string; score: number; box: { top: number } }>;
+  t: Record<Side, { id: string; score: number; timeouts: number; box: { top: number } }>;
 }
 
 interface OpenDrive {
@@ -117,12 +117,17 @@ export class Recorder {
       const p = this.pre;
       const epa = p.dn > 0 ? this.value(g) : undefined;
       this.plays.push([p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
-        epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g)]);
+        epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g), this.timeouts(g)]);
       if (this.drive && p.dn > 0 && this.drive.o === (p.o === 0 ? "away" : "home")) this.drive.plays++;
     }
     for (const row of this.queue) row[13] ??= this.wp(g);
     this.plays.push(...this.queue);
     this.queue = [];
+  }
+
+  /** Timeouts each team has left, packed as away * 4 + home, for the scoreboard. */
+  timeouts(g: LiveGame): number {
+    return g.t.away.timeouts * 4 + g.t.home.timeouts;
   }
 
   /** The home team's win probability as things stand. */
@@ -183,14 +188,14 @@ export class Recorder {
 
   /** A line in the feed that isn't a play: halftime adjustments. */
   note(g: LiveGame, text: string): void {
-    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, PLAY_FLAGS.note, g.t.away.score, g.t.home.score, ""];
+    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, PLAY_FLAGS.note, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
     if (this.inPlay) this.queue.push(row);
     else this.plays.push(row);
   }
 
   /** A kick: written after the play it follows (a kickoff after a touchdown), or now. */
   kick(g: LiveGame, kicking: Side, text: string, flags = 0): PlayRow {
-    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), kicking === "away" ? 0 : 1, 0, 0, 35, this.driveNo, text, flags | PLAY_FLAGS.kick, g.t.away.score, g.t.home.score, ""];
+    const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), kicking === "away" ? 0 : 1, 0, 0, 35, this.driveNo, text, flags | PLAY_FLAGS.kick, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
     if (this.inPlay) this.queue.push(row);
     else this.plays.push(row);
     return row;

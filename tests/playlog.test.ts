@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { askLeague, gameDayOps, gameOps, gameOpsDaily } from "../src/engine/gameops";
 import { addDays } from "../src/engine/dates";
 import { SCHEDULE } from "../src/engine/league";
+import { castAt, nextDriveStop, nextQuarterStop } from "../src/engine/gamecast";
 import { KEEP_DAYS, PLAY_FLAGS as F } from "../src/engine/playlog";
 import { business } from "../src/engine/business";
 import { advanceDay, newGame } from "../src/engine/season";
@@ -29,6 +30,65 @@ describe("play-by-play", () => {
       // Touchdown drives in the chart match offensive touchdowns.
       for (const d of log.drives) expect(d[4]).toBeGreaterThan(0);
       for (const p of snaps) expect(p[11]).not.toBe("");
+    }
+  }, 60_000);
+
+  it("can be stepped through one play at a time, with a scoreboard and a ball on the field", () => {
+    const s = fresh();
+    for (const g of regular.slice(0, 6)) {
+      const { result, log } = simulateGame(s, g, g.away, g.home);
+      const n = log.plays.length;
+      const start = castAt(log, 0);
+      expect([start.away, start.home, start.q, start.clock, start.down]).toEqual([0, 0, 1, 900, 0]);
+      expect(start.timeouts).toEqual([3, 3]);
+      expect(start.last).toBeNull();
+      let prev = start;
+      let labelled = 0, moved = 0;
+      for (let i = 1; i <= n; i++) {
+        const c = castAt(log, i);
+        // The score never goes down, and the clock never runs backwards inside a quarter.
+        expect(c.away).toBeGreaterThanOrEqual(prev.away);
+        expect(c.home).toBeGreaterThanOrEqual(prev.home);
+        if (c.q === prev.q && !c.final) expect(c.clock).toBeLessThanOrEqual(prev.clock);
+        // Everything drawn stays on the field or in an end zone.
+        for (const x of [c.ball, c.toGain, c.driveStart, c.last?.from, c.last?.to]) {
+          if (x == null) continue;
+          expect(x).toBeGreaterThanOrEqual(-10);
+          expect(x).toBeLessThanOrEqual(110);
+        }
+        for (const t of c.timeouts!) {
+          expect(t).toBeGreaterThanOrEqual(0);
+          expect(t).toBeLessThanOrEqual(3);
+        }
+        if (c.down) {
+          expect(c.poss).not.toBeNull();
+          // The line to gain is ahead of the ball in the direction the offense is going.
+          if (c.toGain !== null) expect((c.toGain - c.ball!) * (c.poss === 0 ? 1 : -1)).toBe(c.dist);
+        }
+        // A scoring row is called a score on the graphic.
+        if (c.last!.row[8] & F.score) expect(c.last!.tone).toBe("score");
+        if (c.last!.label) labelled++;
+        if (c.last!.to !== null) moved++;
+        prev = c;
+      }
+      expect(prev.final).toBe(true);
+      expect([prev.away, prev.home]).toEqual([result.awayScore, result.homeScore]);
+      expect(labelled / n).toBeGreaterThan(0.9);
+      expect(moved / n).toBeGreaterThan(0.9);
+      // Somebody used a timeout, and both sides got them back at halftime.
+      expect(log.plays.some((p) => p[14] !== 15)).toBe(true);
+      // Skipping by drive and by quarter always moves forward and lands at the end.
+      for (const stop of [nextDriveStop, nextQuarterStop]) {
+        let at = 0, hops = 0;
+        while (at < n) {
+          const to = stop(log, at);
+          expect(to).toBeGreaterThan(at);
+          at = to;
+          hops++;
+        }
+        expect(at).toBe(n);
+        expect(hops).toBeGreaterThanOrEqual(4);
+      }
     }
   }, 60_000);
 

@@ -659,9 +659,10 @@ export interface ScoringPlay {
  * One snap or kick in a game's play-by-play:
  * [quarter (5+ is overtime), seconds left, offense (0 away, 1 home), down (0 for a kick), distance,
  *  yards from the offense's own goal line, drive number, description, flags (PLAY_FLAGS), away score, home score, formation and look,
- *  EPA for the offense (scrimmage plays), the home team's win probability after the play].
+ *  EPA for the offense (scrimmage plays), the home team's win probability after the play,
+ *  timeouts left after the play as away * 4 + home (absent in logs written before the field view)].
  */
-export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string, number?, number?];
+export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string, number?, number?, number?];
 
 /** One drive: [offense (0 away, 1 home), quarter, clock, start yard line, plays, yards, seconds of possession, how it ended]. */
 export type DriveRow = [0 | 1, number, number, number, number, number, number, string];

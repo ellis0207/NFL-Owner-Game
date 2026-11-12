@@ -58,7 +58,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           </label>
           <label className="toggle">
             <input type="checkbox" checked={prefs.followGames} onChange={(e) => save({ ...prefs, followGames: e.target.checked })} />
-            <span><strong>Follow my games drive by drive</strong><br /><span className="muted">When you play your game from the Today page, it comes in a drive at a time, and you can skip ahead.</span></span>
+            <span><strong>Follow my games play by play</strong><br /><span className="muted">When you play your game from the Today page, it comes in one play at a time on a field view with a scoreboard, and you can skip ahead by drive or quarter.</span></span>
           </label>
           <span className="muted">"Sim a week" in the header advances seven days, stopping early for the draft or (with pauses on) anything urgent. How much lands on your desk at all is set under Front office, Decision rights.</span>
         </div>

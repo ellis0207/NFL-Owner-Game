@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { askLeague, inquiryFor } from "../engine/gameops";
-import { clockText, downText, PLAY_FLAGS as F, playsByDrive, spotText } from "../engine/playlog";
+import { clockText, downText, PLAY_FLAGS as F, spotText } from "../engine/playlog";
 import type { GameLog, GameResult, GameState, PlayRow } from "../engine/types";
 
 function teams(r: GameResult, row: PlayRow | { 0: 0 | 1 }): [string, string] {
@@ -134,55 +134,9 @@ export function GameDay({ game, id, changed }: { game: GameState; id: string; ch
   );
 }
 
-/**
- * Follows a game a drive at a time, as if it were coming in live. The result
- * is already decided; this only holds back what you haven't reached yet.
- */
-export function FollowGame({ r, log, onDone }: { r: GameResult; log: GameLog; onDone: () => void }) {
-  const groups = playsByDrive(log);
-  const [shown, setShown] = useState(1);
-  const visible = groups.slice(0, shown);
-  const last = visible.at(-1)?.rows.at(-1);
-  const done = shown >= groups.length;
-  const newest = useRef<HTMLDivElement>(null);
-  // Bring the drive that just came in to the top of the view.
-  useEffect(() => {
-    const first = newest.current?.querySelector("li");
-    first?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [shown]);
-  const nextQuarter = () => {
-    const q = last?.[0] ?? 1;
-    let n = shown;
-    while (n < groups.length && (groups[n].rows[0][0] <= q)) n++;
-    setShown(Math.min(groups.length, n + 1));
-  };
-  return (
-    <section className="stack">
-      <div className="follow-score">
-        <strong>{r.away} {last?.[9] ?? 0}</strong>
-        <span className="muted">{done ? (r.overtime ? "Final/OT" : "Final") : last ? clockText(last[0], last[1]) : ""}</span>
-        <strong>{r.home} {last?.[10] ?? 0}</strong>
-      </div>
-      <ol className="plays feed">
-        {visible.map((g, gi) => (
-          <div key={g.drive} ref={gi === visible.length - 1 ? newest : undefined} style={{ display: "contents" }}>
-            {g.rows.map((p, i) => <PlayLine key={i} r={r} p={p} />)}
-          </div>
-        ))}
-      </ol>
-      <div className="btn-row follow-controls">
-        {!done && <button className="btn primary" onClick={() => setShown(shown + 1)}>Next drive</button>}
-        {!done && <button className="btn" onClick={nextQuarter}>To the next quarter</button>}
-        {!done && <button className="btn" onClick={() => setShown(groups.length)}>To the end</button>}
-        {done && <button className="btn primary" onClick={onDone}>Box score</button>}
-      </div>
-    </section>
-  );
-}
-
 /** Home win probability across the game, with the quarter breaks. */
 export function WinChart({ r, log }: { r: GameResult; log: GameLog }) {
-  const pts = log.plays.filter((p) => p[13] !== undefined);
+  const pts = log.plays.filter((p) => p[13] != null);
   if (pts.length < 10) return null;
   const W = 600, H = 120;
   const total = (p: PlayRow) => (p[0] <= 4 ? (p[0] - 1) * 900 + (900 - p[1]) : 3600 + (600 - Math.min(600, p[1])));
@@ -220,7 +174,7 @@ export function KeyPlays({ r, log }: { r: GameResult; log: GameLog }) {
   const swings: { p: PlayRow; d: number }[] = [];
   let prev = 0.5;
   for (const p of log.plays) {
-    if (p[13] === undefined) continue;
+    if (p[13] == null) continue;
     swings.push({ p, d: p[13] - prev });
     prev = p[13];
   }
@@ -233,7 +187,7 @@ export function KeyPlays({ r, log }: { r: GameResult; log: GameLog }) {
         {top.map(({ p, d }, i) => (
           <li key={i}>
             <span className="num muted">{clockText(p[0], p[1])}</span>
-            <span>{p[7]}<br /><span className="muted small">{filmNote(p)} {Math.abs(Math.round(d * 100))} points of win probability toward {d > 0 ? r.home : r.away}.{p[12] !== undefined ? ` EPA ${p[12] >= 0 ? "+" : ""}${p[12].toFixed(2)}.` : ""}</span></span>
+            <span>{p[7]}<br /><span className="muted small">{filmNote(p)} {Math.abs(Math.round(d * 100))} points of win probability toward {d > 0 ? r.home : r.away}.{p[12] != null ? ` EPA ${p[12] >= 0 ? "+" : ""}${p[12].toFixed(2)}.` : ""}</span></span>
             <span />
           </li>
         ))}
