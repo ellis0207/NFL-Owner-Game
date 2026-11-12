@@ -81,7 +81,7 @@ export function Field({ r, cast }: { r: GameResult; cast: Cast }) {
     ? `${ids[cast.poss!]} ball, ${downText(cast.down, cast.dist, cast.ydl)} at the ${spotText(cast.ydl, ids[cast.poss!], ids[1 - cast.poss!])}.`
     : "Kickoff.";
   return (
-    <svg className="field" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`The field. ${label}`}>
+    <svg className="gridiron" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`The field. ${label}`}>
       <defs>
         <marker id="cast-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" />
