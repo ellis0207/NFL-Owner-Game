@@ -24,6 +24,7 @@ import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
 import { invested } from "./treasury";
 import type { GameState, Position } from "./types";
+import { liveIds } from "./live";
 
 export type Workload = "light" | "normal" | "heavy";
 
@@ -228,7 +229,8 @@ export function retrainWord(state: GameState, id: string): string {
 
 /** Each week a player learning a new position gets a little more comfortable in it. */
 function learnPositions(state: GameState): void {
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     const r = ps.retrain;
     if (!r || r.drag <= 0) continue;
     const me = personality(id);

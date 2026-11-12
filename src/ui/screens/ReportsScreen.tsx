@@ -44,6 +44,8 @@ export function ReportsScreen({ game, changed }: { game: GameState; changed: () 
           <button className="btn small" onClick={() => { setMsg(saveReport(game, name, kind, param ? { [REPORT_KINDS[kind].params[0] ?? "p"]: param } : {})); setName(""); changed(); }}>Save</button>
         </div>
       </div>
+      <CauseEffect game={game} />
+      <YearRecords game={game} />
       {saved.map((r) => (
         <div key={r.id} className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between" }}><h3>{r.name}</h3><button className="link" onClick={() => { deleteReport(game, r.id); changed(); }}>Delete</button></div>
@@ -83,4 +85,44 @@ function Report({ game, kind, params }: { game: GameState; kind: string; params:
     return <ul>{rows.map((a, i) => <li key={i}>{a.kind}: {a.party}, {money(a.amount)}, ends {a.ends}</li>)}</ul>;
   }
   return null;
+}
+
+/** The owner's decisions, what followed right away, and what they led to later. */
+function CauseEffect({ game }: { game: GameState }) {
+  const log = (game.causes ?? []).slice(0, 15);
+  return (
+    <div className="panel stack tight">
+      <h3>Cause and effect</h3>
+      <span className="muted">Big decisions, what happened right away, and what came of them in later seasons.</span>
+      {log.length === 0 && <span className="muted">Nothing yet: signings, trades, firings, deals and memo decisions show up here.</span>}
+      {log.map((c) => (
+        <div key={c.id}>
+          <strong>{shortDate(c.date)} {c.date.slice(0, 4)}:</strong> {c.text}
+          {c.effects.length > 0 && <ul className="plain muted">{c.effects.map((e, i) => <li key={i}>{e.text}</li>)}</ul>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Each closed league year as it stood: kept even after contracts and rules change. */
+function YearRecords({ game }: { game: GameState }) {
+  const years = Object.values(game.archive ?? {}).sort((a, b) => b.year - a.year);
+  const [open, setOpen] = useState<number | null>(null);
+  if (!years.length) return null;
+  const y = years.find((x) => x.year === open);
+  return (
+    <div className="panel stack tight">
+      <h3>Year records</h3>
+      <span className="muted">Each league year as it closed: our contracts, the cap, the books and the rules in force.</span>
+      <div className="tabs" role="group" aria-label="Year">{years.map((x) => <button key={x.year} aria-pressed={open === x.year} onClick={() => setOpen(open === x.year ? null : x.year)}>{x.year}</button>)}</div>
+      {y && (
+        <div className="stack tight">
+          <span>{TEAM_BY_ID[y.team]?.name ?? y.team}, owned by {y.owner}. Cap {money(y.cap.limit)}, used {money(y.cap.used)}, dead {money(y.cap.dead)}.{y.statement ? ` Revenue ${money(y.statement.revenue)}, operating income ${money(y.statement.operating)}, net ${money(y.statement.net)}.` : ""}</span>
+          <ul className="plain">{y.contracts.slice(0, 12).map((c, i) => <li key={i}>{c.player}: {money(c.apy)} a year through {c.through}, {money(c.hit)} on that year's cap</li>)}</ul>
+          <span className="muted">Rules: {y.rules.join("; ")}</span>
+        </div>
+      )}
+    </div>
+  );
 }

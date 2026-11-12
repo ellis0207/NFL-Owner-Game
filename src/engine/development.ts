@@ -11,6 +11,7 @@ import { mentors } from "./clubhouse";
 import { TEAM_BY_ID } from "./league";
 import { growthFactor } from "./training";
 import type { GameState } from "./types";
+import { liveIds } from "./live";
 
 const SIDE: Record<string, "off" | "def" | "st"> = {
   QB: "off", RB: "off", FB: "off", WR: "off", TE: "off", OT: "off", OG: "off", C: "off",
@@ -22,7 +23,8 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
   const rng = rngFor(state.seed, `dev:${state.date}`);
   const mentored = new Set<string>();
   for (const t of Object.keys(TEAM_BY_ID)) for (const [, y] of mentors(state, t)) mentored.add(y);
-  for (const [id, p] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const p = state.players[id];
     if (!p.team || p.status === "fa") continue;
     const r = HIDDEN_RATINGS[id];
     const player = PLAYER_BY_ID[id];

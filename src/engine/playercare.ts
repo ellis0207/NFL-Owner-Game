@@ -27,6 +27,7 @@ import { teamStaff } from "./staff";
 import { ELITE, production } from "./honors";
 import { cutQuality, invested } from "./treasury";
 import type { GameState, Position } from "./types";
+import { liveIds } from "./live";
 
 export interface Physician { name: string; role: "physician" | "orthopedist" | "trainer" | "rehab"; skill: number; since: number }
 
@@ -267,7 +268,8 @@ export function careDaily(state: GameState): void {
   const K = RULES.keyDates;
   // Arrivals: a player on a new club (or a rookie on his first) starts learning its playbook.
   const first = !Object.keys(c.seen).length;
-  for (const [id, p] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const p = state.players[id];
     if (!p.team || p.status === "fa" || p.status === "retired") continue;
     const was = c.seen[id];
     if (was !== p.team) {

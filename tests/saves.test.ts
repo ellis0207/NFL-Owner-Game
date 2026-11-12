@@ -329,6 +329,22 @@ describe("saves from older versions", () => {
     expect(ownerShare(old)).toBe(1);
   }, 120_000);
 
+  it("a save after a realignment vote keeps the swap, the rival clubs, the cause log and the year record; older saves get rival clubs", async () => {
+    const state = load("pr54-2026-10-10");
+    expect(state.relocation!.realign[0].status).toBe("approved");
+    expect(state.rivals!.clubs.MIA.cash).toBeLessThan(0);
+    expect(state.causes!.length).toBeGreaterThan(0);
+    expect(state.archive!["2026"].contracts.length).toBeGreaterThan(20);
+    for (let i = 0; i < 30; i++) advanceDay(state);
+    expect(state.rivals!.clubs.MIA.tight).toBe(true);
+    const back = await decompress(await compress(state));
+    expect(back.rivals!.clubs.DAL.governance).toBe("owner");
+    const old = load("pr53-2026-10-10");
+    expect(old.rivals).toBeUndefined();
+    advanceDay(old);
+    expect(Object.keys(old.rivals!.clubs).length).toBe(31);
+  }, 120_000);
+
   it("a save after an inheritance keeps the new owner, the family partners and a sale under way; older saves age the owner from load", async () => {
     const state = load("pr53-2026-10-10");
     expect(state.succession!.generation).toBe(2);

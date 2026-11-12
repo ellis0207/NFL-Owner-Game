@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { asksBonuses, attachBonuses, bonusTermsValue, missRisk } from "./bonuses";
 import { attachIncentives, incentiveWorth } from "./incentives";
@@ -29,6 +30,7 @@ import { bestRival, committed, inWindow, isStreetMarket, market, marketYear, sig
 import { onWaivers } from "./waivers";
 import { isOffseason, isPendingFreeAgent, NEXT } from "./offseason";
 import type { GameState, Mandate, Position, Negotiation, NegotiationKind, OfferTerms, Signing } from "./types";
+import { liveIds } from "./live";
 
 // ---- Who can be extended ----
 
@@ -581,6 +583,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
     grades, valueAtSigning,
   };
   state.signings.unshift(signing);
+  if (neg.team === state.userTeam) cause(state, "contracts", `Signed ${p.name}: ${t.years} years, ${money(deal.total)}.`, [`${money(deal.guaranteedAtSigning)} guaranteed at signing on the cap and in cash.`], { kind: "player", id });
   const what = neg.kind === "extension" ? `${t.years}-year extension` : `${t.years}-year deal`;
   news(state, `${p.name} agrees to a ${what} with the ${teamLabel(neg.team)}: ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
   if (neg.team === state.userTeam) {
@@ -811,7 +814,8 @@ function startHoldout(state: GameState, id: string, kind: "holdout" | "holdin"):
 
 /** Week 1: most holdouts report; a few keep sitting and lose game checks. */
 function resolveHoldouts(state: GameState): void {
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (!ps.holdout) continue;
     const pr = priorities(id);
     const rng = rngFor(state.seed, `holdout-end:${id}`);

@@ -29,6 +29,7 @@ import { stat } from "./stats";
 import type { GameState, Position } from "./types";
 import type { DevPlan, Programs } from "./training";
 import type { Policy } from "./medical";
+import { liveIds } from "./live";
 
 /** The world seed: a player's character does not depend on the save. */
 const WORLD = 20260728;
@@ -333,7 +334,8 @@ export function merchLift(state: GameState): number {
  */
 function personalLeave(state: GameState): void {
   const rng = rngFor(state.seed, `leave:${state.date}`);
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (ps.status !== "active" || ps.injury || !ps.team) continue;
     if (rng() > 0.0012) continue;
     const days = rng() < 0.75 ? 6 : 13;

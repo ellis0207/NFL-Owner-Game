@@ -12,6 +12,7 @@
 // view is run by its owner's staff and the pages are read-only), or as a
 // minority partner who gets reports and distributions, can buy more from
 // the controlling owner, and can bid for control.
+import { cause } from "./causes";
 import { billions, business, cashBalance, post, valuation } from "./business";
 import { approvePlan, books, reserveTarget } from "./books";
 import { ensureClubhouse } from "./clubhouse";
@@ -210,6 +211,7 @@ export function closeDeal(state: GameState, deal: ClubDeal): void {
     body: `The purchase, at about ${billions(price)}, closed after the owners' vote (${deal.vote?.yes ?? 24} in favor). The club's ${money(s.assumed)} of debt came with it.`,
   });
   mediaState(state);
+  cause(state, "ownership", `Bought the ${TEAM_BY_ID[deal.team].name} for ${billions(deal.closing!.price)}.`, [`Put in ${money(deal.closing!.ownerEquity)} of our own money; partners ${money(deal.closing!.partners)}, debt ${money(deal.closing!.debt)}.`], { kind: "club", id: deal.team });
   afterClosing(state, deal);
 }
 

@@ -13,6 +13,8 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { coachCase } from "./outlook";
+import { cashLean, styleLean } from "./rivals";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
 import { loyaltyPull } from "./community";
@@ -609,7 +611,7 @@ function gmMayOffer(state: GameState, fa: FreeAgent, terms: OfferTerms, hit: num
   addMemo(state, {
     kind: "signing", area: "signings", from: gmName(state),
     title: `Offer ${p.position} ${p.name}`,
-    problem: `${p.name} (${p.position}, ${p.yearsExp} years in the league) is on the market and would fill a need. ${rivals.length ? `${rivals.length} other team${rivals.length > 1 ? "s have" : " has"} made offers.` : "Nobody else has made an offer yet."}`,
+    problem: `${p.name} (${p.position}, ${p.yearsExp} years in the league) is on the market and would fill a need. ${rivals.length ? `${rivals.length} other team${rivals.length > 1 ? "s have" : " has"} made offers.` : "Nobody else has made an offer yet."} ${coachCase(state, state.userTeam, fa.player).text}`,
     proposal: `${terms.years} years, ${money(terms.total)} total, ${money(terms.guaranteed)} guaranteed (${money(terms.signingBonus)} signing bonus)`,
     amount: apy, cap: `${money(hit)} against next year's cap.`,
     cash: [{ when: "at signing", amount: terms.signingBonus }],
@@ -778,6 +780,7 @@ function cpuBids(state: GameState, day: number): void {
     // Offers already out count against the budget.
     let budget = plannedSpace(state, team) - committed(state, team) - 2 * least;
     for (const fa of open) for (const o of fa.offers) if (o.team === team) budget -= o.hit;
+    budget *= cashLean(state, team);
     if (budget < least) continue;
     // Deals rise, so the year after has to fit as well.
     let later = futureRoom(state, team, NEXT + 1) - committedLater(state, team);
@@ -790,7 +793,7 @@ function cpuBids(state: GameState, day: number): void {
     }
     const need = needs(state, team);
     const eye = staffEffects(team).gmEval;
-    const aggr = Math.min(1, Math.max(0, budget / (40 * least))) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5;
+    const aggr = Math.min(1, Math.max(0, Math.min(1, Math.max(0, budget / (40 * least))) * 0.5 + rngFor(state.seed, `fa-aggr:${team}`)() * 0.5 + styleLean(state, team)));
     const scored = open.map((fa) => {
       const pos = PLAYER_BY_ID[fa.player].position;
       const n = need[pos];

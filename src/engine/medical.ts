@@ -31,6 +31,7 @@ import { projectEffects } from "./projects";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
 import type { GameState, Injury } from "./types";
+import { liveIds } from "./live";
 
 export interface Policy {
   season: number;
@@ -79,7 +80,8 @@ function weeksText(from: string, to: string): string {
 
 /** Follow-up tests, rehab milestones and concussion clearance, for every injured player. */
 function injuriesDaily(state: GameState): void {
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     const inj = ps.injury;
     if (!inj || inj.returnDate <= state.date) continue;
     const name = PLAYER_BY_ID[id]?.name ?? id;
@@ -166,7 +168,8 @@ export function askEarlyReturn(state: GameState, id: string): { ok: boolean; tex
 /** A concussion in a game run by a bare-bones medical staff can draw a league review. */
 function protocolReviews(state: GameState): void {
   if (medicalLevel(state, state.userTeam) > 0) return;
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (ps.team !== state.userTeam || ps.injury?.type !== "Concussion" || ps.injury.date !== addDays(state.date, -1)) continue;
     const rng = rngFor(state.seed, `review:${id}:${ps.injury.date}`);
     if (rng() > 0.15) continue;

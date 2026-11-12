@@ -24,6 +24,7 @@ import { seasonTotals, stat, type StatLine } from "./stats";
 import { describe, direction, headline, outlook, parsePick, trades, tradeWindow } from "./trades";
 import type { BoxScore, GameState, Position, ScheduledGame, Story, TradeRecord } from "./types";
 import { money } from "./inbox";
+import { liveIds } from "./live";
 
 const KEY = RULES.keyDates;
 
@@ -255,7 +256,8 @@ function gameCoverage(state: GameState): void {
 
 function injuryCoverage(state: GameState): void {
   const hurt: { id: string; team: string; view: number }[] = [];
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     const inj = ps.injury;
     if (!inj || inj.date !== state.date || !ps.team || !PLAYER_BY_ID[id]) continue;
     const days = daysBetween(state.date, inj.returnDate);

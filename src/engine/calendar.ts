@@ -28,9 +28,13 @@ export function kickoffDate(season: number): string {
 }
 
 /** The new league year opens on the second Wednesday of March. */
+// Read on nearly every cap and contract check, so each year's date is worked out once.
+const LEAGUE_YEAR_DATES = new Map<number, string>();
 export function newLeagueYearDate(year: number): string {
   if (year === BASE_SEASON + 1) return BASE_KEY_DATES.newLeagueYear;
-  return addDays(onOrAfter(`${year}-03-01`, 3), 7);
+  let d = LEAGUE_YEAR_DATES.get(year);
+  if (!d) LEAGUE_YEAR_DATES.set(year, (d = addDays(onOrAfter(`${year}-03-01`, 3), 7)));
+  return d;
 }
 
 /** The draft starts on the last Thursday of April. */

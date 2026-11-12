@@ -7,6 +7,7 @@ import { diagnose } from "./medical";
 import { staffEffects } from "./staff";
 import { concussionFactor, riskFactor } from "./training";
 import type { GameState, Injury } from "./types";
+import { liveIds } from "./live";
 
 interface InjuryType {
   type: string;
@@ -140,7 +141,8 @@ export function injuryStatus(state: GameState, id: string, gameDate: string): "O
  * few weeks. The longer he was out, the more likely and the longer it lasts.
  */
 export function healInjuries(state: GameState): void {
-  for (const [id, p] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const p = state.players[id];
     if (p.rust && p.rust.until <= state.date) delete p.rust;
     if (!p.injury || p.injury.returnDate > state.date) continue;
     const out = Math.round((Date.parse(p.injury.returnDate) - Date.parse(p.injury.date)) / 86_400_000);

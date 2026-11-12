@@ -1914,6 +1914,9 @@ export interface GameState {
   wealth?: WealthState;
   tenure?: TenureState;
   succession?: SuccessionState;
+  rivals?: RivalsState;
+  causes?: CauseEntry[];
+  archive?: Record<string, YearRecord>;
   franchise?: FranchiseMarketState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;
@@ -2560,6 +2563,66 @@ export interface FranchiseMarketState {
   sales: { team: string; date: string; price: number; pct: number; buyer: string; real?: boolean }[];
   /** Who controls each club now, where it has changed hands. */
   control: Record<string, string>;
+  log: { date: string; text: string }[];
+}
+
+// ---- Cause and effect, and versioned records (causes.ts, archive.ts) ----
+
+export interface CauseEntry {
+  id: string;
+  date: string;
+  system: string;
+  text: string;
+  effects: { date: string; text: string }[];
+  /** What to follow into later seasons. */
+  ref?: { kind: "player" | "trade" | "coach" | "club"; id: string };
+  followed?: number[];
+}
+
+/** One league year as it closed: our contracts, cap, statement and the rules in force. */
+export interface YearRecord {
+  year: number;
+  team: string;
+  owner: string;
+  taken: string;
+  season: number;
+  contracts: { player: string; apy: number; through: number; hit: number }[];
+  cap: { limit: number; used: number; dead: number };
+  statement?: { revenue: number; operating: number; net: number; cashEnd: number; debtEnd: number };
+  rules: string[];
+}
+
+// ---- The other clubs as organizations (rivals.ts) ----
+
+/** A CPU club: its owner's style, who runs football, its money and its reputation (made up from the seed). */
+export interface ClubProfile {
+  team: string;
+  style: "winNow" | "builder" | "profit" | "steady";
+  governance: "owner" | "president" | "gm" | "coach";
+  /** Seasons the owner gives a coach, 1-5, and how freely the owner spends (about 1). */
+  patience: number;
+  spend: number;
+  /** Management reputation and pull with candidates, 0-100 (shown in words). */
+  rep: number;
+  hiring: number;
+  /** Engine only: the club's cash, and whether it's short. */
+  cash: number;
+  tight: boolean;
+  saleLooked?: string;
+  meddles: { date: string; text: string }[];
+  /** What the club remembers: big decisions and dealings with us. */
+  memory: { date: string; text: string; weight: number }[];
+  /** Head coach and GM searches that dragged on (role and opening date). */
+  slow: string[];
+  since: string;
+  owner: string;
+  hc?: string;
+  gm?: string;
+}
+
+export interface RivalsState {
+  clubs: Record<string, ClubProfile>;
+  reviewed?: number;
   log: { date: string; text: string }[];
 }
 

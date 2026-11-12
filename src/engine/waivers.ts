@@ -7,7 +7,7 @@
 // over his remaining salary; bonus money stays with the team that cut him.
 // Players nobody claims become free agents.
 import { accruedSeasons, addDeadMoney, capHit, capSummary, invalidateRosters, teamPlayerIds } from "./cap";
-import { claimedDeal, dealOf, leagueYear } from "./contracts";
+import { claimedDeal, dealCapHit, dealOf, leagueYear } from "./contracts";
 import { addDays, shortDate, weekday } from "./dates";
 import { payCash } from "./finance";
 import { money, send } from "./inbox";
@@ -74,7 +74,7 @@ export function canClaim(state: GameState, team: string, id: string): { ok: bool
   const w = onWaivers(state, id);
   if (!w) return { ok: false, reason: "Not on waivers." };
   if (w.from === team) return { ok: false, reason: "We released him." };
-  const hit = capHit(id, leagueYear(state.date), { ...state, contracts: { ...state.contracts, [id]: claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp) } });
+  const hit = dealCapHit(claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date));
   if (state.settings.capRules === "real" && hit > capSummary(state, team).space) {
     return { ok: false, reason: `His contract counts ${money(hit)} against this year's cap; we don't have the room.` };
   }
@@ -107,7 +107,7 @@ function claimLimit(): number {
 function cpuWants(state: GameState, team: string, w: WaiverEntry): string | null | false {
   const id = w.player;
   const pos = PLAYER_BY_ID[id].position;
-  const hit = capHit(id, leagueYear(state.date), { ...state, contracts: { ...state.contracts, [id]: claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp) } });
+  const hit = dealCapHit(claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date));
   if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) return false;
   const view = claimView(state, team, id);
   const full = rosterCount(state, team).roster >= rosterLimit(state);
@@ -252,7 +252,7 @@ export function claimOdds(state: GameState, id: string): number {
   let miss = 1;
   for (const { id: team } of TEAMS) {
     if (team === from) continue;
-    const hit = deal ? capHit(id, leagueYear(state.date), { ...state, contracts: { ...state.contracts, [id]: claimedDeal(deal, team, state.date, PLAYER_BY_ID[id].yearsExp) } }) : 0;
+    const hit = deal ? dealCapHit(claimedDeal(deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date)) : 0;
     if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) continue;
     const mates = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status));
     const view = claimView(state, team, id);

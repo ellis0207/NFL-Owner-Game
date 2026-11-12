@@ -17,6 +17,7 @@ import { rngFor } from "./rng";
 import { coachView, perceivedAbility, staffEffects, teamStaff, upside } from "./staff";
 import type { GameState, Position, Transaction } from "./types";
 import { onWaivers, placeOnWaivers, subjectToWaivers } from "./waivers";
+import { liveIds } from "./live";
 
 export const POSITION_ORDER: Position[] = [
   "QB", "RB", "FB", "WR", "TE", "OT", "OG", "C", "EDGE", "IDL", "LB", "CB", "S", "K", "P", "LS",
@@ -346,7 +347,8 @@ function gmName(state: GameState): string {
 export function applyTerminationPay(state: GameState): void {
   const year = leagueYear(state.date);
   const tp = (state.termPay ??= {});
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (!ps.team || (ps.status !== "active" && ps.status !== "ir")) continue;
     if (accruedSeasons(id, state.date) >= 4 && dealOf(state, id)?.years.some((y) => y.year === year && !y.void)) tp[id] = year;
   }

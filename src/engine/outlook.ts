@@ -13,6 +13,8 @@ import { GAME_BY_ID, PLAYER_BY_ID, RULES, SCHEDULE } from "./league";
 import { depthChart } from "./roster";
 import { standings, winPct } from "./standings";
 import type { GameState, Position } from "./types";
+import { FORMAT } from "./format";
+import { perceivedAbility, staffEffects } from "./staff";
 
 /** The age by which a position usually starts to slip. */
 const PEAK_END: Partial<Record<Position, number>> = { QB: 35, RB: 28, WR: 30, TE: 30, OT: 32, OG: 32, C: 32, EDGE: 30, IDL: 31, LB: 30, CB: 29, S: 30, K: 38, P: 38 };
@@ -108,4 +110,36 @@ export function teamOutlook(state: GameState, team: string): OutlookRow[] {
     }
   }
   return out;
+}
+
+// ---- The coaches' case for a player ----
+
+const CASE_WEIGHT: Partial<Record<Position, number>> = { QB: 3, EDGE: 1.3, OT: 1.1, WR: 1, CB: 1, IDL: 1, S: 0.8, LB: 0.8, TE: 0.8, OG: 0.8, C: 0.8, RB: 0.6, K: 0.3, P: 0.2 };
+
+/**
+ * What the coaching staff says a player would add: wins a season, the
+ * change in playoff chances, and for linemen the sacks it should save. It is
+ * their estimate from their own read of him against the starter he'd replace.
+ */
+export function coachCase(state: GameState, team: string, id: string): { wins: number; before: number; after: number; sacks: number; text: string } {
+  const p = PLAYER_BY_ID[id];
+  const n = STARTERS.find(([pos]) => pos === p.position)?.[1] ?? 1;
+  const eye = staffEffects(team).coachEval;
+  const chart = depthChart(state, team);
+  const starters = (chart[p.position] ?? []).filter((x) => x !== id).slice(0, n);
+  const weakest = starters.length < n ? 50 : Math.min(...starters.map((x) => perceivedAbility(state, x, `coach:${team}`, eye)));
+  const delta = Math.max(0, perceivedAbility(state, id, `coach:${team}`, eye) - weakest);
+  const games = FORMAT.games;
+  const wins = Math.round(games * 0.03 * (CASE_WEIGHT[p.position] ?? 0.5) * delta / 10 * 10) / 10;
+  const rec = standings(state)[team];
+  const played = rec ? rec.w + rec.l + rec.t : 0;
+  const base = (played ? winPct(rec.w, rec.l, rec.t) : 0.5) * games;
+  const odds = (w: number) => 1 / (1 + Math.exp(-(w - games * 0.56) / 1.4));
+  const before = Math.round(odds(base) * 100);
+  const after = Math.round(odds(base + wins) * 100);
+  const sacks = ["OT", "OG", "C"].includes(p.position) ? Math.round(delta * 0.25) : 0;
+  const text = delta < 2
+    ? `The coaches don't see ${p.name} beating out our starters.`
+    : `The coaches figure ${p.name} adds about ${wins.toFixed(1)} win${wins === 1 ? "" : "s"} a season (playoff chances ${before}% to ${after}%)${sacks ? ` and about ${sacks} fewer sacks allowed` : ""}.`;
+  return { wins, before, after, sacks, text };
 }

@@ -20,6 +20,7 @@ import { depthChart } from "./roster";
 import { rngFor } from "./rng";
 import { trades } from "./trades";
 import type { GameState, Position, RedoAsk } from "./types";
+import { liveIds } from "./live";
 
 /** The ask goes in about ten days into the new league year, after free agency's first wave sets the market. */
 function askDate(): string {
@@ -140,7 +141,8 @@ export function redoCamp(state: GameState, id: string): "holdout" | "holdin" | u
 /** In season: the rare holdout that runs past Week 1 ends within a few weeks, as the game checks add up. */
 function endLongHoldouts(state: GameState): void {
   if (state.date <= RULES.keyDates.regularSeasonStart || state.date > RULES.keyDates.regularSeasonEnd) return;
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     if (ps.holdout?.kind !== "holdout") continue;
     const rng = rngFor(state.seed, `holdout-week:${id}:${state.date}`);
     if (rng() > 0.05) continue;
@@ -153,7 +155,8 @@ function endLongHoldouts(state: GameState): void {
 /** A promise not kept, or an ask left hanging, lands at the next year's ask date. */
 function settleOldAsks(state: GameState): void {
   const year = leagueYear(state.date);
-  for (const [id, ps] of Object.entries(state.players)) {
+  for (const id of liveIds(state)) {
+    const ps = state.players[id];
     const r = ps.redo;
     if (!r || r.year >= year) continue;
     if (!r.settled && r.answer === "promised" && ps.team) {

@@ -11,11 +11,13 @@ import { money } from "../format";
 import type { GameState, RuleProposal } from "../../engine/types";
 import { LaborPanel } from "./LaborPanel";
 import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
+import { ClubProfiles, Realignment } from "./OwnersClubs";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
 
 export function OwnersScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [said, setSaid] = useState<string | null>(null);
+  const [tab, setTab] = useState<"League" | "Clubs" | "Realignment">("League");
   const [pick, setPick] = useState("");
   const o = owners(game);
   const m = currentMeeting(game);
@@ -35,7 +37,13 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
         The owners change the playing rules and league policies at the annual league meeting ({shortDate(meetingDay)}); a change needs {VOTES_TO_PASS} of 32 votes.
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.
       </p>
+      <div className="tabs" role="group" aria-label="View">
+        {(["League", "Clubs", "Realignment"] as const).map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
+      </div>
       {said && <p className="notice">{said}</p>}
+      {tab === "Clubs" && <ClubProfiles game={game} />}
+      {tab === "Realignment" && <Realignment game={game} say={say} />}
+      {tab === "League" && <>
 
       <LeagueOffice game={game} say={say} />
 
@@ -104,6 +112,7 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
           </>
         )}
       </section>
+      </>}
     </section>
   );
 }

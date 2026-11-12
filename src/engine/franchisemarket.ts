@@ -17,6 +17,7 @@
 //
 // The sellers' reasons, rival groups and diligence findings are made up.
 // The comparable sales marked real are, approximately.
+import { atomic } from "./archive";
 import { billions, cashBalance, operatingEstimate, revenueEstimate, valuation } from "./business";
 import { addDays, daysBetween } from "./dates";
 import { LEAGUE_DEBT_LIMIT, totalDebt } from "./debt";
@@ -345,7 +346,7 @@ function leagueDecides(state: GameState, deal: ClubDeal): void {
     failDeal(state, deal, `The owners voted it down: ${yes} for, 24 needed.`);
     return;
   }
-  closeDeal(state, deal);
+  atomic(state, () => closeDeal(state, deal));
 }
 
 export function failDeal(state: GameState, deal: ClubDeal, why: string): void {
