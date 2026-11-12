@@ -47,7 +47,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   Owner: "Your goals, standing, and your own money: investments, debt, family trust, foundation and public profile",
   Ownership: "Partners, the board, stake sales, returns, succession, and buying or selling a club",
   "Front office": "Executives, memos, meetings and culture",
-  Business: "Books, tickets, sponsors, stadium and markets",
+  Business: "Books, tickets, sponsors, stadium, parking and markets",
   Reports: "Saved reports and briefings, cause and effect, year records",
   Agreements: "Agreements and the archive",
   Legal: "Compliance and legal matters",

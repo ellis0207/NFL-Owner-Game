@@ -54,6 +54,7 @@ import { namingIncome } from "./sponsors";
 import { bigGame, merchGame } from "./merch";
 import { venueGame } from "./venue";
 import { afterOurGame, contentMonthly, defaultContentNet } from "./teammedia";
+import { gateGrounds } from "./grounds";
 import { afterHomeGame, applyRenewals, gameTier, hospitalityRevenue, planRenewals, premiumUse, pslCash, recommendedIncrease, sellGeneral, tix, type Sale } from "./ticketing";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, GameTier, LedgerCat, Promo, ScheduledGame, StadiumEvent, Zone } from "./types";
 import { PACK, REAL_CAPS, yearsFromMoneyYear } from "./pack";
@@ -411,6 +412,8 @@ interface GateInputs {
   hospitality?: boolean;
   premiumBook?: number;
   premiumSat?: number;
+  /** Our own stadium and grounds (grounds.ts): seats on sale after closures and conversions, premium inventory, the parking lots. */
+  grounds?: ReturnType<typeof gateGrounds>;
 }
 
 interface GateResult {
@@ -437,14 +440,17 @@ interface GateResult {
 function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defaultHolders(team)): GateResult {
   const s = STADIUM_BY_TEAM[team];
   const mk = MARKETS[team];
-  const general = generalSeats(s);
+  const general = x.grounds?.general ?? generalSeats(s);
+  const premiumSeatCount = x.grounds?.premium ?? premiumSeats(s);
+  // Holders whose seats are closed for work are moved, and some can't be: never more holders than seats.
+  holders = Math.min(holders, Math.round(general * 0.97));
   const opp = g.home === team ? g.away! : g.home!;
   const pre = g.type === "PRE";
   const month = Number(g.date.slice(5, 7));
   const prime = g.weekday === "Monday" || g.weekday === "Thursday" || g.timeET >= "20:00";
   const cold = s.roof === "open" && COLD.has(team) && (month === 12 || month === 1);
   const index = mk.pull * x.mood * x.win * x.marketing * (DRAW[opp] ?? 1) * (x.rivalry ?? (g.divisionGame ? 1.03 : 1)) * (prime ? 1.05 : 1) *
-    (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise * (x.demand ?? 1) * (x.fan ?? 1);
+    (x.grounds?.access ?? 1) * (cold ? 0.95 : 1) * (pre ? 0.8 : 1) * CONCESSIONS[x.concessions].demand * x.noise * (x.demand ?? 1) * (x.fan ?? 1);
   const want = general * index * 1.05;
   const sale = sellGeneral({
     general, holders, want, base: mk.ticket * x.ticketIdx * 1.2 * (pre ? 0.6 : 1), price: x.price * (pre ? 1 : x.tierMult ?? 1), elastic: x.elastic ?? 1,
@@ -453,18 +459,19 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const tier = x.tier ?? "standard";
   const use = premiumUse(x.win, tier, pre, !!x.hospitality && !pre, x.premiumSat);
   const paid = holders + sale.singleSold + sale.groups;
-  const sold = paid + premiumSeats(s);
+  const sold = paid + premiumSeatCount;
   const noShows = Math.round(paid * sale.noShow);
-  const attendance = Math.round(paid - noShows + sale.comps + premiumSeats(s) * use);
+  const attendance = Math.round(paid - noShows + sale.comps + premiumSeatCount * use);
   const regHome = SCHEDULE.filter((x2) => x2.type === "REG" && x2.home === team && !x2.neutral).length;
   const preHome = SCHEDULE.filter((x2) => x2.type === "PRE" && x2.home === team && !x2.neutral).length;
   const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + sale.singleRevenue + sale.groupRevenue;
   // Suite and club money is spread over the home schedule; preseason games count half.
-  const perGame = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) * (x.premiumBook ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
+  const perGame = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) * (x.premiumBook ?? 1) * (x.grounds?.premiumScale ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
   const hospitality = x.hospitality && !pre ? hospitalityRevenue(perGame, premiumUse(x.win, tier, pre, false, x.premiumSat)) : 0;
   const premium = perGame + hospitality;
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
-  const parking = (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
+  // Our own lots are modelled one by one (grounds.ts): we're paid only for the cars they hold, at our share.
+  const parking = x.grounds ? x.grounds.parking(attendance, x.parking).revenue : (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
   const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1) * (x.starMult ?? 1);
   return {
     sold, attendance, holders, singleSeats: sale.singleSeats, singleSold: sale.singleSold, singlePrice: sale.singlePrice, heat: sale.heat,
@@ -499,7 +506,7 @@ function inputs(state: GameState, team: string, rng?: Rng, g?: ScheduledGame): G
     ...(ours && fans ? { premiumSat: (fans.sat.corporate + fans.sat.premium) / 2 } : {}),
     ...(ours ? projectEffects(state).gate : {}),
     ...hostGate(state, team),
-    ...(ours ? { starMult: merchLift(state) * reachLift(state) } : {}),
+    ...(ours ? { starMult: merchLift(state) * reachLift(state), grounds: gateGrounds(state, g?.date ?? state.date) } : {}),
   };
 }
 
@@ -511,11 +518,12 @@ function hostGate(state: GameState, team: string): Partial<GateInputs> {
 }
 
 /** What the business staff expects at a home game, for the Business page; `price` tries another single-game price. */
-export function gateForecast(state: GameState, g: ScheduledGame, price?: number): { sold: number; capacity: number; heat: number; singlePrice: number; tickets: number; tier: GameTier } {
+export function gateForecast(state: GameState, g: ScheduledGame, price?: number): { sold: number; capacity: number; heat: number; singlePrice: number; tickets: number; tier: GameTier; attendance: number; premium: number; parking: number } {
   const team = state.userTeam;
   const x = inputs(state, team, undefined, g);
   const r = gateModel(team, g, price ? { ...x, price } : x, business(state).holders);
-  return { sold: r.sold, capacity: STADIUM_BY_TEAM[team].capacity, heat: r.heat, singlePrice: r.singlePrice, tickets: r.tickets, tier: r.tier };
+  const capacity = x.grounds ? x.grounds.general + x.grounds.premium : STADIUM_BY_TEAM[team].capacity;
+  return { sold: r.sold, capacity, heat: r.heat, singlePrice: r.singlePrice, tickets: r.tickets, tier: r.tier, attendance: r.attendance, premium: r.premium, parking: r.parking };
 }
 
 export function billions(n: number): string {

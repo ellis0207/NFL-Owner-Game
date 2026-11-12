@@ -65,6 +65,7 @@ import { communityDaily } from "./community";
 import { departmentsDaily } from "./departments";
 import { sponsorsDaily } from "./sponsors";
 import { projectsDaily } from "./projects";
+import { groundsDaily } from "./grounds";
 import { reviewDaily } from "./review";
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
@@ -618,6 +619,7 @@ export function advanceDay(state: GameState): void {
   communityDaily(state);
   departmentsDaily(state);
   projectsDaily(state);
+  groundsDaily(state);
   constructionDaily(state);
   politicsDaily(state);
   relocationDaily(state);
