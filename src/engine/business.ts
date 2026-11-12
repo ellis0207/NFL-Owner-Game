@@ -56,19 +56,21 @@ import { venueGame } from "./venue";
 import { afterOurGame, contentMonthly, defaultContentNet } from "./teammedia";
 import { afterHomeGame, applyRenewals, gameTier, hospitalityRevenue, planRenewals, premiumUse, pslCash, recommendedIncrease, sellGeneral, tix, type Sale } from "./ticketing";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, GameTier, LedgerCat, Promo, ScheduledGame, StadiumEvent, Zone } from "./types";
+import { PACK, REAL_CAPS, yearsFromMoneyYear } from "./pack";
 
 const KEY = RULES.keyDates;
 const M = 1_000_000;
 
 /** Each team's share of national revenue (TV, NFL Ventures, licensing) by league year: it moves with the cap, which is built on it. */
 export function nationalRevenue(year: number): number {
-  if (year <= BASE_SEASON) return 472 * M;
-  return Math.round(472 * M * salaryCap(undefined, year) / salaryCap(undefined, BASE_SEASON));
+  if (!PACK && year <= BASE_SEASON) return 472 * M;
+  // Measured against 2026, the year the figure is set in: a historical start scales it back with the cap.
+  return Math.round(472 * M * salaryCap(undefined, year) / (PACK ? REAL_CAPS[2026] : salaryCap(undefined, BASE_SEASON)));
 }
 
 /** Prices and costs that rise with the years, about 4% a year from the first season. */
 export function inflation(year: number, rate = 0.04): number {
-  return Math.pow(1 + rate, Math.max(0, year - BASE_SEASON));
+  return Math.pow(1 + rate, yearsFromMoneyYear(year, BASE_SEASON));
 }
 
 /** A department's budget at a level this league year: costs rise about 4% a year, like everything else the team buys. */

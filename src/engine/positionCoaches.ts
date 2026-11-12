@@ -16,8 +16,11 @@ import { RULES, TEAMS } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { teamSchemes } from "./staff";
 import type { Coach, CoachRoom, GameState, Position, RoomProposal } from "./types";
+import { yearsFromMoneyYear } from "./pack";
+import { PACK } from "./pack";
 
-const DATA = positionJson as { teams: Record<string, Record<string, string[]>>; playedFor: Record<string, string[]> };
+// A historical start has no real position staffs: every room gets made-up coaches.
+const DATA = (PACK ? { teams: {}, playedFor: {} } : positionJson) as { teams: Record<string, Record<string, string[]>>; playedFor: Record<string, string[]> };
 
 export const ROOMS: CoachRoom[] = ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "DB", "ST"];
 
@@ -45,7 +48,7 @@ function titleFor(room: CoachRoom, lead: boolean): string {
 export function roomSalary(c: Coach, lead: boolean, season = RULES.season): number {
   const rep = Math.max(0, Math.min(1, ((c.hidden.development ?? 60) - 50) / 40));
   const base = lead ? 500_000 + 1_100_000 * rep ** 1.4 : 250_000 + 200_000 * rep;
-  return Math.round((base * 1.04 ** Math.max(0, season - 2026)) / 25_000) * 25_000;
+  return Math.round((base * 1.04 ** yearsFromMoneyYear(season)) / 25_000) * 25_000;
 }
 
 /** What the books assume a full set of position coaches costs, as a 2026 figure. */

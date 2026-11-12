@@ -57,7 +57,7 @@ def _career(stats_by_season: dict) -> pd.DataFrame:
     """2023-25 regular-season totals per player (later seasons weigh more)."""
     frames = []
     for season, df in stats_by_season.items():
-        w = {2025: 1.0, 2024: 0.7, 2023: 0.4}.get(season, 0.3)
+        w = {SEASON - 1: 1.0, SEASON - 2: 0.7, SEASON - 3: 0.4}.get(season, 0.3)
         num = df.copy().select_dtypes("number").drop(columns=["season"], errors="ignore").fillna(0) * w
         frames.append(num.assign(player_id=df["player_id"].values))
     return pd.concat(frames).groupby("player_id").sum()

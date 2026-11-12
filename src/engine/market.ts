@@ -10,6 +10,7 @@ import { BASE_SEASON, HIDDEN_RATINGS, PLAYER_BY_ID, PLAYERS, RULES } from "./lea
 import { ability, perceivedAbility, schemeFit, staffEffects } from "./staff";
 import { seasonTotals } from "./stats";
 import type { Deal, GameState, Position } from "./types";
+import { PACK, REAL_CAPS } from "./pack";
 
 // ---- Tags, tenders and options ----
 
@@ -46,6 +47,8 @@ const RFA_TENDERS: Record<number, { first: number; second: number; original: num
 
 /** Later years' amounts follow the cap from the 2027 projection. */
 export function capScale(state: GameState | undefined, year: number): number {
+  // A historical start: the 2026-27 tables scaled to the era's cap.
+  if (PACK && year < 2027) return salaryCap(state, year) / (year === 2026 ? REAL_CAPS[2026] : PROJECTED_CAP_2027);
   if (year <= BASE_SEASON) return 1;
   return salaryCap(state, year) / PROJECTED_CAP_2027;
 }
@@ -318,8 +321,7 @@ function baselineShares(state: GameState): Record<string, number[]> {
 
 /** Real caps for the years before the game starts. */
 function capAt(year: number): number {
-  const caps: Record<number, number> = { 2021: 182_500_000, 2022: 208_200_000, 2023: 224_800_000, 2024: 255_400_000, 2025: 279_200_000 };
-  return caps[year] ?? RULES.salaryCap;
+  return year < BASE_SEASON && (PACK || year >= 2021) ? REAL_CAPS[year] ?? RULES.salaryCap : RULES.salaryCap;
 }
 
 /** The cap share a player with a given consensus view commands at a position. */

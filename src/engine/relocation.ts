@@ -29,6 +29,8 @@ import { gaussian, rngFor } from "./rng";
 import { MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadiums";
 import { reserved } from "./investors";
 import type { GameState } from "./types";
+import { oldHome, ruleSeason, TEMP_HOMES, washingtonName } from "./eras";
+import { PACK } from "./pack";
 
 const M = 1_000_000;
 
@@ -139,7 +141,8 @@ function note(state: GameState, text: string): void {
 
 /** Every market a club could move to now: open cities, and second-team cities big enough. */
 export function markets(state: GameState): MarketData[] {
-  const taken = new Set(relocation(state).moves.map((m) => m.market));
+  const season = state.season ?? RULES.season;
+  const taken = new Set([...relocation(state).moves.map((m) => m.market), ...TEAMS.map((t) => oldHome(state, t.id, season)?.market).filter((x): x is string => !!x)]);
   const out = OPEN_MARKETS.filter((m) => !taken.has(m.id));
   const year = Number(state.date.slice(0, 4));
   const count: Record<string, number> = {};
@@ -471,6 +474,10 @@ interface Originals {
   team: Record<string, { city: string; conference: "AFC" | "NFC"; division: "East" | "North" | "South" | "West" }>;
 }
 let ORIG: Originals | undefined;
+/** The 2026 cities of the clubs a historical pack places elsewhere. */
+const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas" };
+/** The stadium names in a historical pack's first season. */
+const PACK_STADIUM: Record<string, string> = Object.fromEntries(((PACK?.teams ?? []) as { id: string; stadium: string }[]).map((t) => [t.id, t.stadium]));
 function original(): Originals {
   return (ORIG ??= {
     stadium: Object.fromEntries(Object.values(STADIUM_BY_TEAM).map((s) => [s.team, { ...s, fixed: [...s.fixed], blackout: [...(s.blackout ?? [])] }])),
@@ -478,7 +485,8 @@ function original(): Originals {
     market: Object.fromEntries(Object.entries(MARKETS).map(([k, v]) => [k, { ...v }])),
     climate: Object.fromEntries(Object.entries(CLIMATE).map(([k, v]) => [k, { ...v }])),
     place: Object.fromEntries(Object.entries(PLACE).map(([k, v]) => [k, [...v] as [number, number]])),
-    team: Object.fromEntries(TEAMS.map((t) => [t.id, { city: t.city, conference: t.conference, division: t.division }])),
+    // A historical pack names the clubs' cities as they were; the base is still where they play in 2026.
+    team: Object.fromEntries(TEAMS.map((t) => [t.id, { city: (PACK && CITY_2026[t.id]) || t.city, conference: t.conference, division: t.division }])),
   });
 }
 
@@ -497,6 +505,7 @@ export function bindRelocation(state: GameState, season = state.season ?? RULES.
     if (o.climate[t.id]) CLIMATE[t.id] = { ...o.climate[t.id] };
     if (o.place[t.id]) PLACE[t.id] = [...o.place[t.id]] as [number, number];
   }
+  if (state.era) eraHomes(state, season);
   for (const mv of state.relocation?.moves ?? []) {
     const m = OPEN_MARKETS.find((x) => x.id === mv.market) ?? secondMarket(mv.market);
     if (!m) continue;
@@ -521,6 +530,44 @@ export function bindRelocation(state: GameState, season = state.season ?? RULES.
     [a.conference, b.conference] = [b.conference, a.conference];
     [a.division, b.division] = [b.division, a.division];
   }
+}
+
+/**
+ * A historical start: clubs in the city they played in that season (the Rams
+ * in St. Louis, the Chargers in San Diego, the Raiders in Oakland), stadiums
+ * by the names they had until the 2026 building opened, the stopgap homes
+ * after a real move, and Washington's name. Under alternate history the start
+ * season's picture holds.
+ */
+function eraHomes(state: GameState, season: number): void {
+  const s = ruleSeason(state, season);
+  for (const t of TEAMS) {
+    if (moveOf(state, t.id)) continue;
+    const st = STADIUM_BY_TEAM[t.id];
+    const h = oldHome(state, t.id, season);
+    if (h) {
+      const m = OPEN_MARKETS.find((x) => x.id === h.market)!;
+      const e = marketEconomics(m);
+      TEAM_BY_ID[t.id].city = h.city;
+      METRO[t.id] = { ...e.metro };
+      MARKETS[t.id] = { ...e.market };
+      CLIMATE[t.id] = { ...m.climate };
+      PLACE[t.id] = [...m.place] as [number, number];
+      Object.assign(st, { name: h.stadium, roof: h.roof === "outdoors" ? "open" : h.roof, note: `The club's home in ${h.city}.` });
+      Object.assign(TEAM_BY_ID[t.id], { stadium: h.stadium, roof: h.roof });
+      continue;
+    }
+    const temp = state.era!.alt ? undefined : TEMP_HOMES.find((x) => x.team === t.id && s >= x.from && s < x.until);
+    const name = temp?.stadium ?? (s < st.opened && PACK_STADIUM[t.id] ? PACK_STADIUM[t.id] : undefined);
+    if (name) {
+      st.name = name;
+      TEAM_BY_ID[t.id].stadium = name;
+    } else {
+      // In its 2026 building now.
+      Object.assign(TEAM_BY_ID[t.id], { stadium: st.name, roof: st.roof === "open" ? "outdoors" : st.roof === "retractable" ? "closed" : "dome" });
+    }
+  }
+  if (TEAM_BY_ID.WAS) TEAM_BY_ID.WAS.name = washingtonName(s);
 }
 
 /** The stadium binding also restores the moved teams' 2026 buildings before laying the moves on. */

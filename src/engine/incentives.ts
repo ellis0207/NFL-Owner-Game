@@ -14,13 +14,14 @@
 import { dealOf, leagueYear, salaryCap } from "./contracts";
 import { addDays } from "./dates";
 import { money, send } from "./inbox";
-import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "./league";
+import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAM_BY_ID } from "./league";
 import { MEDIA_BY_ID, addStory } from "./outlets";
 import { payCash } from "./finance";
 import { rngFor, type Rng } from "./rng";
 import { teamSnapTotals } from "./seasons";
 import { seasonTotals } from "./stats";
 import type { Deal, DealYear, GameState, Incentive, IncentiveKind, Position } from "./types";
+import { PACK } from "./pack";
 
 // The 14 playoff teams of the 2025 season (the last 14 picks of the real 2026 draft order).
 const PLAYOFFS_2025 = new Set(["CAR", "GB", "PIT", "LAC", "PHI", "JAX", "CHI", "SF", "HOU", "BUF", "LA", "DEN", "NE", "SEA"]);
@@ -114,7 +115,7 @@ function value(kind: IncentiveKind, s: Season): number {
 
 export function madePlayoffs(state: GameState, team: string, season: number): boolean {
   if (season === RULES.season) return Object.values(state.seeds ?? {}).some((teams) => teams.includes(team));
-  if (season === 2025) return PLAYOFFS_2025.has(team);
+  if (season === BASE_SEASON - 1) return (PACK?.rules.lastPlayoffs ?? [...PLAYOFFS_2025]).includes(team);
   return state.history?.seasons.find((s) => s.season === season)?.playoffs[team] !== undefined;
 }
 

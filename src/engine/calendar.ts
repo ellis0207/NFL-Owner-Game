@@ -433,6 +433,8 @@ export interface ScheduleOptions {
   draw?: Record<string, number>;
   /** International games added by vote on top of the usual series. */
   intlExtra?: number;
+  /** Clubs in the playoff field (12 before 2020). */
+  playoffTeams?: number;
 }
 
 /** Most prime-time appearances a team gets in a season, as the league's broadcast rules allow. */
@@ -605,7 +607,7 @@ export function buildSchedule(season: number, seed: number, place: Record<string
     });
   }
   out.sort((a, b) => a.date.localeCompare(b.date) || a.timeET.localeCompare(b.timeET));
-  return [...preseason(season, rng), ...out, ...playoffSlots(season)];
+  return [...preseason(season, rng), ...out, ...playoffSlots(season, opts.playoffTeams)];
 }
 
 /** Three preseason weeks (four games for the Hall of Fame Game teams), mostly against nearby teams. */
@@ -653,7 +655,7 @@ function preseason(season: number, rng: Rng): ScheduledGame[] {
 }
 
 /** The 13 playoff games, teams filled in as the bracket is decided. */
-function playoffSlots(season: number): ScheduledGame[] {
+function playoffSlots(season: number, field = 14): ScheduledGame[] {
   const kd = keyDatesFor(season);
   const wc = kd.wildCardWeekend;
   const div = kd.divisionalRound;
@@ -663,6 +665,13 @@ function playoffSlots(season: number): ScheduledGame[] {
   });
   const sb = superBowlSite(season);
   const nfcFirst = season % 2 === 0;
+  // The 12-team field (before 2020): four Wild Card games.
+  if (field === 12) return [
+    slot(1, "WC", wc, "16:30"), slot(2, "WC", wc, "20:15"), slot(3, "WC", addDays(wc, 1), "13:00"), slot(4, "WC", addDays(wc, 1), "16:30"),
+    slot(5, "DIV", div, "16:30"), slot(6, "DIV", div, "20:15"), slot(7, "DIV", addDays(div, 1), "13:00"), slot(8, "DIV", addDays(div, 1), "16:30"),
+    slot(9, "CONF", conf, "15:00", { conference: nfcFirst ? "NFC" : "AFC" }), slot(10, "CONF", conf, "18:30", { conference: nfcFirst ? "AFC" : "NFC" }),
+    slot(11, "SB", kd.superBowl, "18:30", { neutral: true, stadium: sb.stadium, city: sb.city, label: superBowlName(season) }),
+  ];
   return [
     slot(1, "WC", wc, "16:30"), slot(2, "WC", wc, "20:00"), slot(3, "WC", addDays(wc, 1), "13:00"),
     slot(4, "WC", addDays(wc, 1), "16:30"), slot(5, "WC", addDays(wc, 1), "20:15"), slot(6, "WC", addDays(wc, 2), "20:15"),

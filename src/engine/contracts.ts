@@ -9,6 +9,7 @@ import { addDays, daysBetween } from "./dates";
 import { keyDatesFor, newLeagueYearDate } from "./calendar";
 import { BASE_SEASON, KNOWN_CAPS, PLAYER_BY_ID, RULES } from "./league";
 import type { Deal, DealKind, DealYear, GameState, PlayerData } from "./types";
+import { PACK } from "./pack";
 
 /** Signing and option bonuses spread over at most five league years. */
 export const MAX_PRORATION_YEARS = 5;
@@ -76,6 +77,17 @@ export function projectedCap(year: number): number {
  * the current deal's schedule runs out (its terms carry forward).
  */
 export function minimumSalary(yearsExp: number, year = RULES.season): number {
+  // A historical start carries the real tables for every year to 2027; after that the 2020 deal's steps apply as usual.
+  const real = PACK?.rules.minimumByYear;
+  if (real) {
+    const t = real[String(Math.min(year, 2027))];
+    const steps = Object.keys(t).map(Number).sort((a, b) => a - b);
+    const base = t[String(steps.filter((s) => s <= yearsExp).pop() ?? 0)];
+    if (year <= 2027) return base;
+    const capped = Math.min(year, 2030);
+    const more = base + (capped - 2027) * 45_000;
+    return year <= 2030 ? more : Math.round(more * Math.pow(1.05, year - 2030) * termsFor(year).minScale / 5_000) * 5_000;
+  }
   const table = year <= BASE_SEASON ? RULES.minimumSalary : RULES.minimumSalaryNextYear;
   const steps = Object.keys(table).map(Number).sort((a, b) => a - b);
   const step = steps.filter((s) => s <= yearsExp).pop() ?? 0;

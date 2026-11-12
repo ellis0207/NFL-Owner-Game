@@ -739,6 +739,13 @@ export interface InboxItem {
   priority?: number;
 }
 
+/** A rename-and-repaint league pack: new city, name and colors for some or all clubs. */
+export interface CustomLeague {
+  name: string;
+  version: 1;
+  teams: Record<string, { city?: string; name?: string; colors?: [string, string] }>;
+}
+
 export interface Settings {
   /** "real": the cap is enforced like the NFL does. "off": no cap at all. */
   capRules: "real" | "off";
@@ -756,6 +763,8 @@ export interface Settings {
   info?: "full" | "real" | "limited";
   /** How volatile the economy is: calm, normal or volatile (engine/economy.ts). */
   economy?: "calm" | "normal" | "volatile";
+  /** A historical start: false follows the real timeline after the start; true leaves it to the save (engine/eras.ts). */
+  altHistory?: boolean;
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";
@@ -1917,6 +1926,10 @@ export interface GameState {
   rivals?: RivalsState;
   causes?: CauseEntry[];
   archive?: Record<string, YearRecord>;
+  /** A historical start (engine/eras.ts): the season it began and whether history is left to the save. */
+  era?: { start: number; alt: boolean; altFrom?: number };
+  /** A custom league pack's names and colors, laid over the clubs (engine/custompack.ts). */
+  customLeague?: CustomLeague;
   franchise?: FranchiseMarketState;
   /** The business executives, their searches and the reporting chart (executives.ts). */
   execs?: ExecState;

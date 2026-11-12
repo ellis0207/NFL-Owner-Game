@@ -785,7 +785,19 @@ its revenue. Saves from every earlier version still load, including ones
 that stopped on the day after the old final draft. Check a long career with
 `npx vite-node tests/longrun-report.ts [seasons] [seed]`.
 
-Later: CBA talks, relocation and new stadiums, and difficulty settings.
+Start in any season from 2011 to 2025 as well as 2026. Each season's data
+(that year's rosters and contracts, schedule, stadiums, salary cap and minimum
+salaries) is a separate file the page loads only when that season is chosen.
+Earlier seasons play by their own rules: 16 games before 2021, a 12-team
+playoff field before 2020, the old kickoff and extra-point rules and the 2011
+labor deal until the 2020 one. With real history the league then follows the
+real timeline (the caps each year, the 2020 deal, the Rams', Chargers' and
+Raiders' moves, Washington's names, the clubs' sales). Alternate history,
+at the start or later in Settings, freezes all of that so only the save's own
+votes, moves and sales change it. History > Rules lists the real rule changes.
+A custom league pack renames and repaints the clubs (city, name, colors); the
+game checks the file and offers a template.
+
 
 ## Playing locally
 
@@ -827,6 +839,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
   The play-by-play recorder and drive chart are `playlog.ts`, officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, and offseason grades, fan expectations and storylines `review.ts`.
+  Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
 - `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
@@ -861,6 +874,14 @@ python pipeline/build_league.py            # uses cached downloads
 python pipeline/build_league.py --refresh  # re-downloads everything
 ```
 
+### Historical packs
+
+`data/packs/<year>.json.gz` (2011-2025, 350-690 KB each) are built by
+`python pipeline/history_pack.py 2011 2025`, which reruns the league pipeline
+with `NFL_SEASON` set: rosters and contracts as signed by that season, stats
+from the three seasons before it, the real schedule and playoff field, the
+cap and minimum salaries, real head coaches with generated assistants.
+
 ### How the camp rosters are rebuilt
 
 nflverse has no preseason roster snapshot. Its Regular Season Week 1 snapshot
@@ -880,6 +901,11 @@ rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
 
+- Historical packs: through 2016 the weekly roster files list only each
+  team's 53 and reserve lists at the first game, so those camps open with
+  about 50 to 60 players instead of 90. Coordinators, general managers,
+  position coaches and the preseason schedule are generated for those seasons,
+  and dead money starts from the contracts alone.
 - Dead money and adjusted caps are a team-level OverTheCap snapshot
   (`pipeline/team_cap_2026.py`), taken in October 2026.
 - About a third of contracts have no year-by-year line in the data; their cap

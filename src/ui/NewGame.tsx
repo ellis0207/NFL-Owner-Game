@@ -1,13 +1,35 @@
 import { useMemo, useState } from "react";
 import { capSummary } from "../engine/cap";
 import { longDate, shortDate } from "../engine/dates";
-import { TEAMS } from "../engine/league";
+import { bindCustomLeague, checkPack, packTemplate, setCustomLeague } from "../engine/custompack";
+import { BASE_SEASON, TEAMS } from "../engine/league";
+import { PACK_ERROR } from "../engine/pack";
 import { newGame, openingGame, veteranReportDate } from "../engine/season";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../engine/stadiums";
 import type { GameState, Settings } from "../engine/types";
 import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYLES, WEALTH, DEFAULT_CUSTOM, type CustomStart, type OwnerSetup, type Scenario } from "../engine/ownership";
+import { switchEra } from "./App";
 import { money, onColor } from "./format";
+
+/** The seasons a game can start in: the 2026 default and every season from 2011. */
+const ERAS = [2026, ...Array.from({ length: 15 }, (_, i) => 2025 - i)];
+
+/** Saves a text file through the browser. */
+export function download(name: string, text: string): void {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function withLeague(state: GameState, pack: ReturnType<typeof checkPack>["pack"]): GameState {
+  if (!pack) return state;
+  setCustomLeague(state, pack);
+  bindCustomLeague(state);
+  return state;
+}
 
 export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; onBack: () => void }) {
   const [team, setTeam] = useState("DET");
@@ -17,6 +39,8 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const [profile, setProfile] = useState<OwnerSetup>(DEFAULT_SETUP);
   const [scouting, setScouting] = useState<NonNullable<Settings["scouting"]>>("real");
   const [ironman, setIronman] = useState(false);
+  const [altHistory, setAltHistory] = useState(false);
+  const [league, setLeague] = useState<{ name: string; pack?: ReturnType<typeof checkPack>["pack"]; note: string } | null>(null);
   const custom = profile.custom ?? DEFAULT_CUSTOM;
   const setCustom = (c: Partial<CustomStart>) => setProfile({ ...profile, custom: { ...custom, ...c } });
   const set = (p: Partial<OwnerSetup>) => setProfile({ ...profile, ...p });
@@ -35,6 +59,34 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
       <div className="title-card">
         <div className="btn-row"><button className="btn small" onClick={onBack}>Back</button></div>
         <h1>Pick your franchise</h1>
+        <div className="panel stack tight">
+          <h2>When you start</h2>
+          <label className="field"><span className="label">Starting season</span>
+            <select value={BASE_SEASON} onChange={(e) => switchEra(Number(e.target.value), undefined, true)}>
+              {ERAS.map((y) => <option key={y} value={y}>{y === 2026 ? "2026 (today)" : `${y} season`}</option>)}
+            </select>
+          </label>
+          {PACK_ERROR && <span className="bad">{PACK_ERROR}</span>}
+          <span className="muted">{BASE_SEASON === 2026
+            ? "The league as it stands in summer 2026. Pick an earlier season to start from that year's real rosters, contracts, schedule, stadiums, head coaches and salary cap."
+            : `The league as camps opened in ${BASE_SEASON}: real rosters, contracts signed by then, the schedule, stadiums and city names, head coaches, the cap and that season's rules${BASE_SEASON < 2021 ? " (16 games" + (BASE_SEASON < 2020 ? ", a 12-team playoff field" : "") + ")" : ""}. Coordinators, general managers and the preseason schedule are made up, and money is scaled to the era.`}</span>
+          {BASE_SEASON !== 2026 && (
+            <label className="toggle">
+              <input id="alt-history" type="checkbox" checked={altHistory} onChange={(e) => setAltHistory(e.target.checked)} />
+              <span><strong>Alternate history</strong><br /><span className="muted">Off: the real timeline plays out after {BASE_SEASON} (rule changes, the 2020 labor deal, the caps, the Rams', Chargers' and Raiders' moves, club sales). On: none of it happens on its own; only your league's votes, moves and sales change things.</span></span>
+            </label>
+          )}
+          <label className="field"><span className="label">Custom league pack (optional)</span>
+            <input type="file" accept=".json,application/json" onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return setLeague(null);
+              const c = checkPack(await f.text());
+              setLeague({ name: f.name, pack: c.pack, note: c.ok ? `"${c.pack!.name}" renames ${Object.keys(c.pack!.teams).length} clubs.${c.warnings.length ? " " + c.warnings.join(" ") : ""}` : c.errors.join(" ") });
+            }} />
+          </label>
+          {league && <span className={league.pack ? "muted" : "bad"}>{league.note}</span>}
+          <span className="muted">Rename and repaint the clubs: city, name and colors. <button className="btn small" onClick={() => download("league-pack.json", packTemplate())}>Download a template</button></span>
+        </div>
         <div className="divisions">
           {(["AFC", "NFC"] as const).flatMap((conf) =>
             (["East", "North", "South", "West"] as const).map((div) => (
@@ -172,7 +224,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="ironman" type="checkbox" checked={ironman} onChange={(e) => setIronman(e.target.checked)} />
               <span><strong>Ironman</strong><br /><span className="muted">One continuing save: no loading an earlier save to undo a decision.</span></span>
             </label>
-            <button className="btn primary" onClick={() => onStart(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, ...(ironman ? { ironman } : {}) }, undefined, profile))}>
+            <button className="btn primary" onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
               Take over the {selected.name}
             </button>
           </div>

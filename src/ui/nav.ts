@@ -54,8 +54,8 @@ export const PAGE_HINT: Record<Screen, string> = {
   Standings: "Division standings and playoff seeds",
   League: "Scores around the league",
   Owners: "Fellow owners, votes, labor, club profiles and realignment",
-  History: "Seasons, records, the Hall of Fame and the club's owners",
-  Settings: "Play and display settings",
+  History: "Seasons, records, the Hall of Fame, the club's owners and the rule archive",
+  Settings: "Play and display settings, alternate history and league packs",
   Guide: "How the rules and the money work",
   Save: "Save, load and quit",
 };

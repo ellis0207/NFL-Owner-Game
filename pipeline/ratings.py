@@ -22,7 +22,7 @@ import numpy as np
 
 from constants import SEASON
 
-SEASON_WEIGHTS = {2025: 0.6, 2024: 0.3, 2023: 0.1}
+SEASON_WEIGHTS = {SEASON - 1: 0.6, SEASON - 2: 0.3, SEASON - 3: 0.1}
 SIDE = {
     "QB": "off", "RB": "off", "FB": "off", "WR": "off", "TE": "off", "OT": "off", "OG": "off", "C": "off",
     "EDGE": "def", "IDL": "def", "LB": "def", "CB": "def", "S": "def",

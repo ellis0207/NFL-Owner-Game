@@ -15,6 +15,7 @@ import { standings } from "./standings";
 import type {
   Coach, CoachSeason, DefenseScheme, GameState, OffenseScheme, StaffHidden, StaffPerson, StaffRole, StaffState, StaffTrack,
 } from "./types";
+import { yearsFromMoneyYear } from "./pack";
 
 const M = 1_000_000;
 export const ROLES: StaffRole[] = ["HC", "OC", "DC", "STC", "GM", "TRN", "PRO", "COL"];
@@ -93,7 +94,7 @@ export function salaryFor(role: StaffRole, rep: number, season = RULES.season): 
   };
   const [lo, hi] = range[role];
   const t = Math.max(0, Math.min(1, (rep - 45) / 50)) ** 1.6;
-  const grow = 1.04 ** Math.max(0, season - 2026);
+  const grow = 1.04 ** yearsFromMoneyYear(season);
   return Math.round(((lo + (hi - lo) * t) * grow) / 50_000) * 50_000;
 }
 

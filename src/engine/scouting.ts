@@ -19,6 +19,7 @@ import { DEFENSE, DEFENSE_LABEL, OFFENSE, OFFENSE_LABEL } from "./schemes";
 import { fogOf, staffEffects, teamSchemes, teamStaff } from "./staff";
 import { leanBias, leanNote, paceFactor, scoutFor, specialistFactor } from "./scouts";
 import type { GameState, ScoutAssignment, ScoutDepth, ScoutFilter, ScoutingState } from "./types";
+import { yearsFromMoneyYear } from "./pack";
 
 export const SCOUTING_BUDGET = 2_400_000;
 export const MAX_ASSIGNMENTS = 6;
@@ -36,7 +37,7 @@ export const DEPTHS: Record<ScoutDepth, { label: string; detail: string; base: n
 
 /** A season's college scouting: the budget grows with costs, about 4% a year. */
 export function newScouting(season = RULES.season): ScoutingState {
-  const budget = Math.round(SCOUTING_BUDGET * Math.pow(1.04, Math.max(0, season - 2026)) / 10_000) * 10_000;
+  const budget = Math.round(SCOUTING_BUDGET * Math.pow(1.04, yearsFromMoneyYear(season)) / 10_000) * 10_000;
   return { budget, spent: 0, plan: [], know: {}, weeks: [], cpu: {} };
 }
 

@@ -17,7 +17,7 @@ export interface CbaTerms {
   /** Padded practices allowed in training camp. */
   practice: number;
   /** Regular-season games the players agreed to play. */
-  games: 17 | 18;
+  games: 16 | 17 | 18;
   /** Safety provisions added (field standards, independent doctors, recovery days). */
   safety: number;
   /** The share of the caps each club must pay in cash over a four-year period. */

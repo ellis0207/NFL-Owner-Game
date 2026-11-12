@@ -33,6 +33,8 @@ import { teamStaff } from "./staff";
 import { parsePick } from "./trades";
 import { noteDraft } from "./review";
 import { seasonTotals } from "./stats";
+import { eraNewSeason } from "./eraevents";
+import { bindCustomLeague } from "./custompack";
 import type { DraftArchive, GameState, History, SeasonRecord, SeasonStats, SnapSeason } from "./types";
 
 function emptyHistory(): History {
@@ -79,6 +81,7 @@ export function applySeason(state: GameState): void {
   bindLeases(state);
   bindConstruction(state);
   bindBrand(state);
+  bindCustomLeague(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
   patchPlayers(state);
 }
@@ -262,10 +265,11 @@ export function startNewSeason(state: GameState): void {
 
   // Divisions realigned by the owners (relocation.ts) count from the season they take effect.
   bindRelocation(state, next);
-  state.schedule = buildSchedule(next, state.seed, record.place, record.champion, { draw: scheduleDraw(state, record.place, record.champion), intlExtra: rulesFor(state, next).intlExtra });
+  state.schedule = buildSchedule(next, state.seed, record.place, record.champion, { draw: scheduleDraw(state, record.place, record.champion), intlExtra: rulesFor(state, next).intlExtra, playoffTeams: rulesFor(state, next).playoffTeams });
   state.waiverOrder = firstRound;
   state.season = next;
   applySeason(state);
+  eraNewSeason(state);
   newStaffSeason(state);
   bindStaff(state);
   invalidateRosters(state);

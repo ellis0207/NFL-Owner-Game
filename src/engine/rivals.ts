@@ -11,7 +11,7 @@ import { salaryCap, leagueYear } from "./contracts";
 import { addDays, daysBetween } from "./dates";
 import { CONTROL } from "./investors";
 import { money, news, send } from "./inbox";
-import { RULES, TEAMS, teamLabel } from "./league";
+import { BASE_SEASON, RULES, TEAMS, teamLabel } from "./league";
 import { changeRapport } from "./owners";
 import { rngFor } from "./rng";
 import { history } from "./seasons";
@@ -353,7 +353,7 @@ export function profile(state: GameState, team: string): { owner: string; style:
     money: c.tight ? "Tight: spending cut and the credit line in use" : c.cash > 400 * M ? "Flush" : "Comfortable",
     memory: c.memory.slice(0, 6).map((m) => `${m.date.slice(0, 4)}: ${m.text}`),
     meddles: c.meddles.slice(0, 4).map((m) => `${m.date}: ${m.text}`),
-    history: [`Before 2026: ${CONTROL[team] ?? "its owners"}`, ...sales.map((x) => `${x.date.slice(0, 4)}: sold to ${x.buyer} for ${money(x.price)}`)],
+    history: [`Before ${BASE_SEASON}: ${CONTROL[team] ?? "its owners"}`, ...sales.map((x) => `${x.date.slice(0, 4)}: sold to ${x.buyer} for ${money(x.price)}`)],
   };
 }
 
