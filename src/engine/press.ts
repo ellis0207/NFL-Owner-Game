@@ -4,6 +4,7 @@
 // players, the head coach, agents, fans and each outlet feel, can give an
 // agent leverage, can bring a league fine, and some answers are remembered and
 // come back later.
+import { nextId } from "./ids";
 import { afterAnswer, spokesperson } from "./teammedia";
 import { agentFor, agentHidden, changeMorale, changeTrust, morale, priorities } from "./agents";
 import { teamPlayerIds } from "./cap";
@@ -957,7 +958,7 @@ export function pressDaily(state: GameState): void {
   m.asked[a.key] = state.date;
   const outlet = MEDIA_BY_ID[a.outlet];
   const q: PressQuestion = {
-    id: `q-${state.date}-${m.questions.length}`, date: state.date, expires: addDays(state.date, ANSWER_DAYS),
+    id: nextId(state, "q"), date: state.date, expires: addDays(state.date, ANSWER_DAYS),
     outlet: a.outlet, by: outlet[a.by], topic: a.topic, context: a.context, question: a.question, options: a.options,
     player: a.player, team: a.team, prospect: a.prospect,
   };

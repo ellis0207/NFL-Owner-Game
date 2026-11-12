@@ -1,5 +1,6 @@
 // Turning a game into a compact string and back. Saves are gzip-compressed
 // JSON, base64-encoded so they fit in text stores.
+import { ensureUniqueIds } from "../engine/ids";
 import { bindLeases, ensureLeases } from "../engine/leases";
 import { bindBrand } from "../engine/merch";
 import { clearPathway, restorePathway } from "../engine/global";
@@ -114,6 +115,8 @@ export function migrate(state: GameState): GameState {
   ensureDebt(state);
   ensureOwner(state);
   ensureBooks(state);
+  // Older saves numbered decisions by list length, so capped lists can hold repeated ids.
+  ensureUniqueIds(state);
   // Saves from when the game ended with the draft sit on the day after it, where the next season now starts.
   if (state.date >= DRAFT_OVER && (state.season ?? BASE_SEASON) === RULES.season) startNewSeason(state);
   return state;

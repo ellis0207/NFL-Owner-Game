@@ -62,7 +62,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
         <div className="panel stack tight">
           <h2>When you start</h2>
           <label className="field"><span className="label">Starting season</span>
-            <select value={BASE_SEASON} onChange={(e) => switchEra(Number(e.target.value), undefined, true)}>
+            <select value={BASE_SEASON} onChange={(e) => void switchEra(Number(e.target.value), undefined, true)}>
               {ERAS.map((y) => <option key={y} value={y}>{y === 2026 ? "2026 (today)" : `${y} season`}</option>)}
             </select>
           </label>

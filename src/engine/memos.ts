@@ -6,6 +6,7 @@
 // It also carries out what the owner delegated: the GM answering trade calls,
 // the coaches filling staff jobs, the revenue staff setting prices and signing
 // sponsors, stadium operations taking bookings, and the CFO refinancing loans.
+import { nextId } from "./ids";
 import { cause } from "./causes";
 import { FORMAT } from "./format";
 import { resolveIncident } from "./departments";
@@ -472,7 +473,7 @@ export function assignTask(state: GameState, kind: string): string | null {
   if (t.who !== "GM" && !execRole(state, t.who) && !deputy(state, t.who)) return `Nobody is in the ${EXEC_ROLES[t.who].label.toLowerCase()} job.`;
   // An owner who second-guesses everything gets slower work back.
   const days = Math.round(t.days * (1 + 0.5 * micromanagement(state)));
-  o.tasks.unshift({ id: `task-${state.date}-${o.tasks.length}`, title: t.label, kind, who: t.who, set: state.date, due: addDays(state.date, days), status: "open" });
+  o.tasks.unshift({ id: nextId(state, "task"), title: t.label, kind, who: t.who, set: state.date, due: addDays(state.date, days), status: "open" });
   o.tasks = o.tasks.slice(0, 60);
   noteDecision(state, "tasks", `Asked for: ${t.label.toLowerCase()}`, undefined, "Owner", "owner");
   return null;

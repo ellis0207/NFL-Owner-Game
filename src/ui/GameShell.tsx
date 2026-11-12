@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capSummary } from "../engine/cap";
 import { addDays, longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
@@ -52,6 +52,8 @@ import { LegalScreen } from "./screens/LegalScreen";
 import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext } from "./ui";
 import { TipLayer } from "./TipLayer";
+import { FailurePanel, PageBoundary, SaveIndicator, type ActionFailure } from "./SaveGuard";
+import { holdAutosave } from "../save/local";
 import { tip } from "./tip";
 import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
@@ -161,13 +163,31 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   // A buyer or minority partner can look at every page but act only on their own.
   const locked = !inControl(game) && !FREE_PAGES.includes(screen);
 
+  const [failure, setFailure] = useState<ActionFailure | null>(null);
+  const running = useRef(false);
+
+  /**
+   * Run a simulation step. Whatever happens the controls come back: an error
+   * stops the step where it was, holds autosave so the last good save is kept,
+   * and shows what the owner can do next.
+   */
   function step(fn: (s: GameState) => void) {
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     // Let the button state paint before the simulation runs.
     window.setTimeout(() => {
-      fn(game);
-      changed();
-      setBusy(false);
+      try {
+        fn(game);
+      } catch (e) {
+        console.error(e);
+        holdAutosave("A simulation step failed; the last good save is kept until you choose what to do.");
+        setFailure({ message: e instanceof Error ? e.message : String(e), date: longDate(game.date) });
+      } finally {
+        running.current = false;
+        changed();
+        setBusy(false);
+      }
     }, 0);
   }
 
@@ -226,6 +246,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               </strong>
             </div>
           </div>
+          <SaveIndicator game={game} />
           <div className="btn-row">
             <button className="btn primary" disabled={busy || over} onClick={() => step(advanceDay)}
               title={left ? "Your staff handles whatever is left today, then the clock moves to tomorrow." : undefined}>
@@ -252,8 +273,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               ))}
             </div>
           )}
+          {failure && <FailurePanel failure={failure} game={game} onLoad={onLoad} onClose={() => { setFailure(null); changed(); }} />}
           {over && screen === "Today" && <GameOver game={game} />}
           {locked && <p className="notice">You don't control this club: {tenure(game).role === "buyer" ? `you're a buyer watching it while ${tenure(game).controller} sells` : `${tenure(game).controller} runs it and you hold ${Math.round((tenure(game).stake ?? 0) * 100)}%`}. Its staff make the calls; this page is read-only. Deals are on the Ownership page.</p>}
+          <PageBoundary key={screen} onHome={() => go("Today")}>
           <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
           {screen === "Today" && <TodayScreen game={game} go={go} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
@@ -294,6 +317,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Guide" && <GuideScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
           </div>
+          </PageBoundary>
         </main>
       </div>
       {box && <BoxScore key={`${box}-${follow}`} game={game} id={box} follow={follow} changed={changed} onClose={() => setBox(null)} />}

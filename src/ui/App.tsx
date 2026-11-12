@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { BASE_SEASON } from "../engine/league";
-import { ERA_KEY } from "../engine/pack";
 import { TEAM_COLORS } from "../engine/teamColors";
 import type { GameState } from "../engine/types";
-import { readAutosave, writeAutosave } from "../save/local";
+import { holdAutosave, readAutosave, writeAutosave } from "../save/local";
+import { NEW_KEY, RESUME_KEY, switchEraSafely, type EraSwitchResult } from "../save/era";
 import { onColor } from "./format";
 import { GameShell } from "./GameShell";
 import { NewGame } from "./NewGame";
@@ -11,26 +11,19 @@ import { TitleScreen } from "./TitleScreen";
 
 type View = "title" | "new" | "game";
 
-const RESUME_KEY = "nfl-resume";
-const NEW_KEY = "nfl-to-new";
+// Problems the page needs to tell the owner about (a season switch that couldn't go ahead).
+let report: (text: string) => void = () => {};
 
 /**
  * Each start season's data loads before the game does, so switching seasons
- * reloads the page: the season to load goes in session storage (pack.ts reads
- * it), and a save from that season is parked in the autosave to open after.
+ * reloads the page (save/era.ts). The reload waits for a confirmed save; if
+ * saving fails the game stays open and the owner is told why.
  */
-export function switchEra(season: number, resume?: GameState, toNew = false): void {
-  const go = () => {
-    try {
-      if (season === 2026) sessionStorage.removeItem(ERA_KEY);
-      else sessionStorage.setItem(ERA_KEY, String(season));
-      if (resume) sessionStorage.setItem(RESUME_KEY, "1");
-      if (toNew) sessionStorage.setItem(NEW_KEY, "1");
-    } catch { /* storage blocked: the page stays on this season */ }
-    location.reload();
-  };
-  if (resume) void writeAutosave(resume).then(go);
-  else go();
+export function switchEra(season: number, resume?: GameState, toNew = false): Promise<EraSwitchResult> {
+  return switchEraSafely(season, resume, toNew).then((r) => {
+    if (!r.ok) report(r.reason);
+    return r;
+  });
 }
 
 /** The season a save started in (2026 for the default start). */
@@ -58,6 +51,8 @@ export function applyTeamColors(team: string | null): void {
 export function App({ initial: given }: { initial?: GameState }) {
   // A save carried across a page update from another start season opens after a reload.
   const initial = given && eraOf(given) === BASE_SEASON ? given : undefined;
+  const [problem, setProblem] = useState<string | null>(null);
+  report = setProblem;
   useEffect(() => { if (given && !initial) switchEra(eraOf(given), given); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [game, setGame] = useState<GameState | null>(initial ?? null);
   const [view, setView] = useState<View>(() => (initial ? "game" : backToNew() ? "new" : "title"));
@@ -83,7 +78,8 @@ export function App({ initial: given }: { initial?: GameState }) {
 
   const start = useCallback((state: GameState) => {
     // A save from another start season needs that season's data: reload with it, then open the save.
-    if (eraOf(state) !== BASE_SEASON) return switchEra(eraOf(state), state);
+    if (eraOf(state) !== BASE_SEASON) { void switchEra(eraOf(state), state); return; }
+    holdAutosave(null);
     setGame(state);
     setView("game");
   }, []);
@@ -92,12 +88,22 @@ export function App({ initial: given }: { initial?: GameState }) {
   useEffect(() => {
     let resume = false;
     try { resume = sessionStorage.getItem(RESUME_KEY) === "1"; sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
-    if (resume) void readAutosave().then((r) => { if (r && eraOf(r.state) === BASE_SEASON) { setGame(r.state); setView("game"); } });
+    if (resume) void readAutosave().then((r) => {
+      if (r && eraOf(r.state) === BASE_SEASON) { setGame(r.state); setView("game"); }
+      else setProblem("The save parked before the season switch couldn't be opened. Open it from the title screen or a save file.");
+    });
   }, []);
 
-  if (view === "new") return <NewGame onStart={start} onBack={() => setView("title")} />;
+  const banner = problem && (
+    <div className="notice error app-problem" role="alert">
+      <span>{problem}</span>
+      <button className="btn" onClick={() => setProblem(null)}>Dismiss</button>
+    </div>
+  );
+
+  if (view === "new") return <>{banner}<NewGame onStart={start} onBack={() => setView("title")} /></>;
   if (view === "game" && game) {
-    return <GameShell game={game} tick={tick} changed={bump} onLoad={start} onQuit={() => setView("title")} />;
+    return <>{banner}<GameShell game={game} tick={tick} changed={bump} onLoad={start} onQuit={() => setView("title")} /></>;
   }
-  return <TitleScreen onNew={() => setView("new")} onLoad={start} />;
+  return <>{banner}<TitleScreen onNew={() => setView("new")} onLoad={start} /></>;
 }

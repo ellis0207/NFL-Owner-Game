@@ -10,6 +10,7 @@
 //
 // Every consequential decision lands in the audit trail: what it was, who
 // proposed it, who approved it, and why.
+import { nextId } from "./ids";
 import { addDays, weekday } from "./dates";
 import { gmTrust, noteDispute } from "./culture";
 import { execs, EXEC_ROLES, execRole, signer } from "./executives";
@@ -191,7 +192,7 @@ export function weeklyDigest(state: GameState): void {
 /** File a memo on the owner's desk and flag it in the inbox. */
 export function addMemo(state: GameState, m: Omit<Memo, "id" | "date" | "status" | "notes"> & { notes?: string[] }): Memo {
   const o = office(state);
-  const memo: Memo = { ...m, id: `memo-${state.date}-${o.memos.length}`, date: state.date, status: "open", notes: m.notes ?? [] };
+  const memo: Memo = { ...m, id: nextId(state, "memo"), date: state.date, status: "open", notes: m.notes ?? [] };
   o.memos.unshift(memo);
   if (o.memos.length > 150) o.memos = o.memos.filter((x) => x.status === "open" || x.status === "researching").concat(o.memos.filter((x) => x.status !== "open" && x.status !== "researching").slice(0, 100));
   const days = Math.max(0, Math.round((Date.parse(memo.deadline) - Date.parse(state.date)) / 86_400_000));

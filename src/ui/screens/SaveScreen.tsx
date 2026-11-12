@@ -4,7 +4,7 @@ import { teamLabel } from "../../engine/league";
 import type { GameState } from "../../engine/types";
 import { parseSaveFile } from "../../save/codec";
 import { connectCloud, connectDownloads, exportFileName, exportText, SLOTS, type Cloud, type Slot, type SlotInfo } from "../../save/cloud";
-import { writeAutosave } from "../../save/local";
+import { listRecovery, readRecovery, writeAutosave, writeRecoveryCopy, type RecoveryInfo } from "../../save/local";
 
 export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: (s: GameState) => void; onQuit: () => void }) {
   const [cloud, setCloud] = useState<Cloud | null>(null);
@@ -13,6 +13,9 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmLoad, setConfirmLoad] = useState<Slot | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryInfo[]>([]);
+  const refreshRecovery = () => void listRecovery().then(setRecovery, () => setRecovery([]));
+  useEffect(refreshRecovery, []);
 
   useEffect(() => {
     void connectCloud().then(async (c) => {
@@ -45,7 +48,25 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
           <p className="muted">The game autosaves here after every day. Clearing site data or a private window loses it.</p>
           <div className="btn-row">
             <button className="btn" disabled={busy} onClick={() => act(async () => ((await writeAutosave(game)) ? "Saved in this browser." : "This browser blocked saving. Use a cloud save or export a file."))}>Save now</button>
+            <button className="btn" disabled={busy} onClick={() => act(async () => { const ok = await writeRecoveryCopy(game); refreshRecovery(); return ok ? "Recovery copy saved." : "This browser blocked saving. Use a cloud save or export a file."; })}>Save a recovery copy</button>
           </div>
+          <h4>Recovery copies</h4>
+          <p className="muted">The game keeps three older copies here, one about every week of game time, and opens the newest one if the autosave is ever unreadable.</p>
+          {recovery.length === 0 ? <p className="muted">None yet.</p> : (
+            <div className="stack">
+              {recovery.map((r) => (
+                <div key={r.slot} className="agenda-item">
+                  <span>{teamLabel(r.team)}, {longDate(r.date)} <span className="muted">(saved {new Date(r.savedAt).toLocaleString()})</span></span>
+                  {!game.settings.ironman && <button className="btn small" disabled={busy} onClick={() => act(async () => {
+                    const got = await readRecovery(r.slot);
+                    if (!got) throw new Error("That recovery copy can't be opened.");
+                    onLoad(got.state);
+                    return "Recovery copy opened.";
+                  })}>Open</button>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="panel stack">
           <h3>Save file</h3>
