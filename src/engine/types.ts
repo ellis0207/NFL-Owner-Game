@@ -771,6 +771,8 @@ export interface Settings {
   pause?: "never" | "urgent";
   /** How the owner plays: the whole club, football with the business delegated, or the business with football delegated. */
   mode?: "owner" | "football" | "business";
+  /** How much reaches the owner's decision queue (queue.ts): major calls only, everything, or everything plus department readings. */
+  involvement?: "handsOff" | "standard" | "handsOn";
   /** How much estimated and private information the owner sees: every staff estimate, the usual, or confirmed facts only. */
   info?: "full" | "real" | "limited";
   /** How volatile the economy is: calm, normal or volatile (engine/economy.ts). */
@@ -2885,6 +2887,8 @@ export interface OfficeState {
   year?: number;
   /** Trade offers the GM has already written up. */
   seen?: string[];
+  /** The owner has looked over the staff's delegated decisions up to this date (queue.ts). */
+  reviewed?: string;
 }
 
 // ---- Culture and relationships (culture.ts) ----

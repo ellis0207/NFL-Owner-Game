@@ -21,3 +21,22 @@ export const UiContext = createContext<UiActions>({
 export function useUi(): UiActions {
   return useContext(UiContext);
 }
+
+// ---- Opening a page on a given tab (the decision queue's links) ----
+
+let wanted: { screen: string; tab: string } | null = null;
+
+/** Ask the next page drawn to open on this tab. */
+export function wantTab(screen: string, tab: string | undefined): void {
+  wanted = tab ? { screen, tab } : null;
+}
+
+/** A page's first tab: the one asked for by a link, if any, else its own choice. */
+export function initialTab<T extends string>(screen: string, tabs: readonly T[], fallback: T): T {
+  if (wanted?.screen === screen && (tabs as readonly string[]).includes(wanted.tab)) {
+    const t = wanted.tab as T;
+    wanted = null;
+    return t;
+  }
+  return fallback;
+}

@@ -5,7 +5,7 @@ import { PlaySettings } from "./PlaySettings";
 import { SettingsLeague } from "./SettingsLeague";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
 
-export const TODAY_PANELS = ["Your desk", "Staff", "Business", "Media", "Inbox"] as const;
+export const TODAY_PANELS = ["Decision queue", "Staff", "Business", "Media", "Inbox"] as const;
 
 const SCOUTING: Record<NonNullable<Settings["scouting"]>, string> = {
   sharp: "Sharper reads: your scouts and coaches miss by less. Easier.",

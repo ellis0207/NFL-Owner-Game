@@ -1,3 +1,4 @@
+import { initialTab } from "../ui";
 import { useMemo, useState } from "react";
 import { shortDate, weekday } from "../../engine/dates";
 import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
@@ -41,7 +42,7 @@ function matches(s: Story, f: Filter, us: string): boolean {
 
 export function MediaScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const open = openQuestions(game);
-  const [tab, setTab] = useState<Tab>(open.length ? "Press room" : "News");
+  const [tab, setTab] = useState<Tab>(() => initialTab("Media", TABS, open.length ? "Press room" : "News"));
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

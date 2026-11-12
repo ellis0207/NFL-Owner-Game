@@ -1,3 +1,4 @@
+import { initialTab } from "../ui";
 import { useState } from "react";
 import { teamPlayerIds } from "../../engine/cap";
 import { dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear } from "../../engine/contracts";
@@ -24,7 +25,7 @@ export interface TradeStart {
 }
 
 export function TradesScreen({ game, changed, start }: { game: GameState; changed: () => void; start?: TradeStart | null }) {
-  const [tab, setTab] = useState<Tab>("make");
+  const [tab, setTab] = useState<Tab>(() => initialTab<Tab>("Trades", ["make", "offers", "block", "picks", "league"], "make"));
   const w = tradeWindow(game);
   const offers = trades(game).offers.filter((o) => o.status === "open").length;
   return (
