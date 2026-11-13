@@ -103,6 +103,14 @@ may touch `document` or `window` at load time, and the build keeps
 `modulePreload.polyfill` off. Blob workers don't start from `file://`; test
 over http (`python3 -m http.server` in `dist/`).
 
+Field-view animation: `src/ui/anim/` (`stage.ts`: `runCall` reads a log row, `runTrack` fits a play template to the
+result, `lineUp`, `eleven` names and numbers from box-score snaps; `assets.ts`: `animAssets` fetches `anim/*` once,
+`teamSheet` tints the mask sprites; `FieldPlayers.tsx` canvas over the SVG field). It reads the finished log only.
+Art in `assets/anim/` (Vite `publicDir`, so it is served and built as `anim/`) comes from `pipeline/anim/*.py`
+(Blender via `pip install bpy`: `render_sprites.py`, `pack_atlas.py`, `export_plays.py`); rerun them only when the
+art changes, and republish with the `anim/` files in the artifact's files map. `tests/anim.test.ts`. Only handoffs
+are animated so far; the plan is in project memory (`blender-animation-plan`).
+
 UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
 for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,

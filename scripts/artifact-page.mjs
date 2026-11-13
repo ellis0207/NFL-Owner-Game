@@ -21,3 +21,6 @@ mkdirSync("dist/packs", { recursive: true });
 const packs = readdirSync("data/packs").filter((f) => f.endsWith(".json.gz"));
 for (const f of packs) writeFileSync(`dist/packs/${f.replace(".json.gz", ".txt")}`, readFileSync(`data/packs/${f}`).toString("base64"));
 console.log(`dist/packs: ${packs.length} season packs`);
+
+// The field view's animation art (assets/anim) is already beside the page: Vite copies it as dist/anim.
+console.log(`dist/anim: ${readdirSync("dist/anim").join(", ")}`);
