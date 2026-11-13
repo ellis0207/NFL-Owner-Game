@@ -453,7 +453,14 @@ time on a field view: a broadcast-style scoreboard (score, quarter, clock,
 down and distance, timeouts, possession) over a drawing of the field with the
 ball, the line of scrimmage, the line to gain, the drive so far and the path
 of the last play. You can skip to the next drive, the next quarter or the
-end, let it run on its own, or step back a play. The feed says exactly
+end, let it run on its own, or step back a play. The field view now closes
+in on the ball and draws both teams in their colors, lined up before every
+snap with jersey numbers; handoffs are acted out (the back through the hole
+the feed names, the tackler bringing him down where the play ended) with a
+speed control, and other plays still show the ball and arrow until their
+animations are built. The players are sprites rendered offline in Blender
+(`pipeline/anim`), so nothing about a game's result changes; the setting
+"Animated players on the field view" turns them off. The feed says exactly
 what happened: who was hurt on a play, whether he is coming back and who
 replaced him; plays wiped out by a flag, with what the play was before it
 came back; every timeout; and alerts for a change at quarterback, before
@@ -864,6 +871,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The national and metro economies, recessions, real dollars and scenarios are `economy.ts`; stadium disruptions, revenue and cost shocks, insurance and claims, and financial distress `shocks.ts`.
   The compliance office, filings, cap audits, guarantee funding, trade physicals and league investigations are `compliance.ts`; the crisis playbook `crisis.ts`; club companies, agreement terms, counsel's review, disputes and the exposure report `legal.ts`.
   Supplier terms, audits, consultants, capital, payroll and layoffs are `treasury.ts`; the double-entry journal `journal.ts`; succession, quality-control coaches, coaching guarantees, the hot seat, mandates, memory, the calendar and agendas `people.ts`; credibility, the public line, officials and scandals `standing.ts`; desk ranking, memo follow-ups, saved reports and play settings `desk.ts`.
+  The field view's animated players are `ui/anim/` (`stage.ts` turns a row of the log into 22 moving players from a play template, `assets.ts` loads and tints the sprites, `FieldPlayers.tsx` draws them); the art in `assets/anim/` is made by the Blender scripts in `pipeline/anim/` (see its README) and ships beside the page as `anim/`.
   The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, the stadium's grounds (seating sections, parking lots, transit, closures for work) `grounds.ts`, and offseason grades, fan expectations and storylines `review.ts`.
   Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
@@ -927,6 +935,11 @@ didn't play in 2024 or 2025 are left out. They are rated with the camp
 rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
+
+- Animation: only handoffs are acted out so far; passes, kicks, scrambles,
+  fumbles and plays called back show the ball and arrow. The eleven drawn on
+  each side are the game's most-used players by position, not the exact men
+  on the field for that snap.
 
 - Historical packs: through 2016 the weekly roster files list only each
   team's 53 and reserve lists at the first game, so those camps open with

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { boxAt, castAt, nextDriveStop, nextQuarterStop, storylines, type Cast, type RunningBox } from "../engine/gamecast";
 import { PLAYER_BY_ID, TEAM_BY_ID } from "../engine/league";
 import { stat, type StatKey } from "../engine/stats";
@@ -8,6 +8,10 @@ import type { BoxScore as FinalBox, GameLog, GameResult } from "../engine/types"
 import { PlayerTables, TEAM_ROWS } from "./BoxScore";
 import { onColor } from "./format";
 import { PlayLine } from "./GameFeed";
+import { animAssets, type AnimAssets } from "./anim/assets";
+import { FieldPlayers, type Still } from "./anim/FieldPlayers";
+import { eleven, formationOf, lineUp, runCall, runTrack, type Slot } from "./anim/stage";
+import { readPrefs } from "./prefs";
 
 const colorOf = (team: string): string => TEAM_COLORS[team]?.[0] ?? "#2b3a4a";
 
@@ -62,9 +66,16 @@ export function ScoreBug({ r, cast }: { r: GameResult; cast: Cast }) {
 const W = 1200, H = 533;
 const X = (x: number) => 100 + x * 10;
 const MID = H / 2;
+// With the players drawn, the view closes in on this much of the field's length so they can be made out.
+const ZOOM = 800;
 
-/** The field from above: the ball, the line of scrimmage, the line to gain, the drive so far and the last play. */
-export function Field({ r, cast }: { r: GameResult; cast: Cast }) {
+/**
+ * The field from above: the ball, the line of scrimmage, the line to gain, the drive so far and the last play.
+ * With `players` on, the animated players carry the ball themselves, so the large ball marker is left off;
+ * `live` (a play in motion) also drops the last play's trail. `view` is the stretch of the drawing on show
+ * (left edge and width); the frame keeps the close-up's shape either way so the page doesn't jump.
+ */
+export function Field({ r, cast, players, live, view }: { r: GameResult; cast: Cast; players?: boolean; live?: boolean; view?: [number, number] }) {
   const ids = [r.away, r.home];
   const last = cast.last;
   const snap = cast.down > 0 && cast.poss !== null && cast.ball !== null;
@@ -81,7 +92,7 @@ export function Field({ r, cast }: { r: GameResult; cast: Cast }) {
     ? `${ids[cast.poss!]} ball, ${downText(cast.down, cast.dist, cast.ydl)} at the ${spotText(cast.ydl, ids[cast.poss!], ids[1 - cast.poss!])}.`
     : "Kickoff.";
   return (
-    <svg className="gridiron" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`The field. ${label}`}>
+    <svg className="gridiron" viewBox={`${view?.[0] ?? 0} 0 ${view?.[1] ?? W} ${H}`} style={view ? { aspectRatio: `${ZOOM} / ${H}` } : undefined} role="img" aria-label={`The field. ${label}`}>
       <defs>
         <marker id="cast-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" />
@@ -119,14 +130,14 @@ export function Field({ r, cast }: { r: GameResult; cast: Cast }) {
       )}
       {los !== null && <line className="los" x1={los} x2={los} y1={0} y2={H} />}
       {cast.toGain !== null && <line className="togain" x1={X(cast.toGain)} x2={X(cast.toGain)} y1={0} y2={H} />}
-      {path && <path className={`trail ${last!.tone}`} d={path} markerEnd="url(#cast-arrow)" />}
-      {cast.ball !== null && (
+      {path && !live && <path className={`trail ${last!.tone}`} d={path} markerEnd="url(#cast-arrow)" />}
+      {cast.ball !== null && !players && (
         <g className="ball" style={{ transform: `translate(${X(cast.ball)}px, ${MID}px)` }}>
           <ellipse rx={17} ry={10.5} />
           <line x1={-7} x2={7} y1={0} y2={0} />
         </g>
       )}
-      {snap && (
+      {snap && !players && (
         <g className="tag" transform={`translate(${Math.max(150, Math.min(W - 150, los!))}, ${MID - 74})`}>
           <rect x={-46} y={-20} width={92} height={36} rx={5} fill={colorOf(ids[cast.poss!])} />
           <text y={7} fill={onColor(colorOf(ids[cast.poss!]))}>{dir < 0 ? "◂ " : ""}{ids[cast.poss!]}{dir > 0 ? " ▸" : ""}</text>
@@ -214,43 +225,118 @@ export function RunningBoxScore({ r, box, final, period, injuries }: { r: GameRe
  */
 export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void }) {
   const total = log.plays.length;
+  const ids = [r.away, r.home];
   const [at, setAt] = useState(0);
   const [auto, setAuto] = useState(false);
-  const cast = castAt(log, at);
+  // Animated players: the art loads once, and `moving` is the play (by its count) being acted out.
+  const [assets, setAssets] = useState<AnimAssets | null>(null);
+  const [moving, setMoving] = useState<number | null>(null);
+  const [speed, setSpeed] = useState(1);
+  useEffect(() => {
+    const still = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!readPrefs().animate || still) return;
+    let open = true;
+    void animAssets().then((a) => { if (open) setAssets(a); });
+    return () => { open = false; };
+  }, []);
+  // The play in motion, if the last row stepped to is one the animation can act out (handoffs, for now).
+  const play = useMemo(() => {
+    if (!assets || moving !== at || at < 1) return null;
+    const call = runCall(log, at - 1);
+    const before = castAt(log, at - 1), result = castAt(log, at).last;
+    if (!call || !result || result.to === null || before.poss === null) return null;
+    if (call.carrier && PLAYER_BY_ID[call.carrier]?.position === "QB") return null;
+    const dir = before.poss === 0 ? 1 : -1;
+    return { call, span: [result.from, result.to], track: runTrack(assets.book, call, result.from, dir, (result.to - result.from) * dir) };
+  }, [assets, log, at, moving]);
+  // Until the play is over, everything on screen stays as it was before the snap.
+  const seen = play ? at - 1 : at;
+  const cast = castAt(log, seen);
   const done = at >= total;
   const stories = useMemo(() => storylines(log, [r.away, r.home]), [log, r.away, r.home]);
   // At the end the finished box score takes over, so the totals match it to the yard.
-  const running = useMemo(() => (at >= total && box && log.box ? box : boxAt(log, at)), [log, at, total, box]);
-  const hurt = useMemo(() => log.plays.slice(0, at).filter((p) => p[8] & F.injury)
-    .map((p) => /INJURY: (.*?) is down after the play, ([^.]*)\./.exec(p[7])).filter((m) => m).map((m) => `${m![1]}, ${m![2]}`), [log, at]);
-  const alerts = at > 0 ? stories[at - 1] : [];
+  const running = useMemo(() => (seen >= total && box && log.box ? box : boxAt(log, seen)), [log, seen, total, box]);
+  const hurt = useMemo(() => log.plays.slice(0, seen).filter((p) => p[8] & F.injury)
+    .map((p) => /INJURY: (.*?) is down after the play, ([^.]*)\./.exec(p[7])).filter((m) => m).map((m) => `${m![1]}, ${m![2]}`), [log, seen]);
+  const alerts = seen > 0 ? stories[seen - 1] : [];
+
+  // Both teams lined up for the next snap, when it is a scrimmage play.
+  const still = useMemo<Still | null>(() => {
+    const next = log.plays[seen];
+    if (!assets || play || !next || next[3] === 0 || cast.down === 0 || cast.poss === null || cast.ball === null) return null;
+    const dir = cast.poss === 0 ? 1 : -1;
+    return { ...lineUp(assets.book, formationOf(next[11]), cast.ball, dir), dir };
+  }, [assets, log, seen, play, cast.down, cast.poss, cast.ball]);
+  // Names and numbers: each side's most-used players by position, with the ball carrier and tackler in their spots.
+  const slots = useMemo(() => {
+    const out: Record<string, Slot> = {};
+    const from = box?.players ?? running?.players;
+    if (!assets || !from || cast.poss === null) return out;
+    for (const s of Object.values(eleven(from[SIDES[cast.poss]], true, play?.call.carrier ?? null, "RB"))) out[`0:${s.role}`] = s;
+    const defense = eleven(from[SIDES[1 - cast.poss]], false, play?.call.tackler ?? null, "MLB");
+    const tackler = play && play.track.tackler >= 0 ? Object.values(defense).find((s) => s.id === play.call.tackler) : undefined;
+    if (play && tackler) {
+      // The man credited with the tackle is drawn as the defender who makes it.
+      const role = play.track.roles[play.track.tackler], other = defense[role];
+      if (other) defense[tackler.role] = { ...other, role: tackler.role };
+      else delete defense[tackler.role];
+      defense[role] = { ...tackler, role };
+    }
+    for (const s of Object.values(defense)) out[`1:${s.role}`] = s;
+    return out;
+  }, [assets, box, running, cast.poss, play]);
+
+  // The stretch of field on show: close in on the ball, or on the whole of a play in motion; a play too long for that gets the full field.
+  const view = useMemo<[number, number] | undefined>(() => {
+    if (!assets) return undefined;
+    const ends = play ? play.span : cast.ball !== null ? [cast.ball, cast.ball] : null;
+    if (!ends || Math.abs(X(ends[1]) - X(ends[0])) > ZOOM - 240) return [0, W];
+    return [Math.max(0, Math.min(W - ZOOM, (X(ends[0]) + X(ends[1])) / 2 - ZOOM / 2)), ZOOM];
+  }, [assets, play, cast.ball]);
+
+  // One play on: act it out if it can be; a second press while it is moving skips to its result.
+  const step = () => {
+    if (play) { setMoving(null); return; }
+    const next = Math.min(total, at + 1);
+    setAt(next);
+    setMoving(assets ? next : null);
+  };
+  const jump = (n: number) => { setMoving(null); setAt(n); };
+  const stepNow = useRef(step);
+  stepNow.current = step;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "BUTTON" || tag === "INPUT" || tag === "SELECT") return;
-      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); setAt((n) => Math.min(total, n + 1)); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); setAt((n) => Math.max(0, n - 1)); }
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stepNow.current(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); setMoving(null); setAt((n) => Math.max(0, n - 1)); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [total]);
 
-  // Auto runs a play every couple of seconds until the game ends or it's switched off.
+  // Auto runs a play every couple of seconds until the game ends or it's switched off, waiting for a play in motion to finish.
   useEffect(() => {
-    if (!auto || done) return;
-    const t = setInterval(() => setAt((n) => Math.min(total, n + 1)), 1800);
-    return () => clearInterval(t);
-  }, [auto, done, total]);
+    if (!auto || done || play) return;
+    const t = setTimeout(() => stepNow.current(), 1800);
+    return () => clearTimeout(t);
+  }, [auto, done, play, at]);
 
   const last = cast.last;
-  const shown = log.plays.slice(0, at).reverse();
+  const shown = log.plays.slice(0, seen).reverse();
   const wp = cast.wp;
   return (
     <section className="cast">
       <div className="cast-main stack">
         <ScoreBug r={r} cast={cast} />
-        <Field r={r} cast={cast} />
+        <div className="gridiron-wrap">
+          <Field r={r} cast={cast} players={!!assets && (!!play || !!still)} live={!!play} view={view} />
+          {assets && cast.poss !== null && (
+            <FieldPlayers assets={assets} teams={[ids[cast.poss], ids[1 - cast.poss]]} offenseHome={cast.poss === 1} slots={slots} view={view ?? [0, W]}
+              still={still} track={play?.track ?? null} speed={speed} onEnd={() => setMoving(null)} />
+          )}
+        </div>
         {wp !== null && (
           <div className="cast-wp" role="img" aria-label={`Win probability: ${r.away} ${Math.round((1 - wp) * 100)}%, ${r.home} ${Math.round(wp * 100)}%`}>
             <span className="num">{r.away} {Math.round((1 - wp) * 100)}%</span>
@@ -259,7 +345,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           </div>
         )}
         <div className={`cast-play ${last?.tone ?? ""}`} aria-live="polite">
-          {last ? (
+          {play ? <span className="muted">{log.plays[at - 1][11] || "The snap."}</span> : last ? (
             <>
               {(last.label || (last.row[8] & F.injury) !== 0) && (
                 <strong className="cast-result">{last.label}{(last.row[8] & F.injury) !== 0 && <> <span className="pill inj">Injury</span></>}</strong>
@@ -271,21 +357,22 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           ) : <span className="muted">{r.away} at {r.home}. Press Next play for the opening kickoff.</span>}
         </div>
         <div className="btn-row cast-controls">
-          {!done && <button className="btn primary" onClick={() => setAt(at + 1)}>Next play</button>}
-          {!done && <button className="btn" onClick={() => setAt(nextDriveStop(log, at))}>Next drive</button>}
-          {!done && <button className="btn" onClick={() => setAt(nextQuarterStop(log, at))}>Next quarter</button>}
-          {!done && <button className="btn" onClick={() => setAt(total)}>To the end</button>}
+          {(!done || play) && <button className="btn primary" onClick={step}>{play ? "Skip to the result" : "Next play"}</button>}
+          {!done && <button className="btn" onClick={() => jump(nextDriveStop(log, at))}>Next drive</button>}
+          {!done && <button className="btn" onClick={() => jump(nextQuarterStop(log, at))}>Next quarter</button>}
+          {!done && <button className="btn" onClick={() => jump(total)}>To the end</button>}
           {!done && <button className="btn" aria-pressed={auto} onClick={() => setAuto(!auto)}>{auto ? "Pause" : "Auto"}</button>}
-          {at > 0 && <button className="btn" onClick={() => { setAuto(false); setAt(at - 1); }}>Back a play</button>}
-          {done && <button className="btn primary" onClick={onDone}>Box score</button>}
+          {at > 0 && <button className="btn" onClick={() => { setAuto(false); jump(at - 1); }}>Back a play</button>}
+          {assets && <button className="btn" onClick={() => setSpeed(speed === 1 ? 2 : speed === 2 ? 4 : 1)} aria-label={`Animation speed ${speed}x; press to change`}>Speed {speed}x</button>}
+          {done && !play && <button className="btn primary" onClick={onDone}>Box score</button>}
         </div>
-        <span className="muted small">Play {at} of {total}. The right and left arrow keys step forward and back.</span>
+        <span className="muted small">Play {seen} of {total}. The right and left arrow keys step forward and back.</span>
       </div>
       <RunningBoxScore r={r} box={running} final={done} period={Math.min(cast.q, 5)} injuries={hurt} />
       <div className="cast-feed stack tight">
         <h3>Plays so far</h3>
         {shown.length === 0 && <p className="muted">Nothing yet.</p>}
-        <ol className="plays feed">{shown.map((p, i) => <PlayLine key={at - i} r={r} p={p} alerts={stories[at - i - 1]} />)}</ol>
+        <ol className="plays feed">{shown.map((p, i) => <PlayLine key={seen - i} r={r} p={p} alerts={stories[seen - i - 1]} />)}</ol>
       </div>
     </section>
   );

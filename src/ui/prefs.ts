@@ -6,6 +6,8 @@ export interface Prefs {
   hidden: string[];
   /** Step through your own games a drive at a time when you play them from the Today page. */
   followGames: boolean;
+  /** Draw the players on the field view and act out the plays it can. */
+  animate: boolean;
   /** Sidebar sections the owner has folded away. */
   navClosed: string[];
   /** Light or dark pages, or follow the device. */
@@ -13,7 +15,7 @@ export interface Prefs {
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, navClosed: [], theme: "auto" };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto" };
 
 export function readPrefs(): Prefs {
   try {
