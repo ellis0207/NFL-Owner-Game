@@ -288,6 +288,9 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
     }
   }
 
+  const fieldView = useRef<[number, number]>([0, W]);
+  fieldView.current = view ?? [0, W];
+
   // One play on: act it out if it can be; a second press while it is moving skips to its result.
   const step = () => {
     if (play) { setMoving(null); return; }
@@ -328,7 +331,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           <Field r={r} cast={cast} players={!!stage} live={!!play} view={view} />
           {assets && stage && (
             <FieldPlayers assets={assets} teams={[ids[side], ids[1 - side]]} offenseHome={side === 1} view={view ?? [0, W]}
-              follow={follow} track={stage.track} playing={!!play} speed={speed} onEnd={() => setMoving(null)} />
+              follow={follow} home={fieldView} track={stage.track} playing={!!play} speed={speed} onEnd={() => setMoving(null)} />
           )}
         </div>
         {wp !== null && (

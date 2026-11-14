@@ -611,7 +611,7 @@ function passPlay(book: PlayBook, call: Call, off: string[][], def: string[][], 
       [a.slot, b.slot] = [b.slot, a.slot];
     }
     const house = call.ret >= 100;
-    backTo = house ? -ydl - 4 : spot[0] - call.ret;
+    backTo = house ? -ydl - 4 : call.next ?? spot[0] - call.ret;
     pickEnd = catchAt + Math.max(0.3, Math.abs(spot[0] - backTo) / RUN);
     const back = steady([[catchAt, spot[0], spot[1]], [pickEnd, backTo, spot[1] * 0.7]]);
     sc.then(picker, catchAt, rail((s) => back(Math.min(s, pickEnd))));
@@ -743,7 +743,9 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
   const tb = call.style === "touchback";
   const out = call.style === "out";
   const side = frac(n, 1) < 0.5 ? 1 : -1;
-  const land: P = [tb ? room + 4 : Math.min(call.gain, room - 1), out ? side * (SIDELINE + 1) - hash : (frac(n, 2) - 0.5) * 16];
+  // The spot the receiving team takes over from wins over the yards the feed gives the kick, which are rounded.
+  const dead = call.next !== null && call.style !== "return" ? call.next : call.next !== null ? call.next + call.ret : call.gain;
+  const land: P = [tb ? room + 4 : Math.min(dead, room - 1), out ? side * (SIDELINE + 1) - hash : (frac(n, 2) - 0.5) * 16];
   const ret = add(sc, 1, "PR", [Math.min(room - 1, land[0] + 1), clamp(land[1] * 0.4, -8, 8)], named(call.ids.returner, call.names.returner));
   const kickAt = 1.75, hang = 3.5 + land[0] * 0.02, caught = kickAt + hang;
   sc.then(p, 0.7, rail(line([[0.7, -14, 0], [kickAt, -12.3, 0], [kickAt + 0.8, -11, 0]])));
@@ -763,9 +765,11 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
     const [px, py] = s2.at(p);
     if (s < 0.7) { const q = s / 0.7; return [-0.3 + (px + 0.3) * q, py * q, 0.8, -1]; }
     if (s < kickAt) return [px, py, 0, p];
-    if (s < caught) { const q = (s - kickAt) / hang; return [-12 + (land[0] + 12) * q, land[1] * q, 4 * 19 * q * (1 - q), -1]; }
+    // A punt nobody catches comes down short of where it is downed and rolls there; one into the end zone rolls on.
+    const roll = call.style === "downed" ? 4 : 0;
+    if (s < caught) { const q = (s - kickAt) / hang; return [-12 + (land[0] - roll + 12) * q, land[1] * q, 4 * 19 * q * (1 - q), -1]; }
     if (live || call.style === "fair") { const [x, y] = s2.at(ret); return [x, y, 0, ret]; }
-    return [land[0] + Math.min(tb ? 3 : 4, (s - caught) * 4), land[1], 0, -1];
+    return [land[0] - roll + Math.min(tb ? 3 : roll, (s - caught) * 4), land[1], 0, -1];
   };
   const take = sc.run(end + (call.score ? 1.6 : 0.8));
   for (const i of [...wall, ...rushers]) { mark(take, i, 0, 0.15, ACT.set); mark(take, i, 0.15, kickAt, ACT.block); }
@@ -775,7 +779,7 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
   if (live) {
     if (call.score) mark(take, ret, end + 0.6, 99, ACT.cheer);
     else tackle(sc, take, ret, end, cover, call.ids.tackler);
-  } else if (call.style === "downed") arrive(take, gunners[0], fr(caught + 1), [land[0] + 4, land[1]], true, 0.6);
+  } else if (call.style === "downed") arrive(take, gunners[0], fr(caught + 1), [land[0], land[1]], true, 0.6);
   return { sc, take };
 }
 

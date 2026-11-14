@@ -19,6 +19,8 @@ interface Props {
   view: [number, number];
   /** A play too long for the close-up: the view travels with the ball instead of pulling back. */
   follow: boolean;
+  /** The view the field drawing should have right now, kept up to date by the game view. */
+  home: { current: [number, number] };
   track: Track;
   /** Run the play; otherwise both teams stand as they line up for it. */
   playing: boolean;
@@ -73,7 +75,7 @@ function figureAt(a: AnimAssets, t: Track, i: number, f: number): Figure {
  * moving through a play. It draws on a canvas laid exactly over the field's
  * drawing and tells the game view when the play is over.
  */
-export function FieldPlayers({ assets, teams, offenseHome, view, follow, track, playing, speed, onEnd }: Props) {
+export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, track, playing, speed, onEnd }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   const done = useRef(onEnd);
   done.current = onEnd;
@@ -172,8 +174,10 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, track, 
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
-      // The field drawing gets its own view back when the play is over or skipped.
-      return () => { cancelAnimationFrame(raf); if (cam && field) field.setAttribute("viewBox", `${view[0]} 0 ${view[1]} ${H}`); };
+      // The field drawing gets its view back when the play is over or skipped: the view the game wants now, which
+      // has usually moved on to where the play ended. Putting back the one from before the play left the yard lines
+      // under the players in the wrong place.
+      return () => { cancelAnimationFrame(raf); if (cam && field) field.setAttribute("viewBox", `${home.current[0]} 0 ${home.current[1]} ${H}`); };
     }
     const paint = () => draw(0);
     paint();

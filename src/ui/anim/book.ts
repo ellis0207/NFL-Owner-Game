@@ -48,6 +48,8 @@ export interface Call {
   result: "gain" | "incomplete" | "picked";
   /** Yards past the line of scrimmage where the play ended (kicks: how far the kick went). */
   gain: number;
+  /** Where the other team takes over after a punt or an interception, in yards past the line of scrimmage, when the log's next snap says. */
+  next: number | null;
   /** Yards a kick or an interception was brought back. */
   ret: number;
   score: boolean;
