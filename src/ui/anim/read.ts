@@ -25,13 +25,14 @@ function lineup(log: GameLog, set: number): string[][] | null {
 
 /**
  * What row `n` of the log was, or null for a line with nothing to act out
- * (a timeout, an alert, an onside kick, a blocked kick).
+ * (a timeout, an alert, a fourth-and-20 try in place of an onside kick).
  */
 export function readCall(log: GameLog, n: number): Call | null {
   const row = log.plays[n];
   if (!row || row[8] & (F.note | F.story)) return null;
   const text = row[7], look = row[11] ?? "", flags = row[8];
   const ids: Call["ids"] = {};
+  let tryKicker: string | undefined;
   const d = log.box?.[n];
   if (d && log.ids) {
     const q = d[1];
@@ -45,6 +46,7 @@ export function readCall(log: GameLog, n: number): Call | null {
       else if (k === STAT_INDEX.sacks && !ids.sacker) ids.sacker = id;
       else if (k === STAT_INDEX.fga || k === STAT_INDEX.punts) ids.kicker = id;
       else if (k === STAT_INDEX.kr || k === STAT_INDEX.pr) ids.returner = id;
+      else if (k === STAT_INDEX.xpa) tryKicker = id;
     }
   }
   const hint = row[15]?.split(".");
@@ -66,8 +68,29 @@ export function readCall(log: GameLog, n: number): Call | null {
   const after = log.plays.slice(n + 1, n + 6).find((p) => !(p[8] & (F.note | F.story)));
   if (after && after[3] > 0 && after[2] !== row[2] && after[6] !== row[6] && !/FUMBLES|MUFFS|TOUCHDOWN|touchback|PENALTY|Penalty/.test(text)) call.next = 100 - after[5] - row[5];
 
+  // The try after a touchdown is on the touchdown's row. The offense scored unless the ball changed hands or was
+  // kicked, and the last rise in that club's score says what the try was worth: six points with no word about a
+  // try is a touchdown that ended overtime. (A kickoff brought back for a score is added to the row before it.)
+  if (/TOUCHDOWN/.test(text) && !call.flagged) {
+    const side = (row[3] === 0 || flags & (F.kick | F.turnover) || /INTERCEPTED/.test(text) ? 1 - row[2] : row[2]) as 0 | 1;
+    const now = row[9 + side] as number;
+    let was = 0;
+    for (let j = n - 1; j >= 0; j--) if (log.plays[j][9 + side] !== now) { was = log.plays[j][9 + side] as number; break; }
+    const two = /Two-point try/.test(text) || now - was === 8;
+    const missed = / ([^.]*?) misses the extra point/.exec(text.slice(text.indexOf("TOUCHDOWN.") + 10))?.[1];
+    if (now - was >= 7 || two || missed) call.try = { two, good: now - was >= 7, side, kicker: tryKicker, kickerName: missed };
+  }
+
   // Kicks.
   if (row[3] === 0) {
+    // An onside kick: the row says which club came up with it, and "!" marks the kicking team getting it back.
+    const onside = /^(.*?) onside kick, recovered by (\w+)(!?)/.exec(text);
+    if (onside) {
+      call.kind = "kickoff"; call.style = "onside"; call.score = false;
+      call.names = { kicker: onside[1] };
+      call.recoverer = onside[2]; call.kept = onside[3] === "!";
+      return call;
+    }
     if (!/kicks off/.test(text)) return null;
     call.kind = "kickoff";
     call.names = { kicker: /^(.*?) kicks off/.exec(text)?.[1], returner: /; (.*?) returns it/.exec(text)?.[1] };
@@ -75,6 +98,14 @@ export function readCall(log: GameLog, n: number): Call | null {
     return call;
   }
   if (flags & F.kick) {
+    if (/punt is BLOCKED/.test(text)) {
+      // The defense takes over where the ball came to rest, eight yards behind the line when the log has no next snap.
+      call.kind = "punt"; call.style = "blocked";
+      call.names = { kicker: /^(.*?) punt is BLOCKED/.exec(text)?.[1] };
+      call.recoverer = /; (\w+) recovers/.exec(text)?.[1];
+      if (call.next === null) call.next = -8;
+      return call;
+    }
     if (/BLOCKED/.test(text)) return null;
     if (/ punts /.test(text)) {
       call.kind = "punt";

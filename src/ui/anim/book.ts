@@ -41,7 +41,7 @@ export interface Call {
   where: "middle" | "tackle" | "end";
   /**
    * Runs by the quarterback: sneak, draw, option or keep. Passes: how deep the throw went (c screen, s short,
-   * i intermediate, d deep). Kicks: touchback, return, fair, downed, out, good, left, right or short.
+   * i intermediate, d deep). Kicks: touchback, return, fair, downed, out, muff, blocked, onside, good, left, right or short.
    * A flag before the snap: the foul's name.
    */
   style: string;
@@ -59,6 +59,13 @@ export interface Call {
   recoverer?: string;
   /** A penalty in the feed's words: who, what and how far. */
   caption?: string;
+  /** An onside kick the kicking team got back. */
+  kept?: boolean;
+  /**
+   * The try after a touchdown, which the feed keeps on the touchdown's own row: a kick or a play for two, whether
+   * it counted, which club tried it and the kicker when the row says.
+   */
+  try?: { two: boolean; good: boolean; side: 0 | 1; kicker?: string; kickerName?: string };
   /** Wiped out by a flag after it was run. */
   flagged: boolean;
   brokenUp: boolean;
@@ -100,10 +107,12 @@ export interface Track {
   named: { who: number; from: number; to: number }[];
   /** A flag on the field: the frame it lands and where. */
   flag: [number, number, number] | null;
-  /** Words shown over the field from a frame on: the foul and its yards. */
+  /** Words shown over the field from a frame on: a foul and its yards, or what became of a kick. */
   caption: [number, string] | null;
   /** The stretch of field the play covers, for the camera. */
   span: [number, number];
   /** +1 when the offense heads toward x = 100. */
   dir: 1 | -1;
+  /** The try after a touchdown, played once this is over. */
+  then?: Track;
 }

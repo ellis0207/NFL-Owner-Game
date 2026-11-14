@@ -462,8 +462,11 @@ before the snap and plays called back. A fumble pops loose and the man who
 recovered it falls on it; a penalty is stepped off by an official to the
 new spot with the call shown over the field. The passer, the man with the ball
 and the tackler carry their names, the view travels with the ball on long
-plays, and there is a speed control. Onside kicks and blocked kicks still
-show the ball and arrow (about one play in 700). The players are sprites rendered offline in Blender
+plays, and there is a speed control. Onside kicks bounce toward a sideline
+and the club that recovered falls on the ball, a blocked punt caroms back to
+where the defense takes over, and every touchdown is followed by its extra
+point or two-point try at the goal that was scored on, with the result shown
+over the field. The players are sprites rendered offline in Blender
 (`pipeline/anim`), so nothing about a game's result changes; the setting
 "Animated players on the field view" turns them off. The feed says exactly
 what happened: who was hurt on a play, whether he is coming back and who
@@ -941,7 +944,11 @@ rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
 
-- Animation: onside kicks and blocked kicks show the ball and arrow; a
+- Animation: the sim has no blocked field goals or blocked extra points, so
+  there are none to show (adding them would change results); a fourth-and-20
+  try in place of an onside kick (a rule the owners can adopt) shows the ball
+  and arrow; a two-point try is a plain run or quick pass, since the feed only
+  says whether it worked; a
   fumble is recovered where the play ended (the log has no fumble returns);
   kicking teams are drawn without names except the kicker and returner,
   since the log keeps lineups for scrimmage plays only. Games saved before

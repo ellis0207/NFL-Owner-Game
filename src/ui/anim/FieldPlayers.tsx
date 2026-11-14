@@ -167,10 +167,10 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
         }
         g.strokeText(text, X(fig.x), ty); g.fillText(text, X(fig.x), ty);
       }
-      // The call, over the top of the field, once the flag is down.
+      // Words over the top of the field: the call once the flag is down, or what became of a kick.
       if (track.caption && f >= track.caption[0]) {
         g.setTransform(dpr, 0, 0, dpr, 0, 0);
-        const text = `Flag: ${track.caption[1]}`;
+        const text = track.caption[1];
         g.font = "700 13px system-ui, sans-serif";
         const w = g.measureText(text).width + 20, cx = canvas.clientWidth / 2;
         g.fillStyle = "#ffd400";

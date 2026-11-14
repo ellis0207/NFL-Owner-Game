@@ -69,7 +69,7 @@ describe("acting out the play-by-play", () => {
     const missed = Object.values(report.fallback).reduce((a, b) => a + b, 0);
     expect(missed / report.plays).toBeLessThan(0.02);
     expect(report.fast.length / report.built).toBeLessThan(0.005);
-    for (const kind of ["run", "pass", "kick", "kickoff", "flag"]) expect(report.kinds[kind]).toBeGreaterThan(0);
+    for (const kind of ["run", "pass", "kick", "kickoff", "flag", "extra point"]) expect(report.kinds[kind]).toBeGreaterThan(0);
   });
 
   it("puts 22 men on the field and is the same every time", () => {
@@ -116,6 +116,63 @@ describe("acting out the play-by-play", () => {
     expect(ko.pos).toHaveLength(22);
     expect(ko.span[1] - ko.span[0]).toBeGreaterThan(40);
     expect(play(/ punts /).t.act.some((a) => a.includes(ACT.kick))).toBe(true);
+  });
+
+  it("has the right side fall on an onside kick thirteen yards from the tee", () => {
+    const n = log.plays.findIndex((p) => /kicks off/.test(p[7]));
+    for (const kept of [true, false]) {
+      const plays = log.plays.slice(0, n + 1).map((p) => [...p]) as GameLog["plays"];
+      plays[n][7] = `Joe Kicker onside kick, recovered by ${kept ? "AAA!" : "BBB."}`;
+      const t = buildTrack(book, { ...log, plays }, n, players)!;
+      expect(t.pos).toHaveLength(22);
+      const end = last(t), who = t.holder[end];
+      expect(t.team[who]).toBe(kept ? 0 : 1);
+      expect(Math.abs(t.ball[end * 3] - t.ball[0])).toBeCloseTo(13, 0);
+      expect(t.act[who][end]).toBe(ACT.fall);
+      expect(t.caption?.[1]).toMatch(kept ? /AAA recovers/ : /BBB recovers/);
+      expect(topSpeed(t)).toBeLessThan(10.8);
+    }
+  });
+
+  it("blocks a punt behind the line and gives the ball to the defense", () => {
+    const n = log.plays.findIndex((p) => / punts /.test(p[7]));
+    const plays = log.plays.slice(0, n + 1).map((p) => [...p]) as GameLog["plays"];
+    plays[n][7] = "Joe Punter punt is BLOCKED; BBB recovers.";
+    plays[n][8] = F.kick | F.turnover | F.big;
+    const t = buildTrack(book, { ...log, plays }, n, players)!;
+    const end = last(t), who = t.holder[end];
+    expect(t.team[who]).toBe(1);
+    // The ball never gets past the line of scrimmage and ends eight yards behind it.
+    let far = 0;
+    for (let f = 0; f <= end; f++) far = Math.max(far, (t.ball[f * 3] - t.ball[0]) * t.dir);
+    expect(far).toBeLessThan(1);
+    expect((t.ball[end * 3] - t.ball[0]) * t.dir).toBeCloseTo(-8, 0);
+    expect(t.caption?.[1]).toMatch(/Punt blocked/);
+    expect(topSpeed(t)).toBeLessThan(10.8);
+  });
+
+  it("follows every touchdown with its try at the goal that was scored on", () => {
+    let kicks = 0;
+    log.plays.forEach((row, n) => {
+      if (!/TOUCHDOWN/.test(row[7]) || row[11] === "Play called back") return;
+      const t = buildTrack(book, log, n, players)!;
+      const call = readCall(log, n)!;
+      const next = log.plays.slice(n + 1).find((p) => p[3] === 0);
+      if (!call.try) { expect(next).toBeUndefined(); return; }
+      const tr = t.then!;
+      // The club that scored kicks off next, so it is the one lined up for the try.
+      if (next) expect(call.try.side).toBe(next[2]);
+      const goal = call.try.side === 0 ? 100 : 0;
+      expect(Math.abs(tr.ball[0] - goal)).toBeLessThan(16);
+      expect(tr.caption?.[1]).toMatch(call.try.good ? /is good$/ : /no good$|fails$/);
+      if (!call.try.two) {
+        kicks++;
+        const x = tr.ball[last(tr) * 3];
+        expect(x < 0 || x > 100).toBe(true);
+        expect(tr.act.some((a) => a.includes(ACT.kick))).toBe(true);
+      }
+    });
+    expect(kicks).toBeGreaterThan(0);
   });
 
   it("drops a flag on a penalty before the snap", () => {
