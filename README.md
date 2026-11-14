@@ -458,7 +458,9 @@ in on the ball and draws both teams in their colors, lined up before every
 snap with jersey numbers, and every play is acted out by the men who were
 on the field for it: runs, passes with routes and coverage, sacks,
 scrambles, interceptions, kickoffs, punts, field goals, kneel-downs, flags
-before the snap and plays called back. The passer, the man with the ball
+before the snap and plays called back. A fumble pops loose and the man who
+recovered it falls on it; a penalty is stepped off by an official to the
+new spot with the call shown over the field. The passer, the man with the ball
 and the tackler carry their names, the view travels with the ball on long
 plays, and there is a speed control. Onside kicks and blocked kicks still
 show the ball and arrow (about one play in 700). The players are sprites rendered offline in Blender
@@ -939,11 +941,11 @@ rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
 
-- Animation: onside kicks and blocked kicks show the ball and arrow; fumble
-  recoveries and penalty walk-offs are not acted out; kicking teams are
-  drawn without names except the kicker and returner, since the log keeps
-  lineups for scrimmage plays only. Games saved before this version use
-  each side's most-used players by position.
+- Animation: onside kicks and blocked kicks show the ball and arrow; a
+  fumble is recovered where the play ended (the log has no fumble returns);
+  kicking teams are drawn without names except the kicker and returner,
+  since the log keeps lineups for scrimmage plays only. Games saved before
+  Version 65 use each side's most-used players by position.
 
 - Historical packs: through 2016 the weekly roster files list only each
   team's 53 and reserve lists at the first game, so those camps open with

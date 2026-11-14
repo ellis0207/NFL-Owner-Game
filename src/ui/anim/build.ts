@@ -31,7 +31,7 @@ type P = [number, number];
 type Move = (s: number, me: Man, sc: Scene) => void;
 
 interface Man {
-  team: 0 | 1;
+  team: 0 | 1 | 2;
   group: string;
   body: "skill" | "line";
   id: string | null;
@@ -110,7 +110,7 @@ class Scene {
   /** The ball each frame: x, y, height, and who holds it (-1 nobody). */
   ballAt: (s: number, sc: Scene) => [number, number, number, number] = () => [0, 0, 0, -1];
 
-  add(team: 0 | 1, group: string, id: string | null, at: P, slot?: Slot | null): number {
+  add(team: 0 | 1 | 2, group: string, id: string | null, at: P, slot?: Slot | null): number {
     const p = id ? PLAYER_BY_ID[id] : undefined;
     this.men.push({
       team, group, id, body: group === "OL" || group === "IDL" || group === "EDGE" ? "line" : "skill",
@@ -338,7 +338,91 @@ function seat(groups: string[][], g: number, id: string | undefined): void {
 
 // ---- The plays ----
 
-interface Built { sc: Scene; take: Take; flagAt?: number }
+interface Built { sc: Scene; take: Take; flagAt?: number; carrier?: number; end?: number }
+
+/** Lengthens a finished take: everyone holds where he was. */
+function extend(t: Take, frames: number): void {
+  if (frames <= t.frames) return;
+  const longer = <A extends Float32Array | Int8Array | Uint8Array>(a: A, per: number): A => {
+    const out = new (a.constructor as new (n: number) => A)(frames * per);
+    out.set(a);
+    for (let f = t.frames; f < frames; f++) for (let k = 0; k < per; k++) out[f * per + k] = a[(t.frames - 1) * per + k];
+    return out;
+  };
+  t.pos = t.pos.map((p) => longer(p, 2));
+  t.act = t.act.map((a) => longer(a, 1));
+  t.face = t.face.map((a) => longer(a, 1));
+  t.ball = longer(t.ball, 3);
+  t.holder = longer(t.holder, 1);
+  for (const x of t.named) if (x.to >= t.frames) x.to = frames;
+  t.frames = frames;
+}
+
+/**
+ * A fumble: the ball comes out where the carrier went down, bounces a couple
+ * of yards, and the man who recovered it falls on it. The log puts the
+ * recovery at the spot the play ended, so nobody runs with it.
+ */
+function fumbleAfter(b: Built, call: Call, n: number): void {
+  const { sc, take } = b;
+  const carrier = b.carrier!, end = b.end!;
+  const e = Math.min(take.frames - 1, fr(end));
+  extend(take, e + fr(1.9));
+  const cx = take.pos[carrier][e * 2], cy = take.pos[carrier][e * 2 + 1];
+  const loose: P = [cx, cy + (frac(n, 9) < 0.5 ? 1.8 : -1.8)];
+  // The defense recovers a turnover; otherwise the carrier's own side gets it back.
+  const side = call.turnover ? (sc.men[carrier].team === 0 ? 1 : 0) : sc.men[carrier].team;
+  const pool = sc.men.map((m, i) => (m.team === side && i !== carrier ? i : -1)).filter((i) => i >= 0);
+  const named = call.recoverer ? sc.men.findIndex((m) => m.id !== null && PLAYER_BY_ID[m.id]?.name === call.recoverer) : -1;
+  const got = e + fr(0.9);
+  const who = standIn(sc, take, named, pool, e, loose);
+  for (let f = e + 1; f < take.frames; f++) {
+    const s = (f - e) / RATE, k = Math.min(1, s / 0.5);
+    take.ball[f * 3] = loose[0]; take.ball[f * 3 + 1] = cy + (loose[1] - cy) * k;
+    take.ball[f * 3 + 2] = k < 1 ? 0.2 + Math.abs(Math.sin(k * Math.PI * 2)) * (1 - k) * 1.4 : 0;
+    take.holder[f] = f >= got && who >= 0 ? who : -1;
+  }
+  if (who < 0) return;
+  arrive(take, who, got, loose, true, 0.1);
+  mark(take, who, 0.75 + e / RATE, 99, ACT.fall);
+  take.named.push({ who, from: e, to: take.frames });
+}
+
+/**
+ * A penalty marched off: an official takes the ball from where it lies to
+ * the spot of the next snap, and the men on the ground get up.
+ */
+function walkOff(b: Built, toX: number): void {
+  const { sc, take } = b;
+  const flag = b.flagAt ?? 0;
+  const from = Math.min(take.frames - 1, fr(flag + 0.7));
+  const bx = take.ball[from * 3], by = take.ball[from * 3 + 1];
+  // He comes in from behind the defense once the flag is down.
+  const start: P = [Math.max(bx, 0) + 9, by + (by > 0 ? -7 : 7)];
+  const reachAt = Math.max(flag + 0.9, flag + 0.2 + Math.hypot(start[0] - bx, start[1] - by) / 6.5);
+  const far = Math.hypot(toX - bx, by);
+  const setAt = reachAt + Math.max(0.8, far / 5.5);
+  extend(take, fr(setAt + 0.9));
+  const ref = sc.add(2, "REF", null, start, null);
+  const pos = new Float32Array(take.frames * 2);
+  for (let f = 0; f < take.frames; f++) {
+    const s = f / RATE;
+    const k = s <= flag + 0.2 ? 0 : Math.min(1, (s - flag - 0.2) / (reachAt - flag - 0.2));
+    const j = s <= reachAt ? 0 : Math.min(1, (s - reachAt) / (setAt - reachAt));
+    pos[f * 2] = j > 0 ? bx + (toX - bx) * j : start[0] + (bx - start[0]) * k;
+    pos[f * 2 + 1] = j > 0 ? by * (1 - j) : start[1] + (by - start[1]) * k;
+    if (s >= reachAt) {
+      take.ball[f * 3] = pos[f * 2] + (j >= 1 ? 0.4 : 0); take.ball[f * 3 + 1] = pos[f * 2 + 1]; take.ball[f * 3 + 2] = 0;
+      take.holder[f] = j >= 1 ? -1 : ref;
+    }
+  }
+  take.pos.push(pos);
+  take.act.push(new Uint8Array(take.frames));
+  take.face.push(new Int8Array(take.frames).fill(-1));
+  // Everyone who went down on the play is back on his feet while the yards are stepped off.
+  const up = Math.min(take.frames, fr(flag + 1.1));
+  for (const a of take.act.slice(0, -1)) for (let f = up; f < take.frames; f++) a[f] = ACT.auto;
+}
 
 /** Linemen come out of their stances and lean on each other. */
 function trenches(t: Take, o: Offense, d: Defense, until: number): void {
@@ -426,7 +510,7 @@ function runPlay(book: PlayBook, call: Call, off: string[][], def: string[][], _
   else if (call.score) mark(take, carrier, end + 0.6, 99, ACT.cheer);
   else tackle(sc, take, carrier, end, defenders, call.ids.tackler);
   take.named.push({ who: o.qb, from: 0, to: fr(Math.min(handoff, end + 9)) }, { who: carrier, from: carrier === o.qb ? 0 : fr(handoff), to: take.frames });
-  return { sc, take, flagAt: call.flagged ? end : undefined };
+  return { sc, take, flagAt: call.flagged ? end : undefined, carrier, end };
 }
 
 /** A flag before the snap: both teams set, somebody moves early, and the play never starts. */
@@ -664,7 +748,7 @@ function passPlay(book: PlayBook, call: Call, off: string[][], def: string[][], 
     else tackle(sc, take, carrier, end, defenders, call.ids.tackler);
   }
   take.named.push({ who: o.qb, from: 0, to: throws ? fr(throwAt + 0.4) : take.frames });
-  return { sc, take, flagAt: call.flagged ? end : undefined };
+  return { sc, take, flagAt: call.flagged ? end : undefined, carrier: picker >= 0 ? -1 : carrier, end };
 }
 
 /** A made-up slot for a kicker or returner the feed names. */
@@ -726,7 +810,7 @@ function kickoff(call: Call, n: number, endX: number): Built {
     if (call.score) mark(take, deep, end + 0.6, 99, ACT.cheer);
     else tackle(sc, take, deep, end, cover, call.ids.tackler);
   }
-  return { sc, take };
+  return { sc, take, carrier: tb ? -1 : deep, end };
 }
 
 function punt(call: Call, n: number, ydl: number, hash: number): Built {
@@ -757,8 +841,9 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
   const cover = [...gunners, ...wall, guard, ls];
   cover.forEach((i, k) => { const m = sc.men[i]; sc.then(i, k < 2 ? 0.25 : kickAt - 0.3, toward((_s, s2) => { const [rx, ry] = live ? s2.at(ret) : land; const far = Math.abs(rx - m.x); return [rx, far > 12 ? ry * 0.5 + m.y0 * 0.6 : ry]; }, k < 2 ? 7.4 : 6.8, live ? 1.2 : k < 2 ? 1.5 : 6)); });
   jammers.forEach((i, k) => sc.then(i, 0.3, toward((_s, s2) => { const [gx, gy] = s2.at(gunners[k]); return [gx + 0.9, gy - Math.sign(gy || 1) * 0.6]; }, 7.0)));
-  let end = caught + (call.style === "fair" ? 0.7 : 1.2);
-  if (live || call.style === "fair") sc.then(ret, kickAt + 0.5, reach(land, caught - 0.2));
+  const muff = call.style === "muff";
+  let end = caught + (call.style === "fair" || muff ? 0.7 : 1.2);
+  if (live || call.style === "fair" || muff) sc.then(ret, kickAt + 0.5, reach(land, caught - 0.2));
   else sc.then(ret, kickAt + 1, toward(() => [land[0] - 6, land[1] + (land[1] > 0 ? -7 : 7)], 4.5));
   if (live) end = returnIt(sc, ret, cover, [...jammers, ...backers, ...rushers], caught, land, [call.score ? -ydl - 4 : land[0] - call.ret, land[1] * 0.4 + (frac(n, 3) - 0.5) * 10], call.score);
   sc.ballAt = (s, s2) => {
@@ -768,19 +853,20 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
     // A punt nobody catches comes down short of where it is downed and rolls there; one into the end zone rolls on.
     const roll = call.style === "downed" ? 4 : 0;
     if (s < caught) { const q = (s - kickAt) / hang; return [-12 + (land[0] - roll + 12) * q, land[1] * q, 4 * 19 * q * (1 - q), -1]; }
-    if (live || call.style === "fair") { const [x, y] = s2.at(ret); return [x, y, 0, ret]; }
+    if (live || call.style === "fair" || muff) { const [x, y] = s2.at(ret); return [x, y, 0, ret]; }
     return [land[0] - roll + Math.min(tb ? 3 : roll, (s - caught) * 4), land[1], 0, -1];
   };
   const take = sc.run(end + (call.score ? 1.6 : 0.8));
   for (const i of [...wall, ...rushers]) { mark(take, i, 0, 0.15, ACT.set); mark(take, i, 0.15, kickAt, ACT.block); }
   mark(take, p, kickAt - 0.2, kickAt + 0.3, ACT.kick);
   take.named.push({ who: p, from: 0, to: fr(kickAt + 1.2) });
-  if (live || call.style === "fair") { mark(take, ret, caught - 0.15, caught + 0.2, ACT.catch); take.named.push({ who: ret, from: fr(caught), to: take.frames }); }
+  if (live || call.style === "fair" || muff) { mark(take, ret, caught - 0.15, caught + 0.2, ACT.catch); take.named.push({ who: ret, from: fr(caught), to: take.frames }); }
   if (live) {
     if (call.score) mark(take, ret, end + 0.6, 99, ACT.cheer);
     else tackle(sc, take, ret, end, cover, call.ids.tackler);
   } else if (call.style === "downed") arrive(take, gunners[0], fr(caught + 1), [land[0], land[1]], true, 0.6);
-  return { sc, take };
+  // A muffed punt comes loose the moment it reaches him.
+  return { sc, take, carrier: live || muff ? ret : -1, end: muff ? caught + 0.05 : end };
 }
 
 function fieldGoal(call: Call, ydl: number, hash: number): Built {
@@ -859,6 +945,13 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
   else if (call.kind === "fg") built = fieldGoal(call, row[5], hash);
   else built = passPlay(book, call, off, def, n, flip, row[5], hash);
 
+  // What happened after the whistle: a loose ball, then a penalty stepped off to where the next snap will be.
+  if (call.fumble && built.carrier !== undefined && built.carrier >= 0 && built.end !== undefined) fumbleAfter(built, call, n);
+  if (call.kind === "flag" || call.flagged) {
+    const next = castAt(log, n + 1).ball;
+    if (next !== null) walkOff(built, (next - los) * dir);
+  }
+
   // Onto the field.
   const { sc, take } = built;
   const X = (x: number) => los + dir * x;
@@ -887,6 +980,7 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
     team: sc.men.map((m) => m.team), body: sc.men.map((m) => m.body), slot: sc.men.map((m) => m.slot),
     pos, dist, act: take.act, face, ball, holder: take.holder, named: take.named.filter((x) => x.who >= 0),
     flag: flagF === null ? null : [flagF, X(1.5), Y(4)],
+    caption: flagF === null || !call.caption ? null : [flagF, call.caption],
     span: [Math.max(-10, lo), Math.min(110, hi)], dir,
   };
 }

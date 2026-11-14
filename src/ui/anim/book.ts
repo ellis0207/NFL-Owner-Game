@@ -54,6 +54,11 @@ export interface Call {
   ret: number;
   score: boolean;
   fumble: boolean;
+  /** A fumble the other side recovered, and who the feed says fell on it. */
+  turnover: boolean;
+  recoverer?: string;
+  /** A penalty in the feed's words: who, what and how far. */
+  caption?: string;
   /** Wiped out by a flag after it was run. */
   flagged: boolean;
   brokenUp: boolean;
@@ -79,8 +84,8 @@ export interface Track {
   /** Frames a second, and seconds the whole thing lasts. */
   rate: number;
   dur: number;
-  /** Per player: which club (0 has the ball at the snap), which body, and who he is. */
-  team: (0 | 1)[];
+  /** Per player: which club (0 has the ball at the snap, 2 is an official), which body, and who he is. */
+  team: (0 | 1 | 2)[];
   body: string[];
   slot: (Slot | null)[];
   /** Per player: x, y for every frame; the distance covered so far (it paces the stride); what he is doing; which way he faces when that isn't where he is going (-1). */
@@ -95,6 +100,8 @@ export interface Track {
   named: { who: number; from: number; to: number }[];
   /** A flag on the field: the frame it lands and where. */
   flag: [number, number, number] | null;
+  /** Words shown over the field from a frame on: the foul and its yards. */
+  caption: [number, string] | null;
   /** The stretch of field the play covers, for the camera. */
   span: [number, number];
   /** +1 when the offense heads toward x = 100. */

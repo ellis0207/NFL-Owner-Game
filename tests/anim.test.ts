@@ -121,7 +121,42 @@ describe("acting out the play-by-play", () => {
   it("drops a flag on a penalty before the snap", () => {
     const { t } = play(/^Penalty on \w+: (False start|Encroachment|Defensive offside|Neutral zone infraction)/);
     expect(t.flag).not.toBeNull();
-    expect(t.pos).toHaveLength(22);
+    expect(t.pos).toHaveLength(23);
+  });
+
+  it("steps a penalty off to the next snap's spot behind an official, with the call shown", () => {
+    for (const re of [/^Penalty on \w+: False start/, /but there is a flag down and it comes back/]) {
+      const { n, t } = play(re);
+      const next = log.plays[n + 1];
+      const spot = next[2] === 0 ? next[5] : 100 - next[5];
+      expect(Math.abs(t.ball[last(t) * 3] - spot)).toBeLessThan(1.5);
+      expect(t.team.filter((x) => x === 2)).toHaveLength(1);
+      expect(t.caption?.[1]).toMatch(/\d+ yards/);
+      // The official carried it there.
+      expect(Array.from(t.holder)).toContain(t.team.indexOf(2));
+    }
+  });
+
+  it("has the recovering side fall on a fumble where the play ended", () => {
+    // Fumbles are rare; look through the report's games' worth of rows in a few more games.
+    const s = newGame("DET", "Owner", { capRules: "real" } as never, 7);
+    let seen = 0;
+    for (const g of SCHEDULE.filter((x) => x.type === "REG").slice(0, 24)) {
+      const out = simulateGame(s, g, g.away, g.home);
+      out.log.plays.forEach((row, n) => {
+        if (!/FUMBLES, forced/.test(row[7]) || !(row[8] & F.turnover)) return;
+        const t = buildTrack(book, out.log, n, out.box.players as never)!;
+        const end = t.pos[0].length / 2 - 1;
+        const who = t.holder[end];
+        expect(who).toBeGreaterThanOrEqual(0);
+        expect(t.team[who]).toBe(1);
+        expect(t.act[who][end]).toBe(ACT.fall);
+        // The ball was loose on the way.
+        expect(Array.from(t.holder.slice(Math.max(0, end - 40), end))).toContain(-1);
+        seen++;
+      });
+    }
+    expect(seen).toBeGreaterThan(3);
   });
 
   it("still plays logs kept before lineups were written down", () => {

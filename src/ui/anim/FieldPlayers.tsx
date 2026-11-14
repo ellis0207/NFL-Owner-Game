@@ -88,7 +88,10 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
     const g = canvas.getContext("2d")!;
     const { index } = assets;
     const colors = (team: string): [string, string] => TEAM_COLORS[team] ?? ["#2b3a4a", "#9aa5b1"];
-    const sheet = (i: number) => teamSheet(assets, index.bodies.includes(track.body[i]) ? track.body[i] : "skill", colors(teams[track.team[i]]), track.team[i] === 0 ? offenseHome : !offenseHome);
+    const body = (i: number) => (index.bodies.includes(track.body[i]) ? track.body[i] : "skill");
+    // An official wears a white shirt with black cap and trousers, whoever is playing.
+    const sheet = (i: number) => (track.team[i] === 2 ? teamSheet(assets, body(i), ["#f2f2f2", "#16181b"], true)
+      : teamSheet(assets, body(i), colors(teams[track.team[i] as 0 | 1]), track.team[i] === 0 ? offenseHome : !offenseHome));
     const size = index.span * 10 * SCALE;
     const frames = track.pos[0].length / 2;
     // The camera on a long play: it keeps the ball in the picture, smoothed both ways in time so it neither lurches nor lags.
@@ -145,10 +148,12 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
       // Numbers ride above each helmet; the men on the ball get their names.
       g.textAlign = "center"; g.lineJoin = "round";
       const names: [number, number, number][] = [];
-      for (const i of order) {
+      // Names go on last, so the numbers in a pile don't sit on top of them.
+      for (const pass of [false, true]) for (const i of order) {
         const fig = figs[i], slot = track.slot[i];
         if (!slot) continue;
         const named = !!slot.name && track.named.some((n) => n.who === i && f >= n.from && f <= n.to);
+        if (named !== pass) continue;
         const text = named ? `${slot.number ?? ""} ${slot.name}`.trim() : slot.number === null ? "" : String(slot.number);
         if (!text) continue;
         g.font = `${named ? 700 : 600} ${named ? 13 : 10.5}px system-ui, sans-serif`;
@@ -161,6 +166,18 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
           names.push([X(fig.x), ty, w]);
         }
         g.strokeText(text, X(fig.x), ty); g.fillText(text, X(fig.x), ty);
+      }
+      // The call, over the top of the field, once the flag is down.
+      if (track.caption && f >= track.caption[0]) {
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const text = `Flag: ${track.caption[1]}`;
+        g.font = "700 13px system-ui, sans-serif";
+        const w = g.measureText(text).width + 20, cx = canvas.clientWidth / 2;
+        g.fillStyle = "#ffd400";
+        g.beginPath(); g.roundRect(cx - w / 2, 8, w, 24, 5); g.fill();
+        g.fillStyle = "#1a1a1a"; g.textAlign = "center"; g.textBaseline = "middle";
+        g.fillText(text, cx, 20.5);
+        g.textBaseline = "alphabetic";
       }
     };
 

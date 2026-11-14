@@ -52,7 +52,9 @@ export function readCall(log: GameLog, n: number): Call | null {
   const lane = / left/.test(text) ? 1 : / right/.test(text) ? -1 : 0;
   const call: Call = {
     kind: "run", lane, where: "middle", style: "", result: "gain", gain: 0, ret: 0, next: null,
-    score: (flags & F.score) !== 0 || /TOUCHDOWN/.test(text), fumble: /FUMBLES|MUFFS/.test(text), flagged: look === "Play called back", brokenUp: /broken up/.test(text),
+    score: (flags & F.score) !== 0 || /TOUCHDOWN/.test(text), fumble: /FUMBLES|MUFFS| fumbles, /.test(text), turnover: (flags & F.turnover) !== 0,
+    recoverer: /recovered by ([^.;]+?)(?: at the |\.(?: |$))/.exec(text)?.[1] ?? /; ([^.;]+?) recovers/.exec(text)?.[1],
+    caption: /Penalty on (\w+: [^.]*?\d+ yards)/.exec(text)?.[1], flagged: look === "Play called back", brokenUp: /broken up/.test(text),
     formation: FORMATIONS.find((f) => look.startsWith(f)) ?? "Under center",
     playAction: letters.includes("a"), blitz: letters.includes("b") || /blitz|Fire zone/.test(look), man: letters.includes("m") || /Cover [01]|2-man/.test(look), twoHigh: letters.includes("2") || /Cover [24]|2-man/.test(look),
     ids, names: {}, off: hint ? lineup(log, Number(hint[0])) : null, def: hint ? lineup(log, Number(hint[1])) : null,
@@ -78,7 +80,7 @@ export function readCall(log: GameLog, n: number): Call | null {
       call.kind = "punt";
       call.names = { kicker: /^(.*?) punts/.exec(text)?.[1], returner: /; (.*?) (?:returns|MUFFS)/.exec(text)?.[1] };
       call.gain = Number(/punts (\d+) yards/.exec(text)?.[1] ?? 40);
-      call.style = /touchback/.test(text) ? "touchback" : /returns it/.test(text) ? "return" : /fair catch/.test(text) ? "fair" : /out of bounds/.test(text) ? "out" : "downed";
+      call.style = /touchback/.test(text) ? "touchback" : /MUFFS/.test(text) ? "muff" : /returns it/.test(text) ? "return" : /fair catch/.test(text) ? "fair" : /out of bounds/.test(text) ? "out" : "downed";
       call.ret = /returns it/.test(text) ? yardsIn(text, "returns it") ?? 0 : 0;
       return call;
     }

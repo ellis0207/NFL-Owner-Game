@@ -49,6 +49,12 @@ export function animReport(games: number, seed: number): AnimReport {
       // The players line up where the scoreboard says the ball is.
       const snap = castAt(log, n).ball;
       if (row[3] > 0 && snap !== null && Math.abs(t.ball[0] - snap) > 1.5) out.off.push(`lined up ${Math.abs(t.ball[0] - snap).toFixed(1)} yd off ${where}`);
+      // A penalty marched off, or a fumble recovered, leaves the ball where the scoreboard has it next.
+      const then = castAt(log, n + 1).ball;
+      const lies = t.ball[(t.pos[0].length / 2 - 1) * 3];
+      if ((row[11] === "No play" || row[11] === "Play called back" || /FUMBLES|MUFFS/.test(row[7])) && then !== null && !/TOUCHDOWN|end zone|SAFETY|touchback/.test(row[7]) && Math.abs(lies - then) > 1.5)
+        out.off.push(`after the whistle ${Math.abs(lies - then).toFixed(1)} yd ${where}`);
+      if (/FUMBLES|MUFFS/.test(row[7])) out.kinds.fumble = (out.kinds.fumble ?? 0) + 1;
       const top = topSpeed(t);
       if (top > 10.8) out.fast.push(`${top.toFixed(1)} yd/s ${where}`);
       // Scrimmage plays that stand should leave the ball where the log spots it next.
