@@ -105,7 +105,8 @@ over http (`python3 -m http.server` in `dist/`).
 
 Field-view animation: `src/ui/anim/` (`read.ts`: `readCall(log, n)` turns a row into a `Call`; `build.ts`:
 `buildTrack(book, log, n, box)` works the play out frame by frame, 20 a second, for every player and the ball:
-runs, passes, sacks, kicks, pre-snap flags; `book.ts`: `PlayBook`, `Call`, `Track`, `ACT` codes; `assets.ts`:
+runs, passes, sacks, kicks, pre-snap flags, then `fumbleAfter` and `walkOff` (an official, team 2, carries the
+ball to the next snap's spot) on the finished take; `book.ts`: `PlayBook`, `Call`, `Track`, `ACT` codes; `assets.ts`:
 `animAssets` fetches `anim/*` once, `teamSheet` tints the mask sprites; `FieldPlayers.tsx` canvas over the SVG
 field, with the camera following long plays). It reads the finished log only: the sim writes each snap's lineups
 to `GameLog.who` and `PlayRow[15]` (`"offSet.defSet.call"`, via `Recorder.stage` and `rec.call`), which must
