@@ -51,7 +51,7 @@ export function readCall(log: GameLog, n: number): Call | null {
   const letters = hint?.[2] ?? "";
   const lane = / left/.test(text) ? 1 : / right/.test(text) ? -1 : 0;
   const call: Call = {
-    kind: "run", lane, where: "middle", style: "", result: "gain", gain: 0, ret: 0,
+    kind: "run", lane, where: "middle", style: "", result: "gain", gain: 0, ret: 0, next: null,
     score: (flags & F.score) !== 0 || /TOUCHDOWN/.test(text), fumble: /FUMBLES|MUFFS/.test(text), flagged: look === "Play called back", brokenUp: /broken up/.test(text),
     formation: FORMATIONS.find((f) => look.startsWith(f)) ?? "Under center",
     playAction: letters.includes("a"), blitz: letters.includes("b") || /blitz|Fire zone/.test(look), man: letters.includes("m") || /Cover [01]|2-man/.test(look), twoHigh: letters.includes("2") || /Cover [24]|2-man/.test(look),
@@ -59,6 +59,10 @@ export function readCall(log: GameLog, n: number): Call | null {
   };
   const room = 100 - row[5];
   const gained = (fallback: number) => (call.score && !call.flagged && !(flags & F.turnover) ? room : yardsIn(text) ?? fallback);
+
+  // A change of possession: the next snap is the truest word on where the ball ended up.
+  const after = log.plays.slice(n + 1, n + 6).find((p) => !(p[8] & (F.note | F.story)));
+  if (after && after[3] > 0 && after[2] !== row[2] && after[6] !== row[6] && !/FUMBLES|MUFFS|TOUCHDOWN|touchback|PENALTY|Penalty/.test(text)) call.next = 100 - after[5] - row[5];
 
   // Kicks.
   if (row[3] === 0) {

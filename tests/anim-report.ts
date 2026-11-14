@@ -46,14 +46,17 @@ export function animReport(games: number, seed: number): AnimReport {
       out.kinds[kind] = (out.kinds[kind] ?? 0) + 1;
       for (const p of t.pos) for (const v of p) if (!Number.isFinite(v)) { out.errors.push(`${where} :: a player's spot is not a number`); return; }
       for (const v of t.ball) if (!Number.isFinite(v)) { out.errors.push(`${where} :: the ball's spot is not a number`); return; }
+      // The players line up where the scoreboard says the ball is.
+      const snap = castAt(log, n).ball;
+      if (row[3] > 0 && snap !== null && Math.abs(t.ball[0] - snap) > 1.5) out.off.push(`lined up ${Math.abs(t.ball[0] - snap).toFixed(1)} yd off ${where}`);
       const top = topSpeed(t);
       if (top > 10.8) out.fast.push(`${top.toFixed(1)} yd/s ${where}`);
       // Scrimmage plays that stand should leave the ball where the log spots it next.
       const to = castAt(log, n + 1).last?.to;
       const end = t.ball[(t.pos[0].length / 2 - 1) * 3];
-      // A kick brought back ends where the next drive starts.
+      // A kick or an interception ends where the next drive starts.
       const next = log.plays.slice(n + 1).find((p) => !(p[8] & (F.note | F.story)));
-      if ((kind === "kick" || kind === "kickoff") && /returns it/.test(row[7]) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
+      if (((kind === "kickoff" && /returns it/.test(row[7])) || / punts /.test(row[7]) || /INTERCEPTED/.test(row[7])) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN|touchback|BLOCKED/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
         const spot = next[2] === 0 ? next[5] : 100 - next[5];
         if (Math.abs(end - spot) > 1.5) out.off.push(`${Math.abs(end - spot).toFixed(1)} yd ${where}`);
       }
