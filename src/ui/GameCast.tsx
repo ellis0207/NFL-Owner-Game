@@ -9,8 +9,9 @@ import { PlayerTables, TEAM_ROWS } from "./BoxScore";
 import { onColor } from "./format";
 import { PlayLine } from "./GameFeed";
 import { animAssets, type AnimAssets } from "./anim/assets";
-import { FieldPlayers, type Still } from "./anim/FieldPlayers";
-import { eleven, formationOf, lineUp, runCall, runTrack, type Slot } from "./anim/stage";
+import { FieldPlayers } from "./anim/FieldPlayers";
+import { buildTrack } from "./anim/build";
+import type { Track } from "./anim/book";
 import { readPrefs } from "./prefs";
 
 const colorOf = (team: string): string => TEAM_COLORS[team]?.[0] ?? "#2b3a4a";
@@ -125,12 +126,12 @@ export function Field({ r, cast, players, live, view }: { r: GameResult; cast: C
       ))}
       <rect x={1} y={1} width={W - 2} height={H - 2} className="edge" />
 
-      {snap && cast.driveStart !== null && Math.abs(cast.driveStart - cast.ball!) >= 1 && (
+      {snap && !players && cast.driveStart !== null && Math.abs(cast.driveStart - cast.ball!) >= 1 && (
         <rect className="drive" x={Math.min(X(cast.driveStart), los!)} y={MID - 34} width={Math.abs(los! - X(cast.driveStart))} height={68} />
       )}
       {los !== null && <line className="los" x1={los} x2={los} y1={0} y2={H} />}
       {cast.toGain !== null && <line className="togain" x1={X(cast.toGain)} x2={X(cast.toGain)} y1={0} y2={H} />}
-      {path && !live && <path className={`trail ${last!.tone}`} d={path} markerEnd="url(#cast-arrow)" />}
+      {path && !live && !players && <path className={`trail ${last!.tone}`} d={path} markerEnd="url(#cast-arrow)" />}
       {cast.ball !== null && !players && (
         <g className="ball" style={{ transform: `translate(${X(cast.ball)}px, ${MID}px)` }}>
           <ellipse rx={17} ry={10.5} />
@@ -239,16 +240,21 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
     void animAssets().then((a) => { if (open) setAssets(a); });
     return () => { open = false; };
   }, []);
-  // The play in motion, if the last row stepped to is one the animation can act out (handoffs, for now).
-  const play = useMemo(() => {
-    if (!assets || moving !== at || at < 1) return null;
-    const call = runCall(log, at - 1);
-    const before = castAt(log, at - 1), result = castAt(log, at).last;
-    if (!call || !result || result.to === null || before.poss === null) return null;
-    if (call.carrier && PLAYER_BY_ID[call.carrier]?.position === "QB") return null;
-    const dir = before.poss === 0 ? 1 : -1;
-    return { call, span: [result.from, result.to], track: runTrack(assets.book, call, result.from, dir, (result.to - result.from) * dir) };
-  }, [assets, log, at, moving]);
+  // Each row worked out as a play once, the first time it is asked for. Null is a row with nothing to act out.
+  const tracks = useRef(new Map<number, Track | null>());
+  useEffect(() => { tracks.current.clear(); }, [assets, log]);
+  const trackFor = (n: number): Track | null => {
+    if (!assets || n < 0 || n >= total) return null;
+    let t = tracks.current.get(n);
+    if (t === undefined) {
+      // A row the builder can't make sense of falls back to the ball and arrow instead of stopping the game view.
+      try { t = buildTrack(assets.book, log, n, box?.players); } catch { t = null; }
+      tracks.current.set(n, t);
+    }
+    return t;
+  };
+  // The play in motion: the last row stepped to, acted out.
+  const play = moving === at && at >= 1 ? trackFor(at - 1) : null;
   // Until the play is over, everything on screen stays as it was before the snap.
   const seen = play ? at - 1 : at;
   const cast = castAt(log, seen);
@@ -260,39 +266,27 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
     .map((p) => /INJURY: (.*?) is down after the play, ([^.]*)\./.exec(p[7])).filter((m) => m).map((m) => `${m![1]}, ${m![2]}`), [log, seen]);
   const alerts = seen > 0 ? stories[seen - 1] : [];
 
-  // Both teams lined up for the next snap, when it is a scrimmage play.
-  const still = useMemo<Still | null>(() => {
-    const next = log.plays[seen];
-    if (!assets || play || !next || next[3] === 0 || cast.down === 0 || cast.poss === null || cast.ball === null) return null;
-    const dir = cast.poss === 0 ? 1 : -1;
-    return { ...lineUp(assets.book, formationOf(next[11]), cast.ball, dir), dir };
-  }, [assets, log, seen, play, cast.down, cast.poss, cast.ball]);
-  // Names and numbers: each side's most-used players by position, with the ball carrier and tackler in their spots.
-  const slots = useMemo(() => {
-    const out: Record<string, Slot> = {};
-    const from = box?.players ?? running?.players;
-    if (!assets || !from || cast.poss === null) return out;
-    for (const s of Object.values(eleven(from[SIDES[cast.poss]], true, play?.call.carrier ?? null, "RB"))) out[`0:${s.role}`] = s;
-    const defense = eleven(from[SIDES[1 - cast.poss]], false, play?.call.tackler ?? null, "MLB");
-    const tackler = play && play.track.tackler >= 0 ? Object.values(defense).find((s) => s.id === play.call.tackler) : undefined;
-    if (play && tackler) {
-      // The man credited with the tackle is drawn as the defender who makes it.
-      const role = play.track.roles[play.track.tackler], other = defense[role];
-      if (other) defense[tackler.role] = { ...other, role: tackler.role };
-      else delete defense[tackler.role];
-      defense[role] = { ...tackler, role };
+  // Both teams lined up for the next snap. Notes between plays (a timeout, the two-minute warning) are looked past.
+  let stage: { track: Track; row: number } | null = play ? { track: play, row: at - 1 } : null;
+  for (let j = seen; !stage && j < Math.min(total, seen + 3); j++) {
+    if (j > seen && (log.plays[j][2] !== log.plays[seen][2] || log.plays[j][5] !== log.plays[seen][5])) break;
+    const t = trackFor(j);
+    if (t) stage = { track: t, row: j };
+  }
+  const side = stage ? log.plays[stage.row][2] : 0;
+  // The stretch of field on show: close in on the ball, or on the whole of a play in motion. A play too long for
+  // the close-up (a kick, a long pass) starts on the ball and the view travels with it.
+  let view: [number, number] | undefined, follow = false;
+  if (assets) {
+    const start = stage ? stage.track.ball[0] : cast.ball;
+    const ends = play ? play.span : start !== null ? [start, start] : null;
+    if (!ends) view = [0, W];
+    else {
+      follow = Math.abs(X(ends[1]) - X(ends[0])) > ZOOM - 240;
+      const mid = follow ? X(start!) : (X(ends[0]) + X(ends[1])) / 2;
+      view = [Math.max(0, Math.min(W - ZOOM, mid - ZOOM / 2)), ZOOM];
     }
-    for (const s of Object.values(defense)) out[`1:${s.role}`] = s;
-    return out;
-  }, [assets, box, running, cast.poss, play]);
-
-  // The stretch of field on show: close in on the ball, or on the whole of a play in motion; a play too long for that gets the full field.
-  const view = useMemo<[number, number] | undefined>(() => {
-    if (!assets) return undefined;
-    const ends = play ? play.span : cast.ball !== null ? [cast.ball, cast.ball] : null;
-    if (!ends || Math.abs(X(ends[1]) - X(ends[0])) > ZOOM - 240) return [0, W];
-    return [Math.max(0, Math.min(W - ZOOM, (X(ends[0]) + X(ends[1])) / 2 - ZOOM / 2)), ZOOM];
-  }, [assets, play, cast.ball]);
+  }
 
   // One play on: act it out if it can be; a second press while it is moving skips to its result.
   const step = () => {
@@ -331,10 +325,10 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
       <div className="cast-main stack">
         <ScoreBug r={r} cast={cast} />
         <div className="gridiron-wrap">
-          <Field r={r} cast={cast} players={!!assets && (!!play || !!still)} live={!!play} view={view} />
-          {assets && cast.poss !== null && (
-            <FieldPlayers assets={assets} teams={[ids[cast.poss], ids[1 - cast.poss]]} offenseHome={cast.poss === 1} slots={slots} view={view ?? [0, W]}
-              still={still} track={play?.track ?? null} speed={speed} onEnd={() => setMoving(null)} />
+          <Field r={r} cast={cast} players={!!stage} live={!!play} view={view} />
+          {assets && stage && (
+            <FieldPlayers assets={assets} teams={[ids[side], ids[1 - side]]} offenseHome={side === 1} view={view ?? [0, W]}
+              follow={follow} track={stage.track} playing={!!play} speed={speed} onEnd={() => setMoving(null)} />
           )}
         </div>
         {wp !== null && (
@@ -345,7 +339,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           </div>
         )}
         <div className={`cast-play ${last?.tone ?? ""}`} aria-live="polite">
-          {play ? <span className="muted">{log.plays[at - 1][11] || "The snap."}</span> : last ? (
+          {play ? <span className="muted">{log.plays[at - 1][11] === "No play" ? "A flag before the snap." : log.plays[at - 1][11] || (log.plays[at - 1][8] & F.kick || log.plays[at - 1][3] === 0 ? "The kick." : "The snap.")}</span> : last ? (
             <>
               {(last.label || (last.row[8] & F.injury) !== 0) && (
                 <strong className="cast-result">{last.label}{(last.row[8] & F.injury) !== 0 && <> <span className="pill inj">Injury</span></>}</strong>

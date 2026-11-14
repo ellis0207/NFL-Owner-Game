@@ -2,7 +2,7 @@
 // the play templates. They ship beside the page (dist/anim) and load the first
 // time a field view opens; if they don't arrive the field view keeps to the
 // ball and arrow.
-import type { PlayBook } from "./stage";
+import type { PlayBook } from "./book";
 
 export interface SpriteIndex {
   /** Pixels a frame, directions (rows), yards a frame spans, and where the feet are in it. */

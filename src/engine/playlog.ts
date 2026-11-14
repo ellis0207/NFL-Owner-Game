@@ -82,6 +82,12 @@ export class Recorder {
   text = "";
   flags = 0;
   look = "";
+  /** For the animation: the two lineups on the field ("offense.defense", numbers into `who.sets`) and the call's letters. */
+  cast = "";
+  call = "";
+  who: NonNullable<GameLog["who"]> = { ids: [[], []], sets: [] };
+  private whoIndex: [Record<string, number>, Record<string, number>] = [{}, {}];
+  private setIndex: Record<string, number> = {};
   /** Words added after the play: the analysts' fourth-down advice. */
   tail = "";
   /** How the open drive is ending, set by the play that ends it. */
@@ -147,6 +153,21 @@ export class Recorder {
     this.text = "";
     this.flags = 0;
     this.look = "";
+    this.cast = "";
+    this.call = "";
+  }
+
+  /**
+   * Notes the 22 on the field for this snap, so the field view can draw the men who were really out there.
+   * Lineups repeat all game, so each is kept once and the row only points at it.
+   */
+  stage(offense: Side, groups: (string | undefined)[][], defense: (string | undefined)[][]): void {
+    const set = (side: Side, list: (string | undefined)[][]): number => {
+      const s = side === "away" ? 0 : 1;
+      const key = `${s}:${list.map((g) => g.filter((id): id is string => !!id).map((id) => (this.whoIndex[s][id] ??= this.who.ids[s].push(id) - 1)).join(",")).join("|")}`;
+      return (this.setIndex[key] ??= this.who.sets.push(key) - 1);
+    };
+    this.cast = `${set(offense, groups)}.${set(offense === "away" ? "home" : "away", defense)}`;
   }
 
   say(text: string, flags = 0): void {
@@ -164,8 +185,10 @@ export class Recorder {
     if (this.text) {
       const p = this.pre;
       const epa = p.dn > 0 ? this.value(g) : undefined;
-      this.push(g, [p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
-        epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g), this.timeouts(g)]);
+      const row: PlayRow = [p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
+        epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g), this.timeouts(g)];
+      if (this.cast) row.push(`${this.cast}.${this.call}`);
+      this.push(g, row);
       if (this.drive && p.dn > 0 && this.drive.o === (p.o === 0 ? "away" : "home")) this.drive.plays++;
     }
     for (const row of this.queue) {
@@ -276,7 +299,7 @@ export class Recorder {
   }
 
   log(date: string): GameLog {
-    return { date, plays: this.plays, drives: this.drives, ids: this.ids, box: this.box };
+    return { date, plays: this.plays, drives: this.drives, ids: this.ids, box: this.box, who: this.who };
   }
 }
 

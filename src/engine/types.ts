@@ -660,9 +660,11 @@ export interface ScoringPlay {
  * [quarter (5+ is overtime), seconds left, offense (0 away, 1 home), down (0 for a kick), distance,
  *  yards from the offense's own goal line, drive number, description, flags (PLAY_FLAGS), away score, home score, formation and look,
  *  EPA for the offense (scrimmage plays), the home team's win probability after the play,
- *  timeouts left after the play as away * 4 + home (absent in logs written before the field view)].
+ *  timeouts left after the play as away * 4 + home (absent in logs written before the field view),
+ *  for scrimmage snaps, what the field view's animation needs: "offense.defense.call", the two numbers pointing
+ *  into `GameLog.who.sets` and the call a few letters (see `Recorder.stage`); absent in older logs].
  */
-export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string, number?, number?, number?];
+export type PlayRow = [number, number, 0 | 1, number, number, number, number, string, number, number, number, string, number?, number?, number?, string?];
 
 /** One drive: [offense (0 away, 1 home), quarter, clock, start yard line, plays, yards, seconds of possession, how it ended]. */
 export type DriveRow = [0 | 1, number, number, number, number, number, number, string];
@@ -682,6 +684,13 @@ export interface GameLog {
   /** The running box score, one entry per row of `plays` (absent in logs written before it was kept). */
   ids?: [string[], string[]];
   box?: RowStats[];
+  /**
+   * Who was on the field, for the animation: every lineup either side used, written once.
+   * A set is "side:group|group|..." with players as numbers into `ids` for that side (0 away, 1 home);
+   * the offense's groups are quarterback, backs, fullback, receivers, tight ends, line, and the
+   * defense's are edge, interior, linebackers, corners, safeties.
+   */
+  who?: { ids: [string[], string[]]; sets: string[] };
 }
 
 /** A call the officials got wrong, or one a team disputed. Whether it was wrong is known only to the league office. */
