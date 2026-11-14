@@ -18,9 +18,12 @@ npx vitest run tests/anim.test.ts           # size budget and that every play ha
 - `render_sprites.py` renders every frame from eight sides at the field
   view's camera angle; `pack_atlas.py` outlines the frames and packs one
   lossless WebP per body plus `sprites.json`.
-- `export_plays.py` lays each play out as keyed empties on a field, one unit
-  to the yard, and samples the paths into `plays.json`. `--save` keeps the
-  scene so a play can be reshaped by hand and exported again.
+- `export_plays.py` lays the play book out as keyed empties on a field, one
+  unit to the yard, and samples the paths into `plays.json`: where each
+  group lines up by formation and personnel, the route tree, and the
+  handoff paths. The game (`src/ui/anim/build.ts`) puts the plays together
+  from those pieces. `--save` keeps the scene so a path can be reshaped by
+  hand and exported again.
 
 Everything here is made up for the game: generic figures in club colors and
 generic plays. No logos.

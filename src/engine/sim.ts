@@ -1029,6 +1029,7 @@ class GameSim {
     const pkg: Package = this.down >= 3 && this.dist >= 7 ? "dime" : personnel === "12" || personnel === "13" || personnel === "21" ? "base" : "nickel";
     const def = this.defenseLineup(d, pkg);
     const onField = [lineup.qb, ...lineup.rbs, ...lineup.wrs, ...lineup.tes, lineup.fb, ...lineup.ol];
+    this.rec.stage(o.side, [[lineup.qb], lineup.rbs, [lineup.fb], lineup.wrs, lineup.tes, lineup.ol], [def.edge, def.idl, def.lb, def.cb, def.s]);
     this.snaps(o, onField, "offSnaps");
     this.snaps(d, [...def.edge, ...def.idl, ...def.lb, ...def.cb, ...def.s], "defSnaps");
     o.box.plays++;
@@ -1344,6 +1345,8 @@ class GameSim {
     this.rec.look = `${formation(this.rec, { pass: false, playAction: false, hurry: false, short: this.dist <= 2 && this.down >= 3, personnel: lu.personnel, passRate: o.off.passRate, longYardage: false })}, ${lu.personnel} personnel vs ${def.pkg}`;
     const runText = `${this.name(carrier)} ${where} for ${yardsText(yards)}`;
     this.rec.kind = "rush";
+    // For the animation: a quarterback run, an outside run, a gap run with a puller, or an inside zone run.
+    this.rec.call = type === "qbRun" ? "q" : type === "outsideZone" ? "o" : type === "gap" ? "g" : "z";
     this.rec.actors = { r: carrier };
     this.add(o, carrier, "car");
     this.add(o, carrier, "rushYds", yards);
@@ -1432,6 +1435,8 @@ class GameSim {
     const base = this.baseEdge(o, d);
     this.rec.look = `${formation(this.rec, { pass: true, playAction, hurry, short: false, personnel: lu.personnel, passRate: o.off.passRate, longYardage: this.down >= 3 && this.dist >= 7 })}, ${lu.personnel} personnel vs ${def.pkg}, ${coverShell(this.rec, blitz, man, twoHigh)}`;
     this.rec.kind = "pass";
+    // For the animation: how deep the throw was meant to go (screen, short, intermediate, deep), then play action, a blitz, man coverage and two deep safeties.
+    this.rec.call = `${depth === "screen" ? "c" : depth[0]}${playAction ? "a" : ""}${blitz ? "b" : ""}${man ? "m" : ""}${twoHigh ? "2" : ""}`;
     this.rec.actors = { q: qb };
     const dir = depth === "screen" ? "screen pass" : `pass ${depth === "deep" ? "deep" : "short"} ${this.rec.pick(["left", "middle", "right", "left", "right"])}`;
 

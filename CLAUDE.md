@@ -103,13 +103,17 @@ may touch `document` or `window` at load time, and the build keeps
 `modulePreload.polyfill` off. Blob workers don't start from `file://`; test
 over http (`python3 -m http.server` in `dist/`).
 
-Field-view animation: `src/ui/anim/` (`stage.ts`: `runCall` reads a log row, `runTrack` fits a play template to the
-result, `lineUp`, `eleven` names and numbers from box-score snaps; `assets.ts`: `animAssets` fetches `anim/*` once,
-`teamSheet` tints the mask sprites; `FieldPlayers.tsx` canvas over the SVG field). It reads the finished log only.
-Art in `assets/anim/` (Vite `publicDir`, so it is served and built as `anim/`) comes from `pipeline/anim/*.py`
-(Blender via `pip install bpy`: `render_sprites.py`, `pack_atlas.py`, `export_plays.py`); rerun them only when the
-art changes, and republish with the `anim/` files in the artifact's files map. `tests/anim.test.ts`. Only handoffs
-are animated so far; the plan is in project memory (`blender-animation-plan`).
+Field-view animation: `src/ui/anim/` (`read.ts`: `readCall(log, n)` turns a row into a `Call`; `build.ts`:
+`buildTrack(book, log, n, box)` works the play out frame by frame, 20 a second, for every player and the ball:
+runs, passes, sacks, kicks, pre-snap flags; `book.ts`: `PlayBook`, `Call`, `Track`, `ACT` codes; `assets.ts`:
+`animAssets` fetches `anim/*` once, `teamSheet` tints the mask sprites; `FieldPlayers.tsx` canvas over the SVG
+field, with the camera following long plays). It reads the finished log only: the sim writes each snap's lineups
+to `GameLog.who` and `PlayRow[15]` (`"offSet.defSet.call"`, via `Recorder.stage` and `rec.call`), which must
+never touch the game's rng. Variety comes from `frac(row, k)`, not `Math.random`. Art in `assets/anim/` (Vite
+`publicDir`, so it is served and built as `anim/`) comes from `pipeline/anim/*.py` (Blender via `pip install bpy`:
+`render_sprites.py`, `pack_atlas.py`, `export_plays.py`); rerun them only when the art changes, and republish with
+the `anim/` files in the artifact's files map. `tests/anim.test.ts`; `npx vite-node tests/anim-report.ts [games]
+[seed]` counts rows that fall back to the arrow (under 2%), players too fast and balls off the spot.
 
 UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
 for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
