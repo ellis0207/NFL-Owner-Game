@@ -232,6 +232,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
   // Animated players: the art loads once, and `moving` is the play (by its count) being acted out.
   const [assets, setAssets] = useState<AnimAssets | null>(null);
   const [moving, setMoving] = useState<number | null>(null);
+  const [trying, setTrying] = useState<number | null>(null);
   const [speed, setSpeed] = useState(1);
   useEffect(() => {
     const still = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -254,7 +255,9 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
     return t;
   };
   // The play in motion: the last row stepped to, acted out.
-  const play = moving === at && at >= 1 ? trackFor(at - 1) : null;
+  const whole = moving === at && at >= 1 ? trackFor(at - 1) : null;
+  // A touchdown is followed by its try, which the feed keeps on the same row.
+  const play = whole && trying === at && whole.then ? whole.then : whole;
   // Until the play is over, everything on screen stays as it was before the snap.
   const seen = play ? at - 1 : at;
   const cast = castAt(log, seen);
@@ -293,12 +296,12 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
 
   // One play on: act it out if it can be; a second press while it is moving skips to its result.
   const step = () => {
-    if (play) { setMoving(null); return; }
+    if (play) { setTrying(null); setMoving(null); return; }
     const next = Math.min(total, at + 1);
     setAt(next);
     setMoving(assets ? next : null);
   };
-  const jump = (n: number) => { setMoving(null); setAt(n); };
+  const jump = (n: number) => { setTrying(null); setMoving(null); setAt(n); };
   const stepNow = useRef(step);
   stepNow.current = step;
 
@@ -307,7 +310,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "BUTTON" || tag === "INPUT" || tag === "SELECT") return;
       if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stepNow.current(); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); setMoving(null); setAt((n) => Math.max(0, n - 1)); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); setTrying(null); setMoving(null); setAt((n) => Math.max(0, n - 1)); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -331,7 +334,7 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           <Field r={r} cast={cast} players={!!stage} live={!!play} view={view} />
           {assets && stage && (
             <FieldPlayers assets={assets} teams={[ids[side], ids[1 - side]]} offenseHome={side === 1} view={view ?? [0, W]}
-              follow={follow} home={fieldView} track={stage.track} playing={!!play} speed={speed} onEnd={() => setMoving(null)} />
+              follow={follow} home={fieldView} track={stage.track} playing={!!play} speed={speed} onEnd={() => { if (whole?.then && trying !== at) setTrying(at); else { setTrying(null); setMoving(null); } }} />
           )}
         </div>
         {wp !== null && (

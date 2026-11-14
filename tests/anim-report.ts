@@ -37,11 +37,22 @@ export function animReport(games: number, seed: number): AnimReport {
       let t: Track | null = null;
       try { t = buildTrack(book, log, n, box?.players); } catch (e) { out.errors.push(`${where} :: ${(e as Error).message}`); return; }
       if (!t) {
-        const why = /BLOCKED/.test(row[7]) ? "blocked kick" : row[3] === 0 && !/kicks off/.test(row[7]) ? "onside or free kick" : `other: ${row[7].replace(/\d+/g, "#").slice(0, 50)}`;
+        const why = /BLOCKED/.test(row[7]) ? "blocked kick" : row[3] === 0 && !/kicks off/.test(row[7]) ? "fourth-and-20 try" : `other: ${row[7].replace(/\d+/g, "#").slice(0, 50)}`;
         out.fallback[why] = (out.fallback[why] ?? 0) + 1;
         return;
       }
       out.built++; out.seconds += t.dur;
+      for (const [re, name] of [[/onside kick/, "onside"], [/BLOCKED/, "blocked"]] as const) if (re.test(row[7])) out.kinds[name] = (out.kinds[name] ?? 0) + 1;
+      // The try after a touchdown is a play of its own: it must hold together, and it starts at the goal the score was at.
+      const tr = t.then;
+      if (tr) {
+        const name = /Extra point/.test(tr.caption?.[1] ?? "") ? "extra point" : "two-point try";
+        out.kinds[name] = (out.kinds[name] ?? 0) + 1;
+        for (const p of tr.pos) for (const v of p) if (!Number.isFinite(v)) { out.errors.push(`${where} :: a player's spot on the try is not a number`); return; }
+        if (topSpeed(tr) > 10.8) out.fast.push(`${topSpeed(tr).toFixed(1)} yd/s on the try ${where}`);
+        const scoredAt = t.ball[(t.pos[0].length / 2 - 1) * 3] > 50 ? 100 : 0;
+        if (Math.abs(tr.ball[0] - scoredAt) > 26 || !tr.caption) out.off.push(`try at the wrong end ${where}`);
+      } else if (/TOUCHDOWN/.test(row[7]) && row[11] !== "Play called back") out.kinds["touchdown without a try"] = (out.kinds["touchdown without a try"] ?? 0) + 1;
       const kind = row[11] === "No play" ? "flag" : row[3] === 0 ? "kickoff" : row[8] & F.kick ? "kick" : / pass /.test(row[7]) ? "pass" : "run";
       out.kinds[kind] = (out.kinds[kind] ?? 0) + 1;
       for (const p of t.pos) for (const v of p) if (!Number.isFinite(v)) { out.errors.push(`${where} :: a player's spot is not a number`); return; }
@@ -62,10 +73,12 @@ export function animReport(games: number, seed: number): AnimReport {
       const end = t.ball[(t.pos[0].length / 2 - 1) * 3];
       // A kick or an interception ends where the next drive starts.
       const next = log.plays.slice(n + 1).find((p) => !(p[8] & (F.note | F.story)));
-      if (((kind === "kickoff" && /returns it/.test(row[7])) || / punts /.test(row[7]) || /INTERCEPTED/.test(row[7])) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN|touchback|BLOCKED/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
+      if (((kind === "kickoff" && /returns it/.test(row[7])) || / punts? /.test(row[7]) || /INTERCEPTED/.test(row[7])) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN|touchback/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
         const spot = next[2] === 0 ? next[5] : 100 - next[5];
         if (Math.abs(end - spot) > 1.5) out.off.push(`${Math.abs(end - spot).toFixed(1)} yd ${where}`);
       }
+      // An onside kick ends where the next snap is, whoever has it.
+      if (/onside kick/.test(row[7]) && then !== null && Math.abs(end - then) > 1.5) out.off.push(`onside ${Math.abs(end - then).toFixed(1)} yd ${where}`);
       if (kind !== "kick" && kind !== "kickoff" && kind !== "flag" && row[11] !== "Play called back" && typeof to === "number" && !/incomplete|INTERCEPTED|FUMBLES|throws it away|PENALTY|TOUCHDOWN|end zone|SAFETY/.test(row[7]) && Math.abs(end - to) > 1.5)
         out.off.push(`${Math.abs(end - to).toFixed(1)} yd ${where}`);
     });
