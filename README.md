@@ -78,12 +78,16 @@ we're still over on the day. CPU front offices don't take on next year's money
 they'd have no way to clear.
 
 Veteran deals can carry incentives: playing-time tiers, position stats
-(passing yards, sacks, interceptions and so on) and playoff bonuses. They show
-up on about a quarter of real-money free-agent deals, mostly short "prove it"
-deals and deals for older players or players coming off a lost season, worth
-roughly a quarter of the salary. Following the CBA, an incentive the player
-reached last season is likely to be earned and counts on this year's cap, and
-the rest don't. Two days after the Super Bowl the books are squared: earned
+(passing yards, sacks, interceptions and so on), playoff bonuses and Pro Bowl
+or All-Pro honors. They show up on about a third of real-money free-agent
+deals, one-year deals included. Short "prove it" deals for older players or
+players coming off a lost season get the biggest packages, up to about 45% of
+the salary; highly paid players mostly get only honors incentives, a few
+percent of the salary in every year of the deal. Following the CBA, an
+incentive the player reached last season (or was voted to on the original
+Pro Bowl ballot) is likely to be earned and counts on this year's cap, and the
+rest don't; each later year is judged again once the season is over. Two days
+after the Super Bowl the books are squared: earned
 incentives are paid, and the difference lands on next year's adjusted cap as a
 credit or a charge. The owner can offer incentives in any negotiation, and
 agents value them well below guaranteed money.
