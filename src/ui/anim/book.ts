@@ -65,7 +65,7 @@ export interface Call {
    * The try after a touchdown, which the feed keeps on the touchdown's own row: a kick or a play for two, whether
    * it counted, which club tried it and the kicker when the row says.
    */
-  try?: { two: boolean; good: boolean; side: 0 | 1; kicker?: string; kickerName?: string };
+  try?: { two: boolean; good: boolean; blocked?: boolean; side: 0 | 1; kicker?: string; kickerName?: string };
   /** Wiped out by a flag after it was run. */
   flagged: boolean;
   brokenUp: boolean;

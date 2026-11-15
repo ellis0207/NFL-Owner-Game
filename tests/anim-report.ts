@@ -42,7 +42,7 @@ export function animReport(games: number, seed: number): AnimReport {
         return;
       }
       out.built++; out.seconds += t.dur;
-      for (const [re, name] of [[/onside kick/, "onside"], [/BLOCKED/, "blocked"]] as const) if (re.test(row[7])) out.kinds[name] = (out.kinds[name] ?? 0) + 1;
+      for (const [re, name] of [[/onside kick/, "onside"], [/punt is BLOCKED/, "blocked punt"], [/field goal is BLOCKED/, "blocked field goal"], [/extra point is BLOCKED/, "blocked extra point"]] as const) if (re.test(row[7])) out.kinds[name] = (out.kinds[name] ?? 0) + 1;
       // The try after a touchdown is a play of its own: it must hold together, and it starts at the goal the score was at.
       const tr = t.then;
       if (tr) {
@@ -73,7 +73,7 @@ export function animReport(games: number, seed: number): AnimReport {
       const end = t.ball[(t.pos[0].length / 2 - 1) * 3];
       // A kick or an interception ends where the next drive starts.
       const next = log.plays.slice(n + 1).find((p) => !(p[8] & (F.note | F.story)));
-      if (((kind === "kickoff" && /returns it/.test(row[7])) || / punts? /.test(row[7]) || /INTERCEPTED/.test(row[7])) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN|touchback/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
+      if (((kind === "kickoff" && /returns it/.test(row[7])) || / punts? /.test(row[7]) || /field goal is BLOCKED/.test(row[7]) || /INTERCEPTED/.test(row[7])) && !/FUMBLES|MUFFS|Penalty|PENALTY|TOUCHDOWN|touchback/.test(row[7]) && next && next[3] > 0 && next[2] !== row[2]) {
         const spot = next[2] === 0 ? next[5] : 100 - next[5];
         if (Math.abs(end - spot) > 1.5) out.off.push(`${Math.abs(end - spot).toFixed(1)} yd ${where}`);
       }
