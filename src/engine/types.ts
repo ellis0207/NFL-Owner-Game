@@ -568,11 +568,12 @@ export interface DealYear {
 }
 
 export type IncentiveKind =
-  | "snaps" | "passYds" | "passTd" | "rushYds" | "rushTd" | "rec" | "recYds" | "recTd" | "sacks" | "tackles" | "defInt" | "playoffs";
+  | "snaps" | "passYds" | "passTd" | "rushYds" | "rushTd" | "rec" | "recYds" | "recTd" | "sacks" | "tackles" | "defInt" | "playoffs"
+  | "proBowl" | "allPro";
 
 export interface Incentive {
   kind: IncentiveKind;
-  /** The number to reach; a snap share for playing time and playoff incentives. */
+  /** The number to reach; a snap share for playing time and playoff incentives; for All-Pro, 1 is first team only and 0 either team. */
   threshold: number;
   amount: number;
   /** Likely to be earned (he reached it last season): counts on this year's cap. */

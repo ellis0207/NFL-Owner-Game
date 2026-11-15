@@ -74,10 +74,43 @@ describe("incentives on the cap", () => {
   });
 });
 
+describe("incentives across the years of a deal", () => {
+  it("a one-year deal signed in the spring carries them in its only year", () => {
+    const state = at("draftStart");
+    const id = teamPlayerIds(state, TEAM).find((x) => PLAYER_BY_ID[x].position === "EDGE")!;
+    expect(id).toBeDefined();
+    const deal = writeDeal({ years: 1, total: 6_000_000, signingBonus: 0, guaranteed: 3_000_000, injuryGuaranteed: 0, voidYears: 0, shape: "flat" },
+      { team: TEAM, date: state.date, kind: "veteran", firstYear: NEXT, yearsExp: 6 });
+    attachIncentives(state, id, deal, NEXT, 1_000_000);
+    expect(deal.years[0].year).toBe(NEXT);
+    expect(deal.years[0].incentives?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("next year's are judged again on the season just played", () => {
+    const state = at("superBowl");
+    const season = RULES.season;
+    const id = teamPlayerIds(state, TEAM).find((x) => state.players[x].status === "active"
+      && !dealOf(state, x)?.years.find((y) => y.year === season)?.incentives && dealOf(state, x)?.years.some((y) => y.year === season + 1 && !y.void))!;
+    const deal = structuredClone(dealOf(state, id)!);
+    state.contracts[id] = deal;
+    const y = deal.years.find((x) => x.year === season + 1)!;
+    // He makes the Pro Bowl: that incentive becomes likely. A playing-time rung nobody reaches stops being likely.
+    y.incentives = [
+      { kind: "proBowl", threshold: 0, amount: 500_000, likely: false },
+      { kind: "snaps", threshold: 2, amount: 300_000, likely: true },
+    ];
+    (state.honors!.proBowl[season] ??= []).push(id);
+    until(state, addDays(K.superBowl, 3));
+    expect(y.incentives.map((i) => i.likely)).toEqual([true, false]);
+    expect(y.incentives.every((i) => i.earned === undefined)).toBe(true);
+  });
+});
+
 describe("incentives in the market", () => {
-  it("show up on about a third of veteran free-agent deals, mostly short ones, mostly not likely", () => {
+  it("show up on about a third of veteran free-agent deals, one-year deals included, mostly not likely", () => {
     const state = at("draftStart");
     let deals = 0, withInc = 0, likely = 0, max = 0, apy = 0, long = 0, longWith = 0;
+    const kinds = new Set<string>();
     for (const [id, d] of Object.entries(state.contracts)) {
       // Minimum-salary deals seldom carry incentives worth writing, so the share is measured on real money.
       if (!d || d.kind !== "veteran" || d.signed < K.newLeagueYear || !PLAYER_BY_ID[id] || d.apy < 2_500_000) continue;
@@ -89,16 +122,18 @@ describe("incentives in the market", () => {
       withInc++;
       if (real >= 4) longWith++;
       likely += likelyIncentives(y);
+      for (const i of y.incentives!) kinds.add(i.kind);
       max += incentiveMax(y);
       apy += d.apy;
     }
     const share = withInc / deals;
     console.log(`incentives: ${withInc}/${deals} deals (${Math.round(share * 100)}%), size ${Math.round((max / apy) * 100)}% of APY, likely ${Math.round((likely / max) * 100)}%, long deals ${longWith}/${long}`);
     expect(deals).toBeGreaterThan(60);
-    // About 90 deals in one offseason: the share swings a few points either way from one engine change to the next.
-    // Recent runs land between 9% and 16%, below the real third: a calibration gap to look at, not a regression.
-    expect(share).toBeGreaterThan(0.08);
-    expect(share).toBeLessThan(0.45);
+    // About 100 deals in one offseason: the share swings several points from seed to seed around the real third.
+    expect(share).toBeGreaterThan(0.22);
+    expect(share).toBeLessThan(0.5);
+    expect(kinds.has("snaps")).toBe(true);
+    expect(kinds.has("proBowl") || kinds.has("allPro")).toBe(true);
     expect(max / apy).toBeGreaterThan(0.05);
     expect(max / apy).toBeLessThan(0.4);
     expect(likely / max).toBeLessThan(0.5);
