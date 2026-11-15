@@ -954,7 +954,7 @@ function punt(call: Call, n: number, ydl: number, hash: number): Built {
   return { sc, take, carrier: live || muff ? ret : -1, end: muff ? caught + 0.05 : end };
 }
 
-function fieldGoal(call: Call, ydl: number, hash: number): Built {
+function fieldGoal(call: Call, ydl: number, hash: number, n = 0): Built {
   const sc = new Scene();
   const room = 100 - ydl;
   add(sc, 0, "OL", [-0.3, 0]);
@@ -978,6 +978,36 @@ function fieldGoal(call: Call, ydl: number, hash: number): Built {
     const q = Math.min(1, (s - kickAt) / hang);
     return [-7.3 + (land[0] + 7.3) * q, 0.45 + (land[1] - 0.45) * q, 4 * (short ? 8 : 12) * q * (1 - q), -1];
   };
+  if (call.style === "blocked") {
+    // A man in the middle of the rush gets a hand up as the kick comes off low. The ball drops behind the line
+    // and the defense falls on it at the spot it was kicked from.
+    const side = frac(n, 1) < 0.5 ? 1 : -1;
+    const hit = kickAt + 0.22, lie = hit + 0.9;
+    const leaper = rushers[side > 0 ? 4 : 3];
+    const loose: P = [call.next ?? -7, side * (2 + frac(n, 2) * 2.5)];
+    let who = -1;
+    for (const i of rushers) if (i !== leaper) sc.then(i, hit + 0.1, toward(() => loose, 5.5, 1.4));
+    sc.then(k, hit + 0.3, toward(() => loose, 5, 2.5));
+    sc.ballAt = (s) => {
+      if (s < 0.6) { const q = s / 0.6; return [-0.3 - 7 * q, 0.45 * q, 0.7, -1]; }
+      if (s < kickAt) return [-7.3, 0.45, 0, -1];
+      if (s < hit) { const q = (s - kickAt) / (hit - kickAt); return [-7.3 + 6.6 * q, 0.45 + (side * 0.6 - 0.45) * q, 0.4 + 2.2 * q, -1]; }
+      const q = Math.min(1, (s - hit) / (lie - hit));
+      return [-0.7 + (loose[0] + 0.7) * q, side * 0.6 + (loose[1] - side * 0.6) * q, q < 1 ? 2.6 * (1 - q) + Math.abs(Math.sin(q * Math.PI * 2)) * (1 - q) : 0, s >= lie + 0.35 ? who : -1];
+    };
+    const take = sc.run(lie + 1.8);
+    const e = fr(lie + 0.35);
+    who = nearest(take, rushers.filter((i) => i !== leaper), e, loose);
+    for (let f = e; f < take.frames; f++) take.holder[f] = who;
+    arrive(take, who, e, loose, true, 0.1);
+    mark(take, who, lie + 0.2, 99, ACT.fall);
+    for (const i of [...wall, ...rushers]) { mark(take, i, 0, 0.15, ACT.set); if (i !== who) mark(take, i, 0.15, hit, ACT.block); }
+    mark(take, leaper, hit - 0.1, hit + 0.5, ACT.catch);
+    mark(take, holder, 0, kickAt + 0.3, ACT.kneel);
+    mark(take, k, kickAt - 0.2, kickAt + 0.3, ACT.kick);
+    take.named.push({ who: k, from: 0, to: fr(hit + 0.6) });
+    return { sc, take, note: [hit, `Field goal blocked: ${call.recoverer ?? "the defense"} recovers`] };
+  }
   const take = sc.run(kickAt + hang + 0.9);
   for (const i of [...wall, ...rushers]) { mark(take, i, 0, 0.15, ACT.set); mark(take, i, 0.15, 99, ACT.block); }
   mark(take, holder, 0, kickAt + 0.3, ACT.kneel);
@@ -1031,8 +1061,13 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
   } else if (call.kind === "kickoff") {
     const to = castAt(log, n + 1).last?.to;
     built = kickoff(call, n, to === null || to === undefined ? 30 : (to - los) * dir);
-  } else if (call.kind === "punt") built = punt(call, n, row[5], hash);
-  else if (call.kind === "fg") built = fieldGoal(call, row[5], hash);
+  } else if (call.kind === "punt") {
+    // A muffed punt is recovered where the scoreboard spots the ball next, which the kick's rounded yards can miss.
+    const lies = castAt(log, n + 1).ball;
+    if (call.style === "muff" && lies !== null) call.next = (lies - los) * dir;
+    built = punt(call, n, row[5], hash);
+  }
+  else if (call.kind === "fg") built = fieldGoal(call, row[5], hash, n);
   else built = passPlay(book, call, off, def, n, flip, row[5], hash);
 
   // What happened after the whistle: a loose ball, then a penalty stepped off to where the next snap will be.
@@ -1064,9 +1099,9 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
       tried.note = [(tried.end ?? 1.5) + 0.2, t.good ? "Two-point try is good" : "Two-point try fails"];
       track.then = onField(tried, fieldX(t.side, 100 - line), tdir, 0, tried.note);
     } else {
-      const kick: Call = { ...call, kind: "fg", style: t.good ? "good" : frac(n, 11) < 0.5 ? "left" : "right", ids: { kicker: t.kicker }, names: { kicker: t.kickerName }, try: undefined };
-      tried = fieldGoal(kick, 100 - LEAGUE_RULES.xpLine, 0);
-      tried.note = [(tried.take.frames - 1) / RATE - 1.1, t.good ? "Extra point is good" : "Extra point is no good"];
+      const kick: Call = { ...call, kind: "fg", style: t.blocked ? "blocked" : t.good ? "good" : frac(n, 11) < 0.5 ? "left" : "right", next: null, recoverer: undefined, ids: { kicker: t.kicker }, names: { kicker: t.kickerName }, try: undefined };
+      tried = fieldGoal(kick, 100 - LEAGUE_RULES.xpLine, 0, n);
+      tried.note = t.blocked ? [tried.note?.[0] ?? 1.5, "Extra point is blocked"] : [(tried.take.frames - 1) / RATE - 1.1, t.good ? "Extra point is good" : "Extra point is no good"];
       track.then = onField(tried, fieldX(t.side, 100 - LEAGUE_RULES.xpLine), tdir, 0, tried.note);
     }
     // The picture colors team 0 as the club with the ball on the row. After a return for a score that is the other club.

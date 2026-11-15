@@ -77,8 +77,10 @@ export function readCall(log: GameLog, n: number): Call | null {
     let was = 0;
     for (let j = n - 1; j >= 0; j--) if (log.plays[j][9 + side] !== now) { was = log.plays[j][9 + side] as number; break; }
     const two = /Two-point try/.test(text) || now - was === 8;
-    const missed = / ([^.]*?) misses the extra point/.exec(text.slice(text.indexOf("TOUCHDOWN.") + 10))?.[1];
-    if (now - was >= 7 || two || missed) call.try = { two, good: now - was >= 7, side, kicker: tryKicker, kickerName: missed };
+    const tail = text.slice(text.indexOf("TOUCHDOWN.") + 10);
+    const blocked = / ([^.]*?)'s extra point is BLOCKED/.exec(tail)?.[1];
+    const missed = blocked ?? / ([^.]*?) misses the extra point/.exec(tail)?.[1];
+    if (now - was >= 7 || two || missed) call.try = { two, good: now - was >= 7, blocked: !!blocked, side, kicker: tryKicker, kickerName: missed };
   }
 
   // Kicks.
@@ -106,7 +108,6 @@ export function readCall(log: GameLog, n: number): Call | null {
       if (call.next === null) call.next = -8;
       return call;
     }
-    if (/BLOCKED/.test(text)) return null;
     if (/ punts /.test(text)) {
       call.kind = "punt";
       call.names = { kicker: /^(.*?) punts/.exec(text)?.[1], returner: /; (.*?) (?:returns|MUFFS)/.exec(text)?.[1] };
@@ -118,7 +119,8 @@ export function readCall(log: GameLog, n: number): Call | null {
     if (/field goal/.test(text)) {
       call.kind = "fg";
       call.names = { kicker: /^(.*?) \d+-yard/.exec(text)?.[1] };
-      call.style = /GOOD/.test(text) ? "good" : /wide left/.test(text) ? "left" : /wide right/.test(text) ? "right" : "short";
+      call.recoverer = /; (\w+) recovers/.exec(text)?.[1];
+      call.style = /BLOCKED/.test(text) ? "blocked" : /GOOD/.test(text) ? "good" : /wide left/.test(text) ? "left" : /wide right/.test(text) ? "right" : "short";
       return call;
     }
     return null;

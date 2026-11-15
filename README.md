@@ -463,8 +463,8 @@ recovered it falls on it; a penalty is stepped off by an official to the
 new spot with the call shown over the field. The passer, the man with the ball
 and the tackler carry their names, the view travels with the ball on long
 plays, and there is a speed control. Onside kicks bounce toward a sideline
-and the club that recovered falls on the ball, a blocked punt caroms back to
-where the defense takes over, and every touchdown is followed by its extra
+and the club that recovered falls on the ball, a blocked punt, field goal or extra
+point (about one kick in seventy is blocked) comes down behind the line, and every touchdown is followed by its extra
 point or two-point try at the goal that was scored on, with the result shown
 over the field. The players are sprites rendered offline in Blender
 (`pipeline/anim`), so nothing about a game's result changes; the setting
@@ -944,8 +944,9 @@ rosters on the same scale, without changing anyone else's rating.
 
 ### Known gaps
 
-- Animation: the sim has no blocked field goals or blocked extra points, so
-  there are none to show (adding them would change results); a fourth-and-20
+- Animation: a blocked field goal is recovered where it was kicked from and
+  a blocked extra point is dead (the sim has no returns of blocked kicks); a
+  fourth-and-20
   try in place of an onside kick (a rule the owners can adopt) shows the ball
   and arrow; a two-point try is a plain run or quick pass, since the feed only
   says whether it worked; a

@@ -814,7 +814,20 @@ class GameSim {
     else if (distance >= 40) this.add(o, kicker, "fga40");
     const lead = o.score - d.score;
     const moment = bigMoment(this.q, this.clock, lead, this.ot.active, this.game.type === "POST") && lead <= 0;
-    const made = this.rng() < clamp(this.fgMakeChance(kicker, distance) + (moment && kicker ? poise(this.state, kicker) * 0.04 : 0), 0.02, 0.99) && this.rng() > 0.01;
+    // About one kick in seventy is blocked: the one in a hundred well-struck kicks that used to drift wide for no
+    // reason, and the worst-struck of the misses, which come off the foot low. The same draws decide it, so makes
+    // and misses fall exactly as they did.
+    const struck = this.rng();
+    const onLine = struck < clamp(this.fgMakeChance(kicker, distance) + (moment && kicker ? poise(this.state, kicker) * 0.04 : 0), 0.02, 0.99);
+    const made = onLine && this.rng() > 0.01;
+    if (!made && (onLine || struck > 0.994)) {
+      // The defense takes over where the ball was kicked from, seven yards behind the line.
+      this.rec.say(`${this.name(kicker)} ${distance}-yard field goal is BLOCKED; ${d.id} recovers.`, F.kick | F.big);
+      this.rec.why = "Blocked field goal";
+      this.possessionEnded(o.side);
+      if (!this.over) this.newPossession(d.side, 100 - Math.max(1, this.ydl - 7));
+      return;
+    }
     if (made) {
       this.add(o, kicker, "fgm");
       this.add(o, kicker, "fgLong", distance);
@@ -870,11 +883,16 @@ class GameSim {
       const acc = this.tr(kicker, "kickAccuracy");
       // Snapped from farther back, the extra point is just a longer field goal.
       const xpScale = LEAGUE_RULES.xpLine === 15 ? 1 : this.fgMakeChance(kicker, LEAGUE_RULES.xpLine + 18) / this.fgMakeChance(kicker, 33);
-      if (this.rng() < (0.968 + (acc - 80) * 0.002) * xpScale) {
+      const struck = this.rng();
+      if (struck < (0.968 + (acc - 80) * 0.002) * xpScale) {
         this.add(team, kicker, "xpm");
         team.score += 1;
         team.quarters[Math.min(this.q, 5) - 1] = (team.quarters[Math.min(this.q, 5) - 1] ?? 0) + 1;
         last.text += ` (${this.name(kicker)} kick)`;
+      } else if (struck > 0.992) {
+        // The lowest of the missed kicks never clear the line. The ball is dead; nobody runs a blocked try back.
+        last.text += " (kick blocked)";
+        this.tdNote(` ${this.name(kicker)}'s extra point is BLOCKED.`);
       } else {
         last.text += " (kick failed)";
         this.tdNote(` ${this.name(kicker)} misses the extra point.`);

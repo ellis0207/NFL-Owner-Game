@@ -151,6 +151,29 @@ describe("acting out the play-by-play", () => {
     expect(topSpeed(t)).toBeLessThan(10.8);
   });
 
+  it("blocks a field goal and an extra point at the line", () => {
+    const n = log.plays.findIndex((p) => /field goal is GOOD/.test(p[7]));
+    const plays = log.plays.slice(0, n + 1).map((p) => [...p]) as GameLog["plays"];
+    plays[n][7] = "Joe Kicker 40-yard field goal is BLOCKED; BBB recovers.";
+    plays[n][8] = F.kick | F.big;
+    const t = buildTrack(book, { ...log, plays }, n, players)!;
+    const end = last(t);
+    expect(t.team[t.holder[end]]).toBe(1);
+    let far = 0;
+    for (let f = 0; f <= end; f++) far = Math.max(far, (t.ball[f * 3] - t.ball[0]) * t.dir);
+    expect(far).toBeLessThan(1.5);
+    expect(t.caption?.[1]).toMatch(/Field goal blocked: BBB recovers/);
+    expect(topSpeed(t)).toBeLessThan(10.8);
+    // The same on a try: the touchdown row says the kick was blocked.
+    const td = log.plays.findIndex((p, i) => /TOUCHDOWN\.$/.test(p[7]) && p[3] > 0 && !(p[8] & F.turnover) && readCall(log, i)?.try?.good);
+    const rows = log.plays.map((p) => [...p]) as GameLog["plays"];
+    rows[td][7] += " Joe Kicker's extra point is BLOCKED.";
+    const tr = buildTrack(book, { ...log, plays: rows }, td, players)!.then!;
+    expect(tr.caption?.[1]).toBe("Extra point is blocked");
+    const x = tr.ball[last(tr) * 3];
+    expect(x > 0 && x < 100).toBe(true);
+  });
+
   it("follows every touchdown with its try at the goal that was scored on", () => {
     let kicks = 0;
     log.plays.forEach((row, n) => {

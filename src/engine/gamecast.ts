@@ -69,6 +69,7 @@ function resultOf(row: PlayRow, next: PlayRow | null, offPts: number, defPts: nu
   // a scrimmage play means the half ended, and the feed keeps no spot for it.
   const spotted = next && (next[3] > 0 || row[3] === 0);
   const to = spotted ? fieldX(next[2], next[5]) : null;
+  if (/BLOCKED/.test(text)) return { to, label: "Blocked", tone: "turnover" };
   if (row[8] & F.turnover) {
     const label = /INTERCEPT/.test(text) ? "Interception" : /FUMBLE|MUFF/.test(text) ? "Fumble" : "Turnover";
     return { to, label, tone: "turnover" };
