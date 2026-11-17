@@ -10,3 +10,69 @@
   --room-title-weight: 700;
   --room-title-spacing: 0.015em;
 }
+
+/* Ledger paper: pale green paper, the red double margin rule down the
+   left, and double rules under table heads, as on an accountant's pad. */
+[data-room="building"] {
+  --rb-paper: color-mix(in srgb, var(--panel) 94%, #9fcfae);
+  --rb-line: color-mix(in srgb, var(--rule) 55%, #7fb592);
+  --rb-margin: #c0504d;
+  --rb-slip: color-mix(in srgb, var(--panel) 88%, #f3b7b0);
+}
+:root[data-theme="dark"] [data-room="building"] { --rb-paper: color-mix(in srgb, var(--panel) 94%, #2b7d52); --rb-line: color-mix(in srgb, var(--rule) 75%, #2b7d52); --rb-slip: color-mix(in srgb, var(--panel) 90%, #b8574e); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [data-room="building"] { --rb-paper: color-mix(in srgb, var(--panel) 94%, #2b7d52); --rb-line: color-mix(in srgb, var(--rule) 75%, #2b7d52); --rb-slip: color-mix(in srgb, var(--panel) 90%, #b8574e); } }
+
+[data-room="building"] .panel { background: var(--rb-paper); }
+.rb-ledger .panel {
+  background:
+    linear-gradient(90deg, transparent 0.55rem, var(--rb-margin) 0.55rem, var(--rb-margin) calc(0.55rem + 1px), transparent calc(0.55rem + 1px), transparent calc(0.55rem + 4px), var(--rb-margin) calc(0.55rem + 4px), var(--rb-margin) calc(0.55rem + 5px), transparent calc(0.55rem + 5px)),
+    var(--rb-paper);
+  padding-left: 1.6rem;
+}
+[data-room="building"] h2, [data-room="building"] .panel h3 { font-family: var(--font-display); letter-spacing: 0.05em; }
+[data-room="building"] thead th {
+  border-bottom: 3px double color-mix(in srgb, var(--room-accent) 70%, var(--rule));
+  background: color-mix(in srgb, var(--panel) 90%, #2b7d52);
+}
+[data-room="building"] tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--panel) 96%, #2b7d52); }
+[data-room="building"] .kv dt { border-bottom: 1px dotted var(--rb-line); }
+[data-room="building"] .kv dd { border-bottom: 1px dotted var(--rb-line); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[data-room="building"] .tabs button[aria-pressed="true"] { background: var(--room-accent); border-color: var(--room-accent); color: #fff; }
+
+/* Trades: an offer is a phone message slip; a done deal is a transaction
+   ticket, with blockbusters stamped in the club color. */
+.rb-slip {
+  background: var(--rb-slip);
+  border-top: 4px solid var(--rb-margin);
+  border-radius: 2px 2px var(--radius) var(--radius);
+}
+.rb-slip-label {
+  font-family: var(--font-type);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--rb-margin);
+}
+.rb-slip-from { font-family: var(--font-type); font-size: 1.1rem; border-bottom: 1px solid var(--rb-line); padding-bottom: 0.2rem; }
+.rb-ticket {
+  border-left: 4px solid var(--room-accent);
+  border-radius: 2px var(--radius) var(--radius) 2px;
+  position: relative;
+}
+.rb-ticket.big { border-left-color: var(--team); }
+.rb-ticket.big::after {
+  content: "Blockbuster";
+  position: absolute;
+  top: 0.7rem;
+  right: 0.9rem;
+  transform: rotate(4deg);
+  padding: 0.05rem 0.45rem;
+  border: 2px solid var(--team);
+  border-radius: 4px;
+  color: var(--team);
+  font-family: var(--font-broadcast);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}

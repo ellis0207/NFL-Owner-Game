@@ -17,12 +17,17 @@ import type { GameState, Position } from "../../engine/types";
 import { money, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
+import { FreeAgencyBoard } from "./ContractsScreen";
 
-type Tab = "available" | "waivers" | "ps" | "wire";
-const TABS: [Tab, string][] = [["available", "Available"], ["waivers", "Waiver wire"], ["ps", "Practice squad"], ["wire", "Transactions"]];
+// The free agency class (veterans whose deals run out) comes first; street
+// free agents are the ones anyone can sign today.
+type Tab = "fa" | "available" | "waivers" | "ps" | "wire";
+const TABS: [Tab, string][] = [["fa", "Free agency class"], ["available", "Street free agents"], ["waivers", "Waiver wire"], ["ps", "Practice squad"], ["wire", "Transactions"]];
 
 export function FreeAgentsScreen({ game, changed }: { game: GameState; changed: () => void }) {
-  const [tab, setTab] = useState<Tab>("available");
+  const offseason = isOffseason(game.date);
+  // In the offseason the class is the market; during the season the street is.
+  const [tab, setTab] = useState<Tab>(offseason ? "fa" : "available");
   const us = game.userTeam;
   const counts = rosterCount(game, us);
   const order = waiverOrder(game);
@@ -37,10 +42,11 @@ export function FreeAgentsScreen({ game, changed }: { game: GameState; changed: 
       <div className="tabs" role="group" aria-label="View">
         {TABS.map(([k, label]) => (
           <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>
-            {label}{k === "waivers" && onWire ? ` (${onWire})` : ""}
+            {k === "fa" && !offseason ? "Next free agency class" : label}{k === "waivers" && onWire ? ` (${onWire})` : ""}
           </button>
         ))}
       </div>
+      {tab === "fa" && <FreeAgencyBoard game={game} changed={changed} />}
       {tab === "available" && <Available game={game} changed={changed} />}
       {tab === "waivers" && <Waivers game={game} changed={changed} />}
       {tab === "ps" && <PracticeSquad game={game} changed={changed} />}
@@ -285,7 +291,7 @@ function PracticeSquad({ game, changed }: { game: GameState; changed: () => void
                 </tr>
               );
             })}
-            {squad.length === 0 && <tr><td colSpan={9} className="muted">The practice squad is empty. Sign players from the Available tab.</td></tr>}
+            {squad.length === 0 && <tr><td colSpan={9} className="muted">The practice squad is empty. Sign players from the Street free agents tab.</td></tr>}
           </tbody>
         </table>
       </div>

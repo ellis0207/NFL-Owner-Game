@@ -31,7 +31,11 @@ morning brief, the Inbox as a mail tray, Standings as a wall of division
 boards, and Owners shows each vote as a 32-seat chamber. In the film room
 the Roster opens as a depth-chart board (defense, the line of scrimmage,
 offense, specialists), with the full table a tap away and the choice
-remembered; the game plan sits on Game week beside the practice plan.
+remembered; the game plan sits on Game week beside the practice plan. The cap
+office keeps its books on ledger paper, trade offers arrive as phone message
+slips, the war room pins its cards to the board, and College wears varsity
+letters. The Free agents page opens on the free agency class, beside the
+street free agents.
 
 Business > Grounds draws the stadium from above: the seating bowl by section,
 the club's land, its lots and garages, the independent lots nearby and how fans
