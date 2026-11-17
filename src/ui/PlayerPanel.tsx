@@ -16,6 +16,7 @@ import { canTradePlayer, hasNoTradeClause, trades } from "../engine/trades";
 import { matchup } from "../engine/standings";
 import { gameLog, seasonTotals, unpack } from "../engine/stats";
 import { careerLines, careerNote, careerTotals } from "../engine/careerstats";
+import { coachingNow } from "../engine/formerplayers";
 import type { GameState } from "../engine/types";
 import { ContractTable, dealSummary } from "./ContractTable";
 import { draftLine, gameLine, height, mergeSeason, money, statLine } from "./format";
@@ -112,6 +113,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
           <dt>College</dt><dd>{p.college ?? "—"}</dd>
           <dt>Draft</dt><dd>{draftLine(p)}</dd>
           <dt>Experience</dt><dd>{p.yearsExp === 0 ? "Rookie" : `${p.yearsExp} seasons`}</dd>
+          {state.status === "retired" && coachingNow(game, id) && <><dt>Coaching</dt><dd>{coachingNow(game, id)}</dd></>}
         </dl>
 
         {state.injury && state.injury.returnDate > game.date && (

@@ -72,6 +72,7 @@ import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings
 import { payWeek } from "./finance";
 import { business, businessDaily, businessGame } from "./business";
 import { carouselDaily } from "./carousel";
+import { formerPlayersDaily } from "./formerplayers";
 import { capMovesDaily } from "./capmoves";
 import { campDaily } from "./camp";
 import { ownersDaily } from "./owners";
@@ -539,6 +540,7 @@ export function advanceDay(state: GameState): void {
   offseasonDaily(state);
   carouselDaily(state);
   positionCoachesDaily(state);
+  formerPlayersDaily(state);
   // A lockout stops signings, trades and every team activity.
   const out = lockedOut(state);
   if (!out) contractsDaily(state);

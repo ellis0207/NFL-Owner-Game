@@ -296,6 +296,17 @@ coach hires them and you approve or turn down his pick; a new head coach brings
 some of his own people. Coaches remember whom they worked under, and teams
 looking for a coordinator or head coach lean toward branches of winning trees.
 
+Retired players sometimes go into coaching, about as often as in real life:
+roughly fourteen a year across the league, a little over half as NFL assistant
+or quality control coaches (often with a club they played for) and the rest as
+position coaches in college, usually at their old school. Quarterbacks,
+linemen, linebackers and defensive backs with long careers who were known for
+how they prepared are the likeliest; kickers and stars who earned enough to stay
+home rarely do it. They learn the trade for two seasons before a head coach
+will give one a room, and from there they rise or stall like any young coach:
+a coordinator job is rare and a head coaching job rarer. A retired player's card
+shows where he coaches now.
+
 Before the draft, the doctors examine every combine invitee and you pick the
 45 prospects for formal interviews (the GM fills any you leave open). After
 the combine you can bring in 30 prospects for top-30 visits and send position
@@ -878,7 +889,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.
-  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
+  Playing rules and the change catalog are `rules.ts`; owner relations, the league meeting and votes are `owners.ts`; Super Bowl and draft hosting bids are `hosting.ts`; interview rules for playoff teams' staff are `hiring.ts`; position coaches and their hiring are `positionCoaches.ts`; retired players going into coaching are `formerplayers.ts`; combine medicals and interviews, top-30 visits and private workouts are `visits.ts`; stadium leases with the city or stadium authority are `leases.ts`.
   The club's statements, budget and forecast are `books.ts`, its loans, credit line and covenants `debt.ts`, and the owner's profile, goals and scorecard `ownership.ts`.
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
