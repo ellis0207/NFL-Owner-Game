@@ -122,7 +122,7 @@ the `anim/` and `art/` files in the artifact's files map. `tests/anim.test.ts`; 
 UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
 for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
 `src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `kit.tsx`
-(`StatTile`, `Card`, `Callout`, `EmptyState`, `Meter`), `format.ts`,
+(`StatTile`, `Card`, `Callout`, `EmptyState`, `Meter`, `CountUp`), `format.ts`,
 `PlayerPanel.tsx`, `ContractTable.tsx`. A new screen is a file in `screens/`,
 a name in a `NAV` group plus a `PAGE_HINT` line, and one render line; its
 title comes from the `Masthead` (`PAGE_TITLE` when it differs from the page
@@ -133,7 +133,7 @@ draft, office, league, game) with `data-room` on the page, its tokens
 (`--room-base`, `--room-accent`, `--room-glint`, `--room-hue`, `--room-font`)
 in `src/ui/styles/rooms/<room>.css`, and a header picture rendered in Blender
 (`pipeline/art`, `assets/art/<room>.webp`, served as `art/`; a page with its
-own picture is listed in `PAGE_ART`). Styles are split
+own picture is listed in `PAGE_ART`; `title.webp` is the title screen). Styles are split
 in `src/ui/styles/`: `base.css` (tokens, shell, tables), `kit.css`,
 `masthead.css`, the room files, and `field.css`/`tips.css`/`app.css`/
 `hall.css`/`mediapages.css`. A room file defines only classes with its prefix

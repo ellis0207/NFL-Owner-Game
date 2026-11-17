@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TEAM_COLORS } from "../engine/teamColors";
 import { agentFor, clientsOnTeam, STYLE_LABEL } from "../engine/agents";
 import { dealOf, leagueYear } from "../engine/contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "../engine/dates";
@@ -118,7 +119,7 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="drawer wide" role="dialog" aria-label={`Contract talks: ${p.name}`} onClick={(e) => e.stopPropagation()}>
         <div className="btn-row" style={{ justifyContent: "flex-end" }}><button className="btn small" onClick={onClose}>Close</button></div>
-        <header>
+        <header style={ps?.team && TEAM_COLORS[ps.team] ? { ["--pc" as string]: TEAM_COLORS[ps.team][0], ["--pc2" as string]: TEAM_COLORS[ps.team][1] } : undefined}>
           <div>
             <h2>{p.name}</h2>
             <span className="muted">

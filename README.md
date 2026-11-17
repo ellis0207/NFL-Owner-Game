@@ -38,7 +38,10 @@ letters. The Free agents page opens on the free agency class, beside the
 street free agents. The owner's office reads like an annual report: cream
 stock under brass rules and serif small capitals; the Front office tabs are
 grouped into leadership, decisions and operations, and Business calls its
-tabs Team media and League money.
+tabs Team media and League money. The Guide is a numbered manual, the
+player card wears its club's colors, headline figures count to their new
+values (not when the device asks for reduced motion), and the title screen
+opens on the stadium under the lights.
 
 Business > Grounds draws the stadium from above: the seating bowl by section,
 the club's land, its lots and garages, the independent lots nearby and how fans

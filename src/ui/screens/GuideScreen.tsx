@@ -258,11 +258,11 @@ const SECTIONS: { title: string; body: string[] }[] = [
 
 export function GuideScreen() {
   return (
-    <section className="stack">
+    <section className="stack ut-manual">
       {SECTIONS.map((s) => (
-        <details key={s.title} className="panel">
+        <details key={s.title} className="panel ut-chapter">
           <summary><strong>{s.title}</strong></summary>
-          <div className="stack tight" style={{ marginTop: 8 }}>{s.body.map((p, i) => <p key={i}>{p}</p>)}</div>
+          <div className="stack tight ut-text" style={{ marginTop: 8 }}>{s.body.map((p, i) => <p key={i}>{p}</p>)}</div>
         </details>
       ))}
     </section>

@@ -3,7 +3,7 @@
 // as a scoreboard figure in the League room and a ledger total in the cap
 // office. They show only what the owner can see: stats, money, counts and
 // staff reports, never a rating.
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 type Tone = "good" | "bad" | "warn" | undefined;
 
@@ -12,7 +12,7 @@ export function StatTile({ label, value, note, tone }: { label: ReactNode; value
   return (
     <div className={`kit-tile${tone ? ` ${tone}` : ""}`}>
       <span className="kit-tile-label">{label}</span>
-      <strong className="kit-tile-value">{value}</strong>
+      <strong className="kit-tile-value">{typeof value === "string" ? <CountUp text={value} fromZero /> : value}</strong>
       {note !== undefined && <span className="kit-tile-note">{note}</span>}
     </div>
   );
@@ -72,4 +72,46 @@ export function Meter({ value, label, tone }: { value: number; label?: ReactNode
       <span className="kit-meter-bar" role="img" aria-label={`${Math.round(pct)}%`}><span style={{ width: `${pct}%` }} /></span>
     </div>
   );
+}
+
+// A figure that counts to its new value instead of jumping: the number inside
+// a label such as "$11.8M" or "20" moves over about half a second, keeping
+// its prefix, suffix, decimals and commas. Units that change ($850K to $1.2M)
+// or a reader who prefers reduced motion get the new text at once.
+const NUM = /-?[\d,]*\.?\d+/;
+
+function parts(text: string) {
+  const m = NUM.exec(text);
+  if (!m) return null;
+  const raw = m[0];
+  const decimals = raw.includes(".") ? raw.split(".")[1].length : 0;
+  return { pre: text.slice(0, m.index), post: text.slice(m.index + raw.length), n: Number(raw.replace(/,/g, "")), decimals, commas: raw.includes(",") };
+}
+
+function stillPlease(): boolean {
+  try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return true; }
+}
+
+/** Counts up from zero when it first shows if `fromZero`, and from the old value whenever it changes. */
+export function CountUp({ text, fromZero = false }: { text: string; fromZero?: boolean }) {
+  const [shown, setShown] = useState(() => (fromZero && !stillPlease() && parts(text) ? text.replace(NUM, "0") : text));
+  const last = useRef<string>(fromZero ? text.replace(NUM, "0") : text);
+  useEffect(() => {
+    const to = parts(text);
+    const from = parts(last.current);
+    last.current = text;
+    if (!to || !from || from.pre !== to.pre || from.post !== to.post || from.n === to.n || stillPlease()) { setShown(text); return; }
+    const start = performance.now();
+    const fmt = (v: number) => to.pre + v.toLocaleString("en-US", { minimumFractionDigits: to.decimals, maximumFractionDigits: to.decimals, useGrouping: to.commas }) + to.post;
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / 550);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setShown(t >= 1 ? text : fmt(from.n + (to.n - from.n) * ease));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [text]);
+  return <>{shown}</>;
 }
