@@ -196,6 +196,16 @@ playoff pictures, cover the college season and grade every team's draft. Agents
 who leak contract talks leak to them. The Media page has the feed, filters and
 each outlet's staff.
 
+Game stories, big individual days, injuries, signings, releases, waiver claims
+and trades are written by a story engine. Each story is a fact (what happened),
+an angle (an upset, a comeback, a revenge game, a contract year, a cap crunch, a
+reunion and dozens more, chosen from what the engine knows) and a format (game
+story, breaking alert, report, cap breakdown, numbers piece, film room, column,
+radio take, beat notebook, grades, feature), written from phrase banks in the
+outlet's voice. Bigger news gets more stories from more outlets, and our club's
+beat writers cover all of our news. The media report counts the distinct story
+types a season produces.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each
@@ -885,7 +895,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl) `capplan.ts` (locked-in future cap money, the league-year compliance deadline) `redo.ts` (early redo asks, hold-ins and holdouts) and `conditions.ts` (conditional picks).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
-  The outlets are `outlets.ts`, daily coverage is `media.ts`, and press questions and their hidden effects are `press.ts`.
+  The outlets are `outlets.ts`, daily coverage is `media.ts`, the story engine (facts, angles, formats, the writing grammar and the desks) is `media/`, and press questions and their hidden effects are `press.ts`.
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.

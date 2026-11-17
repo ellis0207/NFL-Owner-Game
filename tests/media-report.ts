@@ -28,6 +28,19 @@ const count = (f: (s: Story) => string) => Object.entries(all.reduce<Record<stri
 console.log(`By kind: ${count((s) => s.kind)}`);
 console.log(`By outlet: ${count((s) => s.outlet)}`);
 console.log(`By month: ${count((s) => s.date.slice(0, 7))}`);
+// The story engine: distinct story types (fact/angle/format) and repeated headlines.
+const typed = all.filter((s) => s.type);
+const types = new Set(typed.map((s) => s.type));
+console.log(`\nStory engine: ${typed.length} stories, ${types.size} distinct types, ${new Set(typed.map((s) => s.type!.split("/")[0])).size} fact types, ${new Set(typed.map((s) => s.angle)).size} angles`);
+console.log(`By format: ${count((s) => s.format ?? "(hand-written)")}`);
+let repeats = 0;
+const lastSeen = new Map<string, string>();
+for (const s of all.slice().sort((a, b) => a.date.localeCompare(b.date))) {
+  const prev = lastSeen.get(s.headline);
+  if (prev && Date.parse(s.date) - Date.parse(prev) < 30 * 86400000) repeats++;
+  lastSeen.set(s.headline, s.date);
+}
+console.log(`Headlines repeated within 30 days: ${repeats} of ${all.length}`);
 const m = mediaState(state);
 console.log(`\nQuestions: ${m.questions.length} (${count.call(null, () => "") && ""}${Object.entries(m.questions.reduce<Record<string, number>>((a, q) => ((a[q.topic] = (a[q.topic] ?? 0) + 1), a), {})).map(([k, v]) => `${k} ${v}`).join(", ")})`);
 for (const q of m.questions.slice(0, 12)) console.log(`  ${q.date} [${q.topic}] ${q.question} -> ${q.answer === -1 ? "(no answer)" : q.options[q.answer!]?.text}`);

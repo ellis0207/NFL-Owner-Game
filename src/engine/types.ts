@@ -1172,6 +1172,21 @@ export interface Story {
   prospects?: string[];
   gameId?: string;
   college?: boolean;
+  /** Composed stories (engine/media): the story type "fact/angle/format", and its format and angle. */
+  type?: string;
+  format?: string;
+  angle?: string;
+}
+
+/** A fact another system hands the media (engine/media/facts.ts `emit`), written up at the end of the day. */
+export interface MediaFactInput {
+  type: string;
+  text: string;
+  kind?: StoryKind;
+  teams?: string[];
+  players?: string[];
+  value?: number;
+  data?: Record<string, string | number | boolean>;
 }
 
 /** One answer the owner can give. Its effects are worked out by the engine and never shown. */
@@ -1236,6 +1251,8 @@ export interface MediaState {
   hypeSnap?: Record<string, number>;
   /** Topics already asked about, so the same development isn't asked twice. */
   asked: Record<string, string>;
+  /** Facts handed over today by other systems, written up by the media at the end of the day. */
+  queue?: MediaFactInput[];
 }
 
 export interface TeamFinance {
