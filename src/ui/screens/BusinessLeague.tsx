@@ -1,4 +1,4 @@
-// The Business page's League tab: our share of the national pools, what's
+// The Business page's League money tab: our share of the national pools, what's
 // been paid and what the spring audit settles, the media renewals ahead, and
 // what changing revenue sharing would do to each club.
 import { useState } from "react";

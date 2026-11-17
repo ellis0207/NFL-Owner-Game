@@ -34,12 +34,12 @@ import { expectLabel } from "../../engine/review";
 import { GroupedTabs } from "../Tabs";
 import { tip } from "../tip";
 
-const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Media", "Game day", "Buildings", "Community", "Stadium", "Grounds", "Sponsors", "Projects", "Budget", "League", "Economy and risk", "New stadium", "Relocation", "International"] as const;
+const TABS = ["Overview", "Books", "Journal", "Treasury", "Plan", "Financing", "Tickets", "Fans", "Store", "Team media", "Game day", "Buildings", "Community", "Stadium", "Grounds", "Sponsors", "Projects", "Budget", "League money", "Economy and risk", "New stadium", "Relocation", "International"] as const;
 type Tab = (typeof TABS)[number];
 // The tabs by part of the business, so the page reads like a table of contents.
 const GROUPS: { label: string; tabs: Tab[] }[] = [
-  { label: "Money", tabs: ["Overview", "Books", "Journal", "Treasury", "Plan", "Budget", "Financing", "League"] },
-  { label: "Revenue", tabs: ["Tickets", "Fans", "Sponsors", "Store", "Media"] },
+  { label: "Money", tabs: ["Overview", "Books", "Journal", "Treasury", "Plan", "Budget", "Financing", "League money"] },
+  { label: "Revenue", tabs: ["Tickets", "Fans", "Sponsors", "Store", "Team media"] },
   { label: "Operations", tabs: ["Game day", "Stadium", "Grounds", "Buildings", "Projects", "Community"] },
   { label: "Growth and risk", tabs: ["Economy and risk", "New stadium", "Relocation", "International"] },
 ];
@@ -64,7 +64,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Tickets" && <Tickets game={game} changed={changed} />}
       {tab === "Fans" && <Fans game={game} />}
       {tab === "Store" && <Store game={game} changed={changed} />}
-      {tab === "Media" && <Media game={game} changed={changed} />}
+      {tab === "Team media" && <Media game={game} changed={changed} />}
       {tab === "Game day" && <GameDay game={game} changed={changed} />}
       {tab === "Buildings" && <Buildings game={game} changed={changed} />}
       {tab === "Community" && <Community game={game} changed={changed} />}
@@ -73,7 +73,7 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
       {tab === "Sponsors" && <Sponsors game={game} changed={changed} />}
       {tab === "Projects" && <Projects game={game} changed={changed} />}
       {tab === "Budget" && <Budget game={game} changed={changed} />}
-      {tab === "League" && <><LeagueMoney game={game} changed={changed} /><League game={game} /></>}
+      {tab === "League money" && <><LeagueMoney game={game} changed={changed} /><League game={game} /></>}
       {tab === "Economy and risk" && <EconomyRisk game={game} changed={changed} />}
     </section>
   );

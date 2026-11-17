@@ -10,3 +10,53 @@
   --room-title-weight: 600;
   --room-title-spacing: -0.01em;
 }
+
+/* The annual report: heavy cream stock, a brass rule over each section,
+   serif headings in small capitals, and figures set like a financial
+   statement (hairline rules, a double rule under the heads). */
+[data-room="office"] {
+  --bd-stock: color-mix(in srgb, var(--panel) 95%, #efe4cc);
+  --bd-brass: #9c7a35;
+  --bd-navy: #1b2a4a;
+  --bd-hair: color-mix(in srgb, var(--rule) 75%, #9c7a35);
+}
+:root[data-theme="dark"] [data-room="office"] { --bd-stock: color-mix(in srgb, var(--panel) 94%, #4d5f8c); --bd-brass: #c7a35a; --bd-navy: #33467a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [data-room="office"] { --bd-stock: color-mix(in srgb, var(--panel) 94%, #4d5f8c); --bd-brass: #c7a35a; --bd-navy: #33467a; } }
+
+[data-room="office"] .panel {
+  background: var(--bd-stock);
+  border-top: 2px solid var(--bd-brass);
+  border-radius: 2px 2px var(--radius) var(--radius);
+}
+[data-room="office"] h2,
+[data-room="office"] .panel h3 {
+  font-family: var(--font-serif);
+  font-variant: small-caps;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--ink);
+}
+[data-room="office"] .panel h3 { font-size: 1.3rem; letter-spacing: 0.04em; }
+[data-room="office"] .panel > h3:first-child { padding-bottom: 0.3rem; border-bottom: 1px solid var(--bd-hair); }
+[data-room="office"] thead th {
+  font-family: var(--font-serif);
+  font-variant: small-caps;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+  font-size: 0.86rem;
+  border-bottom: 3px double var(--bd-hair);
+}
+[data-room="office"] tbody td { border-bottom-color: color-mix(in srgb, var(--bd-hair) 60%, transparent); }
+[data-room="office"] .kv dd { font-family: var(--font-serif); font-size: 1.02rem; }
+[data-room="office"] .label { font-family: var(--font-serif); font-variant: small-caps; text-transform: lowercase; letter-spacing: 0.07em; font-size: 0.86rem; }
+[data-room="office"] .tabs button[aria-pressed="true"] {
+  background: var(--bd-navy);
+  border-color: var(--bd-navy);
+  color: #f4ead2;
+  box-shadow: inset 0 -2px 0 var(--bd-brass);
+}
+[data-room="office"] .tab-groups { background: var(--bd-stock); border-top: 2px solid var(--bd-brass); }
+[data-room="office"] .tab-group .label { color: var(--bd-brass); }
+[data-room="office"] .kit-tile-value { font-family: var(--font-serif); font-weight: 600; }
+[data-room="office"] .notice { border-left-color: var(--bd-brass); }

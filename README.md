@@ -35,7 +35,10 @@ remembered; the game plan sits on Game week beside the practice plan. The cap
 office keeps its books on ledger paper, trade offers arrive as phone message
 slips, the war room pins its cards to the board, and College wears varsity
 letters. The Free agents page opens on the free agency class, beside the
-street free agents.
+street free agents. The owner's office reads like an annual report: cream
+stock under brass rules and serif small capitals; the Front office tabs are
+grouped into leadership, decisions and operations, and Business calls its
+tabs Team media and League money.
 
 Business > Grounds draws the stadium from above: the seating bowl by section,
 the club's land, its lots and garages, the independent lots nearby and how fans
@@ -536,7 +539,7 @@ stores and online shop run in-house or through partners, counterfeiters
 work the big games, and the league's licensing royalties stay national.
 Rebrands (uniforms, a logo, even a new name) need the league's approval,
 cost real money and lead time, and a new name costs fans' trust for years.
-The Media tab shows the league's real TV and streaming deals, our share and
+The Business > Team media tab shows the league's real TV and streaming deals, our share and
 a range for after the 2029 opt-out, a content department with its shows,
 social followers that make digital sponsorship worth more, beat writers and
 their sources, a spokesperson for press questions and a searchable archive

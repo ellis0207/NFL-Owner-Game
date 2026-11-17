@@ -15,20 +15,23 @@ import { Desk, Meetings, Record } from "./FrontOfficeDesk";
 import { People } from "./FrontOfficePeople";
 import { Culture } from "./FrontOfficeCulture";
 import { tip } from "../tip";
+import { GroupedTabs } from "../Tabs";
 
 const TABS = ["Executives", "People", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
+// Who runs the club, what they decide and how, and the departments under them.
+const GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: "Leadership", tabs: ["Executives", "People", "Culture"] },
+  { label: "Decisions", tabs: ["Decision rights", "Memos", "Meetings", "Record"] },
+  { label: "Operations", tabs: ["Departments"] },
+];
 
 export function FrontOfficeScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const memos = openMemos(game).filter((m) => m.status === "open").length;
   const [tab, setTab] = useState<Tab>(() => initialTab("Front office", TABS, memos ? "Memos" : "Executives"));
   return (
     <section className="stack">
-      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <div className="tabs" role="group" aria-label="Front office">
-          {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}{t === "Memos" && memos ? ` (${memos})` : ""}</button>)}
-        </div>
-      </div>
+      <GroupedTabs label="Front office" groups={GROUPS} value={tab} onChange={setTab} note={(t) => (t === "Memos" && memos ? ` (${memos})` : "")} />
       {tab === "Executives" && <Executives game={game} changed={changed} />}
       {tab === "People" && <People game={game} changed={changed} />}
       {tab === "Decision rights" && <Rights game={game} changed={changed} />}
