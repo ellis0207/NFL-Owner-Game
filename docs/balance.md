@@ -47,6 +47,7 @@ that day). Any club over is a hard error.
 | Standard deviation of win percentage | 0.13 to 0.25 | NFL seasons sit near 0.18 to 0.20 |
 | Relocations per season | 0 to 0.5 | CPU moves should be rare |
 | CPU clubs with negative cash | 0 to 4 | A few struggling clubs is fine; a wave means revenue or costs broke |
+| Player stat marks (`STAT_RANGES` in `tests/statspread.ts`) | e.g. 16 to 30 1,000-yard receivers, 12 to 28 players with 10 sacks, reception leader 110 to 150 | From the 2023-2025 seasons in the player data: the owner reads talent through stats, so they must spread like the real league's. One season can wander outside a range; a mark outside it every season is a tuning task |
 
 The ranges live in `RANGES` at the top of `tests/balance-report.ts`; change
 both together.
