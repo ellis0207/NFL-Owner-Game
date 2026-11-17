@@ -14,6 +14,7 @@ import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "
 import { capScale } from "./market";
 import { addStory, gradeLean, MEDIA, MEDIA_BY_ID } from "./outlets";
 import { byline } from "./media/corps";
+import { endArc, openArc } from "./media/arcs";
 import { gaussian, rngFor } from "./rng";
 import { depthChart } from "./roster";
 import { seasonTotals } from "./stats";
@@ -216,6 +217,8 @@ function pickStorylines(state: GameState, r: ReviewState): void {
   for (const s of r.storylines) {
     const o = MEDIA_BY_ID[s.outlet];
     addStory(state, { outlet: o.id, by: o.columnist, kind: "preview", teams: [us], players: s.player ? [s.player] : undefined, headline: s.title, body: openingLine(state, s) });
+    // Each question runs all season as a storyline the media come back to.
+    openArc(state, "question", { key: `${r.season}:${s.id}`, team: us, player: s.player, title: s.title });
   }
 }
 
@@ -253,6 +256,7 @@ function settle(state: GameState, r: ReviewState): void {
     }
     s.status = ok ? "answered" : "unanswered";
     s.verdict = ok ? "The season gave a good answer." : "The question is still hanging over the team.";
+    endArc(state, "question", `${r.season}:${s.id}`, s.status);
     state.pressure.fans = Math.max(0, Math.min(100, state.pressure.fans + (ok ? 1.5 : -1.5)));
   }
   const delta = Math.max(-8, Math.min(8, (wins - e) * 1.2));

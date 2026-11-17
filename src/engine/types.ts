@@ -1230,6 +1230,35 @@ export interface Rumor {
   headline?: string;
 }
 
+/** A storyline that runs for weeks (engine/media/arcs.ts). */
+export interface Arc {
+  id: string;
+  kind: string;
+  /** What makes it unique among open arcs of its kind: a club, a player, a pair of clubs. */
+  key: string;
+  team: string;
+  player?: string;
+  coach?: string;
+  /** Another club in the story: a rival, a destination. */
+  other?: string;
+  title?: string;
+  data?: Record<string, string | number | boolean>;
+  opened: string;
+  phase: string;
+  beats: { date: string; beat: string }[];
+  ending?: string;
+  ended?: string;
+}
+
+export interface ArcState {
+  list: Arc[];
+  next: number;
+  /** Each club's starting quarterback at the last weekly look, to spot a switch. */
+  qb1?: Record<string, string>;
+  /** Steps other systems settled since the last day's writing. */
+  pending?: { id: string; beat: string; ending: boolean }[];
+}
+
 export interface PressCorps {
   people: Reporter[];
   next: number;
@@ -1324,6 +1353,8 @@ export interface MediaState {
   corps?: PressCorps;
   /** Leaks and agents' accounts waiting for a reporter. */
   tips?: PressTip[];
+  /** The storylines running around the league. */
+  arcs?: ArcState;
 }
 
 export interface TeamFinance {

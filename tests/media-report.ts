@@ -8,6 +8,7 @@ import { mediaState } from "../src/engine/outlets";
 import { compress } from "../src/save/codec";
 import type { Story } from "../src/engine/types";
 import { reportStart } from "./fixtures";
+import { arcState } from "../src/engine/media/arcs";
 
 const seed = Number(process.argv[2] ?? 7);
 const t0 = Date.now();
@@ -41,6 +42,12 @@ for (const s of all.slice().sort((a, b) => a.date.localeCompare(b.date))) {
   lastSeen.set(s.headline, s.date);
 }
 console.log(`Headlines repeated within 30 days: ${repeats} of ${all.length}`);
+const arcs = arcState(state).list;
+const tally = (xs: string[]) => Object.entries(xs.reduce<Record<string, number>>((m, x) => ((m[x] = (m[x] ?? 0) + 1), m), {})).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(", ");
+console.log(`\nArcs: ${arcs.length} kept (${arcs.filter((x) => !x.ending).length} open), ${typed.filter((x) => x.type!.startsWith("arc.")).length} arc stories`);
+console.log(`  By kind: ${tally(arcs.map((x) => x.kind))}`);
+console.log(`  Endings: ${tally(arcs.filter((x) => x.ending).map((x) => `${x.kind}:${x.ending}`))}`);
+for (const x of typed.filter((x) => x.type!.startsWith("arc.")).slice(0, 12)) console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 220)}`);
 const m = mediaState(state);
 console.log(`\nQuestions: ${m.questions.length} (${count.call(null, () => "") && ""}${Object.entries(m.questions.reduce<Record<string, number>>((a, q) => ((a[q.topic] = (a[q.topic] ?? 0) + 1), a), {})).map(([k, v]) => `${k} ${v}`).join(", ")})`);
 for (const q of m.questions.slice(0, 12)) console.log(`  ${q.date} [${q.topic}] ${q.question} -> ${q.answer === -1 ? "(no answer)" : q.options[q.answer!]?.text}`);

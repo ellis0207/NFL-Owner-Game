@@ -5,6 +5,8 @@ import { contentFor, withUs, writeStory } from "../src/engine/media/compose";
 import { campFact, seatFact, talkFacts } from "../src/engine/media/desks";
 import { TEAMS } from "../src/engine/league";
 import { RUMOR_CONTENT } from "../src/engine/media/content/rumors";
+import { ARC_CONTENT } from "../src/engine/media/content/arcs";
+import { ARC_LABEL, ARCS, arcState } from "../src/engine/media/arcs";
 import { playerSlots, teamSlots } from "../src/engine/media/facts";
 import { corps, localStaff, outletOf } from "../src/engine/media/corps";
 import { collectFacts, emit, type Fact } from "../src/engine/media/facts";
@@ -187,6 +189,51 @@ describe("the story engine", () => {
       }
     }
     expect(written).toBeGreaterThan(150);
+  });
+
+  it("writes every arc's opening, chapters and endings cleanly", async () => {
+    const state = await stateAt("DET", 7, "regularSeasonStart");
+    const ids = Object.keys(state.players).filter((id) => state.players[id].team === "CHI");
+    let written = 0;
+    expect(Object.keys(ARC_CONTENT).sort()).toEqual(ARCS.map((d) => d.kind).sort());
+    for (const kind of Object.keys(ARC_CONTENT)) expect(ARC_LABEL[kind], kind).toBeTruthy();
+    for (const [kind, c] of Object.entries(ARC_CONTENT)) {
+      const beats = c.angles.map((a) => a.id).filter((id) => id !== "plain" && id !== "ours");
+      for (const beat of ["open", ...beats.filter((b) => b !== "open")]) {
+        for (const ours of [false, true]) {
+          const raw: Fact = {
+            id: `t:${kind}:${beat}:${ours}`, type: `arc.${kind}`, family: "arc", kind: "trend", teams: ["CHI", "GB"], players: [ids[0]], value: 60, ours,
+            tags: { [beat]: true, beat, ending: beat !== "open" && !["pressure", "rolling"].includes(beat), opening: beat === "open", ours, star: ours },
+            slots: {
+              T: teamSlots(state, "CHI"), X: teamSlots(state, "GB"), P: playerSlots(state, ids[0]), W: playerSlots(state, ids[1]), C: { name: "Joe Smith" },
+              days: 40, n: 3, title: "Is Joe Smith the answer at quarterback?", text: "The council has questions",
+            },
+          };
+          const f = withUs(state, raw);
+          for (const angle of c.angles.filter((a) => a.id === "plain" || a.when(f.tags) > 0)) {
+            for (const format of c.formats.filter((x) => x !== "notebook" || f.ours)) {
+              const missing: string[] = [];
+              const d = writeStory(state, f, angle, format, FORMATS[format].outlets[0][0], rngFor(1, `${f.id}:${angle.id}:${format}`), missing);
+              const text = `${d.headline} ${d.body}`;
+              expect(missing, `${d.type}: ${text}`).toEqual([]);
+              expect(text, d.type).not.toMatch(/undefined|NaN|\[object|[{}<>[\]]/);
+              written++;
+            }
+          }
+        }
+      }
+    }
+    expect(written).toBeGreaterThan(1000);
+  });
+
+  it("runs storylines through a season: they open, move and end, and get written up", async () => {
+    const state = await stateAt("DET", 7);
+    const list = arcState(state).list;
+    const kinds = new Set(list.map((a) => a.kind));
+    expect(kinds.size, [...kinds].join(",")).toBeGreaterThanOrEqual(8);
+    expect(list.some((a) => a.ending && a.beats.length >= 2)).toBe(true);
+    expect(list.some((a) => a.kind === "question")).toBe(true);
+    expect(mediaState(state).stories.filter((s) => s.type?.startsWith("arc.")).length).toBeGreaterThan(20);
   });
 
   it("files the day's coverage with story types, every game gets a story, and other systems can hand over facts", async () => {
