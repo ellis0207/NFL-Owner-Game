@@ -489,6 +489,8 @@ export interface PlayerState {
   dev?: number;
   /** Change to the player's ceiling since the save began (engine only). */
   pot?: number;
+  /** Each trait's offset from `dev`: speed fades with age while hands and reads can keep improving (aging.ts; engine only). */
+  tdev?: Record<string, number>;
   /** Credited seasons before the current season, once the save has moved past 2026 (else the data's count). */
   exp?: number;
   /** Date placed on injured reserve (eligible to return after four games). */

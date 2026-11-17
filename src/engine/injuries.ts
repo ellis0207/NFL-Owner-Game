@@ -4,7 +4,8 @@ import { HIDDEN_RATINGS, PLAYER_BY_ID, RULES } from "./league";
 import { projectEffects } from "./projects";
 import { rngFor, type Rng } from "./rng";
 import { diagnose } from "./medical";
-import { staffEffects } from "./staff";
+import { clearFitCache, staffEffects } from "./staff";
+import { tiltTraits } from "./aging";
 import { concussionFactor, riskFactor } from "./training";
 import type { GameState, Injury } from "./types";
 import { liveIds } from "./live";
@@ -70,7 +71,11 @@ function lastingDamage(state: GameState, id: string, type: string, rng: Rng): vo
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
   if (rng() > Math.min(0.9, l.odds * (age >= 30 ? 1.35 : age <= 24 ? 0.8 : 1))) return;
   const p = state.players[id];
-  p.dev = Math.round(((p.dev ?? 0) - (l.loss[0] + (l.loss[1] - l.loss[0]) * rng())) * 10) / 10;
+  const loss = l.loss[0] + (l.loss[1] - l.loss[0]) * rng();
+  p.dev = Math.round(((p.dev ?? 0) - loss) * 10) / 10;
+  // What a torn tendon takes is mostly burst and speed, not hands or reads (aging.ts).
+  tiltTraits(state, id, loss);
+  clearFitCache();
 }
 
 function pick(rng: Rng, list: InjuryType[]): InjuryType {
