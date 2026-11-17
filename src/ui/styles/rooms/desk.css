@@ -10,3 +10,119 @@
   --room-title-weight: 600;
   --room-title-spacing: -0.005em;
 }
+
+/* Paper: the desk's cards are cream sheets in light theme, warm charcoal in dark. */
+[data-room="desk"] {
+  --dk-paper: color-mix(in srgb, var(--panel) 90%, #e9d9b8);
+  --dk-ink: color-mix(in srgb, var(--ink) 85%, #1a2a55);
+  --dk-rule: color-mix(in srgb, var(--rule) 80%, #b89b6a);
+}
+:root[data-theme="dark"] [data-room="desk"] { --dk-paper: color-mix(in srgb, var(--panel) 92%, #6b5233); --dk-rule: color-mix(in srgb, var(--rule) 80%, #6b5233); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [data-room="desk"] { --dk-paper: color-mix(in srgb, var(--panel) 92%, #6b5233); --dk-rule: color-mix(in srgb, var(--rule) 80%, #6b5233); } }
+[data-room="desk"] .panel { background: var(--dk-paper); border-color: var(--dk-rule); }
+[data-room="desk"] .page-body h2 { font-family: var(--font-warm); font-weight: 600; font-size: 1.45rem; letter-spacing: -0.005em; }
+
+/* ---- Today: the morning briefing ---- */
+.dk-lede { font-family: var(--font-warm); font-weight: 400; margin-bottom: 1.1rem; font-size: 1.22rem; line-height: 1.45; color: var(--dk-ink); max-width: 70ch; text-wrap: pretty; }
+.dk-dateline { font-family: var(--font-body); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--room-accent); margin-right: 0.4rem; }
+.dk-brief { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); align-items: start; }
+.dk-main, .dk-side { display: grid; gap: 1.1rem; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+/* The side column: index cards with a colored tab along the top. */
+.dk-side > .panel { position: relative; padding-top: 1.25rem; border-top: 0; box-shadow: 0 1px 0 var(--dk-rule), 0 6px 14px -10px rgb(40 25 10 / 0.35); }
+.dk-side > .panel::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; border-radius: var(--radius) var(--radius) 0 0; background: var(--room-accent); opacity: 0.85; }
+.dk-side > .panel h2 { font-size: 1.15rem; }
+@media (max-width: 1100px) { .dk-brief { grid-template-columns: 1fr; } }
+
+/* The decision queue: folders, the important ones raised and tabbed in the club's color. */
+[data-room="desk"] .decision-queue { background: transparent; border: 0; box-shadow: none; padding: 0; }
+[data-room="desk"] .queue-item {
+  position: relative; background: var(--dk-paper); border: 1px solid var(--dk-rule); border-left: 4px solid var(--dk-rule);
+  border-radius: 2px var(--radius) var(--radius) var(--radius); padding: 0.7rem 0.9rem; box-shadow: var(--shadow); margin-top: 0.55rem;
+}
+[data-room="desk"] .queue-item::before {
+  content: ""; position: absolute; top: -0.55rem; left: -4px; width: 5.5rem; height: 0.55rem;
+  background: inherit; border: 1px solid var(--dk-rule); border-bottom: 0; border-left: 4px solid var(--dk-rule); border-radius: 4px 6px 0 0;
+}
+[data-room="desk"] .queue-item.major { border-left-color: var(--team); box-shadow: var(--shadow-lift); }
+[data-room="desk"] .queue-item.major::before { border-left-color: var(--team); }
+[data-room="desk"] .queue-item.problem, [data-room="desk"] .queue-item.deadline,
+[data-room="desk"] .queue-item.problem::before, [data-room="desk"] .queue-item.deadline::before { border-left-color: var(--room-accent); }
+[data-room="desk"] .queue-title { font-family: var(--font-warm); font-weight: 600; font-size: 1.05rem; color: var(--dk-ink); text-align: left; }
+[data-room="desk"] .queue-kind { font-weight: 700; }
+
+/* Today's schedule: a time line down the left edge. */
+.dk-today .agenda { gap: 0; }
+.dk-today .agenda-item { position: relative; padding-left: 1.1rem; border-bottom-color: var(--dk-rule); }
+.dk-today .agenda-item::before { content: ""; position: absolute; left: 0.2rem; top: 0; bottom: 0; width: 2px; background: var(--dk-rule); }
+.dk-today .agenda-item::after { content: ""; position: absolute; left: -0.05rem; top: 0.95rem; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--dk-paper); border: 2px solid var(--room-accent); }
+.dk-today .agenda-item.done::after { background: var(--good); border-color: var(--good); }
+
+/* ---- Inbox: a mail tray and a letter ---- */
+.dk-mail { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 1rem; align-items: start; }
+.dk-tray { max-height: calc(100vh - 14rem); overflow-y: auto; background: var(--dk-paper); border: 1px solid var(--dk-rule); border-radius: var(--radius); box-shadow: var(--shadow); }
+.dk-envelope { padding: 0; border-bottom-color: var(--dk-rule); }
+.dk-envelope button.head { display: grid; grid-template-columns: 2.1rem minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; padding: 0.6rem 0.75rem; width: 100%; box-sizing: border-box; flex-wrap: nowrap; }
+.dk-envelope:hover button.head { background: color-mix(in srgb, var(--dk-paper) 80%, var(--room-hue)); }
+.dk-envelope.open button.head { background: color-mix(in srgb, var(--dk-paper) 70%, var(--room-hue)); box-shadow: inset 3px 0 0 var(--room-accent); }
+.dk-envelope.urgent .dk-sender { background: var(--room-accent); }
+.dk-sender { width: 2.1rem; height: 2.1rem; border-radius: 50%; display: grid; place-items: center; background: var(--dk-ink); color: var(--dk-paper); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; }
+.dk-envelope-text { display: grid; min-width: 0; }
+.dk-envelope-top { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.78rem; }
+.dk-from { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dk-envelope .subject { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dk-reader { position: sticky; top: 5.5rem; }
+.dk-letter { background: var(--dk-paper); border: 1px solid var(--dk-rule); border-radius: var(--radius); padding: 1.4rem 1.6rem 1.6rem; box-shadow: var(--shadow-lift); display: grid; gap: 0.75rem; }
+.dk-letterhead { font-size: 0.85rem; border-bottom: 1px solid var(--dk-rule); padding-bottom: 0.6rem; }
+.dk-letter-title { font-family: var(--font-warm); font-weight: 600; font-size: 1.6rem; line-height: 1.15; color: var(--dk-ink); }
+.dk-letter .body { white-space: pre-line; max-width: 68ch; font-size: 0.98rem; line-height: 1.6; }
+.dk-inline-letter { display: none; }
+@media (max-width: 900px) {
+  .dk-mail { grid-template-columns: 1fr; }
+  .dk-tray { max-height: none; }
+  .dk-reader { display: none; }
+  .dk-inline-letter { display: block; padding: 0 0.75rem 0.75rem; }
+  .dk-inline-letter .dk-letter { box-shadow: none; padding: 1rem; }
+}
+
+/* ---- Calendar: a paper planner ---- */
+[data-room="desk"] .cal-grid { background: var(--dk-rule); border-color: var(--dk-rule); box-shadow: var(--shadow); }
+[data-room="desk"] .cal-head { background: var(--dk-ink); color: var(--dk-paper); }
+[data-room="desk"] .cal-day { background: var(--dk-paper); }
+[data-room="desk"] .cal-day.past { background: color-mix(in srgb, var(--dk-paper) 75%, var(--sunk)); }
+[data-room="desk"] .cal-day.empty { background: color-mix(in srgb, var(--dk-paper) 55%, var(--sunk)); }
+[data-room="desk"] .cal-num { font-family: var(--font-warm); font-size: 1rem; color: var(--dk-ink); }
+/* Today circled in the club's color, as if in pen. */
+[data-room="desk"] .cal-day.today .cal-num { background: none; color: var(--dk-ink); box-shadow: 0 0 0 2px var(--team); border-radius: 50%; padding: 0 0.35rem; }
+/* Game days as ticket stubs: a notched edge. */
+[data-room="desk"] .cal-chip.game { border-radius: 2px; -webkit-mask: radial-gradient(circle at 0 50%, transparent 3px, #000 3.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 3px, #000 3.5px) right / 51% 100% no-repeat; mask: radial-gradient(circle at 0 50%, transparent 3px, #000 3.5px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 3px, #000 3.5px) right / 51% 100% no-repeat; padding-inline: 0.45rem; }
+[data-room="desk"] .cal-month { font-family: var(--font-warm); text-transform: none; font-size: 1.35rem; }
+
+/* ---- Media: a broadsheet ---- */
+.dk-nameplate { display: grid; gap: 0.35rem; text-align: center; border-bottom: 3px double var(--dk-ink); padding-bottom: 0.4rem; }
+.dk-nameplate-name { font-family: var(--font-serif); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: -0.01em; line-height: 1; color: var(--dk-ink); }
+.dk-nameplate-line { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--dk-ink); padding-top: 0.3rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+[data-room="desk"] .mp-front { background: var(--dk-paper); border: 1px solid var(--dk-rule); border-radius: 4px; padding: 1.1rem 1.3rem 1.3rem; box-shadow: var(--shadow); }
+[data-room="desk"] .mp-lead .mp-head { font-family: var(--font-serif); font-weight: 700; font-size: clamp(1.6rem, 3vw, 2.3rem); line-height: 1.08; color: var(--dk-ink); }
+[data-room="desk"] .mp-lead .body { font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.6; columns: 2 22rem; column-gap: 1.6rem; column-rule: 1px solid var(--dk-rule); max-width: none; }
+[data-room="desk"] .mp-grid { gap: 0; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); border-top: 2px solid var(--dk-ink); }
+[data-room="desk"] .mp-card { border-top: 0; border-right: 1px solid var(--dk-rule); padding: 0.6rem 0.8rem 0.7rem; }
+[data-room="desk"] .mp-card.ours { border-top: 0; background: color-mix(in srgb, var(--dk-paper) 85%, var(--team)); }
+[data-room="desk"] .mp-card button.link { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.25; color: var(--dk-ink); }
+[data-room="desk"] .news-date { font-family: var(--font-serif); text-transform: none; letter-spacing: 0; color: var(--dk-ink); border-bottom: 1px solid var(--dk-ink); padding-bottom: 0.2rem; margin-top: 0.8rem; }
+[data-room="desk"] .story .headline { font-family: var(--font-serif); font-size: 1.04rem; }
+[data-room="desk"] .story .body, [data-room="desk"] .mp-story .body { font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.62; }
+
+/* The Huddle: posts with an avatar, a social feed. */
+.dk-post { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.65rem; padding: 0.65rem 0; border-bottom: 1px solid var(--dk-rule); }
+.dk-post:last-child { border-bottom: 0; }
+.dk-avatar { width: 2.4rem; height: 2.4rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: #5b6b7d; }
+.dk-post.kind-player .dk-avatar { background: var(--team); color: var(--team-ink); }
+.dk-post.kind-press .dk-avatar { background: #2f4a7a; }
+.dk-post.kind-club .dk-avatar { background: var(--room-accent); }
+.dk-post.kind-owner .dk-avatar { background: #8a6a1f; }
+.dk-post-body { display: grid; gap: 0.2rem; min-width: 0; overflow-wrap: anywhere; }
+/* Headlines read as type, not links, until pointed at. */
+[data-room="desk"] .mp-head, [data-room="desk"] .mp-card button.link { text-decoration: none; }
+[data-room="desk"] .mp-head:hover, [data-room="desk"] .mp-card button.link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+[data-room="desk"] .queue-title { text-decoration: none; }
+[data-room="desk"] .queue-title:hover { text-decoration: underline; }

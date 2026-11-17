@@ -93,7 +93,10 @@ export function FrontPage({ game, openStory, openReporter }: { game: GameState; 
       {stories.length === 0 && <p className="muted">{query ? "No stories match." : "Nothing in this edition yet. The outlets file every day as the league moves."}</p>}
       {lead && (
         <section className="mp-front">
-          <span className="muted small">{weekday(lead.date)}, {shortDate(lead.date)}</span>
+          <header className="dk-nameplate">
+            <span className="dk-nameplate-name">{edition === "national" ? "The National Desk" : edition.startsWith("club:") ? `${TEAMS.find((t) => `club:${t.id}` === edition)?.name ?? ""} Daily` : outletOf(edition).name}</span>
+            <span className="dk-nameplate-line"><span>{weekday(lead.date)}, {shortDate(lead.date)}</span><span>{today.length} stories today</span></span>
+          </header>
           <article className="mp-lead">
             <button className="link mp-head" onClick={() => openStory(lead.id)}>{lead.headline}</button>
             <div className="muted small">{outletOf(lead.outlet).name} · <ReporterName id={lead.reporter} name={lead.by} onOpen={openReporter} /></div>

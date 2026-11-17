@@ -32,7 +32,7 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
   const others = TEAMS.filter((t) => t.id !== game.userTeam).sort((a, b) => o.relations[b.id].rapport - o.relations[a.id].rapport);
 
   return (
-    <section className="stack">
+    <section className="stack lg-chamber-page">
       <p className="muted">
         The owners change the playing rules and league policies at the annual league meeting ({shortDate(meetingDay)}); a change needs {VOTES_TO_PASS} of 32 votes.
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.
@@ -126,6 +126,7 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
     return (
       <div className="report">
         <strong>{c.title}</strong>
+        <Chamber yes={p.yes ?? 0} no={32 - (p.yes ?? 0)} undecided={0} need={VOTES_TO_PASS} />
         <span className={p.passed ? "good" : "bad"}>{p.passed ? "Approved" : "Voted down"}, {p.yes}-{32 - (p.yes ?? 0)}{p.amended ? " (as a one-season trial)" : ""}. We voted {p.votes?.[game.userTeam] ? "yes" : "no"}.</span>
         <span className="muted">{sponsorName(p.sponsor)}</span>
       </div>
@@ -143,6 +144,7 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
         Proposed by the {sponsorName(p.sponsor)}.{p.sponsor !== "committee" && ` Competition Committee: ${COMMITTEE[p.committee]}.`}
         {p.ourVote === undefined && ` If we don't decide, our president votes ${p.sponsor === "committee" || p.committee === "for" ? "yes" : "no"}.`}
       </span>
+      <Chamber yes={projected} no={w.no.length + (p.ourVote === false ? 1 : 0)} undecided={w.undecided.length} need={VOTES_TO_PASS} />
       <span>
         Our read of the room: about {projected} yes, {w.no.length + (p.ourVote === false ? 1 : 0)} no, {w.undecided.length} undecided
         {projected >= VOTES_TO_PASS ? " — it looks like it passes." : projected + w.undecided.length >= VOTES_TO_PASS ? " — it could go either way." : " — it looks short."}
@@ -199,5 +201,28 @@ function Hosting({ game, say }: { game: GameState; say: (t: string | null) => vo
       {!canHostSuperBowl(game.userTeam) && <span className="muted">Our stadium doesn't qualify for a Super Bowl (they go to domes and warm-weather stadiums a team controls). Any city can host the draft.</span>}
       {awards.length > 0 && <span className="muted">Awarded in this save: {awards.join(" · ")}</span>}
     </section>
+  );
+}
+
+/**
+ * The owners' meeting as a chamber of 32 seats in three rows, filled from the
+ * left with yes votes, then undecided, then no; the tick marks the votes a
+ * change needs.
+ */
+export function Chamber({ yes, no, undecided, need }: { yes: number; no: number; undecided: number; need: number }) {
+  const rows = [{ r: 34, n: 8 }, { r: 50, n: 11 }, { r: 66, n: 13 }];
+  // Seats ordered left to right across all rows, by angle, so the colors sweep like a real chamber.
+  const seats = rows.flatMap(({ r, n }) => Array.from({ length: n }, (_, i) => {
+    const a = Math.PI - (Math.PI * (i + 0.5)) / n;
+    return { x: 80 + r * Math.cos(a), y: 76 - r * Math.sin(a), a };
+  })).sort((p, q) => q.a - p.a);
+  const kind = (i: number) => (i < yes ? "yes" : i < yes + undecided ? "maybe" : i < yes + undecided + no ? "no" : "empty");
+  const t = Math.PI - (Math.PI * need) / 32;
+  return (
+    <svg className="lg-chamber" viewBox="0 0 160 82" role="img" aria-label={`${yes} yes, ${undecided} undecided, ${no} no; ${need} needed`}>
+      {seats.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="4.6" className={`lg-seat ${kind(i)}`} />)}
+      <line x1={80 + 26 * Math.cos(t)} y1={76 - 26 * Math.sin(t)} x2={80 + 74 * Math.cos(t)} y2={76 - 74 * Math.sin(t)} className="lg-need" />
+      <text x="80" y="78" textAnchor="middle" className="lg-chamber-count">{yes}–{no}</text>
+    </svg>
   );
 }

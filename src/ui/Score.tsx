@@ -5,6 +5,10 @@ import { matchup } from "../engine/standings";
 import type { GameState } from "../engine/types";
 import { useUi } from "./ui";
 import { tip } from "./tip";
+import { TEAM_COLORS } from "../engine/teamColors";
+
+/** A sliver of the club color beside its name on a score tile. */
+const swatch = (team: string) => ({ ["--sw" as string]: TEAM_COLORS[team]?.[0] ?? "transparent" });
 
 export function Score({ game, id }: { game: GameState; id: string }) {
   const ui = useUi();
@@ -16,8 +20,8 @@ export function Score({ game, id }: { game: GameState; id: string }) {
   const homeWin = r && r.homeScore > r.awayScore;
   const body = (
     <>
-      <div className={`row ${awayWin ? "win" : ""}`}><span {...tip("team", m.away)}>{m.away}</span><span>{r ? r.awayScore : ""}</span></div>
-      <div className={`row ${homeWin ? "win" : ""}`}><span {...tip("team", m.home)}>{g.neutral ? m.home : `@${m.home}`}</span><span>{r ? r.homeScore : ""}</span></div>
+      <div className={`row ${awayWin ? "win" : ""}`} style={swatch(m.away)}><span {...tip("team", m.away)}>{m.away}</span><span>{r ? r.awayScore : ""}</span></div>
+      <div className={`row ${homeWin ? "win" : ""}`} style={swatch(m.home)}><span {...tip("team", m.home)}>{g.neutral ? m.home : `@${m.home}`}</span><span>{r ? r.homeScore : ""}</span></div>
       <div className="meta">{r ? (r.overtime ? "Final/OT" : "Final") : kickoff(g.timeET)} · {g.label ?? gameTypeLabel(g)}{r && game.box[id] ? " · Box score" : ""}</div>
     </>
   );

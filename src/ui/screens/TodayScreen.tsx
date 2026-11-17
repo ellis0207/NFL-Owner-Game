@@ -25,6 +25,8 @@ import { openSearches, proposals } from "../../engine/carousel";
 import { ROLE_NAME, staff } from "../../engine/coaches";
 import { tip } from "../tip";
 import { DecisionQueue } from "./DecisionQueue";
+import { decisionQueue } from "../../engine/queue";
+import { longDate } from "../../engine/dates";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
@@ -56,8 +58,22 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
     return m && (m.home === game.userTeam || m.away === game.userTeam);
   })());
 
+  const waitingOnUs = decisionQueue(game).length;
+  const unreadCount = game.inbox.filter((i) => !i.read).length;
+  const nextLine = next && (() => {
+    const m = matchup(game, next)!;
+    const opp = m.home === game.userTeam ? `${teamLabel(m.away)} at home` : `at ${teamLabel(m.home)}`;
+    return next.date === game.date ? `Game day: ${opp}.` : `Next game ${shortDate(next.date)}, ${opp}.`;
+  })();
+
   return (
     <>
+      <p className="dk-lede">
+        <span className="dk-dateline">{longDate(game.date)}</span>{" "}
+        {waitingOnUs ? `${waitingOnUs} decision${waitingOnUs === 1 ? "" : "s"} wait${waitingOnUs === 1 ? "s" : ""} on you this morning.` : "Nothing waits on you this morning."}{" "}
+        {nextLine}{" "}
+        {unreadCount ? `${unreadCount} unread in the inbox.` : ""}
+      </p>
       {isSeasonOver(game) && game.champion && (
         <section className="panel champion">
           <span className="label">{superBowlName(RULES.season)} champion</span>
@@ -76,6 +92,8 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
           </p>
         </section>
       )}
+      <div className="dk-brief">
+      <div className="dk-main">
       {!hidden.includes("Decision queue") && <DecisionQueue game={game} changed={changed} go={go} />}
       {(isSeasonOver(game) || summer) && (
         <section className="panel stack tight">
@@ -85,9 +103,9 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
           ))}
         </section>
       )}
-      <section className="panel stack">
+      <section className="panel stack dk-today">
         <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-          <h2>Today</h2>
+          <h2>Today's schedule</h2>
           <button className="btn small" onClick={() => go("Calendar")}>Open calendar</button>
         </div>
         <div className="agenda">
@@ -123,6 +141,26 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
           })()}.</p>
         )}
       </section>
+      {todays.length > 0 && (
+        <section className="stack">
+          <h3>Today's games</h3>
+          <div className="scores">{todays.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
+        </section>
+      )}
+      {played.length > 0 && (
+        <section className="stack">
+          <h3>Yesterday's scores</h3>
+          <div className="scores">{played.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
+        </section>
+      )}
+      {game.news.length > 0 && (
+        <section className="panel stack">
+          <h2>Around the league</h2>
+          {game.news.slice(0, 8).map((n, i) => <div key={i}><span className="muted">{shortDate(n.date)}</span> · {n.text}</div>)}
+        </section>
+      )}
+      </div>
+      <aside className="dk-side" aria-label="Around the club">
       {next && (() => {
         const report = teamPlayerIds(game, game.userTeam)
           .filter((id) => game.players[id].status === "active" || game.players[id].status === "camp")
@@ -186,25 +224,9 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
           ))}
         </section>
       )}
-      {todays.length > 0 && (
-        <section className="stack">
-          <h3>Today's games</h3>
-          <div className="scores">{todays.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
-        </section>
-      )}
-      {played.length > 0 && (
-        <section className="stack">
-          <h3>Yesterday's scores</h3>
-          <div className="scores">{played.map((g) => <Score key={g.id} game={game} id={g.id} />)}</div>
-        </section>
-      )}
       <CollegeToday game={game} go={go} />
-      {game.news.length > 0 && (
-        <section className="panel stack">
-          <h2>Around the league</h2>
-          {game.news.slice(0, 8).map((n, i) => <div key={i}><span className="muted">{shortDate(n.date)}</span> · {n.text}</div>)}
-        </section>
-      )}
+      </aside>
+      </div>
     </>
   );
 }

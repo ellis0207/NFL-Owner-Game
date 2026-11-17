@@ -488,3 +488,117 @@ def game():
 
 
 ROOMS = {"desk": desk, "team": team, "building": building, "draft": draft, "office": office, "league": league, "game": game}
+
+
+# ---- Pages with a picture of their own ----
+
+def archive():
+    """History: the league's record room. Shelves of bound season books, an old leather ball under a lamp."""
+    setup(world=(0.01, 0.008, 0.006))
+    wood = mat("shelf", (0.13, 0.065, 0.03), rough=0.45, noise=0.5, scale=4, stretch=(10, 1, 1))
+    back = mat("back", (0.05, 0.03, 0.018), rough=0.7)
+    gilt = mat("gilt", (0.85, 0.62, 0.22), rough=0.3, metal=1)
+    covers = [mat(f"cv{i}", c, rough=0.55, noise=0.3, scale=30) for i, c in enumerate([(0.32, 0.06, 0.05), (0.07, 0.12, 0.25), (0.08, 0.2, 0.12), (0.28, 0.17, 0.07), (0.15, 0.1, 0.08)])]
+    box((0.8, 0.35, 1.2), (7, 0.05, 2.6), back)
+    rnd = random.Random(9)
+    for shelf, z in enumerate((0.3, 0.95, 1.6)):
+        box((0.8, 0.12, z - 0.02), (7, 0.5, 0.04), wood)
+        x = -2.6
+        while x < 4.2:
+            w = rnd.uniform(0.045, 0.08)
+            h = rnd.uniform(0.42, 0.55)
+            lean = rnd.uniform(-2, 2) if rnd.random() < 0.15 else 0
+            box((x + w / 2, 0.15, z + h / 2), (w, 0.32, h), rnd.choice(covers), rot=(0, lean, 0), bevel=0.004)
+            for k in (0.12, 0.2, h - 0.08):
+                box((x + w / 2, -0.012, z + k), (w * 0.9, 0.004, 0.012), gilt)
+            x += w + 0.004
+    # The old ball on a stand on the middle shelf's ledge, lit by a warm lamp.
+    leather = mat("old", (0.2, 0.09, 0.04), rough=0.6, noise=0.5, scale=40)
+    ball((1.95, -0.25, 1.06), 0.11, leather, scale=(1.6, 1, 1), rot=(0, 0, 18))
+    cyl((1.95, -0.25, 0.96), 0.07, 0.04, gilt)
+    spot((2.2, -1.6, 2.2), (1.9, 0, 1.0), 260, angle=55, blend=0.95, color=(1, 0.8, 0.55))
+    area((-2, -2.5, 1.6), (0.5, 0, 1), 30, size=3, color=(0.55, 0.62, 1))
+    camera((-0.6, -2.6, 1.15), (1.6, 0.1, 1.0), lens=34, focus=(1.9, -0.2, 1.05), fstop=2.8)
+
+
+def press():
+    """Media: the morning's papers on the desk, folded and stacked, with a radio microphone."""
+    setup(world=(0.012, 0.012, 0.014))
+    top = mat("top", (0.12, 0.08, 0.05), rough=0.4, noise=0.5, scale=3, stretch=(1, 12, 1))
+    newsprint = mat("newsprint", (0.78, 0.76, 0.7), rough=0.9)
+    ink = mat("ink", (0.08, 0.08, 0.09), rough=0.8)
+    grey = mat("grey", (0.35, 0.35, 0.36), rough=0.8)
+    steel = mat("steel", (0.55, 0.57, 0.6), rough=0.25, metal=1)
+    black = mat("black", (0.02, 0.02, 0.025), rough=0.35)
+    box((0, 0, -0.02), (6, 3, 0.04), top)
+    rnd = random.Random(14)
+    for i in range(5):
+        x, y, a = 0.85 + rnd.uniform(-0.05, 0.05), 0.0 + rnd.uniform(-0.04, 0.04), rnd.uniform(-10, 10) + (i - 2) * 4
+        z = 0.012 + i * 0.016
+        box((x, y, z), (0.6, 0.42, 0.014), newsprint, rot=(0, 0, a))
+        if i == 4:
+            # The top paper's front: a nameplate, a big headline and columns of type.
+            def put(dx, dy, w, h, m):
+                ar = math.radians(a)
+                box((x + dx * math.cos(ar) - dy * math.sin(ar), y + dx * math.sin(ar) + dy * math.cos(ar), z + 0.0075), (w, h, 0.001), m, rot=(0, 0, a))
+            put(0, 0.16, 0.42, 0.045, ink)
+            put(0, 0.13, 0.56, 0.003, ink)
+            put(-0.02, 0.085, 0.5, 0.035, ink)
+            put(-0.02, 0.045, 0.4, 0.03, ink)
+            for c in range(4):
+                for r in range(9):
+                    put(-0.21 + c * 0.14, 0.0 - r * 0.02, 0.12, 0.006, grey)
+    # A broadcast microphone on a short stand at the right.
+    cyl((1.75, 0.15, 0.01), 0.09, 0.02, black)
+    cyl((1.75, 0.15, 0.13), 0.012, 0.24, steel)
+    cyl((1.75, 0.12, 0.3), 0.05, 0.16, black, rot=(70, 0, 0))
+    ball((1.75, 0.065, 0.33), 0.052, mat("grille", (0.25, 0.26, 0.28), rough=0.4, metal=0.8))
+    spot((1.9, -0.7, 1.3), (1.0, 0, 0), 220, angle=80, blend=0.9, color=(1, 0.92, 0.8))
+    area((-2, -1.5, 1.8), (0.5, 0, 0), 35, size=3, color=(0.6, 0.7, 1))
+    camera((0.15, -1.4, 0.62), (1.05, 0.08, 0.02), lens=36, focus=(0.9, 0.0, 0.08), fstop=2.6)
+
+
+ROOMS.update({"archive": archive, "press": press})
+
+
+def chamber():
+    """Owners: the league meeting in a hotel ballroom. Rows of draped tables with nameplates and microphones, a dais and a screen."""
+    setup(world=(0.006, 0.008, 0.014))
+    drape = mat("drape", (0.03, 0.05, 0.12), rough=0.85, noise=0.2, scale=20)
+    carpet = mat("carpet", (0.09, 0.03, 0.035), rough=1, noise=0.4, scale=40)
+    card = mat("card", (0.88, 0.87, 0.82), rough=0.8)
+    steel = mat("steel", (0.5, 0.52, 0.55), rough=0.3, metal=1)
+    black = mat("black", (0.015, 0.015, 0.02), rough=0.4)
+    screen = mat("screen", (0.15, 0.3, 0.75), rough=0.5, emit=2.2)
+    white = mat("white", (1, 1, 1), emit=4)
+    box((0, 6, -0.01), (30, 30, 0.02), carpet)
+    # Rows of tables facing the dais at +Y.
+    for row in range(6):
+        y = row * -1.3
+        for side in (-1, 1):
+            x0 = side * 2.6
+            box((x0, y, 0.37), (4.2, 0.6, 0.74), drape)
+            for k in range(5):
+                x = x0 - 1.6 + k * 0.8
+                box((x, y + 0.12, 0.79), (0.22, 0.012, 0.08), card, rot=(-12, 0, 0))
+                cyl((x + 0.12, y + 0.05, 0.84), 0.005, 0.2, steel, rot=(-25, 0, 0))
+                ball((x + 0.12, y + 0.095, 0.93), 0.012, black)
+    # The dais and the screen behind it.
+    box((0, 4.2, 0.25), (8, 1.6, 0.5), drape)
+    box((0, 3.8, 0.95), (0.6, 0.4, 0.9), black)
+    box((0, 6.2, 2.6), (6.4, 0.1, 3.2), black)
+    box((0, 6.14, 2.6), (6.0, 0.02, 2.9), screen)
+    text("24 OF 32", (0, 6.1, 2.4), 0.9, white, rot=(90, 0, 0))
+    # Chandeliers: rings of small lights.
+    bulb = mat("bulb", (1, 0.85, 0.6), emit=20)
+    for cx in (-3, 3):
+        for cy in (-2, 1.5):
+            for i in range(10):
+                a = i * math.pi / 5
+                ball((cx + 0.5 * math.cos(a), cy + 0.5 * math.sin(a), 3.8), 0.04, bulb)
+            spot((cx, cy, 3.7), (cx, cy, 0), 600, angle=100, blend=0.9, color=(1, 0.82, 0.6))
+    area((0, 4, 3.5), (0, -2, 0), 300, size=6, color=(0.4, 0.55, 1))
+    camera((-4.8, -9.2, 2.3), (0.8, 4.5, 1.2), lens=32, focus=(0, 0, 0.8), fstop=5)
+
+
+ROOMS["chamber"] = chamber

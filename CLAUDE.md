@@ -132,7 +132,8 @@ Rooms: each sidebar group is a room (`ROOM` in nav.ts: desk, team, building,
 draft, office, league, game) with `data-room` on the page, its tokens
 (`--room-base`, `--room-accent`, `--room-glint`, `--room-hue`, `--room-font`)
 in `src/ui/styles/rooms/<room>.css`, and a header picture rendered in Blender
-(`pipeline/art`, `assets/art/<room>.webp`, served as `art/`). Styles are split
+(`pipeline/art`, `assets/art/<room>.webp`, served as `art/`; a page with its
+own picture is listed in `PAGE_ART`). Styles are split
 in `src/ui/styles/`: `base.css` (tokens, shell, tables), `kit.css`,
 `masthead.css`, the room files, and `field.css`/`tips.css`/`app.css`/
 `hall.css`/`mediapages.css`. A room file defines only classes with its prefix
