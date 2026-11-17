@@ -47,6 +47,7 @@ import { ensureClubhouse, lockerDaily } from "./clubhouse";
 import { knownReturn, medicalDaily } from "./medical";
 import { gameWeekDaily } from "./gameweek";
 import { honorsDaily } from "./honors";
+import { hallOfFameDaily } from "./halloffame";
 import { recordsDaily } from "./records";
 import { bonusesDaily } from "./bonuses";
 import { ensureScouts } from "./scouts";
@@ -650,6 +651,7 @@ export function advanceDay(state: GameState): void {
   gameWeekDaily(state);
   bonusesDaily(state);
   honorsDaily(state);
+  hallOfFameDaily(state);
   hindsightDaily(state);
   recordsDaily(state);
   // The press files on everything that happened today, then asks the owner about it.

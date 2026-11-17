@@ -31,6 +31,21 @@ afterEach(() => {
 });
 
 describe("historical starts", () => {
+  it("a 2011 start has the Hall as it stood, and votes the later real greats in itself", async () => {
+    const e = await engineFor(2011);
+    const hof = await import("../src/engine/halloffame");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 3);
+    const classes = hof.hofClasses(s);
+    expect(classes[2011].length).toBe(7);
+    expect(classes[2012]).toBeUndefined();
+    // Retired before 2011 and inducted later in real life: a candidate here.
+    expect(hof.hofCase(s, "hof:curtis-martin")!.hofYear).toBeUndefined();
+    const proj = hof.projectClasses(s, 3).flatMap((p) => p.ids);
+    expect(proj.length).toBeGreaterThan(5);
+    // Still playing in 2011: his career is this save's to finish, not the data's.
+    expect(proj).not.toContain("hof:peyton-manning");
+  }, 120_000);
+
   for (const year of YEARS) {
     it(`a ${year} start has that year's cap, rosters, schedule, stadiums and format`, async () => {
       const e = await engineFor(year);

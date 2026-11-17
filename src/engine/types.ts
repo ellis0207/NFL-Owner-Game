@@ -2952,8 +2952,44 @@ export interface HonorsState {
   proBowl: Record<number, string[]>;
   allPro: Record<number, { first: string[]; second: string[] }>;
   awards: Record<number, AwardResult[]>;
-  /** Hall of Fame: inducted players by class year, and each year's finalists. */
-  hof: { classes: Record<number, string[]>; finalists: Record<number, string[]> };
+  /**
+   * Hall of Fame classes elected in this save (halloffame.ts) by class year, and
+   * each year's modern-era finalists. Real classes before the save live in
+   * data/hof. Ids are player ids, or "hof:<key>" for people from the data.
+   */
+  hof: {
+    classes: Record<number, string[]>;
+    finalists: Record<number, string[]>;
+    /** The full ballot of each vote: who reached which round and how the panel voted. Absent in older saves. */
+    ballots?: Record<number, HofBallot>;
+    /** Marks against a player's name from discipline cases in this save: [conduct, things said in public]. */
+    rep?: Record<string, [number, number]>;
+    /** The last discipline case read into `rep`. */
+    seen?: string;
+  };
+}
+
+/** One candidate on a Hall of Fame ballot. */
+export interface HofEntry {
+  id: string;
+  /** How far he got: 25 semifinalist, 15 finalist, 10 and 5 the reduction votes; 1 a senior or coach/contributor finalist. */
+  stage: 25 | 15 | 10 | 5 | 1;
+  /** Share of the panel that voted yes in the final vote, 0-100. */
+  share?: number;
+  elected?: boolean;
+  /** His year on the ballot (1 = first year eligible). */
+  year: number;
+  /** What held him back, in the papers' words. */
+  why?: string;
+}
+
+/** A year's Hall of Fame vote by the panel of Hall of Famers. */
+export interface HofBallot {
+  /** The voters: Hall of Fame players drawn for this year. */
+  panel: string[];
+  modern: HofEntry[];
+  seniors: HofEntry[];
+  builders: HofEntry[];
 }
 
 /** A best mark: who, for whom, how much, and when. */
