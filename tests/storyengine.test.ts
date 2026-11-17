@@ -7,6 +7,10 @@ import { TEAMS } from "../src/engine/league";
 import { RUMOR_CONTENT } from "../src/engine/media/content/rumors";
 import { ARC_CONTENT } from "../src/engine/media/content/arcs";
 import { SEASON_CONTENT } from "../src/engine/media/content/season";
+import { MAIL, OPINION_CONTENT } from "../src/engine/media/content/opinion";
+import { ALERT, CLUB, FAN, NEWS_TAKE, PLAYER } from "../src/engine/media/content/social";
+import { fanAccounts, sentiment, social, trending } from "../src/engine/media/social";
+import { opinionState } from "../src/engine/media/opinion";
 import { ARC_LABEL, ARCS, arcState } from "../src/engine/media/arcs";
 import { playerSlots, teamSlots } from "../src/engine/media/facts";
 import { corps, localStaff, outletOf } from "../src/engine/media/corps";
@@ -266,6 +270,50 @@ describe("the story engine", () => {
     expect(written).toBeGreaterThan(300);
   });
 
+  it("writes every Huddle post and opinion piece cleanly", async () => {
+    const state = await stateAt("DET", 7, "regularSeasonStart");
+    const ids = Object.keys(state.players).filter((id) => state.players[id].team === "CHI");
+    const slots: Fact["slots"] = {
+      T: teamSlots(state, "CHI"), X: teamSlots(state, "GB"), P: playerSlots(state, ids[0]), Q: playerSlots(state, ids[1]), O: "Packers", score: "24-17", total: "$40M", coach: "Joe Smith",
+      yearsWord: "four", injury: "torn ACL", span: "about 6 weeks", head: "The Bears trade a pick to the Packers", text: "the Bears fired their coordinator",
+      R: { name: "Pat Doe", outlet: "The Ledger" }, S: { name: "Lou Roe", outlet: "The Blitz" }, stance: "for real", weeks: 4, since: "Oct 1", list: "Bears, Packers, Lions", topic: "Bears",
+      stanceR: "They're for real", stanceS: "Not buying it", mail: "Q? A.", A: "@Fan", C: { name: "Joe Smith" },
+    };
+    const lines = [
+      ...Object.values(FAN).flatMap((x) => [...x.good, ...x.bad, ...x.chat]), ...Object.values(NEWS_TAKE).flatMap((x) => [...x.good, ...x.bad]),
+      ...Object.values(PLAYER).flat(), ...Object.values(ALERT).flat(), ...Object.values(CLUB).flat(), ...Object.values(MAIL).flatMap((x) => [...x.q, ...x.a]),
+    ];
+    for (const line of lines) {
+      for (let k = 0; k < 4; k++) {
+        const missing: string[] = [];
+        const text = render(line, slots, { rng: rngFor(k, line), banks: {}, tone: "lively", missing });
+        expect(missing, `${line} -> ${text}`).toEqual([]);
+        expect(text, line).not.toMatch(/undefined|NaN|\[object|[{}<>[\]]/);
+      }
+    }
+    expect(new Set(fanAccounts(state, "CHI").map((a) => a.handle)).size).toBe(8);
+    let written = 0;
+    const flags = ["open", "holding", "shaky", "right", "wrong", "real", "fraud", "pod", "local", "team", "mvp"];
+    for (const [kind, c] of Object.entries(OPINION_CONTENT)) {
+      for (const on of [false, true]) {
+        const tags: Record<string, boolean> = { [kind]: true, ours: on };
+        if (on) for (const t of flags) tags[t] = true;
+        const raw: Fact = { id: `t:${kind}:${on}`, type: `opinion.${kind}`, family: "opinion", kind: "trend", teams: ["CHI"], players: [ids[0]], value: 50, ours: on, tags, slots };
+        const f = on ? withUs(state, raw) : raw;
+        for (const angle of c.angles.filter((a) => a.id === "plain" || a.when(f.tags) > 0)) {
+          for (const format of c.formats.filter((x) => x !== "notebook" || f.ours)) {
+            const missing: string[] = [];
+            const d = writeStory(state, f, angle, format, FORMATS[format].outlets[0][0], rngFor(1, `${f.id}:${angle.id}:${format}`), missing);
+            expect(missing, `${d.type}: ${d.headline} ${d.body}`).toEqual([]);
+            expect(`${d.headline} ${d.body}`, d.type).not.toMatch(/undefined|NaN|\[object|[{}<>[\]]/);
+            written++;
+          }
+        }
+      }
+    }
+    expect(written).toBeGreaterThan(40);
+  });
+
   it("runs storylines through a season: they open, move and end, and get written up", async () => {
     const state = await stateAt("DET", 7);
     const list = arcState(state).list;
@@ -277,6 +325,13 @@ describe("the story engine", () => {
     // The calendar's stories: ladders, the playoff picture, the deadline, retrospectives and more.
     const season = new Set(mediaState(state).stories.filter((s) => s.type?.startsWith("season.")).map((s) => s.type!.split("/")[0]));
     for (const k of ["award", "playoffs", "retro"]) expect(season.has(`season.${k}`), [...season].join(",")).toBe(true);
+    // The Huddle: fans, players, reporters and clubs all post; moods spread; something is trending; columnists hold theses.
+    const posts = social(state).posts;
+    for (const k of ["fan", "club", "press"]) expect(posts.some((p) => p.kind === k), k).toBe(true);
+    const moods = TEAMS.map((t) => sentiment(state, t.id));
+    expect(Math.max(...moods) - Math.min(...moods)).toBeGreaterThan(10);
+    expect(trending(state).length).toBeGreaterThan(0);
+    expect(opinionState(state).theses.length).toBeGreaterThan(3);
   });
 
   it("files the day's coverage with story types, every game gets a story, and other systems can hand over facts", async () => {

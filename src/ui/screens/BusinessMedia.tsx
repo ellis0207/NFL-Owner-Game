@@ -57,9 +57,12 @@ export function Media({ game, changed }: { game: GameState; changed: () => void 
             <dt>Content, {year}</dt><dd>{money(content.cost)} to run, {money(content.revenue)} back from shows and their sponsors</dd>
           </dl>
           <span className="label">What people are saying</span>
-          {t.feed.length ? (
-            <ul>{t.feed.slice(0, 6).map((p, i) => <li key={i}><span className="muted">{shortDate(p.date)} {p.who}:</span> {p.text}</li>)}</ul>
-          ) : <span className="muted">Quiet until the games start.</span>}
+          {(() => {
+            const feed = (game.media?.social?.posts ?? []).filter((p) => p.team === game.userTeam).slice(0, 6);
+            return feed.length ? (
+              <ul>{feed.map((p) => <li key={p.id}><span className="muted">{shortDate(p.date)} {p.who}:</span> {p.text}</li>)}</ul>
+            ) : <span className="muted">Quiet for now. The full feed is on Media &gt; Huddle.</span>;
+          })()}
         </div>
       </div>
       <div className="split">

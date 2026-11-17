@@ -25,7 +25,8 @@ describe("team media", () => {
     const s = stateAt(TEAM, 7);
     const t = teamMedia(s);
     expect(t.followers).not.toBe(t.followers0);
-    expect(t.feed.length).toBeGreaterThan(0);
+    // Fans talk about us on the Huddle (media/social.ts), which replaced the old five-account feed.
+    expect((s.media?.social?.posts ?? []).some((p) => p.team === s.userTeam)).toBe(true);
     expect(t.archive.length).toBeGreaterThan(20);
     expect(audienceLift(s)).toBeGreaterThan(0.7);
     expect(audienceLift(s)).toBeLessThan(1.5);

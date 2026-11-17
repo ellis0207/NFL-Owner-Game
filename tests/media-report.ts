@@ -9,6 +9,8 @@ import { compress } from "../src/save/codec";
 import type { Story } from "../src/engine/types";
 import { reportStart } from "./fixtures";
 import { arcState } from "../src/engine/media/arcs";
+import { sentiment, social, trending } from "../src/engine/media/social";
+import { TEAMS } from "../src/engine/league";
 
 const seed = Number(process.argv[2] ?? 7);
 const t0 = Date.now();
@@ -17,12 +19,16 @@ const all: Story[] = [];
 const seen = new Set<string>();
 let days = 0;
 let i = 0;
+const allPosts: { kind?: string; date: string; who: string; text: string; by?: string }[] = [];
+let lastPost = 0;
 // One season: through the draft, until the league moves on.
 while ((state.season ?? 2026) === 2026) {
   for (const q of openQuestions(state)) if (i++ % 4 !== 3) answerQuestion(state, q.id, (i * 7) % q.options.length);
   advanceDay(state);
   days++;
   for (const s of mediaState(state).stories) if (!seen.has(s.id)) { seen.add(s.id); all.push(s); }
+  for (const p of mediaState(state).social?.posts ?? []) if (p.id && p.id > lastPost) allPosts.push(p);
+  lastPost = mediaState(state).social?.next ? mediaState(state).social!.next - 1 : lastPost;
 }
 console.log(`${days} days in ${((Date.now() - t0) / 1000).toFixed(0)}s, ${all.length} stories (${(all.length / days).toFixed(1)} a day)`);
 const count = (f: (s: Story) => string) => Object.entries(all.reduce<Record<string, number>>((a, s) => ((a[f(s)] = (a[f(s)] ?? 0) + 1), a), {})).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(", ");
@@ -47,6 +53,22 @@ const tally = (xs: string[]) => Object.entries(xs.reduce<Record<string, number>>
 console.log(`\nArcs: ${arcs.length} kept (${arcs.filter((x) => !x.ending).length} open), ${typed.filter((x) => x.type!.startsWith("arc.")).length} arc stories`);
 console.log(`  By kind: ${tally(arcs.map((x) => x.kind))}`);
 console.log(`  Endings: ${tally(arcs.filter((x) => x.ending).map((x) => `${x.kind}:${x.ending}`))}`);
+const posts = social(state).posts;
+const inSeasonPosts = allPosts.filter((p) => p.date >= "2026-09-10" && p.date <= "2027-01-03");
+console.log(`\nHuddle: ${allPosts.length} posts in the season (${(allPosts.length / days).toFixed(1)} a day; ${(inSeasonPosts.length / 116).toFixed(1)} a day in the regular season). By kind: ${tally(allPosts.map((p) => p.kind ?? "?"))}`);
+for (const p of allPosts.filter((x) => x.kind === "player").slice(0, 8)) console.log(`  player ${p.date} ${p.who}: ${p.text}`);
+console.log(`  Trending: ${trending(state).map((t) => `${t.topic} (${t.posts})`).join(", ")}`);
+console.log(`  Moods: ${TEAMS.map((t) => `${t.id} ${Math.round(sentiment(state, t.id))}`).join(", ")}`);
+for (const p of posts.slice(0, 12)) console.log(`  ${p.date} ${p.who}${p.by ? ` (${p.by})` : ""}: ${p.text}`);
+const op = typed.filter((x) => x.type!.startsWith("opinion."));
+console.log(`\nOpinion: ${op.length} stories. By kind: ${tally(op.map((x) => x.type!.split("/")[0].slice(8)))}`);
+const opShown = new Set<string>();
+for (const x of op) {
+  const k = x.type!.split("/")[0];
+  if (opShown.has(k)) continue;
+  opShown.add(k);
+  console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 300)}`);
+}
 const narr = typed.filter((x) => x.type!.startsWith("season."));
 console.log(`\nSeason narratives: ${narr.length} stories. By kind: ${tally(narr.map((x) => x.type!.split("/")[0].slice(7)))}`);
 const shown = new Set<string>();

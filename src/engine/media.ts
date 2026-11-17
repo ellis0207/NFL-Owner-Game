@@ -19,7 +19,7 @@ import { draftClass } from "./prospects";
 import { gaussian, rngFor, type Rng } from "./rng";
 import { depthChart } from "./roster";
 import { teamStaff } from "./staff";
-import { seedConference, standings, matchup, type Record_ } from "./standings";
+import { standings, matchup, type Record_ } from "./standings";
 import { seasonTotals, stat, type StatLine } from "./stats";
 import { outlook, parsePick } from "./trades";
 import type { BoxScore, GameState, Position, ScheduledGame, Story } from "./types";
@@ -27,6 +27,8 @@ import { money } from "./inbox";
 import { composeDay, fileFacts } from "./media/compose";
 import { arcsDaily } from "./media/arcs";
 import { narrativesDaily } from "./media/narratives";
+import { socialDaily } from "./media/social";
+import { opinionDaily } from "./media/opinion";
 import { campFact, seatFact, talkFacts } from "./media/desks";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
@@ -49,7 +51,6 @@ export function surname(name: string): string {
   const parts = name.split(" ").filter((w) => !/^(Jr\.?|Sr\.?|II|III|IV|V)$/.test(w));
   return parts[parts.length - 1] ?? name;
 }
-const last = surname;
 const pname = (id: string) => PLAYER_BY_ID[id]?.name ?? "Unknown";
 const ppos = (id: string) => PLAYER_BY_ID[id]?.position ?? "";
 const recordOf = (r: Record_ | undefined) => (r ? `${r.w}-${r.l}${r.t ? `-${r.t}` : ""}` : "0-0");
@@ -380,50 +381,6 @@ function weekPreview(state: GameState): void {
   });
 }
 
-function overreactions(state: GameState): void {
-  const table = standings(state);
-  const rng = rngFor(state.seed, `media:over:${state.date}`);
-  const teams = TEAMS.map((t) => t.id);
-  const hot = teams.filter((t) => table[t].streak.startsWith("W") && Number(table[t].streak.slice(1)) >= 2);
-  const cold = teams.filter((t) => table[t].streak.startsWith("L") && Number(table[t].streak.slice(1)) >= 2);
-  const takes: string[] = [];
-  if (hot.length) {
-    const t = pick(rng, hot);
-    takes.push(`The ${nick(t)} are winning the Super Bowl. ${pick(rng, ["Book it.", "I said what I said.", "Write it down."])}`);
-  }
-  if (cold.length) {
-    const t = pick(rng, cold);
-    takes.push(`Blow up the ${nick(t)}. ${pick(rng, ["Everybody, top to bottom.", `${last(hcName(t))} has lost that room.`, "Start over."])}`);
-  }
-  const us = state.userTeam;
-  const r = table[us];
-  if (r.w + r.l > 0) {
-    takes.push(r.streak.startsWith("W")
-      ? `The ${nick(us)} owner has figured it out. ${pick(rng, ["Smartest guy in the league.", "Who saw this coming? Not me."])}`
-      : `Somebody has to ask the ${nick(us)} owner what the plan is. ${pick(rng, ["Because I don't see one.", "The fans deserve an answer."])}`);
-  }
-  if (!takes.length) return;
-  story(state, O.blitz, "columnist", {
-    kind: "trend", teams: [us],
-    headline: "Overreaction Monday",
-    body: takes.map((t, i) => `${i + 1}. ${t}`).join("\n") + `\n\nKara Voss's verdict: "${pick(rng, ["Half of that is crazy. The other half is just loud.", "Lou, you say this every week.", "Ask me again in December."])}"`,
-  });
-}
-
-function playoffPicture(state: GameState): void {
-  const lines: string[] = [];
-  for (const conf of ["AFC", "NFC"] as const) {
-    const seeds = seedConference(state, conf);
-    lines.push(`${conf}: ${seeds.map((t, i) => `${i + 1}. ${nick(t)}`).join(", ")}`);
-  }
-  const inNow = [...seedConference(state, "AFC"), ...seedConference(state, "NFC")].includes(state.userTeam);
-  story(state, O.ledger, "analyst", {
-    kind: "trend", teams: [state.userTeam],
-    headline: `If the season ended today: the playoff picture${inNow ? ` (${nick(state.userTeam)} are in)` : ""}`,
-    body: lines.join("\n") + `\n\nThe ${nick(state.userTeam)} are ${inNow ? "in the field" : "on the outside"} for now.`,
-  });
-}
-
 function trends(state: GameState): void {
   const date = state.date;
   const wd = weekday(date);
@@ -446,10 +403,8 @@ function trends(state: GameState): void {
     return;
   }
   if (wd === "Tuesday") powerRankings(state, false);
-  if (wd === "Monday") overreactions(state);
   if (wd === "Thursday" && date >= addDays(KEY.regularSeasonStart, 14)) statWatch(state);
   if (wd === "Wednesday") weekPreview(state);
-  if (wd === "Tuesday" && date >= addDays(KEY.regularSeasonStart, 77)) playoffPicture(state);
   if (wd === "Tuesday" && date >= addDays(KEY.regularSeasonStart, 40)) hotSeat(state);
 }
 
@@ -816,9 +771,12 @@ export function mediaDaily(state: GameState): void {
   // Games, big days, injuries, signings, releases, claims and trades go through the story engine.
   const facts = composeDay(state);
   // The running stories: arcs open from the day's facts and the league's state, move a phase, or end.
-  arcsDaily(state, facts);
+  const arcFacts = arcsDaily(state, facts);
   // The calendar's stories: award races, the playoff picture, the deadline, draft stock, anniversaries, milestones, retrospectives, tributes.
-  narrativesDaily(state);
+  const seasonFacts = narrativesDaily(state);
+  // The Huddle reacts to all of it; then the opinion desk argues about it.
+  socialDaily(state, [...facts, ...arcFacts, ...seasonFacts]);
+  opinionDaily(state);
   wireCoverage(state);
   corpsDaily(state);
   rumorDesk(state);

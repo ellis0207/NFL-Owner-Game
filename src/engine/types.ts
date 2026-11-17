@@ -1364,6 +1364,9 @@ export interface MediaState {
   arcs?: ArcState;
   /** The season narratives desk (media/narratives.ts). */
   narr?: NarrState;
+  social?: SocialState;
+  /** The opinion desk (media/opinion.ts). */
+  opinion?: OpinionState;
 }
 
 export interface TeamFinance {
@@ -1548,6 +1551,37 @@ export interface SocialPost {
   date: string;
   who: string;
   text: string;
+  /** The Huddle (media/social.ts): post id, who posted (fan, player, reporter, club), the club and player it's about, the topic it counts toward in trending, the fan's mood. */
+  id?: number;
+  kind?: "fan" | "player" | "press" | "club";
+  team?: string;
+  player?: string;
+  by?: string;
+  topic?: string;
+  mood?: number;
+}
+
+/** A columnist's running argument about one club, kept until the season settles it. */
+export interface Thesis {
+  id: string;
+  reporter: string;
+  team: string;
+  stance: "real" | "fraud";
+  opened: string;
+  /** The club's winning share when the column first ran. */
+  from: number;
+  end?: "right" | "wrong";
+}
+
+export interface OpinionState {
+  theses: Thesis[];
+}
+
+/** The Huddle: the feed, and each club's fan sentiment (0-100). */
+export interface SocialState {
+  posts: SocialPost[];
+  next: number;
+  mood: Record<string, number>;
 }
 
 export interface TeamMediaState {
