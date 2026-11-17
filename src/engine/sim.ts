@@ -1215,6 +1215,9 @@ class GameSim {
     if (this.down === 2 && this.dist <= 3) p -= 0.12;
     if (this.down >= 3) p = this.dist >= 5 ? 0.9 : this.dist >= 3 ? 0.68 : 0.42;
     if (this.ydl >= 98) p -= 0.15;
+    // Inside the twenty a coach leans on his quarterback as far as he trusts him: the best passers
+    // finish drives through the air, which is how their touchdown totals pull away from the pack.
+    if (this.ydl >= 80 && o.qbNow) p += clamp((this.ab(o.qbNow) - 86) * 0.045, 0, 0.32);
     if (hurry) p = Math.max(p, 0.8);
     if (milk) p -= 0.25;
     if (this.q >= 3 && lead >= 14) p -= 0.12;
@@ -1465,7 +1468,9 @@ class GameSim {
   passPlay(o: Team, d: Team, lu: Lineup, def: DefLineup, hurry: boolean): PlayOutcome {
     const tr = (id: string | undefined, t: string) => this.tr(id, t);
     const qb = lu.qb;
-    const depth = this.pickDepth(o);
+    // The first read and how deep the throw goes are chosen together: the deep threat runs the go
+    // routes and the slot the quick game, so each receiver's catches come at his own depth.
+    const { target: first, depth } = this.pickPass(o, d, lu);
     const playAction = depth !== "screen" && this.down <= 2 && !hurry && this.rng() < o.off.playAction * 1.6;
     const blitz = this.rng() < d.def.blitz * (this.down === 3 ? 1.35 : 1);
     const man = this.rng() < d.def.man * (blitz ? 1.3 : 1);
@@ -1543,7 +1548,7 @@ class GameSim {
             : 0.7 * tr(cover, "coverage") + 0.3 * tr(cover, "speed");
       return { id, cover, cpos, sep: recv - coverSkill };
     };
-    let read = sepOf(this.pickTarget(o, d, lu, depth));
+    let read = sepOf(first);
     // Reading the coverage: with a clean pocket, a quarterback who processes well comes off a covered first read.
     if (!pressured && depth !== "screen" && read.sep < -3 && this.rng() < clamp(0.18 + (tr(qb, "decisions") - 80) * 0.02, 0.05, 0.5)) {
       const next = sepOf(this.pickTarget(o, d, lu, depth));
@@ -1564,7 +1569,8 @@ class GameSim {
     const calm = moment ? poise(this.state, qb, o.plan?.quality ?? 0) : 0;
     const accuracy = (depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy")) + calm * 4;
     const baseComp = { screen: 0.88, short: 0.79, inter: 0.61, deep: 0.39 }[depth];
-    const compressed = this.ydl >= 80 ? 0.11 : 0;
+    // The field shrinks inside the twenty; the most accurate passers still find the small windows.
+    const compressed = this.ydl >= 80 ? 0.11 - clamp((accuracy - 88) * 0.006, 0, 0.04) : 0;
     let pComp = baseComp - compressed - this.cond.comp[depth] + sep * 0.008 + (accuracy - 80) * 0.0045 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
     pComp = clamp(pComp, 0.1, 0.93);
     const decisions = tr(qb, "decisions") - d.def.disguise * 5;
@@ -1624,10 +1630,12 @@ class GameSim {
     }
 
     // Completion.
+    // A vertical receiver's routes run longer at every depth than a possession receiver's.
+    const stretch = PLAYER_BY_ID[target].position === "WR" ? clamp(0.5 * (tr(target, "deep") + tr(target, "speed")) - 0.5 * (tr(target, "routes") + tr(target, "hands")), -15, 15) : -4;
     const air = depth === "screen" ? -3 + Math.floor(this.rng() * 5)
       : depth === "short" ? 1 + Math.floor(this.rng() * 7)
-        : depth === "inter" ? 9 + Math.floor(this.rng() * 8)
-          : 20 + Math.round(-Math.log(Math.max(1e-6, this.rng())) * 7);
+        : depth === "inter" ? 9 + Math.floor(this.rng() * 8) + Math.round(stretch * 0.15)
+          : 20 + Math.round(stretch * 0.4 + -Math.log(Math.max(1e-6, this.rng())) * 7);
     const yacSkill = 0.6 * tr(target, "yac") + 0.4 * tr(target, "speed");
     const tackleSpeed = cover ? tr(cover, "speed") : 70;
     const yacMean = { screen: 5.0, short: 3.0, inter: 2.3, deep: 3.0 }[depth] + (yacSkill - 80) * 0.07 + (o.off === OFFENSE.wideZone ? 0.5 : 0);
@@ -1713,6 +1721,17 @@ class GameSim {
   }
 
   pickDepth(o: Team): Depth {
+    const { screen, short, inter, deep } = this.depthWeights(o);
+    const total = screen + short + inter + deep;
+    const r = this.rng() * total;
+    if (r < screen) return "screen";
+    if (r < screen + short) return "short";
+    if (r < screen + short + inter) return "inter";
+    return "deep";
+  }
+
+  /** How often the offense throws to each depth on this down and distance. */
+  depthWeights(o: Team): Record<Depth, number> {
     let { screen, short, deep } = o.off;
     if (this.down >= 3 && this.dist >= 8) {
       screen *= 0.6;
@@ -1727,12 +1746,68 @@ class GameSim {
     const room = 100 - this.ydl;
     if (room < 20) deep = 0;
     const inter = Math.max(0.05, 1 - o.off.screen - o.off.short - o.off.deep);
-    const total = screen + short + inter + deep;
-    const r = this.rng() * total;
-    if (r < screen) return "screen";
-    if (r < screen + short) return "short";
-    if (r < screen + short + inter) return "inter";
-    return "deep";
+    return { screen, short, inter, deep };
+  }
+
+  /**
+   * The first read and the depth of the throw together. The target is chosen by his share of the
+   * looks, then the depth from the team's tendencies tilted toward his game: a speed receiver who
+   * wins deep sees far more shots downfield than a possession receiver or the slot, backs catch
+   * screens and checkdowns, tight ends work the short and middle areas.
+   */
+  pickPass(o: Team, d: Team, lu: Lineup): { target: string; depth: Depth } {
+    const tr = (id: string, k: string) => this.tr(id, k);
+    const q = (id: string, keys: string[]) => Math.max(0.4, 1 + (keys.reduce((s, k) => s + tr(id, k), 0) / keys.length - 80) * 0.017);
+    const cands: string[] = [];
+    const weights: number[] = [];
+    const fits: Record<Depth, number>[] = [];
+    const push = (id: string | undefined, w: number, fit: Record<Depth, number>) => {
+      if (!id || w <= 0) return;
+      cands.push(id);
+      weights.push(w);
+      fits.push(fit);
+    };
+    lu.wrs.forEach((id, i) => {
+      // How much more he is a vertical threat than a route runner, and how much of a runner after the catch.
+      const vert = clamp(0.5 * (tr(id, "deep") + tr(id, "speed")) - 0.5 * (tr(id, "routes") + tr(id, "hands")), -15, 15);
+      const yac = clamp(tr(id, "yac") - tr(id, "routes"), -15, 15);
+      const slot = i >= 2 ? 1 : 0;
+      push(id, ([1, 0.72, 0.6, 0.5][i] ?? 0.45) * q(id, ["routes", "hands"]), {
+        deep: Math.exp(vert * 0.16) * (slot ? 0.6 : i === 0 ? 1.3 : 1.05),
+        inter: i === 0 ? 1.25 : 1,
+        short: Math.exp(-vert * 0.06) * (slot ? 1.35 : i === 0 ? 0.8 : 0.9),
+        screen: Math.exp(yac * 0.05 - vert * 0.03) * (slot ? 1.3 : 0.6),
+      });
+    });
+    lu.tes.forEach((id, i) => push(id, (i === 0 ? 0.6 : 0.38) * o.off.teTargets * q(id, ["receiving"]), { deep: 0.45, inter: 1.15, short: 1.15, screen: 0.45 }));
+    lu.rbs.forEach((id) => push(id, 0.6 * o.off.rbTargets * q(id, ["receiving"]), { deep: 0.06, inter: 0.35, short: 1.5, screen: 3.4 }));
+    if (lu.fb) push(lu.fb, 0.06, { deep: 0.05, inter: 0.4, short: 2, screen: 1.5 });
+    // Game plans built to take away the top option.
+    const top = weights.indexOf(Math.max(...weights));
+    if (top >= 0) weights[top] *= 1 - 0.18 * d.def.gamePlan;
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = this.rng() * total;
+    let k = cands.length - 1;
+    for (let i = 0; i < cands.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { k = i; break; }
+    }
+    if (k < 0) return { target: lu.qb, depth: this.pickDepth(o) };
+    // The team's depth tendencies, divided by how the whole group leans, so the offense as a whole
+    // still throws deep as often as its plan says; then tilted toward this receiver's game.
+    const tend = this.depthWeights(o);
+    const depths: Depth[] = ["screen", "short", "inter", "deep"];
+    const w = depths.map((dp) => {
+      const mean = fits.reduce((s, f, i) => s + f[dp] * weights[i], 0) / total;
+      return tend[dp] * fits[k][dp] / Math.max(0.05, mean);
+    });
+    let x = this.rng() * w.reduce((a, b) => a + b, 0);
+    let depth: Depth = "deep";
+    for (let i = 0; i < depths.length; i++) {
+      x -= w[i];
+      if (x <= 0) { depth = depths[i]; break; }
+    }
+    return { target: cands[k], depth };
   }
 
   pickTarget(o: Team, d: Team, lu: Lineup, depth: Depth): string {

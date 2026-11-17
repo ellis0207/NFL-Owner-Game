@@ -162,13 +162,16 @@ Calibration targets (what "healthy" looked like when each system shipped):
   `statspread.test.ts`): how totals split among players: ~25 1,000-yard
   receivers and ~20-25 10-sack players a year, top target ~24% of a team's
   targets, sacks EDGE ~.5 / IDL ~.25 / LB+DB ~.2. Target weights in
-  `pickTarget`, sack credit in `sack`, rotation in `defenseLineup` (`sim.ts`).
+  `pickPass` (the first read and the throw's depth together, tilted by the
+  receiver's game; `pickTarget` only for the second read), sack credit in `sack`, rotation in `defenseLineup` (`sim.ts`).
   The report also prints whole leaderboards (ranks 1-64 for 27 stats,
   `tests/realcurves.ts`) next to real 2024 and 2025, and each team's target
   and carry shares by rank (real targets .24 .18 .14 .11 .09; carries .50 .23
   .12). Receiver and back rotation in `offenseLineup`, the workhorse share
-  from the RB1-RB2 gap. Known gap: yards per catch is too flat (top ~15 vs
-  real 17-21), since the throw's depth is chosen before the target.
+  from the RB1-RB2 gap. Yards per catch runs ~17 at the top to ~10.5 at rank
+  64 (vertical receivers run longer routes, `stretch`); the passing TD leader
+  ~42 (real 43-46) from red-zone trust in elite quarterbacks in
+  `passProbability`.
 - Seasons loop (`seasons-report.ts 4 7`, about 1 min a season): top-30
   talent steady year to year; ~32 comp picks a year; 85+ players drift slowly
   (446 to ~420 over four seasons); every team near or under the cap by year 4.
