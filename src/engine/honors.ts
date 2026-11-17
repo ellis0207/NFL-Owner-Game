@@ -9,14 +9,13 @@
 //
 // Dates follow the real calendar: Pro Bowl rosters about three weeks before
 // the regular season ends, the All-Pro teams the week after it, the awards
-// and the Hall of Fame class three days before the Super Bowl.
+// three days before the Super Bowl. The Hall of Fame vote is in halloffame.ts.
 import { careerLines } from "./careerstats";
 import { addDays } from "./dates";
 import { news, send } from "./inbox";
 import { seasonOf } from "./incentives";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { rngFor } from "./rng";
-import { history } from "./seasons";
 import { perceivedAbility } from "./staff";
 import { standings } from "./standings";
 import { seasonTotals } from "./stats";
@@ -238,34 +237,6 @@ export function careerScore(state: GameState, id: string): number {
   return known + before * peak + pb * 0.6 + ap1 * 2 + ap2 * 0.8 + big;
 }
 
-/** The bar a career has to clear, and the most a class can take. */
-const HOF_BAR = 11;
-const HOF_CLASS = 5;
-
-function selectHallOfFame(state: GameState): void {
-  const season = RULES.season;
-  const year = season + 1;
-  const h = honors(state);
-  if (h.hof.classes[year]) return;
-  const hist = history(state);
-  const inducted = new Set(Object.values(h.hof.classes).flat());
-  // Five full seasons retired.
-  const eligible = Object.entries(hist.retired).filter(([id, last]) => last <= season - 5 && !inducted.has(id) && PLAYER_BY_ID[id]);
-  const rng = rngFor(state.seed, `hof:${year}`);
-  const ranked = eligible.map(([id, last]) => ({ id, v: careerScore(state, id) + (rng() - 0.5) * 1.5 + Math.min(1.5, (season - 5 - last) * 0.1) }))
-    .sort((a, b) => b.v - a.v);
-  const finalists = ranked.slice(0, 15).filter((x) => x.v >= HOF_BAR * 0.7);
-  const chosen = finalists.filter((x) => x.v >= HOF_BAR).slice(0, HOF_CLASS).map((x) => x.id);
-  h.hof.finalists[year] = finalists.map((x) => x.id);
-  h.hof.classes[year] = chosen;
-  if (chosen.length) {
-    news(state, `The Pro Football Hall of Fame class of ${year}: ${chosen.map((id) => PLAYER_BY_ID[id].name).join(", ")}.`);
-    const ours = chosen.filter((id) => (PLAYER_BY_ID[id].stats ?? []).some((s) => s.team === state.userTeam) || state.players[id]?.lastTeam === state.userTeam);
-    if (ours.length) send(state, "league", "Pro Football Hall of Fame", `${ours.map((id) => PLAYER_BY_ID[id].name).join(" and ")} elected to the Hall of Fame`,
-      `${ours.map((id) => PLAYER_BY_ID[id].name).join(" and ")}, who played for us, ${ours.length === 1 ? "is" : "are"} in the class of ${year}. The enshrinement is in Canton before the Hall of Fame Game.`);
-  }
-}
-
 // ---- What honors are used for ----
 
 /** Pro Bowls on the original ballot, which the fifth-year option counts. */
@@ -291,8 +262,6 @@ export function honorsDaily(state: GameState): void {
   const K = RULES.keyDates;
   if (state.date === addDays(K.regularSeasonEnd, -19)) selectProBowl(state);
   if (state.date === addDays(K.wildCardWeekend, -1)) selectAllPro(state);
-  if (state.date === addDays(K.superBowl, -3)) {
-    presentAwards(state);
-    selectHallOfFame(state);
-  }
+  // The Hall of Fame class is elected the same day (halloffame.ts).
+  if (state.date === addDays(K.superBowl, -3)) presentAwards(state);
 }

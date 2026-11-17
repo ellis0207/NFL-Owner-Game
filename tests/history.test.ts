@@ -3,7 +3,7 @@ import { bonusesDaily } from "../src/engine/bonuses";
 import { teamPlayerIds } from "../src/engine/cap";
 import { dealOf } from "../src/engine/contracts";
 import { addDays } from "../src/engine/dates";
-import { careerScore, honors, honorsDaily, honorsOf, proBowls } from "../src/engine/honors";
+import { honors, honorsOf, proBowls } from "../src/engine/honors";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "../src/engine/league";
 import { marketPrice } from "../src/engine/market";
 import { draftDeal, extensionEligibility, offerValue, openTalks, startYearFor } from "../src/engine/negotiation";
@@ -39,20 +39,13 @@ describe("honors", () => {
     expect(proBowls(s, h.proBowl[season][0])).toBe(1);
   }, 600_000);
 
-  it("votes long, productive careers into the Hall of Fame five years after retirement", () => {
+  it("elects a Hall of Fame class from the panel's vote three days before the Super Bowl", () => {
     const s = stateAt(TEAM, 3);
-    const season = RULES.season;
-    const pool = Object.keys(s.players).filter((id) => PLAYER_BY_ID[id] && (PLAYER_BY_ID[id].yearsExp ?? 0) >= 12);
-    const best = pool.sort((a, b) => careerScore(s, b) - careerScore(s, a)).slice(0, 3);
-    const short = Object.keys(s.players).find((id) => PLAYER_BY_ID[id] && PLAYER_BY_ID[id].yearsExp === 2)!;
-    for (const id of [...best, short]) history(s).retired[id] = season - 5;
-    const h = honors(s);
-    delete h.hof.classes[season + 1];
-    s.date = addDays(RULES.keyDates.superBowl, -3);
-    honorsDaily(s);
-    expect(h.hof.classes[season + 1].length).toBeGreaterThan(0);
-    expect(h.hof.classes[season + 1]).not.toContain(short);
-    for (const id of h.hof.classes[season + 1]) expect(best).toContain(id);
+    const year = RULES.season + 1;
+    const h = honors(s).hof;
+    expect(h.classes[year].length).toBeGreaterThanOrEqual(2);
+    expect(h.ballots![year].panel.length).toBe(48);
+    expect(h.finalists[year].length).toBe(15);
   }, 600_000);
 });
 

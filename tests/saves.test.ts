@@ -1,4 +1,5 @@
 import { ownerShare } from "../src/engine/investors";
+import { hofClasses, projectClasses } from "../src/engine/halloffame";
 import { readFileSync } from "node:fs";
 import { termsFor } from "../src/engine/cbaterms";
 import { rulesFor } from "../src/engine/rules";
@@ -132,6 +133,11 @@ describe("saves from older versions", () => {
     expect(back.honors?.allPro[season]).toEqual(state.honors!.allPro[season]);
     const old = load("pr36-2026-11-15");
     expect(old.honors).toBeUndefined();
+    // The class the old Hall elected stands; the real classes and the watchers' projections come with it.
+    const classes = hofClasses(state);
+    expect(classes[2026].length).toBe(5);
+    expect(classes[2027]).toEqual(state.honors!.hof.classes[2027]);
+    expect(projectClasses(state, 2)[0].year).toBe(2028);
   }, 90_000);
 
   it("a save with ticket office settings and seat licenses keeps them through renewals", async () => {

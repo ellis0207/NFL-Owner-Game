@@ -10,6 +10,7 @@ import type { GameState } from "../../engine/types";
 import { money } from "../format";
 import { CareersTab, HindsightTab, OwnersTab, PeopleTab } from "./HistoryMore";
 import { RulesTab } from "./HistoryRules";
+import { HallTab } from "./HistoryHall";
 import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
 import { tip } from "../tip";
@@ -29,7 +30,7 @@ export function HistoryScreen({ game }: { game: GameState }) {
       <h2>History</h2>
       <GroupedTabs label="History" groups={GROUPS} value={tab} onChange={setTab} />
       {tab === "Honors" && <Honors game={game} />}
-      {tab === "Hall of Fame" && <Hall game={game} />}
+      {tab === "Hall of Fame" && <HallTab game={game} />}
       {tab === "Records" && <Records game={game} />}
       {tab === "Rivalries" && <Rivalries game={game} />}
       {tab === "Trades" && <Trades game={game} />}
@@ -86,24 +87,6 @@ function Honors({ game }: { game: GameState }) {
         {ours.length ? ours.map((id) => <span key={id}><Name id={id} /> <span className="muted">{game.players[id]?.pos ?? PLAYER_BY_ID[id].position}</span></span>) : <span className="muted">{h.proBowl[y] ? "None." : "Not named yet."}</span>}
         {h.proBowl[y] && <span className="muted">{h.proBowl[y].length} players were named across both conferences.</span>}
       </div>
-    </div>
-  );
-}
-
-function Hall({ game }: { game: GameState }) {
-  const h = honors(game).hof;
-  const years = Object.keys(h.finalists).map(Number).sort((a, b) => b - a);
-  return (
-    <div className="stack">
-      <p className="muted">Players become eligible five full seasons after they retire. The selectors weigh the whole career: what he did, how long, and the honors along the way. A class takes at most five.</p>
-      {!years.length && <span className="muted">No votes yet in this save. The first players to retire here become eligible five seasons later.</span>}
-      {years.map((y) => (
-        <div key={y} className="panel stack tight">
-          <h3>Class of {y}</h3>
-          <span>{h.classes[y]?.length ? h.classes[y].map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>) : "Nobody reached the bar."}</span>
-          {h.finalists[y]?.length > (h.classes[y]?.length ?? 0) && <span className="muted">Other finalists: {h.finalists[y].filter((id) => !h.classes[y]?.includes(id)).map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>)}</span>}
-        </div>
-      ))}
     </div>
   );
 }

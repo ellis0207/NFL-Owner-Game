@@ -549,9 +549,22 @@ All-Pro teams the week after the regular season, and the awards (MVP,
 offensive and defensive player and rookie of the year, comeback player and
 coach of the year) at NFL Honors the week of the Super Bowl, voted on the
 stats, the team's record, the film and reputation. Pro Bowls set the
-fifth-year option's top tiers. Players become eligible for the Hall of Fame
-five seasons after they retire. The History page keeps the honors, the Hall
-of Fame classes, single-game and single-season marks against the real NFL
+fifth-year option's top tiers.
+
+The Pro Football Hall of Fame holds every real class since 1963 (387
+enshrinees), each with a plaque: position, years, clubs, titles, awards, Pro
+Bowls, All-Pro teams, the draft, and career stats with season rows from 1999
+on. The real retired players still waiting (Tom Brady, Bill Belichick, Torry
+Holt, Ken Anderson...) and this league's retirees are voted on each year,
+three days before the Super Bowl, by a panel of 48 living Hall of Fame
+players: 25 semifinalists, 15 finalists, reductions to 10 and 5, then 80
+percent to get in, plus a senior and a coach or contributor. Each voter has
+his own leanings (old-school or numbers, his position, his old clubs) and
+weighs conduct and feuds with the press his own way, so a great player with a
+reputation can wait years. The Hall of Fame tab shows the newest class in
+bronze, every ballot with vote shares and why each man fell short, the
+classes the watchers project, the longest waits, and every member by position
+or club. The History page also keeps the honors, single-game and single-season marks against the real NFL
 records, rivalries built from division games, playoff meetings and close
 finishes, how every trade turned out, the club's eras under each head coach
 and GM, contracts that set a new high at their position, and the club's
