@@ -152,6 +152,8 @@ export interface Coach {
   room?: CoachRoom;
   /** NFL teams the person played for, by today's team id. */
   playedFor?: string[];
+  /** The player id of a former player who went into coaching (formerplayers.ts). */
+  formerPlayer?: string;
   retired?: number;
   hiredYear: number;
   callsPlays: ("offense" | "defense")[];

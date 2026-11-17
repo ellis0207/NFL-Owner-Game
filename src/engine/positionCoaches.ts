@@ -157,8 +157,12 @@ function pool(state: GameState, room: CoachRoom, skip: Set<string>): Coach[] {
   const track = room === "ST" ? "st" : "coach";
   return Object.values(staff(state).people).filter((c) => {
     if (c.retired || c.role || skip.has(c.id) || c.track !== track) return false;
+    // A former player learns the trade for two seasons before anyone hands him a room.
+    if (c.formerPlayer && RULES.season + 1 - c.hiredYear < 2) return false;
     if (c.job?.room === room && !c.job.lead) return true;
     if (!c.job && c.room === room) return true;
+    // A former player coaching that position in college (formerplayers.ts).
+    if (c.job?.kind === "college" && c.room === room) return true;
     return false;
   });
 }
