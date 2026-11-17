@@ -15,6 +15,7 @@
 // The suburbs, council members and studies are made up. The mechanics (bond
 // and tax-district financing, independent impact reviews, referenda and
 // non-relocation pledges in return for public money) follow real deals.
+import { opEdsSince, pressTone } from "./media/climate";
 import { business, businessChief, post } from "./business";
 import { construction, baseCost, type StadiumPlan, type Site } from "./construction";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
@@ -129,6 +130,8 @@ export function voterSupport(state: GameState): number {
   if (t.rival?.used === "leverage") v += 4;
   if (t.round > 1) v += 3;
   v += t.push;
+  // How the club is covered, and the owner's own case made in a guest column.
+  v += (pressTone(state, us) / 50) * 4 + Math.min(2, opEdsSince(state, "stadium", addDays(state.date, -365))) * 2;
   return Math.max(5, Math.min(95, Math.round(v)));
 }
 

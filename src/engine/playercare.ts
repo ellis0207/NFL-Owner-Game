@@ -11,6 +11,7 @@
 // game and fade over the week; a player near every snap for weeks plays a
 // shade worse and gets hurt a bit more. Both are small, and never shown.
 // The physicians are made up, named from the shared lists.
+import { pressTone } from "./media/climate";
 import { careerLines } from "./careerstats";
 import { personality } from "./clubhouse";
 import { servicesScore } from "./community";
@@ -180,10 +181,12 @@ export function franchiseReputation(state: GameState, team: string): number {
   const staff = teamStaff(team);
   const tenure = (p?: { hiredYear?: number }) => Math.min(6, Math.max(0, RULES.season - (p?.hiredYear ?? RULES.season)));
   const stability = (tenure(staff.HC as { hiredYear?: number }) + tenure(staff.GM as { hiredYear?: number })) / 12;
-  if (team !== state.userTeam) return 0.4 + stability * 0.2;
+  // Players hear how a club is talked about.
+  const press = (pressTone(state, team) / 50) * 0.05;
+  if (team !== state.userTeam) return 0.4 + stability * 0.2 + press;
   const medical = ((state.business?.budget.medical ?? 1) / 3) * 0.6 + (care(state).doctors.reduce((t, d) => t + d.skill, 0) / care(state).doctors.length - 50) / 70 * 0.4;
   const standing = ownerStanding(state).score / 100;
-  return Math.max(0, Math.min(1, 0.25 + stability * 0.2 + medical * 0.2 + standing * 0.35));
+  return Math.max(0, Math.min(1, 0.25 + stability * 0.2 + medical * 0.2 + standing * 0.35 + press));
 }
 
 // ---- The doctors ----

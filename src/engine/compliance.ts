@@ -4,6 +4,7 @@
 // with findings, a chance to respond, sanctions and appeals. Other clubs'
 // cases are made up and run on their own; the league disciplines one to three
 // clubs in a typical year.
+import { leagueAttention } from "./media/climate";
 import { post } from "./business";
 import { addDeadMoney, teamPlayerIds } from "./cap";
 import { dealOf, leagueYear } from "./contracts";
@@ -97,7 +98,8 @@ export function trainedNow(state: GameState): boolean {
 export function violationRisk(state: GameState): number {
   const c = compliance(state);
   const review = state.legal?.review ? 0.9 : 1;
-  return (1.15 - 0.15 * c.staff) * (trainedNow(state) ? 0.7 : 1) * review * (1 + 0.25 * c.strikes);
+  // An owner who has the league office's attention gets looked at more closely.
+  return (1.15 - 0.15 * c.staff) * (trainedNow(state) ? 0.7 : 1) * review * (1 + 0.25 * c.strikes) * (1 + leagueAttention(state) / 200);
 }
 
 // ---- Guaranteed pay funding ----

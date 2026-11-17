@@ -270,6 +270,16 @@ word), post from the owner's own Huddle account, write a guest column, and set
 each reporter's access, up to banning one. What any of it does is never shown;
 the owner reads the coverage.
 
+Coverage has consequences. How a club is written about builds up and fades
+over a few weeks, and it moves fan trust, sponsors' mood, players' morale and
+the leverage of an agent whose client the press is raving about; it makes CPU
+owners quicker to fire a coach the papers are savaging, shapes how free agents
+see a club, draws the league office's eye to an owner who rips the officials,
+and sways voters on a stadium deal. The Media page opens on front pages for
+each national outlet and every club's local paper, radio and TV, with search
+across every story; a story opens on its own page with follow-ups, and each
+reporter has a page with their record, their reports and how they cover you.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each

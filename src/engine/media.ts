@@ -30,6 +30,7 @@ import { narrativesDaily } from "./media/narratives";
 import { socialDaily } from "./media/social";
 import { opinionDaily } from "./media/opinion";
 import { ownerDeskDaily } from "./media/ownerdesk";
+import { coverageDaily } from "./media/coverage";
 import { campFact, seatFact, talkFacts } from "./media/desks";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
@@ -777,8 +778,10 @@ export function mediaDaily(state: GameState): void {
   const seasonFacts = narrativesDaily(state);
   // The Huddle reacts to all of it; then the opinion desk argues about it.
   socialDaily(state, [...facts, ...arcFacts, ...seasonFacts]);
-  opinionDaily(state);
+  const opinionFacts = opinionDaily(state);
   ownerDeskDaily(state, facts);
+  // What the coverage does: tones for clubs and players that move fans, sponsors, agents and more.
+  coverageDaily(state, [...facts, ...arcFacts, ...seasonFacts, ...opinionFacts]);
   wireCoverage(state);
   corpsDaily(state);
   rumorDesk(state);

@@ -15,7 +15,8 @@ export type TipKind =
   | "dept" // business department budget
   | "cash" // the club's cash on hand
   | "pnl" // league year, "revenue" | "expenses" | "operating"
-  | "game"; // scheduled game id
+  | "game" // scheduled game id
+  | "reporter"; // press corps id
 
 export function tip(kind: TipKind, ...args: (string | number | undefined)[]): { "data-tip": string } {
   return { "data-tip": [kind, ...args.filter((a) => a !== undefined)].join(":") };

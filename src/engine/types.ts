@@ -1369,6 +1369,18 @@ export interface MediaState {
   opinion?: OpinionState;
   /** The owner's own dealings with the press (media/ownerdesk.ts). */
   desk?: OwnerDesk;
+  /** Engine only: the tone of recent coverage (media/coverage.ts). */
+  climate?: PressClimate;
+}
+
+/** Engine only: how the coverage has read lately, kept day to day. */
+export interface PressClimate {
+  /** Each club's tone, -50 to 50. */
+  tone: Record<string, number>;
+  /** Players written about lately, -50 to 50 (small values drop off). */
+  players: Record<string, number>;
+  /** The league office's attention to our owner's public words, 0-100. */
+  league: number;
 }
 
 export interface TeamFinance {

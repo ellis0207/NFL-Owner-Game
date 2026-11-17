@@ -13,6 +13,12 @@ import { mediaState } from "../src/engine/outlets";
 import { rngFor } from "../src/engine/rng";
 import { advanceDay } from "../src/engine/season";
 import { stateAt } from "./fixtures";
+import { absorb, climate } from "../src/engine/media/coverage";
+import { leagueAttention, pressTone } from "../src/engine/media/climate";
+import { fireChance } from "../src/engine/carousel";
+import { teamStaff } from "../src/engine/staff";
+import { franchiseReputation } from "../src/engine/playercare";
+import { TEAMS } from "../src/engine/league";
 
 const BAD = /undefined|NaN|\[object|[{}<>[\]]/;
 
@@ -109,4 +115,25 @@ describe("the owner's press desk", () => {
     for (const pc of ownerDesk(state).pressers.filter((x) => x.date > held!.date)) expect(pc.questions.every((q) => q.by !== victim.id)).toBe(true);
     expect(corps(state).people.length).toBeGreaterThan(0);
   }, 120_000);
+
+  it("turns a season's coverage into tones that CPU owners, free agents and the league office feel", async () => {
+    const state = await stateAt("DET", 7);
+    const tones = TEAMS.map((t) => pressTone(state, t.id));
+    expect(Math.max(...tones) - Math.min(...tones)).toBeGreaterThan(10);
+    expect(Object.keys(climate(state).players).length).toBeGreaterThan(5);
+    // A savaged club: its owner is less patient and free agents like it less.
+    const cpu = TEAMS.find((t) => t.id !== "DET" && teamStaff(t.id).HC)!.id;
+    const hc = teamStaff(cpu).HC!;
+    const coach = state.staff!.people[hc.id];
+    climate(state).tone[cpu] = 0;
+    const calm = [fireChance(state, cpu, coach), franchiseReputation(state, cpu)];
+    climate(state).tone[cpu] = -40;
+    expect(fireChance(state, cpu, coach)).toBeGreaterThan(calm[0]);
+    expect(franchiseReputation(state, cpu)).toBeLessThan(calm[1]);
+    // Ripping the officials draws the league office's eye.
+    const before = leagueAttention(state);
+    absorb(state, [{ id: "t", type: "owner.post", family: "owner", kind: "owner", teams: ["DET"], players: [], value: 45, ours: true, tags: { refs: true }, slots: {} }]);
+    expect(leagueAttention(state)).toBeGreaterThan(before);
+    expect(pressTone(state, "DET")).toBeLessThan(50);
+  });
 });

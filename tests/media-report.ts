@@ -88,6 +88,11 @@ const desk = ownerDesk(state);
 console.log(`\nOwner desk: ${desk.pressers.length} press conferences (${desk.pressers.map((p) => `${p.date} ${p.occasion}${p.skipped ? " skipped" : ""}`).join(", ")}); cred ${desk.cred}, responses ${desk.responses.length}, claims open ${desk.claims.length}`);
 for (const p of desk.pressers.slice(-2)) for (const q of p.questions) console.log(`  [${p.occasion}/${q.topic}] ${q.text}\n      ${q.options.map((o) => `${o.tone}: ${o.text}`).join("\n      ")}`);
 console.log(`  Owner stories by type: ${count((s) => (s.kind === "owner" ? (s.type ?? "old").split("/")[0] : "-"))}`);
+const cl = mediaState(state).climate;
+if (cl) {
+  const tones = Object.entries(cl.tone).sort((a, b) => b[1] - a[1]);
+  console.log(`\nPress climate: best ${tones.slice(0, 4).map(([t, v]) => `${t} ${v.toFixed(1)}`).join(", ")}; worst ${tones.slice(-4).map(([t, v]) => `${t} ${v.toFixed(1)}`).join(", ")}; players tracked ${Object.keys(cl.players).length}; league attention ${cl.league.toFixed(1)}`);
+}
 const m = mediaState(state);
 console.log(`\nQuestions: ${m.questions.length} (${count.call(null, () => "") && ""}${Object.entries(m.questions.reduce<Record<string, number>>((a, q) => ((a[q.topic] = (a[q.topic] ?? 0) + 1), a), {})).map(([k, v]) => `${k} ${v}`).join(", ")})`);
 for (const q of m.questions.slice(0, 12)) console.log(`  ${q.date} [${q.topic}] ${q.question} -> ${q.answer === -1 ? "(no answer)" : q.options[q.answer!]?.text}`);
