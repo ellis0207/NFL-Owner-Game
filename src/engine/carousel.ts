@@ -8,6 +8,7 @@
 // nobody joins a new team until his current team's season is over.
 // Head coaching interviews can't be blocked; a lateral move to another
 // coordinator job can, while the coach is under contract.
+import { pressTone } from "./media/climate";
 import { cause } from "./causes";
 import { hiringFactor, patienceShift } from "./rivals";
 import { FORMAT } from "./format";
@@ -770,6 +771,8 @@ export function fireChance(state: GameState, team: string, hc: Coach): number {
   const playoffs = [...(state.seeds?.AFC ?? []), ...(state.seeds?.NFC ?? [])].includes(team);
   let z = (wp - expect) * 5 + (wp - 0.5) * 3 + (lastWp - 0.5) * 1.5 + (playoffs ? 1.6 : 0);
   z += patienceShift(state, team);
+  // Owners read the papers: a coach the press is savaging is closer to the door.
+  z += (pressTone(state, team) / 50) * 0.5;
   if (tenure <= 1) z += 2.2;
   else if (tenure === 2) z += 0.8;
   const p = 1.8 / (1 + Math.exp(z * 1.4 + 2.0));

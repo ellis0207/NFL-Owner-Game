@@ -26,6 +26,7 @@ import { ARC_LABEL, ARCS, openArcs } from "./arcs";
 import { ANSWER, ASK, EXCLUSIVE, OPED, OWNER_POST, OWNER_REPLY } from "./content/ownerdesk";
 import { corps, isLocal, outletOf, working } from "./corps";
 import { fileFacts } from "./compose";
+import { absorb } from "./coverage";
 import { playerSlots, teamSlots, type Fact } from "./facts";
 import { render, type Slots } from "./grammar";
 import { fanAccounts, social } from "./social";
@@ -98,7 +99,9 @@ function ownerFact(state: GameState, kind: string, key: string, value: number, o
 }
 
 function file(state: GameState, facts: Fact[]): void {
-  if (facts.length) fileFacts(state, facts, 4);
+  if (!facts.length) return;
+  fileFacts(state, facts, 4);
+  absorb(state, facts);
 }
 
 // ---- Questions ----

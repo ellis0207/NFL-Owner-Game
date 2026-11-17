@@ -1,10 +1,10 @@
 import { FORMATS, type FormatId } from "../../engine/media/formats";
 import { initialTab } from "../ui";
-import { useMemo, useState } from "react";
-import { daysBetween, shortDate, weekday } from "../../engine/dates";
+import { useState } from "react";
+import { daysBetween, shortDate } from "../../engine/dates";
 import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
 import { NATIONAL, relLabel, relOf } from "../../engine/outlets";
-import { corps, isLocal, outletOf, recordLine, working } from "../../engine/media/corps";
+import { outletOf, recordLine, working } from "../../engine/media/corps";
 import { expectLabel } from "../../engine/review";
 import { ARC_LABEL, arcStage, arcState } from "../../engine/media/arcs";
 import { sentiment, sentimentWord, trending } from "../../engine/media/social";
@@ -16,109 +16,43 @@ import type { Arc, GameState, PressQuestion, Story, Storyline } from "../../engi
 import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
-import { AccessSelect, OwnerDeskPanel, PresserCard, openPressers } from "./MediaDesk";
-import { deskReporters } from "../../engine/media/ownerdesk";
+import { OwnerDeskPanel, PresserCard, openPressers } from "./MediaDesk";
+import { FrontPage, KIND_LABEL, ReporterList, ReporterName, ReporterPage, ROLE, StoryPage } from "./MediaPages";
 
-const TABS = ["News", "Huddle", "Press room", "Storylines", "Outlets", "Reporters"] as const;
+const TABS = ["Front page", "Huddle", "Press room", "Storylines", "Reporters", "Outlets"] as const;
 type Tab = (typeof TABS)[number];
-
-const FILTERS = {
-  all: "Everything",
-  ours: "Our team",
-  nfl: "NFL",
-  rumors: "Rumors and leaks",
-  college: "College and draft",
-  owner: "About you",
-} as const;
-type Filter = keyof typeof FILTERS;
-
-const KIND_LABEL: Record<Story["kind"], string> = {
-  recap: "Game", injury: "Injury", signing: "Signing", release: "Release", trade: "Trade", rumor: "Rumor", leak: "Leak",
-  interview: "Interview", trend: "Analysis", rankings: "Rankings", preview: "Preview", college: "College", draft: "Draft", owner: "Owner", league: "League",
-};
-
-function outletMatch(id: string, want: string, us: string): boolean {
-  if (!want) return true;
-  if (want === "local:us") return id === "beat" || (isLocal(id) && id.endsWith(`:${us}`));
-  if (want === "local:all") return isLocal(id);
-  return id === want;
-}
-
-function matches(s: Story, f: Filter, us: string): boolean {
-  if (f === "all") return true;
-  if (f === "ours") return !!s.teams?.includes(us) || s.kind === "owner";
-  if (f === "nfl") return !s.college;
-  if (f === "rumors") return s.kind === "rumor" || s.kind === "leak";
-  if (f === "college") return !!s.college || s.kind === "draft";
-  return s.kind === "owner";
-}
 
 export function MediaScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const open = [...openQuestions(game), ...openPressers(game)];
-  const [tab, setTab] = useState<Tab>(() => initialTab("Media", TABS, open.length ? "Press room" : "News"));
+  const [tab, setTabRaw] = useState<Tab>(() => initialTab("Media", TABS, open.length ? "Press room" : "Front page"));
+  // A story or reporter opened from any tab shows in place, with Back to return.
+  const [page, setPage] = useState<{ story?: string; reporter?: string }[]>([]);
+  const top = page[page.length - 1];
+  const openStory = (id: string) => setPage([...page, { story: id }]);
+  const openReporter = (id: string) => setPage([...page, { reporter: id }]);
+  const back = () => setPage(page.slice(0, -1));
+  const setTab = (t: Tab) => { setTabRaw(t); setPage([]); };
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
         <h2>Media</h2>
         <div className="tabs" role="group" aria-label="Media">
           {TABS.map((t) => (
-            <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
+            <button key={t} aria-pressed={tab === t && !top} onClick={() => setTab(t)}>
               {t}{t === "Press room" && open.length > 0 ? ` (${open.length})` : ""}
             </button>
           ))}
         </div>
       </div>
-      {tab === "News" && <NewsFeed game={game} />}
-      {tab === "Huddle" && <Huddle game={game} />}
-      {tab === "Press room" && <PressRoom game={game} changed={changed} />}
-      {tab === "Storylines" && <Storylines game={game} />}
-      {tab === "Outlets" && <Outlets game={game} />}
-      {tab === "Reporters" && <Reporters game={game} changed={changed} />}
+      {top?.story && <StoryPage game={game} id={top.story} openStory={openStory} openReporter={openReporter} back={back} />}
+      {top?.reporter && <ReporterPage game={game} id={top.reporter} openStory={openStory} back={back} changed={changed} />}
+      {!top && tab === "Front page" && <FrontPage game={game} openStory={openStory} openReporter={openReporter} />}
+      {!top && tab === "Huddle" && <Huddle game={game} />}
+      {!top && tab === "Press room" && <PressRoom game={game} changed={changed} />}
+      {!top && tab === "Storylines" && <Storylines game={game} />}
+      {!top && tab === "Outlets" && <Outlets game={game} openReporter={openReporter} />}
+      {!top && tab === "Reporters" && <ReporterList game={game} openReporter={openReporter} changed={changed} />}
     </section>
-  );
-}
-
-function NewsFeed({ game }: { game: GameState }) {
-  const [filter, setFilter] = useState<Filter>("all");
-  const [outlet, setOutlet] = useState<string>("");
-  const [shown, setShown] = useState(60);
-  const stories = useMemo(
-    () => (game.media?.stories ?? []).filter((s) => matches(s, filter, game.userTeam) && outletMatch(s.outlet, outlet, game.userTeam)),
-    [game.media?.stories, game.media?.stories.length, filter, outlet, game.userTeam],
-  );
-  let lastDate = "";
-  return (
-    <div className="stack">
-      <div className="btn-row" style={{ alignItems: "center" }}>
-        <div className="tabs" role="group" aria-label="Filter">
-          {(Object.keys(FILTERS) as Filter[]).map((f) => (
-            <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setShown(60); }}>{FILTERS[f]}</button>
-          ))}
-        </div>
-        <label className="field" style={{ marginLeft: "auto" }}>
-          <select value={outlet} onChange={(e) => { setOutlet(e.target.value); setShown(60); }} aria-label="Outlet">
-            <option value="">All outlets</option>
-            {NATIONAL.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            <option value="local:us">Our local media</option>
-            <option value="local:all">Every club's local media</option>
-          </select>
-        </label>
-      </div>
-      {stories.length === 0 && <p className="muted">Nothing here yet. The outlets file every day as the league moves.</p>}
-      <div className="news-feed">
-        {stories.slice(0, shown).map((s) => {
-          const head = s.date !== lastDate ? <h3 className="news-date">{weekday(s.date)}, {shortDate(s.date)}</h3> : null;
-          lastDate = s.date;
-          return (
-            <div key={s.id}>
-              {head}
-              <StoryCard game={game} s={s} />
-            </div>
-          );
-        })}
-      </div>
-      {stories.length > shown && <button className="btn" onClick={() => setShown(shown + 60)}>Show more</button>}
-    </div>
   );
 }
 
@@ -217,15 +151,14 @@ function QuestionCard({ game, q, changed }: { game: GameState; q: PressQuestion;
   );
 }
 
-const ROLE: Record<string, string> = { insider: "Insider", columnist: "Columnist", analyst: "Analyst", draft: "Draft", reporter: "Reporter", beat: "Beat writer", host: "Host", anchor: "Anchor" };
 
-function Staff({ game, outlet }: { game: GameState; outlet: string }) {
+function Staff({ game, outlet, openReporter }: { game: GameState; outlet: string; openReporter: (id: string) => void }) {
   const people = working(game).filter((p) => p.outlet === outlet);
   return (
     <div className="stack tight">
       {people.map((p) => (
         <div key={p.id}>
-          <strong>{p.name}</strong> <span className="muted">{ROLE[p.role]}{p.awards.length ? ` · ${p.awards.map((a) => `${a.name} ${a.season}`).join(", ")}` : ""}</span>
+          <strong><ReporterName id={p.id} name={p.name} onOpen={openReporter} /></strong> <span className="muted">{ROLE[p.role]}{p.awards.length ? ` · ${p.awards.map((a) => `${a.name} ${a.season}`).join(", ")}` : ""}</span>
           <div className="muted small">{recordLine(p)}</div>
         </div>
       ))}
@@ -233,7 +166,7 @@ function Staff({ game, outlet }: { game: GameState; outlet: string }) {
   );
 }
 
-function Outlets({ game }: { game: GameState }) {
+function Outlets({ game, openReporter }: { game: GameState; openReporter: (id: string) => void }) {
   const fines = game.media?.fines ?? [];
   const us = game.userTeam;
   return (
@@ -244,7 +177,7 @@ function Outlets({ game }: { game: GameState }) {
           <section key={o.id} className="panel stack tight">
             <h3>{o.name}</h3>
             <p className="muted">{o.what}</p>
-            <Staff game={game} outlet={o.id} />
+            <Staff game={game} outlet={o.id} openReporter={openReporter} />
             <div><span className="label">How they cover you</span> {relLabel(relOf(game, o.id))}</div>
           </section>
         ))}
@@ -255,7 +188,7 @@ function Outlets({ game }: { game: GameState }) {
           <section key={id} className="panel stack tight">
             <h3>{outletOf(id).name}</h3>
             <p className="muted">{outletOf(id).what}</p>
-            <Staff game={game} outlet={id} />
+            <Staff game={game} outlet={id} openReporter={openReporter} />
           </section>
         ))}
       </div>
@@ -265,54 +198,6 @@ function Outlets({ game }: { game: GameState }) {
           : fines.map((f, i) => <div key={i}>{shortDate(f.date)}: {money(f.amount)} for {f.reason}.</div>)}
       </section>
       <p className="muted">{teamLabel(game.userTeam)} media relations keeps an eye on the coverage; nobody hands you a scorecard.</p>
-    </div>
-  );
-}
-
-const OUTCOME = { hit: "Confirmed", miss: "Wrong", quiet: "Went quiet" } as const;
-
-/** Who broke what, and whether it turned out to be true: the only way to learn whom to believe. */
-function Reporters({ game, changed }: { game: GameState; changed: () => void }) {
-  const c = corps(game);
-  const byId = new Map(c.people.map((p) => [p.id, p]));
-  const judged = working(game).filter((p) => p.hits + p.misses >= 3).sort((a, b) => b.hits / (b.hits + b.misses) - a.hits / (a.hits + a.misses) || b.hits - a.hits);
-  const reports = c.rumors.filter((r) => r.headline).slice(0, 40);
-  const listed = deskReporters(game);
-  return (
-    <div className="stack">
-      <section className="panel stack tight">
-        <h3>Access</h3>
-        <p className="muted">Favored reporters get the first questions and the first calls (up to three). A banned reporter loses the credential, and the rest of the press notices.</p>
-        <div className="table-wrap"><table>
-          <thead><tr><th>Reporter</th><th>Outlet</th><th>Access</th></tr></thead>
-          <tbody>
-            {listed.map((p) => <tr key={p.id}><td>{p.name}</td><td>{outletOf(p.outlet).name}</td><td><AccessSelect game={game} id={p.id} changed={changed} /></td></tr>)}
-          </tbody>
-        </table></div>
-      </section>
-      <section className="panel stack tight">
-        <h3>Track records</h3>
-        <p className="muted">Reports are judged when the trade, signing, hire or firing happens, or when it plainly doesn't.</p>
-        {judged.length === 0 ? <p className="muted">Nobody has enough reports on the record yet.</p> : (
-          <div className="table-wrap"><table>
-            <thead><tr><th>Reporter</th><th>Outlet</th><th>Record</th></tr></thead>
-            <tbody>
-              {judged.slice(0, 30).map((p) => (
-                <tr key={p.id}><td>{p.name}</td><td>{outletOf(p.outlet).name}</td><td>{recordLine(p)}</td></tr>
-              ))}
-            </tbody>
-          </table></div>
-        )}
-      </section>
-      <section className="panel stack tight">
-        <h3>Recent reports</h3>
-        {reports.length === 0 ? <p className="muted">No sourced reports yet.</p> : reports.map((r) => (
-          <div key={r.id}>
-            <span className="muted">{shortDate(r.date)}</span> {r.headline} <span className="muted">· {byId.get(r.reporter)?.name}</span>{" "}
-            <span className="pill">{r.outcome ? OUTCOME[r.outcome] : "Open"}</span>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

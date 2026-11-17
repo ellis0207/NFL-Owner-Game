@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { corps, outletOf, recordLine } from "../engine/media/corps";
+import { relLabel } from "../engine/outlets";
 import { budgetVsActual } from "../engine/books";
 import { capHit, capSummary, contractYearsLeft, rollover, teamPlayerIds } from "../engine/cap";
 import { coachAge, jobLabel, knownFor, ROLE_NAME } from "../engine/coaches";
@@ -389,6 +391,28 @@ function gameCard(game: GameState, id: string): TipCard | null {
   };
 }
 
+/** A reporter: who they are, their record, how they cover the owner, and their access. */
+function reporterCard(game: GameState, id: string): TipCard | null {
+  const r = corps(game).people.find((p) => p.id === id);
+  if (!r) return null;
+  const access = game.media?.desk?.access[id];
+  return {
+    title: r.name,
+    sub: `${REPORTER_ROLE[r.role] ?? r.role}, ${outletOf(r.outlet).name}`,
+    body: (
+      <Rows rows={[
+        r.team && TEAM_BY_ID[r.team] ? ["Covers", TEAM_BY_ID[r.team].name] : null,
+        ["Record", recordLine(r)],
+        ["On you", relLabel(r.rel)],
+        access ? ["Access", access === "banned" ? "Banned" : "Favored"] : null,
+        r.awards.length ? ["Awards", r.awards.map((a) => `${a.name} ${a.season}`).join(", ")] : null,
+      ]} />
+    ),
+    foot: "Click for their page on Media.",
+  };
+}
+const REPORTER_ROLE: Record<string, string> = { insider: "Insider", columnist: "Columnist", analyst: "Analyst", draft: "Draft analyst", reporter: "Reporter", beat: "Beat writer", host: "Host", anchor: "Anchor" };
+
 /** The card for a `data-tip` key, from the state as it is right now. */
 export function tipCard(game: GameState, key: string): TipCard | null {
   const [kind, a, b] = key.split(":");
@@ -403,6 +427,7 @@ export function tipCard(game: GameState, key: string): TipCard | null {
     case "cash": return cashCard(game);
     case "pnl": return pnlCard(game, a, b);
     case "game": return gameCard(game, a);
+    case "reporter": return reporterCard(game, a);
     default: return null;
   }
 }

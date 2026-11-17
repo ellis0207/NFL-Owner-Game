@@ -5,6 +5,7 @@
 // how each account feels about the club, and partners that fail to pay or
 // get into trouble. Partner companies are made up; the naming partners come
 // from the real stadium names.
+import { pressTone } from "./media/climate";
 import { business, businessChief, post } from "./business";
 import { dealFor, dealValue, LOCAL_CATS, localDeals, sponsorHeat } from "./commerce";
 import { leagueYear } from "./contracts";
@@ -145,7 +146,7 @@ function accounts(state: GameState): void {
   const year = leagueYear(state.date);
   const heat = sponsorHeat(state);
   const b = business(state);
-  const target = 55 + (b.budget.marketing - 1) * 3 + execBoost(state, "CRO") * 4 + (heat - 1) * 40 + (fanBase(state).trust - 60) / 4;
+  const target = 55 + (b.budget.marketing - 1) * 3 + execBoost(state, "CRO") * 4 + (heat - 1) * 40 + (fanBase(state).trust - 60) / 4 + (pressTone(state, state.userTeam) / 50) * 6;
   for (const d of l.deals) if (dealValue(d, year) > 0 && !d.ended) d.rel = Math.round(((d.rel ?? 60) + (target - (d.rel ?? 60)) * 0.05) * 10) / 10;
 }
 
