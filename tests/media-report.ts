@@ -47,7 +47,16 @@ const tally = (xs: string[]) => Object.entries(xs.reduce<Record<string, number>>
 console.log(`\nArcs: ${arcs.length} kept (${arcs.filter((x) => !x.ending).length} open), ${typed.filter((x) => x.type!.startsWith("arc.")).length} arc stories`);
 console.log(`  By kind: ${tally(arcs.map((x) => x.kind))}`);
 console.log(`  Endings: ${tally(arcs.filter((x) => x.ending).map((x) => `${x.kind}:${x.ending}`))}`);
-for (const x of typed.filter((x) => x.type!.startsWith("arc.")).slice(0, 12)) console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 220)}`);
+const narr = typed.filter((x) => x.type!.startsWith("season."));
+console.log(`\nSeason narratives: ${narr.length} stories. By kind: ${tally(narr.map((x) => x.type!.split("/")[0].slice(7)))}`);
+const shown = new Set<string>();
+for (const x of narr) {
+  const k = x.type!.split("/")[0];
+  if (shown.has(k)) continue;
+  shown.add(k);
+  console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 260)}`);
+}
+for (const x of typed.filter((x) => x.type!.startsWith("arc.")).slice(0, 4)) console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 220)}`);
 const m = mediaState(state);
 console.log(`\nQuestions: ${m.questions.length} (${count.call(null, () => "") && ""}${Object.entries(m.questions.reduce<Record<string, number>>((a, q) => ((a[q.topic] = (a[q.topic] ?? 0) + 1), a), {})).map(([k, v]) => `${k} ${v}`).join(", ")})`);
 for (const q of m.questions.slice(0, 12)) console.log(`  ${q.date} [${q.topic}] ${q.question} -> ${q.answer === -1 ? "(no answer)" : q.options[q.answer!]?.text}`);

@@ -23,7 +23,7 @@ import { describe, headline as tradeHeadline } from "../trades";
 import type { BoxScore, GameState, MediaFactInput, Position, ScheduledGame, StoryKind, TradeRecord } from "../types";
 import type { Slots } from "./grammar";
 
-export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat" | "rumor" | "arc";
+export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat" | "rumor" | "arc" | "season";
 
 export interface Fact {
   id: string;

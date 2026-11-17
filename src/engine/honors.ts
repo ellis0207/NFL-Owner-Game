@@ -71,7 +71,7 @@ const z = (xs: number[]) => {
 };
 
 /** Every player with enough games this season, scored within his position. `rep` adds the Pro Bowl reputation. */
-function ballot(state: GameState, rep: boolean): Ballot[] {
+function ballot(state: GameState, rep: boolean, minGames = 6): Ballot[] {
   const totals = seasonTotals(state, "REG");
   const table = standings(state);
   const h = honors(state);
@@ -79,7 +79,7 @@ function ballot(state: GameState, rep: boolean): Ballot[] {
   for (const [id, row] of Object.entries(totals)) {
     const p = PLAYER_BY_ID[id];
     const l = row.line as Record<string, number>;
-    if (!p || Number(l.g ?? 0) < 6) continue;
+    if (!p || Number(l.g ?? 0) < minGames) continue;
     const pos = (state.players[id]?.pos ?? p.position) as Position;
     if (!byPos.has(pos)) byPos.set(pos, []);
     byPos.get(pos)!.push({ id, team: row.team, l });
@@ -164,6 +164,26 @@ function top(list: { id: string; v: number }[], n = 3): string[] {
 
 function weighted(b: Ballot[], w: Partial<Record<Position, number>>, extra: (x: Ballot) => number = () => 0): { id: string; v: number }[] {
   return b.filter((x) => w[x.pos] !== undefined).map((x) => ({ id: x.id, v: x.score * w[x.pos]! + extra(x) }));
+}
+
+/**
+ * The award races as the media see them mid-season: the same ballot the
+ * voters use, without their noise, ranked for each player award. Read by the
+ * weekly ladders in media/narratives.ts.
+ */
+export function awardLadders(state: GameState, minGames: number, n = 5): Partial<Record<Award, string[]>> {
+  const all = ballot(state, false, minGames);
+  const table = standings(state);
+  const pct = (t: string) => { const r = table[t]; return r ? (r.w + 0.5 * r.t) / Math.max(1, r.w + r.l + r.t) : 0.5; };
+  const rookies = all.filter((b) => PLAYER_BY_ID[b.id].rookieYear === RULES.season);
+  const rank = (list: { id: string; v: number }[]) => list.sort((a, b) => b.v - a.v).slice(0, n).map((x) => x.id);
+  return {
+    MVP: rank(weighted(all, MVP_WEIGHT, (x) => (pct(x.team) - 0.5) * 1.6)),
+    OPOY: rank(weighted(all.filter((b) => OFFENSE.has(b.pos)), OPOY_WEIGHT)),
+    DPOY: rank(weighted(all.filter((b) => !OFFENSE.has(b.pos)), DPOY_WEIGHT)),
+    OROY: rank(weighted(rookies.filter((b) => OFFENSE.has(b.pos)), { ...OPOY_WEIGHT, QB: 1, OT: 0.4, OG: 0.35, C: 0.35 })),
+    DROY: rank(weighted(rookies.filter((b) => !OFFENSE.has(b.pos)), DPOY_WEIGHT)),
+  };
 }
 
 function presentAwards(state: GameState): void {

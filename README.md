@@ -237,6 +237,14 @@ promises run as arcs too, until the season answers them or the promise is kept
 or broken. Each chapter gets its own coverage, and Media > Storylines tracks
 what's running and how recent stories ended.
 
+The calendar writes its own stories: weekly MVP and award ladders, the
+playoff picture down the stretch with clinchings and eliminations, the trade
+deadline countdown, draft prospects rising and falling between mock drafts,
+anniversaries of our club's own headlines and sagas, draft classes ten and
+twenty years on, milestone and record watches from career stats, a
+retrospective for every club when its season ends, the league's year in
+review, and tributes when a long or decorated career ends.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each
