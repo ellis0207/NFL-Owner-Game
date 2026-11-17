@@ -193,6 +193,19 @@ coaches, and that school starts a search. College > Recruiting, Programs and
 Coaching changes show the classes, each program's recent seasons and class
 ranks, the hot seat and the carousel.
 
+Players develop through college: next year's underclassmen play and put up
+stats a season early, and a program whose coach develops players well sends
+them to the draft better than they arrived. Each prospect's college career
+(season lines and schools) carries into his profile. The transfer portal
+opens for three weeks in December and ten days in April: quarterbacks stuck
+behind a better one, players buried on a crowded depth chart, players whose
+coach was fired and standouts at smaller schools who want a bigger stage move,
+and play for the new school from the next season (College > Recruiting >
+Transfer portal). The college desk covers it all through the story engine:
+commitments, flips, signing days, firings, hires, coaches leaving for the NFL,
+retirements, transfers and the preseason poll's risers and fallers, a few
+stories a day so it never crowds out the NFL.
+
 Scouting is how the owner learns who those prospects are. Each week the owner
 points up to six assignments at a region, a conference, a school, positions, a
 college system, or specific players, at one of three depths: film study,
@@ -1025,7 +1038,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
   Practice reports, the practice plan, the emergency list and game-day eligibility are `gameweek.ts`; the scouting staff and its leans `scouts.ts`; per-game and workout bonuses, the rookie escalator and the cash floor `bonuses.ts`.
-  The living college world (programs, the rollover, binding recruits to the draft classes) is `cfbworld.ts`, high school recruiting `recruiting.ts`, and college head coaches and their carousel `cfbcoaches.ts`.
+  The living college world (programs, the rollover, binding recruits to the draft classes) is `cfbworld.ts`, high school recruiting `recruiting.ts`, college head coaches and their carousel `cfbcoaches.ts`, the transfer portal `portal.ts`, and the college desk's facts `cfbmedia.ts` (words in `media/content/college.ts`).
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.

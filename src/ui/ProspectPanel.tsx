@@ -7,7 +7,9 @@ import { DEPTHS, onScoutList, scoutPlayer, scoutReport, unscoutPlayer } from "..
 import type { GameState, ScoutDepth } from "../engine/types";
 import { mockSpot, selectionOf } from "../engine/draft";
 import { teamLabel } from "../engine/league";
-import { COLLEGE_SEASON } from "../engine/college";
+import { COLLEGE_SEASON, collegePlayer } from "../engine/college";
+import { collegeCareer } from "../engine/cfbworld";
+import { coachName } from "../engine/cfbcoaches";
 import { height } from "./format";
 import { canVisit, canWorkOut, inviteVisit, INTERVIEWS, preDraftNotes, privateWorkout, toggleInterview, VISITS, WORKOUTS } from "../engine/visits";
 import { COMBINE_DATE } from "../engine/draft";
@@ -17,9 +19,12 @@ import { enrollYear } from "../engine/prospects";
 
 export function ProspectPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
   const ui = useUi();
-  const p = draftClass(game.seed).byId[id];
-  const r0 = p ? recruitingProfile(game.seed, id, p.classYear, COLLEGE_SEASON + 1) : null;
-  const recruit = r0 && p ? { ...r0, year: enrollYear(p.classYear, COLLEGE_SEASON + 1) } : null;
+  const p = collegePlayer(game, id) ?? draftClass(game.seed).byId[id];
+  // Next year's underclassmen are tracked too; they enter the draft a year later.
+  const draftYear = draftClass(game.seed).byId[id] ? COLLEGE_SEASON + 1 : COLLEGE_SEASON + 2;
+  const r0 = p ? recruitingProfile(game.seed, id, p.classYear, draftYear) : null;
+  const recruit = r0 && p ? { ...r0, year: enrollYear(p.classYear, draftYear) } : null;
+  const career = collegeCareer(game, id);
   const report = scoutReport(game, id);
   const log = prospectLog(game, id);
   const totals = prospectTotals(game, id);
@@ -188,7 +193,27 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
             </div>
           </section>
         )}
-        <p className="muted">{rankedName(game, p.school)} is {school.coach}'s team ({school.city}, {school.state}).</p>
+        {career.length > 0 && (
+          <section className="stack tight">
+            <h3>College career</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Season</th><th>School</th><th className="num">G</th>{keys.map((k) => <th key={k} className="num">{STAT_LABEL[k]}</th>)}</tr></thead>
+                <tbody>
+                  {career.map((r) => (
+                    <tr key={r.season}>
+                      <td>{r.season}</td>
+                      <td className="name"><button className="link" onClick={() => ui.openSchool(r.school)}>{schoolName(r.school)}</button></td>
+                      <td className="num">{r.line.g}</td>
+                      {keys.map((k) => <td key={k} className="num">{(r.line[k] ?? 0).toLocaleString("en-US")}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+        <p className="muted">{rankedName(game, p.school)} is {coachName(game, p.school)}'s team ({school.city}, {school.state}).</p>
       </aside>
     </div>
   );

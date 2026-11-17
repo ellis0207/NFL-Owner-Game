@@ -12,6 +12,7 @@ import { COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS, CONFERENCES, schoolName 
 import { addDays, daysBetween, weekday } from "./dates";
 import { newPerson } from "./coaches";
 import { news } from "./inbox";
+import { cfbFact, schoolSlots } from "./cfbmedia";
 import { RULES } from "./league";
 import { gaussian, rngFor } from "./rng";
 import type { CfbWorld, Coach, GameState } from "./types";
@@ -236,6 +237,11 @@ export function fireCoach(state: GameState, team: string, midseason = false): vo
   open(state, team);
   const out = buyout(state, c);
   log(state, team, "fired", c.id, `${schoolName(team)} fire head coach ${c.name}${midseason ? ` after a ${w}-${l} start; an assistant finishes the season` : ` after a ${w}-${l} season`} (buyout around ${money(out)})`);
+  const years = Math.max(1, cfbSeason(state) - c.hiredYear + 1);
+  const big = state.cfb!.programs[team].prestige >= 78;
+  cfbFact(state, "fired", 40 + (state.cfb!.programs[team].prestige - 50) * 0.6 + (midseason ? 8 : 0), {
+    C: { name: c.name, from: "", years, rec: `${w}-${l}` }, S: schoolSlots(state, team), rec: `${w}-${l}`, years, buyout: money(out),
+  }, { midseason, big, quick: years <= 2, long: years >= 10 });
 }
 
 function retireCoach(state: GameState, team: string): void {
@@ -245,7 +251,9 @@ function retireCoach(state: GameState, team: string): void {
   c.retired = RULES.season;
   moves++;
   open(state, team);
-  log(state, team, "retired", c.id, `${c.name} retires as ${schoolName(team)} head coach after ${Math.max(1, cfbSeason(state) - c.hiredYear + 1)} seasons`);
+  const years = Math.max(1, cfbSeason(state) - c.hiredYear + 1);
+  log(state, team, "retired", c.id, `${c.name} retires as ${schoolName(team)} head coach after ${years} seasons`);
+  cfbFact(state, "retired", 30 + (state.cfb!.programs[team].prestige - 50) * 0.5 + Math.min(15, years), { C: { name: c.name, from: "", years }, S: schoolSlots(state, team), years });
 }
 
 /** Black Monday: the programs that are done waiting, and the coaches who are done coaching. */
@@ -357,6 +365,10 @@ function hire(state: GameState, team: string): void {
   moves++;
   delete w.openings[team];
   log(state, team, "hired", pick.id, `${schoolName(team)} hire ${pick.name}${fromText ? ` (${fromText})` : ""} as head coach`);
+  const fromHC = from?.kind === "college" && from.title === "head coach";
+  cfbFact(state, "hired", 38 + (w.programs[team].prestige - 50) * 0.6 + (fromHC ? 6 : 0), {
+    C: { name: pick.name, from: fromText }, S: schoolSlots(state, team), from: fromText, ...(from?.kind === "college" && fromHC ? { F: schoolSlots(state, from.team) } : {}),
+  }, { fromHC, coord: from?.kind === "college" && !fromHC, retread: !from && pick.fired !== undefined, big: w.programs[team].prestige >= 78 });
 }
 
 /** Searches take one to three weeks; a midseason opening waits for the season to end. */
@@ -378,6 +390,14 @@ export function cfbCoachesDaily(state: GameState): void {
   for (const t of COLLEGE_TEAMS) if (!w.openings[t.id] && !headCoach(state, t.id)) open(state, t.id);
   if (weekday(state.date) === "Sunday" && state.date >= MID_FROM && state.date <= MID_TO) midseason(state);
   if (state.date === BLACK_MONDAY) blackMondayMoves(state);
+  // Coaches who left for an NFL job today (coaches.ts logs the move when the club hires him).
+  for (const m of w.log) {
+    if (m.date !== state.date) break;
+    const c = state.staff.people[m.coach];
+    if (m.kind === "left" && c?.team) {
+      cfbFact(state, "left", 45 + (w.programs[m.team].prestige - 50) * 0.5, { C: { name: c.name, from: "" }, S: schoolSlots(state, m.team), T: c.team }, { big: w.programs[m.team].prestige >= 78 });
+    }
+  }
   searches(state);
 }
 

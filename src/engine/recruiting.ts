@@ -23,6 +23,7 @@ import { news } from "./inbox";
 import { enrollYear, HOMETOWN_STATES, POSITION_SHARE, rawClass, SIZE } from "./prospects";
 import { gaussian, makeRng, rngFor, type Rng } from "./rng";
 import { headCoach, recruiter } from "./cfbcoaches";
+import { cfbFact, powerSchool, schoolSlots, starWord } from "./cfbmedia";
 import type { CfbRecruitingClass, CfbWorld, GameState, Position, Region } from "./types";
 
 export interface Recruit {
@@ -328,6 +329,11 @@ function commit(state: GameState, cls: CfbRecruitingClass, b: Board, r: Recruit,
   news(state, "college", from
     ? `CFB · Flip: ${who} drops ${COLLEGE_TEAM[from].school} and commits to ${COLLEGE_TEAM[school].school}`
     : `CFB · ${who} commits to ${COLLEGE_TEAM[school].school}`);
+  const R = { name: r.name, pos: r.position, stars: r.stars, word: starWord(r.stars), rank: r.rank, home: r.home };
+  const value = 25 + (150 - r.rank) * 0.2 + (r.stars === 5 ? 8 : 0) + (from ? 6 : 0);
+  const tags = { five: r.stars === 5, top10: r.rank <= 10, home: COLLEGE_TEAM[school].state === r.home, g5: !powerSchool(school) && r.rank <= 100, late: state.date >= addDays(signingDay(cls.year), -10) };
+  if (from) cfbFact(state, "flip", value, { R, S: schoolSlots(state, school), F: schoolSlots(state, from) }, { five: tags.five, coachGone: coachChanged(state.cfb!, from, cls.commits[r.id].date) });
+  else cfbFact(state, "commit", value, { R, S: schoolSlots(state, school) }, tags);
 }
 
 // ---- Each day ----
@@ -379,6 +385,7 @@ function finalize(state: GameState, cls: CfbRecruitingClass, pool: RecruitPool, 
   if (!quiet) {
     const top = order.slice(0, 5).map((t, i) => `${i + 1}. ${COLLEGE_TEAM[t].school}`).join(", ");
     news(state, "college", `CFB · National Signing Day: the class of ${cls.year} is in. Top classes: ${top}`);
+    cfbFact(state, "signing", 70, { year: cls.year, list: top, S: schoolSlots(state, order[0]), n: Object.keys(cls.commits).length }, { national: true });
   }
 }
 
@@ -417,7 +424,13 @@ export function recruitingDaily(state: GameState, quiet = false): void {
     for (const [id, c] of Object.entries(cls.commits)) {
       if (rngFor(state.seed, `hs-early:${id}`)() < (coachChanged(w, c.school, c.date) ? 0.4 : 0.88)) c.signed = 1;
     }
-    if (!quiet) news(state, "college", `CFB · Early signing period: ${Object.values(cls.commits).filter((c) => c.signed).length} of the nation's top recruits sign`);
+    if (!quiet) {
+      const n = Object.values(cls.commits).filter((c) => c.signed).length;
+      news(state, "college", `CFB · Early signing period: ${n} of the nation's top recruits sign`);
+      const order = classRanking(state, year);
+      const list = order.slice(0, 5).map((t, i) => `${i + 1}. ${COLLEGE_TEAM[t.team].school}`).join(", ");
+      if (order.length) cfbFact(state, "signing", 60, { year, list, S: schoolSlots(state, order[0].team), n }, { early: true });
+    }
   }
   if (state.date === nsd && !cls.done) finalize(state, cls, pool, quiet);
 }

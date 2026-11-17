@@ -20,6 +20,7 @@ import { ARC_CONTENT } from "./content/arcs";
 import { SEASON_CONTENT } from "./content/season";
 import { OPINION_CONTENT } from "./content/opinion";
 import { OWNER_CONTENT } from "./content/ownerdesk";
+import { COLLEGE_CONTENT } from "./content/college";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
 import { CONNECT } from "./content/blend";
@@ -39,6 +40,7 @@ export function contentFor(f: Fact): FamilyContent | undefined {
   if (f.family === "season") return SEASON_CONTENT[f.type.split(".")[1]];
   if (f.family === "opinion") return OPINION_CONTENT[f.type.split(".")[1]];
   if (f.family === "owner") return OWNER_CONTENT[f.type.split(".")[1]];
+  if (f.family === "college") return COLLEGE_CONTENT[f.type.split(".")[1]];
   return FAMILIES[f.family];
 }
 
@@ -75,6 +77,7 @@ export function storiesFor(f: Fact): number {
     case "owner": return f.tags.exclusive || f.tags.solo ? 1 : 1 + (v >= 45 ? 1 : 0) + (v >= 70 ? 1 : 0);
     case "season": return 1 + (v >= 55 ? 1 : 0) + (v >= 75 ? 1 : 0) + (f.ours ? 1 : 0);
     case "camp": return 1 + (f.ours && v >= 50 ? 1 : 0);
+    case "college": return 1 + (v >= 70 ? 1 : 0) + (v >= 85 ? 1 : 0);
     case "seat": return 1 + (v >= 60 ? 1 : 0);
     case "wire": return (v >= 40 ? 1 : 0) + (v >= 65 ? 1 : 0) + (f.ours ? 1 : 0);
     default: return v >= 40 ? 1 : 0;
@@ -142,7 +145,9 @@ const OUTLET_BEATS: Record<string, string[]> = {
 function pickOutlet(fmt: FormatDef, used: Set<string>, rng: Rng, f: Fact): string {
   const subject = String(f.slots.topic ?? f.family);
   const home = (f.slots.US as { id?: string } | undefined)?.id ?? f.teams[0];
-  const weights: [string, number][] = fmt.outlets.map(([o, w]) => {
+  // College football is the Saturday paper's beat first.
+  const own: [string, number][] = f.family === "college" ? [["sentinel", 4], ...fmt.outlets.filter(([o]) => o !== "beat")] : fmt.outlets;
+  const weights: [string, number][] = own.map(([o, w]) => {
     if (o === "beat") return [`local:${home}`, w];
     const beats = OUTLET_BEATS[o];
     return [o, beats ? w * (beats.includes(subject) ? 3 : 0.5) : w];

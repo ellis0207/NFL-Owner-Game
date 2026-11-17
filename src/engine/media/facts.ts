@@ -23,7 +23,7 @@ import { describe, headline as tradeHeadline } from "../trades";
 import type { BoxScore, GameState, MediaFactInput, Position, ScheduledGame, StoryKind, TradeRecord } from "../types";
 import type { Slots } from "./grammar";
 
-export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat" | "rumor" | "arc" | "season" | "opinion" | "owner";
+export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat" | "rumor" | "arc" | "season" | "opinion" | "owner" | "college";
 
 export interface Fact {
   id: string;
@@ -575,11 +575,28 @@ function wireFacts(state: GameState, table: Record<string, Record_>): Fact[] {
   return out;
 }
 
+/** College football's day: recruiting, the carousel, the portal (cfbmedia.ts). */
+function collegeFacts(state: GameState): Fact[] {
+  const m = mediaState(state);
+  const q = m.cfbq ?? [];
+  m.cfbq = [];
+  // College is a side desk: the day's five biggest college items get stories, the rest stay on the wire.
+  return q.slice().sort((a, b) => b.value - a.value).slice(0, 5).map((x, i) => {
+    // An NFL club in the story (a coach leaving for the pros) arrives as its id.
+    const nfl = typeof x.slots.T === "string" ? x.slots.T : "";
+    return {
+      id: `cfb:${state.date}:${i}`, type: `college.${x.kind}`, family: "college" as const, kind: "college" as const,
+      teams: nfl ? [nfl] : [], players: [], value: x.value, ours: false, tags: { [x.kind]: true, ...x.tags },
+      slots: { ...(x.slots as Slots), ...(nfl ? { T: teamSlots(state, nfl) } : {}), topic: "college" },
+    };
+  });
+}
+
 /** Every fact of the day, before the desks decide what to write. */
 export function collectFacts(state: GameState): Fact[] {
   const table = standings(state);
   return [
     ...gameFacts(state, table), ...injuryFacts(state, table), ...signingFacts(state, table),
-    ...releaseFacts(state, table), ...tradeFacts(state, table), ...wireFacts(state, table),
+    ...releaseFacts(state, table), ...tradeFacts(state, table), ...wireFacts(state, table), ...collegeFacts(state),
   ];
 }
