@@ -21,10 +21,10 @@ import { depthChart } from "./roster";
 import { teamStaff } from "./staff";
 import { seedConference, standings, matchup, type Record_ } from "./standings";
 import { seasonTotals, stat, type StatLine } from "./stats";
-import { describe, direction, headline, outlook, parsePick, trades, tradeWindow } from "./trades";
-import type { BoxScore, GameState, Position, ScheduledGame, Story, TradeRecord } from "./types";
+import { direction, outlook, parsePick, trades, tradeWindow } from "./trades";
+import type { BoxScore, GameState, Position, ScheduledGame, Story } from "./types";
 import { money } from "./inbox";
-import { liveIds } from "./live";
+import { composeDay } from "./media/compose";
 
 const KEY = RULES.keyDates;
 
@@ -230,7 +230,8 @@ function recap(state: GameState, g: ScheduledGame, table: Record<string, Record_
   });
 }
 
-function gameCoverage(state: GameState): void {
+/** Preseason games: our game gets a story, the rest share a scoreboard. */
+function preseasonCoverage(state: GameState): void {
   const games = (GAMES_BY_DATE[state.date] ?? []).filter((g) => state.results[g.id]);
   if (!games.length) return;
   const table = standings(state);
@@ -248,135 +249,6 @@ function gameCoverage(state: GameState): void {
         teams: others.flatMap((g) => [state.results[g.id].away, state.results[g.id].home]),
       });
     }
-  }
-  for (const g of games.filter((x) => x.type !== "PRE")) recap(state, g, table);
-}
-
-// ---- Injuries ----
-
-function injuryCoverage(state: GameState): void {
-  const hurt: { id: string; team: string; view: number }[] = [];
-  for (const id of liveIds(state)) {
-    const ps = state.players[id];
-    const inj = ps.injury;
-    if (!inj || inj.date !== state.date || !ps.team || !PLAYER_BY_ID[id]) continue;
-    const days = daysBetween(state.date, inj.returnDate);
-    if (!inj.seasonEnding && days < 6) continue;
-    const view = marketView(state, id);
-    // A star missing a week is news; anyone else has to be out a while.
-    if (!inj.seasonEnding && days < 14 && view < 90) continue;
-    if (view < 81 && ps.team !== state.userTeam) continue;
-    if (view < 74) continue;
-    hurt.push({ id, team: ps.team, view });
-  }
-  hurt.sort((a, b) => b.view - a.view);
-  for (const h of hurt.slice(0, 8)) {
-    const inj = state.players[h.id].injury!;
-    const rng = rngFor(state.seed, `media:inj:${h.id}:${state.date}`);
-    const weeks = Math.max(1, Math.round(daysBetween(state.date, inj.returnDate) / 7));
-    const n = pname(h.id);
-    const pos = ppos(h.id);
-    const chart = depthChart(state, h.team);
-    const next = chart[pos as Position]?.find((x) => x !== h.id && !state.players[x]?.injury);
-    const line = nflLine(state, h.id);
-    const outlet = rng() < 0.6 ? O.sideline : O.ledger;
-    story(state, outlet, "insider", {
-      kind: "injury", teams: [h.team], players: [h.id],
-      headline: inj.seasonEnding
-        ? `${nick(h.team)} ${pos} ${n} out for the season with ${inj.type.toLowerCase()}`
-        : pick(rng, [`${nick(h.team)} ${pos} ${n} expected to miss about ${weeks} week${weeks === 1 ? "" : "s"}`, `Sources: ${n} out ${weeks === 1 ? "about a week" : `${weeks} weeks`} with ${inj.type.toLowerCase()}`]),
-      body: `${n} has ${/s$/.test(inj.type) ? "" : /^[aeiou]/i.test(inj.type) ? "an " : "a "}${inj.type.toLowerCase()}${state.date >= KEY.regularSeasonStart ? "" : ", suffered in camp"}, according to people familiar with the diagnosis. ` +
-        (inj.seasonEnding ? `It's a major blow for the ${nick(h.team)}. ` : `The team hopes to have ${last(n)} back in ${weeks <= 1 ? "about a week" : weeks === 2 ? "a couple of weeks" : `about ${weeks} weeks`}. `) +
-        (line ? `${last(n)} has ${line} this season. ` : "") +
-        (next ? `${pname(next)} is next on the depth chart.` : ""),
-    });
-  }
-}
-
-// ---- Transactions ----
-
-function signingCoverage(state: GameState): void {
-  const today = state.signings.filter((s) => s.date === state.date);
-  for (const s of today) {
-    const ours = s.team === state.userTeam;
-    if (s.apy < (ours ? 1_500_000 : 5_000_000) || s.kind === "tender" || s.kind === "minimum") continue;
-    const rng = rngFor(state.seed, `media:sign:${s.id}`);
-    const n = pname(s.player);
-    const pos = ppos(s.player);
-    const ext = s.kind === "extension";
-    const tag = s.kind === "tag";
-    const yrs = `${s.years}-year`;
-    const head = tag ? `${n} signs his tag with the ${nick(s.team)}`
-      : ext ? pick(rng, [`${nick(s.team)} extend ${pos} ${n}: ${yrs}, ${money(s.total)}`, `${n} gets paid: ${yrs}, ${money(s.total)} extension with ${nick(s.team)}`])
-      : pick(rng, [`${n} agrees to ${yrs}, ${money(s.total)} deal with ${nick(s.team)}`, `${nick(s.team)} land ${pos} ${n}: ${yrs}, ${money(s.total)}`]);
-    const grades = s.grades.length ? `Early grades: ${s.grades.map((g) => `${g.outlet} ${g.grade} ("${g.take}")`).join("; ")}.` : "";
-    story(state, O.capspace, "insider", {
-      kind: "signing", teams: [s.team], players: [s.player], headline: head,
-      body: `${ext ? `The ${nick(s.team)} and ${pos} ${n} agreed on an extension` : `${pos} ${n} agreed to terms with the ${teamLabel(s.team)}`}: ` +
-        `${s.years} year${s.years === 1 ? "" : "s"}, ${money(s.total)}, ${money(s.guaranteed)} guaranteed, an average of ${money(s.apy)} a year. ` +
-        (s.apy >= 20_000_000 ? `It puts ${last(n)} among the highest-paid players at the position. ` : "") + grades,
-    });
-    if (s.apy >= 25_000_000 || (ours && s.apy >= 12_000_000)) {
-      const avg = s.grades.reduce((a, g) => a + "FDCBA".indexOf(g.grade[0]), 0) / Math.max(1, s.grades.length);
-      story(state, O.blitz, "columnist", {
-        kind: "interview", teams: [s.team], players: [s.player],
-        headline: avg >= 3 ? `Big Lou: the ${nick(s.team)} nailed the ${last(n)} deal` : `Big Lou: the ${nick(s.team)} just lit money on fire`,
-        body: avg >= 3
-          ? `"You pay your guys. ${last(n)} is a difference-maker and the ${nick(s.team)} didn't flinch. Love it," Big Lou Marchetti said on The Blitz.`
-          : `"${money(s.apy)} a year for ${last(n)}? Somebody in that building needs to explain that one to the fans," Big Lou Marchetti said on The Blitz. Kara Voss pushed back: "It's market price. Get over it."`,
-      });
-    }
-  }
-}
-
-function releaseCoverage(state: GameState): void {
-  const today = (state.transactions ?? []).filter((t) => t.date === state.date && (t.kind === "released" || t.kind === "waived"));
-  let n = 0;
-  for (const t of today) {
-    if (!PLAYER_BY_ID[t.player] || n >= 6) continue;
-    const view = marketView(state, t.player);
-    if (view < (t.team === state.userTeam ? 78 : 83)) continue;
-    n++;
-    const name = pname(t.player);
-    const age = ageOn(PLAYER_BY_ID[t.player].birthDate, state.date);
-    const line = nflLine(state, t.player);
-    story(state, rngFor(state.seed, `media:rel:${t.player}`)() < 0.5 ? O.sideline : O.capspace, "insider", {
-      kind: "release", teams: [t.team], players: [t.player],
-      headline: `${nick(t.team)} ${t.kind === "waived" ? "waive" : "release"} ${ppos(t.player)} ${name}`,
-      body: `The ${teamLabel(t.team)} ${t.kind === "waived" ? "waived" : "released"} ${name}${age ? `, ${age},` : ""} today. ` +
-        (line ? `${last(name)} had ${line} this season. ` : "") +
-        (t.kind === "waived" ? "Any team can put in a claim before he clears waivers." : `${last(name)} is free to sign anywhere, and expect interest.`),
-    });
-  }
-}
-
-function tradeCoverage(state: GameState): void {
-  for (const rec of (state.trades?.log ?? []).filter((x) => x.date === state.date && x.status !== "voided")) {
-    tradeStory(state, rec);
-  }
-}
-
-function tradeStory(state: GameState, rec: TradeRecord): void {
-  const rng = rngFor(state.seed, `media:trade:${rec.id}`);
-  const players = [...rec.send[0], ...rec.send[1]].flatMap((a) => (a.kind === "player" ? [a.id] : []));
-  const [a, b] = rec.teams;
-  const gradeLine = (team: string) => (rec.grades?.[team] ?? []).map((g) => `${g.outlet} ${g.grade}`).join(", ");
-  story(state, rng() < 0.5 ? O.sideline : O.ledger, "insider", {
-    kind: "trade", teams: [a, b], players,
-    headline: `${rec.blockbuster ? "Blockbuster: " : "Trade: "}${headline(state, rec)}`,
-    body: `The ${teamLabel(a)} send ${describe(state, rec.send[0], a)} to the ${teamLabel(b)} for ${describe(state, rec.send[1], b)}` +
-      (rec.status === "agreed" ? ", pending the new league year." : ".") +
-      ` Grades for the ${nick(a)}: ${gradeLine(a)}. For the ${nick(b)}: ${gradeLine(b)}.`,
-  });
-  if ((rec.blockbuster && players.length) || rec.teams.includes(state.userTeam)) {
-    const g = (team: string) => (rec.grades?.[team] ?? []).reduce((s, x) => s + "FDCBA".indexOf(x.grade[0]), 0) / Math.max(1, rec.grades?.[team]?.length ?? 1);
-    const winner = g(a) >= g(b) ? a : b;
-    story(state, O.blitz, "columnist", {
-      kind: "interview", teams: [a, b], players,
-      headline: `Winners and losers: the ${nick(winner)} fleeced somebody`,
-      body: `"I'll say it: the ${nick(winner)} won this trade, and it isn't close," Big Lou Marchetti said. ` +
-        `Kara Voss wasn't so sure: "${pick(rng, ["Check back in two years. Trades never look the same a season later.", "Lou, you grade every trade in five minutes.", "The other side got exactly what it wanted. Both can win."])}"`,
-    });
   }
 }
 
@@ -1166,11 +1038,9 @@ function evergreen(state: GameState): void {
 /** Everything the outlets file today. Runs at the end of the day, after the league has moved. */
 export function mediaDaily(state: GameState): void {
   mediaState(state);
-  gameCoverage(state);
-  injuryCoverage(state);
-  signingCoverage(state);
-  releaseCoverage(state);
-  tradeCoverage(state);
+  preseasonCoverage(state);
+  // Games, big days, injuries, signings, releases, claims and trades go through the story engine.
+  composeDay(state);
   wireCoverage(state);
   rumorMill(state);
   interviews(state);

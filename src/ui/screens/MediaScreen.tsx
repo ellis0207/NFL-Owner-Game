@@ -1,3 +1,4 @@
+import { FORMATS, type FormatId } from "../../engine/media/formats";
 import { initialTab } from "../ui";
 import { useMemo, useState } from "react";
 import { shortDate, weekday } from "../../engine/dates";
@@ -115,7 +116,7 @@ export function StoryCard({ game, s, compact }: { game: GameState; s: Story; com
       <button className="head" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className={`pill kind-${s.kind}`}>{KIND_LABEL[s.kind]}</span>
         <strong className="headline">{s.headline}</strong>
-        <span className="muted byline">{o?.name ?? s.outlet} · {s.by}</span>
+        <span className="muted byline">{o?.name ?? s.outlet} · {s.by}{s.format && FORMATS[s.format as FormatId] ? ` · ${FORMATS[s.format as FormatId].label}` : ""}</span>
       </button>
       {open && (
         <>
