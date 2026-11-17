@@ -1,0 +1,12 @@
+/* The stadium at night and the league's record books: scoreboard black,
+   amber digits. Pages: Standings, Scoreboard, Owners, History. */
+[data-room="league"] {
+  --room-base: #05080d;
+  --room-accent: #c98a12;
+  --room-glint: #ffcf5a;
+  --room-hue: #6b7a90;
+  --room-font: var(--font-broadcast);
+  --room-title-case: uppercase;
+  --room-title-weight: 600;
+  --room-title-spacing: 0.02em;
+}

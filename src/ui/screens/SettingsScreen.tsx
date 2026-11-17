@@ -20,7 +20,6 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
   const set = (s: Partial<Settings>) => { Object.assign(game.settings, s); changed(); };
   return (
     <section className="stack">
-      <h2>Settings</h2>
       <div className="split">
         <div className="panel stack tight">
           <h3>Realism</h3>

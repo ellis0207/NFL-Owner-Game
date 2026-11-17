@@ -4,7 +4,22 @@ import { migrate } from "./save/codec";
 import { startSimWorker } from "./sim/worker";
 import { App } from "./ui/App";
 import { applyPrefs } from "./ui/prefs";
-import "./ui/styles.css";
+// Styles: the shared base, the shell's pieces, then one file per room.
+import "./ui/styles/base.css";
+import "./ui/styles/kit.css";
+import "./ui/styles/masthead.css";
+import "./ui/styles/rooms/desk.css";
+import "./ui/styles/rooms/team.css";
+import "./ui/styles/rooms/building.css";
+import "./ui/styles/rooms/draft.css";
+import "./ui/styles/rooms/office.css";
+import "./ui/styles/rooms/league.css";
+import "./ui/styles/rooms/game.css";
+import "./ui/styles/field.css";
+import "./ui/styles/tips.css";
+import "./ui/styles/app.css";
+import "./ui/styles/hall.css";
+import "./ui/styles/mediapages.css";
 
 type Hot = { ready?: (fn: (data: unknown) => void) => void; data?: unknown };
 

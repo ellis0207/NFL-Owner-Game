@@ -67,3 +67,46 @@ export function groupOf(s: Screen): NavGroup {
 export function pageLabel(s: Screen): string {
   return PAGE_LABEL[s] ?? s;
 }
+
+// ---- Rooms: each sidebar group has a look of its own ----
+
+/** The room a sidebar group is drawn as: its palette, type and header picture (styles/rooms/*.css, assets/art). */
+export type Room = "desk" | "team" | "building" | "draft" | "office" | "league" | "game";
+
+export const ROOM: Record<NavGroup["id"], Room> = {
+  home: "desk",
+  team: "team",
+  moves: "building",
+  draft: "draft",
+  office: "office",
+  league: "league",
+  game: "game",
+};
+
+/** The place each room stands for, shown small above a page's title. */
+export const ROOM_PLACE: Record<Room, string> = {
+  desk: "The owner's desk",
+  team: "The film room",
+  building: "The cap office",
+  draft: "The war room",
+  office: "The boardroom",
+  league: "Around the league",
+  game: "The manual",
+};
+
+export function roomOf(s: Screen): Room {
+  return ROOM[groupOf(s).id];
+}
+
+/** A page's title in its header, where it says more than the sidebar name. */
+export const PAGE_TITLE: Partial<Record<Screen, string>> = {
+  Football: "Football overview",
+  Cap: "Salary cap",
+  College: "College football",
+  Scouting: "College scouting",
+  Owner: "Owner's office",
+  Agreements: "Agreements and archive",
+  Legal: "Compliance and legal",
+  League: "League scoreboard",
+  Guide: "Owner's guide",
+};

@@ -1,0 +1,12 @@
+/* The film room and the practice field: chalkboard slate, chalk white and
+   field green. Pages: Overview to Analytics. */
+[data-room="team"] {
+  --room-base: #0d1a15;
+  --room-accent: #2f8f55;
+  --room-glint: #7fd69d;
+  --room-hue: #3f8a64;
+  --room-font: var(--font-broadcast);
+  --room-title-case: uppercase;
+  --room-title-weight: 600;
+  --room-title-spacing: 0.02em;
+}

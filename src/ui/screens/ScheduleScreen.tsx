@@ -1,5 +1,5 @@
 import { kickoff, shortDate } from "../../engine/dates";
-import { RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "../../engine/league";
+import { RULES, SCHEDULE, teamLabel } from "../../engine/league";
 import { gameTypeLabel } from "../../engine/season";
 import { scheduleReleaseDate, scheduleReleased } from "../../engine/seasons";
 import { matchup } from "../../engine/standings";
@@ -18,14 +18,12 @@ export function ScheduleScreen({ game }: { game: GameState }) {
   if (!scheduleReleased(game)) {
     return (
       <section className="stack">
-        <h2>{TEAM_BY_ID[us].name} {RULES.season} schedule</h2>
         <p className="muted">The league releases the {RULES.season} schedule on {shortDate(scheduleReleaseDate())}. We know who we play, from the division rotation and last season's finish, but not when or where.</p>
       </section>
     );
   }
   return (
     <section className="stack">
-      <h2>{TEAM_BY_ID[us].name} {RULES.season} schedule</h2>
       <div className="table-wrap">
         <table>
           <thead>

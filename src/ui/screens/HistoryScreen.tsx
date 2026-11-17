@@ -27,7 +27,6 @@ export function HistoryScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>("Honors");
   return (
     <section className="stack">
-      <h2>History</h2>
       <GroupedTabs label="History" groups={GROUPS} value={tab} onChange={setTab} />
       {tab === "Honors" && <Honors game={game} />}
       {tab === "Hall of Fame" && <HallTab game={game} />}

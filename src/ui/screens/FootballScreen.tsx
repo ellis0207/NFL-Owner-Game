@@ -36,7 +36,6 @@ export function FootballScreen({ game }: { game: GameState }) {
   const link = (id: string) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
   return (
     <section className="stack">
-      <h2>Football overview</h2>
       <div className="split">
         <div className="panel stack tight">
           <h3>Season and staff</h3>

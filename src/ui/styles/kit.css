@@ -1,0 +1,39 @@
+/* ---- Shared pieces for the rooms (kit.tsx) ---- */
+.kit-tiles { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.kit-tile {
+  display: grid; gap: 0.15rem; align-content: start; padding: 0.8rem 0.95rem; min-width: 0;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); box-shadow: var(--shadow);
+  border-top: 3px solid var(--room-accent, var(--team));
+}
+.kit-tile-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.kit-tile-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.55rem; font-weight: 500; line-height: 1.15; overflow-wrap: anywhere; }
+.kit-tile-note { font-size: 0.8rem; color: var(--muted); }
+.kit-tile.good .kit-tile-value { color: var(--good); }
+.kit-tile.bad .kit-tile-value { color: var(--bad); }
+.kit-tile.warn .kit-tile-value { color: var(--warn); }
+
+.kit-card { background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.15rem; box-shadow: var(--shadow); display: grid; gap: 0.75rem; min-width: 0; }
+.kit-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 0.5rem 1rem; }
+.kit-card-kicker { display: block; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--room-accent, var(--team)); }
+.kit-card-title { font-family: var(--room-font, var(--font-display)); color: var(--ink); text-transform: var(--room-title-case, uppercase); letter-spacing: var(--room-title-spacing, 0.04em); font-weight: var(--room-title-weight, 600); font-size: 1.25rem; }
+
+.kit-callout { display: grid; gap: 0.25rem; padding: 0.7rem 0.9rem; border-radius: var(--radius); border: 1px solid var(--rule); border-left: 4px solid var(--room-accent, var(--team)); background: color-mix(in srgb, var(--panel) 90%, var(--room-accent, var(--team))); }
+.kit-callout.good { border-left-color: var(--good); background: color-mix(in srgb, var(--panel) 90%, var(--good)); }
+.kit-callout.bad { border-left-color: var(--bad); background: color-mix(in srgb, var(--panel) 90%, var(--bad)); }
+.kit-callout.warn { border-left-color: var(--warn); background: color-mix(in srgb, var(--panel) 90%, var(--warn)); }
+.kit-callout-title { font-weight: 600; }
+
+.kit-empty { display: grid; gap: 0.3rem; justify-items: center; text-align: center; padding: 2rem 1rem; border: 1px dashed var(--rule); border-radius: var(--radius); color: var(--ink); }
+.kit-empty p { max-width: 48ch; }
+
+.kit-meter { display: grid; gap: 0.25rem; }
+.kit-meter-label { font-size: 0.8rem; color: var(--muted); }
+.kit-meter-bar { display: block; height: 8px; border-radius: 4px; background: var(--sunk); overflow: hidden; }
+.kit-meter-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--room-accent, var(--team)); }
+.kit-meter.good .kit-meter-bar > span { background: var(--good); }
+.kit-meter.bad .kit-meter-bar > span { background: var(--bad); }
+.kit-meter.warn .kit-meter-bar > span { background: var(--warn); }
+
+/* A ledger table: ruled like an accounting book, totals under a double rule. */
+table.kit-ledger td, table.kit-ledger th { border-bottom-color: color-mix(in srgb, var(--rule) 70%, var(--room-hue, transparent)); }
+table.kit-ledger tr.total td { border-top: 3px double var(--ink); font-weight: 600; }

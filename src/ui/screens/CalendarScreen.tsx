@@ -74,7 +74,6 @@ export function CalendarScreen({ game }: { game: GameState }) {
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h2>Calendar</h2>
         <div className="btn-row">
           <button className="btn small" disabled={month <= FIRST_MONTH} onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">‹</button>
           <strong className="cal-month">{new Date(first + "T12:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</strong>

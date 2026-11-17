@@ -24,3 +24,5 @@ console.log(`dist/packs: ${packs.length} season packs`);
 
 // The field view's animation art (assets/anim) is already beside the page: Vite copies it as dist/anim.
 console.log(`dist/anim: ${readdirSync("dist/anim").join(", ")}`);
+// The room pictures for the page headers (assets/art, from pipeline/art) go out the same way, as dist/art.
+console.log(`dist/art: ${readdirSync("dist/art").join(", ")}`);

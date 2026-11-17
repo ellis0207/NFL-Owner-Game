@@ -44,7 +44,6 @@ export function AgreementsScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<"center" | "archive">("center");
   return (
     <section className="stack">
-      <h2>Agreements and archive</h2>
       <div className="tabs" role="group" aria-label="View">
         <button aria-pressed={tab === "center"} onClick={() => setTab("center")}>Contract center</button>
         <button aria-pressed={tab === "archive"} onClick={() => setTab("archive")}>Archive</button>

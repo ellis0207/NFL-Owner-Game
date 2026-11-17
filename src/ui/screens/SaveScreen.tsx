@@ -40,7 +40,6 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
 
   return (
     <section className="stack">
-      <h2>Save</h2>
       {message && <p className={`notice ${message.error ? "error" : ""}`}>{message.text}</p>}
       <div className="split">
         <div className="panel stack">

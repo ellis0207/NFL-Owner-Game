@@ -1,0 +1,11 @@
+/* Media front pages (screens/MediaPages.tsx) */
+.mp-front { display: grid; gap: 0.75rem; border-bottom: 2px solid var(--rule); padding-bottom: 0.75rem; }
+.mp-lead { display: grid; gap: 0.35rem; }
+.mp-lead .mp-head { font-size: 1.45rem; font-weight: 700; line-height: 1.2; text-align: left; }
+.mp-lead .body { margin: 0; max-width: 72ch; }
+.mp-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.mp-card { display: grid; gap: 0.25rem; align-content: start; border-top: 1px solid var(--rule); padding-top: 0.5rem; }
+.mp-card.ours { border-top: 3px solid var(--team); }
+.mp-card button.link { text-align: left; font-weight: 600; }
+.mp-story .body { white-space: pre-line; max-width: 72ch; margin: 0; }
+.mp-card .pill { justify-self: start; }

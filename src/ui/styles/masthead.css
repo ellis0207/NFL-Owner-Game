@@ -1,0 +1,82 @@
+/* ---- The room around each page (Masthead.tsx, GameShell.tsx) ----
+   The page takes a faint wash of its room's hue; the masthead carries the
+   room's picture, rendered in Blender (pipeline/art), behind the title. The
+   scoreboard header is a stadium board, dark in both themes. */
+
+.main[data-room] { background: color-mix(in srgb, var(--paper) 93%, var(--room-hue)); }
+.main[data-room="game"] { background: var(--paper); }
+
+/* ---- Masthead ---- */
+.mh {
+  position: relative; overflow: hidden; border-radius: 12px; min-height: 9.25rem;
+  display: flex; align-items: flex-end; color: #f5f2ec; isolation: isolate;
+  background-color: var(--room-base);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 8px 24px -12px rgb(0 0 0 / 0.45);
+}
+/* The picture sits to the right; a scrim in the room's own dark carries the title on the left. */
+.mh::before {
+  content: ""; position: absolute; inset: 0; z-index: -2;
+  background-image: var(--mh-art); background-size: cover; background-position: 70% 50%;
+}
+.mh::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(90deg, var(--room-base) 0%, color-mix(in srgb, var(--room-base) 86%, transparent) 30%, color-mix(in srgb, var(--room-base) 20%, transparent) 70%, transparent 100%),
+    linear-gradient(0deg, color-mix(in srgb, var(--room-base) 55%, transparent) 0%, transparent 55%);
+}
+/* A rule along the bottom in the club's colors, then the room's. */
+.mh-rule {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, var(--team) 0 18%, var(--team-2) 18% 22%, var(--room-accent) 22% 100%);
+  opacity: 0.95;
+}
+.mh-text { display: grid; gap: 0.3rem; padding: 1.25rem 1.5rem 1.35rem; max-width: min(62%, 44rem); }
+.mh-kicker {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--room-glint); display: flex; align-items: center; gap: 0.5rem;
+}
+.mh-kicker::before { content: ""; width: 1.4rem; height: 2px; background: currentColor; border-radius: 1px; }
+.mh-title {
+  font-family: var(--room-font); font-weight: var(--room-title-weight); text-transform: var(--room-title-case);
+  letter-spacing: var(--room-title-spacing); font-size: clamp(1.9rem, 3.3vw, 2.75rem); line-height: 1.02;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.35); text-wrap: balance;
+}
+.mh[data-room="desk"] .mh-title { font-variation-settings: "SOFT" 50, "WONK" 0; }
+.mh[data-room="draft"] .mh-title { font-size: clamp(1.7rem, 3vw, 2.45rem); }
+.mh-hint { color: rgb(245 242 236 / 0.8); font-size: 0.92rem; max-width: 56ch; }
+
+@media (max-width: 760px) {
+  .mh { min-height: 7.25rem; border-radius: 10px; }
+  .mh::before { background-position: 78% 50%; }
+  .mh::after { background: linear-gradient(90deg, var(--room-base) 0%, color-mix(in srgb, var(--room-base) 78%, transparent) 55%, color-mix(in srgb, var(--room-base) 35%, transparent) 100%); }
+  .mh-text { max-width: 100%; padding: 1rem 1rem 1.1rem; }
+  .mh-title { font-size: 1.7rem; }
+  .mh-hint { font-size: 0.82rem; }
+}
+
+/* ---- Sidebar: a line icon per room, the room's color on the page you're on ---- */
+.nav-head-label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.nav-icon { flex: none; opacity: 0.8; }
+.nav-group[data-room] .nav-item[aria-current="page"]::before { background: var(--room-glint); }
+.nav-group[data-room]:has(.nav-item[aria-current="page"]) .nav-head { color: var(--room-glint); }
+
+/* ---- Scoreboard: a stadium board, dark in both themes ---- */
+.scoreboard .clock .day { font-family: var(--font-broadcast); font-weight: 600; letter-spacing: 0.02em; }
+.scoreboard .clock .phase, .scoreboard .label { color: #8d9aa6; }
+.scoreboard .figure { border-left-color: rgb(255 255 255 / 0.09); }
+.scoreboard .figure strong { color: #ffcf5a; text-shadow: 0 0 10px rgb(255 190 60 / 0.25); }
+.scoreboard .figure strong.bad { color: #ff8a7a; text-shadow: none; }
+.scoreboard .btn:not(.primary) { background: rgb(255 255 255 / 0.06); color: #e8edf1; border-color: rgb(255 255 255 / 0.16); box-shadow: none; }
+.scoreboard .btn:not(.primary):hover { background: rgb(255 255 255 / 0.12); border-color: rgb(255 255 255 / 0.3); }
+.scoreboard .btn.primary { border-color: var(--team-2); }
+.scoreboard .save-state { color: #8d9aa6; }
+.scoreboard .save-state.warn { color: #f0b85a; }
+.scoreboard .save-state.bad { color: #ff8a7a; }
+.scoreboard :focus-visible { outline-color: #ffcf5a; }
+
+/* ---- Pages fade in ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .page-body { animation: page-in 220ms ease-out; }
+  .mh-text { animation: page-in 320ms ease-out; }
+}
+@keyframes page-in { from { opacity: 0; transform: translateY(4px); } }

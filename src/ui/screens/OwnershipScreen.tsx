@@ -34,7 +34,6 @@ export function OwnershipScreen({ game, changed }: { game: GameState; changed: (
   const say: Say = (msg, ok) => { setSaid(msg ?? ok ?? null); changed(); };
   return (
     <section className="stack">
-      <h2>Ownership</h2>
       <GroupedTabs label="Ownership" groups={inControl(game) ? GROUPS : [{ label: "Clubs", tabs: ["Deals"] }]} value={inControl(game) ? tab : "Deals"} onChange={setTab} />
       {said && <p className="notice">{said}</p>}
       {inControl(game) && tab === "Stakes" && <Stakes game={game} say={say} />}

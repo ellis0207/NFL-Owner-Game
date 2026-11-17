@@ -1,0 +1,12 @@
+/* The war room's big board: cork, index-card cream, pins. College pages take
+   varsity letters. Pages: College, Scouting, Draft. */
+[data-room="draft"] {
+  --room-base: #21150b;
+  --room-accent: #b8651f;
+  --room-glint: #f2b46f;
+  --room-hue: #b98a55;
+  --room-font: var(--font-varsity);
+  --room-title-case: uppercase;
+  --room-title-weight: 400;
+  --room-title-spacing: 0.01em;
+}

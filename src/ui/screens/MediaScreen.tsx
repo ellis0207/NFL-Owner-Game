@@ -35,7 +35,6 @@ export function MediaScreen({ game, changed }: { game: GameState; changed: () =>
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2>Media</h2>
         <div className="tabs" role="group" aria-label="Media">
           {TABS.map((t) => (
             <button key={t} aria-pressed={tab === t && !top} onClick={() => setTab(t)}>

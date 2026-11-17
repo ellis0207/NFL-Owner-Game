@@ -1,0 +1,11 @@
+/* The manual: plain theme colors, no tint. Pages: Settings, Guide, Save. */
+[data-room="game"] {
+  --room-base: #161a1f;
+  --room-accent: var(--team);
+  --room-glint: #c9d3dc;
+  --room-hue: transparent;
+  --room-font: var(--font-body);
+  --room-title-case: none;
+  --room-title-weight: 600;
+  --room-title-spacing: -0.01em;
+}

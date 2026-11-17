@@ -27,7 +27,6 @@ export function ScoutingScreen({ game, changed }: { game: GameState; changed: ()
   const director = teamStaff(game.userTeam).COL;
   return (
     <section className="stack">
-      <h2>College scouting</h2>
       <p className="muted">
         {director ? `${director.name}, our director of college scouting, runs the staff. ` : ""}
         Point the scouts at a slice of the {RULES.season + 1} draft class each week. Narrow assignments learn a lot about a few players;

@@ -33,7 +33,6 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
 
   return (
     <section className="stack">
-      <h2>Owners</h2>
       <p className="muted">
         The owners change the playing rules and league policies at the annual league meeting ({shortDate(meetingDay)}); a change needs {VOTES_TO_PASS} of 32 votes.
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.

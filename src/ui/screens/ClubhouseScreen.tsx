@@ -20,7 +20,6 @@ export function ClubhouseScreen({ game, changed }: { game: GameState; changed: (
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2>Clubhouse</h2>
         <div className="tabs" role="group" aria-label="Clubhouse">
           {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
         </div>

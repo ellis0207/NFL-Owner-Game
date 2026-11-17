@@ -60,7 +60,9 @@ import { decisionQueue } from "../engine/queue";
 import { tip } from "./tip";
 import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
-import { NAV, PAGE_HINT, groupOf, pageLabel, type Screen } from "./nav";
+import { NAV, ROOM, groupOf, pageLabel, roomOf, type Screen } from "./nav";
+import { Masthead, RoomIcon } from "./Masthead";
+import { DRAFT_YEAR } from "../engine/draft";
 
 export type { Screen } from "./nav";
 
@@ -244,9 +246,9 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
               const shut = closed.includes(g.id) && !(g.pages as readonly Screen[]).includes(screen);
               const waiting = (g.pages as readonly Screen[]).reduce((n, p) => n + (typeof badges[p] === "number" ? (badges[p] as number) : badges[p] ? 1 : 0), 0);
               return (
-                <div key={g.id} className="nav-group">
+                <div key={g.id} className="nav-group" data-room={ROOM[g.id]}>
                   <button className="nav-head" aria-expanded={!shut} onClick={() => toggleGroup(g.id)}>
-                    <span>{g.label}</span>
+                    <span className="nav-head-label"><RoomIcon group={g.id} />{g.label}</span>
                     {shut && waiting > 0 ? <span className="badge">{waiting}</span> : <span className="chev" aria-hidden="true" />}
                   </button>
                   {!shut && (g.pages as readonly Screen[]).map((s) => (
@@ -262,7 +264,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           <div className="owner">Owner: {game.ownerName}</div>
         </div>
       </aside>
-      <div className="main">
+      <div className="main" data-room={roomOf(screen)}>
         {game.sandbox && <div className="sandbox-banner" role="note">Sandbox game: unlimited money and no cap; results here are kept apart from realism games.</div>}
         <header className="scoreboard">
           <div className="clock">
@@ -293,10 +295,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
         </header>
         <main className="content">
-          <div className="page-head">
-            <span className="crumb">{group.label}<span aria-hidden="true"> / </span>{pageLabel(screen)}</span>
-            <span className="hint">{PAGE_HINT[screen]}</span>
-          </div>
+          <Masthead key={screen} screen={screen} title={screen === "Draft" ? `The ${DRAFT_YEAR} NFL Draft` : screen === "Schedule" ? `${team.name} ${RULES.season} schedule` : undefined} />
           {group.pages.length > 1 && (
             <div className="section-pages" role="group" aria-label={group.label}>
               {(group.pages as readonly Screen[]).map((s) => (
@@ -310,7 +309,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {over && screen === "Today" && <GameOver game={game} />}
           {locked && <p className="notice">You don't control this club: {tenure(game).role === "buyer" ? `you're a buyer watching it while ${tenure(game).controller} sells` : `${tenure(game).controller} runs it and you hold ${Math.round((tenure(game).stake ?? 0) * 100)}%`}. Its staff make the calls; this page is read-only. Deals are on the Ownership page.</p>}
           <PageBoundary key={`${screen}:${visit}`} onHome={() => go("Today")}>
-          <div className={locked ? "readonly" : undefined} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
+          <div className={locked ? "page-body readonly" : "page-body"} onClickCapture={locked ? blockAction : undefined} onChangeCapture={locked ? blockAction : undefined}>
           {screen === "Today" && <TodayScreen game={game} go={go} changed={changed} busy={busy} play={(id, gameId) => step((s) => {
             playEvent(s, id);
             // Your own game can come in a play at a time.

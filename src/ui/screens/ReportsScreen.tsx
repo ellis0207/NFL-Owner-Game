@@ -24,7 +24,6 @@ export function ReportsScreen({ game, changed }: { game: GameState; changed: () 
   const desk = rankedDesk(game).slice(0, 8);
   return (
     <section className="stack">
-      <h2>Reports</h2>
       {msg && <p className="notice">{msg}</p>}
       <div className="panel stack tight">
         <h3>What needs you, in order</h3>
