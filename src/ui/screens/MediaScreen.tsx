@@ -16,6 +16,8 @@ import type { Arc, GameState, PressQuestion, Story, Storyline } from "../../engi
 import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
+import { AccessSelect, OwnerDeskPanel, PresserCard, openPressers } from "./MediaDesk";
+import { deskReporters } from "../../engine/media/ownerdesk";
 
 const TABS = ["News", "Huddle", "Press room", "Storylines", "Outlets", "Reporters"] as const;
 type Tab = (typeof TABS)[number];
@@ -52,7 +54,7 @@ function matches(s: Story, f: Filter, us: string): boolean {
 }
 
 export function MediaScreen({ game, changed }: { game: GameState; changed: () => void }) {
-  const open = openQuestions(game);
+  const open = [...openQuestions(game), ...openPressers(game)];
   const [tab, setTab] = useState<Tab>(() => initialTab("Media", TABS, open.length ? "Press room" : "News"));
   return (
     <section className="stack">
@@ -71,7 +73,7 @@ export function MediaScreen({ game, changed }: { game: GameState; changed: () =>
       {tab === "Press room" && <PressRoom game={game} changed={changed} />}
       {tab === "Storylines" && <Storylines game={game} />}
       {tab === "Outlets" && <Outlets game={game} />}
-      {tab === "Reporters" && <Reporters game={game} />}
+      {tab === "Reporters" && <Reporters game={game} changed={changed} />}
     </section>
   );
 }
@@ -154,15 +156,30 @@ export function StoryCard({ game, s, compact }: { game: GameState; s: Story; com
 
 function PressRoom({ game, changed }: { game: GameState; changed: () => void }) {
   const open = openQuestions(game);
+  const pressers = openPressers(game);
   const past = (game.media?.questions ?? []).filter((q) => q.answer !== undefined).slice(0, 30);
+  const held = (game.media?.desk?.pressers ?? []).filter((p) => p.held && !p.skipped).slice(0, 8);
   return (
     <div className="stack">
       <p className="muted">
         Reporters want your comment when something happens to the team. What you say gets printed, and it can matter to
         players, the coaches, agents, fans and the league office in ways you won't see right away. Questions you don't answer in time get a "declined to comment."
       </p>
-      {open.length === 0 && <p className="panel muted">No requests for comment right now.</p>}
+      {pressers.map((p) => <PresserCard key={p.id} game={game} p={p} changed={changed} />)}
+      {open.length === 0 && pressers.length === 0 && <p className="panel muted">No requests for comment right now.</p>}
       {open.map((q) => <QuestionCard key={q.id} game={game} q={q} changed={changed} />)}
+      <OwnerDeskPanel game={game} changed={changed} />
+      {held.length > 0 && (
+        <section className="panel stack tight">
+          <h3>Press conferences and interviews</h3>
+          {held.map((p) => (
+            <details key={p.id}>
+              <summary>{shortDate(p.held!)} · {p.title}</summary>
+              {p.questions.map((q, i) => <div key={i} className="said"><div><strong>{q.text}</strong></div><div>"{q.options[q.answer ?? 2]?.text}"</div></div>)}
+            </details>
+          ))}
+        </section>
+      )}
       {past.length > 0 && (
         <section className="panel stack tight">
           <h3>What you've said</h3>
@@ -255,13 +272,24 @@ function Outlets({ game }: { game: GameState }) {
 const OUTCOME = { hit: "Confirmed", miss: "Wrong", quiet: "Went quiet" } as const;
 
 /** Who broke what, and whether it turned out to be true: the only way to learn whom to believe. */
-function Reporters({ game }: { game: GameState }) {
+function Reporters({ game, changed }: { game: GameState; changed: () => void }) {
   const c = corps(game);
   const byId = new Map(c.people.map((p) => [p.id, p]));
   const judged = working(game).filter((p) => p.hits + p.misses >= 3).sort((a, b) => b.hits / (b.hits + b.misses) - a.hits / (a.hits + a.misses) || b.hits - a.hits);
   const reports = c.rumors.filter((r) => r.headline).slice(0, 40);
+  const listed = deskReporters(game);
   return (
     <div className="stack">
+      <section className="panel stack tight">
+        <h3>Access</h3>
+        <p className="muted">Favored reporters get the first questions and the first calls (up to three). A banned reporter loses the credential, and the rest of the press notices.</p>
+        <div className="table-wrap"><table>
+          <thead><tr><th>Reporter</th><th>Outlet</th><th>Access</th></tr></thead>
+          <tbody>
+            {listed.map((p) => <tr key={p.id}><td>{p.name}</td><td>{outletOf(p.outlet).name}</td><td><AccessSelect game={game} id={p.id} changed={changed} /></td></tr>)}
+          </tbody>
+        </table></div>
+      </section>
       <section className="panel stack tight">
         <h3>Track records</h3>
         <p className="muted">Reports are judged when the trade, signing, hire or firing happens, or when it plainly doesn't.</p>

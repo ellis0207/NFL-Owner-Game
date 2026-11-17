@@ -18,6 +18,7 @@ import { memoPriority, messagePriority } from "./desk";
 import { money } from "./inbox";
 import { PLAYER_BY_ID, RULES, teamLabel } from "./league";
 import { openQuestions } from "./press";
+import { openPressers } from "./media/ownerdesk";
 import { off, pendingFreeAgents } from "./offseason";
 import { MEDIA_BY_ID } from "./outlets";
 import { roomProposals } from "./positionCoaches";
@@ -213,6 +214,16 @@ function pressItems(state: GameState): QueueItem[] {
   }));
 }
 
+/** Press conferences the owner has been called to, and interviews the owner asked for. */
+function presserItems(state: GameState): QueueItem[] {
+  return openPressers(state).map((p) => ({
+    id: `presser:${p.id}`, kind: "deadline" as const, side: "owner" as const,
+    title: p.title, why: `${p.questions.length} questions are waiting.`, expires: p.expires,
+    ifNothing: p.kind === "presser" ? "A spokesperson reads a statement and you take no questions, which the press will notice." : "The reporter gives up on the interview.",
+    link: { screen: "Media", tab: "Press room" }, major: p.kind === "presser", score: urgency(state, p.expires) + 5,
+  }));
+}
+
 /** Deadlines in the next two weeks where something of ours isn't ready. */
 function deadlineItems(state: GameState): QueueItem[] {
   const out: QueueItem[] = [];
@@ -374,7 +385,7 @@ export function decisionQueue(state: GameState, all = false): QueueItem[] {
   const memos = (state.office?.memos ?? []).filter((m) => m.status === "open").map((m) => memoItem(state, m));
   const items = [
     ...memos, ...tradeItems(state), ...bookingItems(state), ...staffItems(state), ...talksItems(state),
-    ...pressItems(state), ...otherItems(state), ...deadlineItems(state), ...problemItems(state), ...messageItems(state), ...reviewItems(state),
+    ...pressItems(state), ...presserItems(state), ...otherItems(state), ...deadlineItems(state), ...problemItems(state), ...messageItems(state), ...reviewItems(state),
   ];
   const level = involvement(state);
   const shown = all || level !== "handsOff" ? items : items.filter((i) => i.major);
