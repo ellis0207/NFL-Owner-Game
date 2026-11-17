@@ -29,7 +29,8 @@ import { cfbDate, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS } from "./colleg
 import { money, news, send } from "./inbox";
 import { BASE_SEASON, onSeasonChange, RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
-import { addStory, MEDIA_BY_ID, mediaState } from "./outlets";
+import { addStory, mediaState } from "./outlets";
+import { byline } from "./media/corps";
 import { rngFor, type Rng } from "./rng";
 import { controlOf, DRAW, MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadiums";
 import { standings, winPct } from "./standings";
@@ -643,7 +644,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
     b.sellouts++;
     if (b.sellouts === 8) {
       addStory(state, {
-        outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "league", teams: [us],
+        outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "league", teams: [us],
         headline: `${TEAM_BY_ID[us].name} sell out again`,
         body: `${s.name} was full again against the ${TEAM_BY_ID[o].name}, the team's eighth straight sellout. The secondary market is running ${gr.heat >= 1.2 ? "well above" : "close to"} face value.`,
       });
@@ -653,7 +654,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   const pct = gr.sold / s.capacity;
   if (b.sellouts >= 3) {
     addStory(state, {
-      outlet: "capspace", by: MEDIA_BY_ID.capspace.columnist, kind: "league", teams: [us],
+      outlet: "capspace", by: byline(state, "capspace", "columnist"), kind: "league", teams: [us],
       headline: `${TEAM_BY_ID[us].name}' sellout streak ends at ${b.sellouts}`,
       body: `The ${TEAM_BY_ID[us].name} announced ${gr.sold.toLocaleString("en-US")} tickets sold against the ${TEAM_BY_ID[o].name}, ${Math.round(pct * 100)}% of capacity.` +
         (b.prices.single > 1.1 ? " Single-game prices went up this year, and buyers noticed." : ""),
@@ -663,7 +664,7 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
   if (pct < 0.9) {
     fans(state, -1);
     addStory(state, {
-      outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "league", teams: [us],
+      outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "league", teams: [us],
       headline: `Empty seats at ${s.name}`,
       body: `"You could hear the vendors," Big Lou Marchetti said of the ${TEAM_BY_ID[us].name}' game against the ${TEAM_BY_ID[o].name}, which drew ${gr.sold.toLocaleString("en-US")} paid in a ${s.capacity.toLocaleString("en-US")}-seat stadium. ` +
         (b.prices.single > 1.1 ? `"Charge that much for that product? Fans aren't dumb."` : `"Win some games and they'll come back."`),
@@ -912,7 +913,7 @@ export function answerOffer(state: GameState, id: string, accept: boolean): stri
   ev.status = "booked";
   ev.note = s.structure === "coowned" ? `The ${TEAM_BY_ID[s.partner!].name} signed off.` : s.structure === "publicTeam" ? `${s.owner} approved the date.` : undefined;
   addStory(state, {
-    outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "league", teams: [state.userTeam],
+    outlet: "sideline", by: byline(state, "sideline", "reporter"), kind: "league", teams: [state.userTeam],
     headline: `${s.name} lands ${ev.name}`,
     body: `${ev.name} is coming to ${s.name} on ${weekday(ev.date)}, ${shortDate(ev.date)}. ${ev.promoter} is promoting the event.`,
   });
@@ -1117,7 +1118,7 @@ function creditCheck(state: GameState): void {
     "The league and our lenders watch club debt closely. Big signing bonuses are paid in cash up front, so that's usually where the money goes.");
   fans(state, -1);
   addStory(state, {
-    outlet: "capspace", by: MEDIA_BY_ID.capspace.insider, kind: "owner", teams: [state.userTeam],
+    outlet: "capspace", by: byline(state, "capspace", "insider"), kind: "owner", teams: [state.userTeam],
     headline: `${TEAM_BY_ID[state.userTeam].name} owner puts ${money(need)} into the team`,
     body: `People familiar with the team's finances say ${state.ownerName} made a capital contribution after the club tapped out its credit line. Bonus-heavy contracts are paid in cash up front.`,
   });
@@ -1156,7 +1157,7 @@ export function setNextSeasonPrices(state: GameState, season: number, premium: n
   if (pct > 5) trustHit(state, -(pct - 5) * 0.6, pct >= 10 ? 1 : 0, `Raised season-ticket prices ${pct}%`);
   if (pct < 0) fans(state, -pct * 0.2);
   addStory(state, {
-    outlet: "capspace", by: MEDIA_BY_ID.capspace.columnist, kind: "league", teams: [state.userTeam],
+    outlet: "capspace", by: byline(state, "capspace", "columnist"), kind: "league", teams: [state.userTeam],
     headline: pct > 0 ? `${TEAM_BY_ID[state.userTeam].name} raise ${RULES.season + 1} season-ticket prices ${pct}%` : pct < 0 ? `${TEAM_BY_ID[state.userTeam].name} cut ${RULES.season + 1} season-ticket prices` : `${TEAM_BY_ID[state.userTeam].name} hold season-ticket prices`,
     body: `Renewal notices went out to about ${b.holders.toLocaleString("en-US")} season-ticket holders. ` +
       (pct >= 8 ? "It's one of the bigger increases in the league this year." : pct > 0 ? "Most teams raise prices a few percent a year." : "Holders will take it."),
@@ -1227,7 +1228,7 @@ function valuationsStory(state: GameState): void {
   const rank = values.findIndex(([t]) => t === us) + 1;
   const avg = values.reduce((t, [, v]) => t + v, 0) / values.length;
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.columnist, kind: "trend", teams: [values[0][0], us],
+    outlet: "ledger", by: byline(state, "ledger", "columnist"), kind: "trend", teams: [values[0][0], us],
     headline: `The Ledger's franchise values: the ${TEAM_BY_ID[values[0][0]].name} top the list at ${billions(values[0][1])}`,
     body: `Our annual estimates put the average NFL team at ${billions(avg)}. Top five: ${values.slice(0, 5).map(([t, v]) => `${TEAM_BY_ID[t].name} ${billions(v)}`).join(", ")}. ` +
       `The ${TEAM_BY_ID[us].name} rank ${rank}${["st", "nd", "rd"][((rank + 90) % 100 - 10) % 10 - 1] ?? "th"} at ${billions(valuation(state, us))}. Teams that own and run their stadiums keep the most of what the building earns, and it shows.`,
@@ -1249,7 +1250,7 @@ export function setSinglePrice(state: GameState, mult: number): void {
   if (pct >= 15 && next > 1.1) {
     fans(state, -1);
     addStory(state, {
-      outlet: "capspace", by: MEDIA_BY_ID.capspace.columnist, kind: "league", teams: [state.userTeam],
+      outlet: "capspace", by: byline(state, "capspace", "columnist"), kind: "league", teams: [state.userTeam],
       headline: `${TEAM_BY_ID[state.userTeam].name} raise single-game ticket prices`,
       body: `Single-game tickets for the rest of the season went up about ${pct}%, the team confirmed. Season-ticket prices are locked for the year.`,
     });
@@ -1266,7 +1267,7 @@ export function setConcessions(state: GameState, tier: ConcessionTier): string |
   if (tier === "value") {
     fans(state, 2);
     addStory(state, {
-      outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "league", teams: [state.userTeam],
+      outlet: "ledger", by: byline(state, "ledger", "reporter"), kind: "league", teams: [state.userTeam],
       headline: `${TEAM_BY_ID[state.userTeam].name} roll out a value menu`,
       body: "Hot dogs, sodas and popcorn at a fraction of the usual stadium prices, the model Atlanta made famous. Teams that have tried it say fans buy more and complain less.",
     });

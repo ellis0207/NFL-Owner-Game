@@ -13,7 +13,8 @@ import { addDays, shortDate } from "./dates";
 import { news, send } from "./inbox";
 import { RULES, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
 import { issuePull, trialDone } from "./leagueoffice";
-import { MEDIA_BY_ID, addStory } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { gaussian, rngFor } from "./rng";
 import { RULE_BY_ID, RULE_CATALOG, rulesFor } from "./rules";
 import type { GameState, LeagueMeeting, OwnerRelation, OwnersState, RuleProposal } from "./types";
@@ -254,7 +255,7 @@ function holdVote(state: GameState): void {
   const passed = m.proposals.filter((p) => p.passed);
   send(state, "league", "League Office", "The owners vote", `${lines.join("\n")}\n\nApproved changes take effect for the ${m.year} season.`);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "league",
+    outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "league",
     headline: passed.length ? `Owners approve ${passed.length} rule change${passed.length === 1 ? "" : "s"}` : "Owners keep the rulebook as it is",
     body: passed.length
       ? `At the annual meeting the owners approved: ${passed.map((p) => RULE_BY_ID[p.rule].title.toLowerCase()).join("; ")}. ` +

@@ -11,7 +11,8 @@ import { creditLimit } from "./debt";
 import { shortDate } from "./dates";
 import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { rngFor } from "./rng";
 import { drawFund, leaseFund } from "./leases";
 import { STADIUM_BY_TEAM } from "./stadiums";
@@ -160,7 +161,7 @@ export function projectsDaily(state: GameState): void {
       const where = def.stadium ? STADIUM_BY_TEAM[state.userTeam].name : "the team facility";
       send(state, "business", businessChief(state), `${def.title}: finished`, `The work at ${where} is done, on time, at ${money(p.cost)} for our share.`);
       addStory(state, {
-        outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "owner", teams: [state.userTeam],
+        outlet: "sideline", by: byline(state, "sideline", "reporter"), kind: "owner", teams: [state.userTeam],
         headline: `${TEAM_BY_ID[state.userTeam].name} unveil ${def.title.charAt(0).toLowerCase()}${def.title.slice(1)}`,
         body: `The ${TEAM_BY_ID[state.userTeam].name} showed off the finished work at ${where} today. ${def.what}`,
       });

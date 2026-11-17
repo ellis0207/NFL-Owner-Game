@@ -14,7 +14,8 @@ import { addDays } from "./dates";
 import { payCash } from "./finance";
 import { money, news, send } from "./inbox";
 import { GAMES_BY_DATE, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
-import { MEDIA_BY_ID, addStory } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { rngFor, type Rng } from "./rng";
 import { keepValue, releasePlayer, rosterCount, rosterLimit } from "./roster";
 import { settleMinicamp } from "./spring";
@@ -100,7 +101,7 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
     log.push({ date: state.date, team, player: id, kind, games: PED_GAMES, text });
     news(state, "discipline", `${p.name} (${teamLabel(team)}) suspended ${PED_GAMES} games for violating the league's PED policy`);
     addStory(state, {
-      outlet: "sideline", by: MEDIA_BY_ID.sideline.insider, kind: "league", teams: [team], players: [id],
+      outlet: "sideline", by: byline(state, "sideline", "insider"), kind: "league", teams: [team], players: [id],
       headline: `${p.name} suspended ${PED_GAMES} games`,
       body: `The league has suspended ${p.position} ${p.name} of the ${teamLabel(team)} ${PED_GAMES} games, ${when}, for violating the policy on performance-enhancing substances. ` +
         `He can take part in practice and preseason games; his roster spot doesn't count while he serves the suspension.`,
@@ -132,7 +133,7 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
   log.push({ date: state.date, team, player: id, kind, text: `${cap(what)}` });
   changeMorale(state, id, -2);
   addStory(state, {
-    outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "rumor", teams: [team], players: [id],
+    outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "rumor", teams: [team], players: [id],
     headline: `${p.name} sounds off`,
     body: `${p.name} ${what}. It's the kind of thing that plays well with our listeners and badly in a locker room. Your move, ${teamLabel(team)}.`,
   });

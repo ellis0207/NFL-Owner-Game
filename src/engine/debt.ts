@@ -16,7 +16,8 @@ import { business, businessChief, cashBalance, operatingEstimate, post, pnl } fr
 import { leagueYear } from "./contracts";
 import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { gaussian, rngFor } from "./rng";
 import { execBoost } from "./executives";
 import { consulting, restatements } from "./treasury";
@@ -408,7 +409,7 @@ function testCovenants(state: GameState): void {
         "Other lenders have sent refinancing terms; otherwise the money comes out of our cash, then the credit line, then your pocket.");
       requestLoan(state, { amount: l.balance, years: 5, kind: "floating", purpose: "refinance", refinances: l.id });
       addStory(state, {
-        outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+        outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
         headline: `Lender calls a ${TEAM_BY_ID[state.userTeam].name} loan`,
         body: `${l.lender} has demanded repayment of about ${money(l.balance)} after the club missed its loan covenants twice, people familiar with the matter say. Such defaults are rare in the NFL, where the league watches club debt closely.`,
       });

@@ -17,7 +17,8 @@ import { leagueYear } from "./contracts";
 import { execBoost, execRole } from "./executives";
 import { fanBase } from "./fans";
 import { send } from "./inbox";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { rivalryHeat } from "./records";
 import { gaussian, rngFor } from "./rng";
 import { STADIUM_BY_TEAM } from "./stadiums";
@@ -175,7 +176,7 @@ export function venueGame(state: GameState, g: ScheduledGame, x: { attendance: n
     const text = "A brawl in the upper deck spilled onto the concourse; video went viral";
     incidents.push(`${text}.`);
     v.investigations.unshift({ date: state.date, game: g.id, text, finding: p.security === 0 ? "Security was thin in that section. Staffing should come back up." : "The response was by the book. Two fans were banned from the stadium." });
-    addStory(state, { outlet: "blitz", by: MEDIA_BY_ID.blitz.reporter, kind: "league", teams: [us], headline: `Fight in the stands at ${s.name}`, body: `${text}. The team says it's reviewing the footage and will ban those involved.` });
+    addStory(state, { outlet: "blitz", by: byline(state, "blitz", "reporter"), kind: "league", teams: [us], headline: `Fight in the stands at ${s.name}`, body: `${text}. The team says it's reviewing the footage and will ban those involved.` });
     fanBase(state).trust -= 1;
   }
   // The league checks the visiting team's rooms and the medical crews; health and fire inspectors come once a month.

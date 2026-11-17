@@ -17,6 +17,7 @@ import { GAMES_BY_DATE, HIDDEN_STAFF, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, te
 import { marketView } from "./market";
 import { pick, surname } from "./media";
 import { addStory, changeRel, MEDIA, MEDIA_BY_ID, mediaState, relOf } from "./outlets";
+import { byline } from "./media/corps";
 import { isPendingFreeAgent } from "./offseason";
 import { rngFor, type Rng } from "./rng";
 import { depthChart } from "./roster";
@@ -794,7 +795,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
         `The league has fined you ${money(amount)} for ${reason}. The fine is charged to the club's accounts and does not count against the salary cap.`);
       news(state, "discipline", `The league fines ${teamLabel(us)} owner ${owner} ${money(amount)} for ${e.kind === "fineRefs" ? "criticizing officials" : "tampering comments"}`);
       addStory(state, {
-        outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [us], players: p ? [p] : undefined,
+        outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [us], players: p ? [p] : undefined,
         headline: `League fines ${nick(us)} owner ${owner} ${money(amount)}`,
         body: `The league fined ${owner} ${money(amount)} for ${reason}. ` +
           (e.kind === "fineTamper" && p ? `The ${nick(state.players[p]?.team ?? us)} are said to have complained to the league office.` : "The league doesn't comment on officiating complaints beyond the fine."),
@@ -811,7 +812,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
           ? `"I heard what was said. I'll let my play answer it," ${pname(p)} said. ${mad ? "People close to him say he was stung." : ""}`
           : `"I took it personally. I think we all did," ${pname(p)} said of the owner's comments. ${mad ? "Teammates were quieter, but nobody defended the remarks." : "He added that the locker room would respond the right way."}`;
       addStory(state, {
-        outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "interview", teams: [us], players: [p],
+        outlet: "sideline", by: byline(state, "sideline", "reporter"), kind: "interview", teams: [us], players: [p],
         headline: e.kind === "agentFires" ? `${pname(p)}'s agent fires back at ${nick(us)} owner` : `${pname(p)} responds to owner's comments`,
         body: quote,
       });
@@ -827,7 +828,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
             : "The guys were asking me about your comments today. I told them to focus on the work. It would help if we were on the same page in public.");
       }
       addStory(state, {
-        outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "trend", teams: [us],
+        outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "trend", teams: [us],
         headline: `Big Lou: ${nick(us)} owner just put ${last(name)} on notice`,
         body: `"When the owner talks like that, everybody in the building hears it," Big Lou Marchetti said. "That's either a wake-up call or the beginning of the end for ${last(name)}." Kara Voss: "Or it's a guy who didn't have a better answer."`,
       });
@@ -835,7 +836,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
     }
     case "doctors":
       addStory(state, {
-        outlet: "sideline", by: MEDIA_BY_ID.sideline.insider, kind: "injury", teams: [us], players: p ? [p] : undefined,
+        outlet: "sideline", by: byline(state, "sideline", "insider"), kind: "injury", teams: [us], players: p ? [p] : undefined,
         headline: `Owner's timeline on ${p ? pname(p) : "injured star"} doesn't match the medical`,
         body: `Despite ${owner}'s optimism, people familiar with the diagnosis say ${p ? pname(p) : "the player"} is not expected back this season. The team declined further comment.`,
       });
@@ -843,7 +844,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
     case "capTake": case "hotTakeSelf": case "hotTakeTrade": {
       const warm = state.pressure.fans >= 55;
       addStory(state, {
-        outlet: e.kind === "capTake" ? "capspace" : "blitz", by: e.kind === "capTake" ? MEDIA_BY_ID.capspace.columnist : MEDIA_BY_ID.blitz.columnist,
+        outlet: e.kind === "capTake" ? "capspace" : "blitz", by: e.kind === "capTake" ? byline(state, "capspace", "columnist") : byline(state, "blitz", "columnist"),
         kind: "trend", teams: [us], players: p ? [p] : undefined,
         headline: e.kind === "capTake" ? `Brandt: the ${nick(us)} owner is selling, but is anyone buying?` : warm ? `Big Lou: say what you want, the ${nick(us)} owner has guts` : `Big Lou: the ${nick(us)} owner needs to stop talking`,
         body: e.kind === "capTake"
@@ -868,7 +869,7 @@ function resolveStances(state: GameState): void {
         for (const o of MEDIA) changeRel(state, o.id, -5);
         teamMorale(state, -3); fans(state, -3);
         addStory(state, {
-          outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "owner", teams: [us], players: [s.player],
+          outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "owner", teams: [us], players: [s.player],
           headline: `So much for "not going anywhere"`,
           body: `On ${shortDate(s.date)}, ${state.ownerName} said ${pname(s.player)} wasn't going anywhere. Now he's gone. "Players around the league just learned what that owner's word is worth," Big Lou Marchetti said.`,
         });
@@ -885,7 +886,7 @@ function resolveStances(state: GameState): void {
         fans(state, -6); press(state, -3);
         for (const o of MEDIA) changeRel(state, o.id, -2);
         addStory(state, {
-          outlet: "capspace", by: MEDIA_BY_ID.capspace.columnist, kind: "owner", teams: [us], players: [s.player],
+          outlet: "capspace", by: byline(state, "capspace", "columnist"), kind: "owner", teams: [us], players: [s.player],
           headline: `The ${nick(us)} promised to pay ${pname(s.player)}. They didn't.`,
           body: `"We're going to get it done," ${state.ownerName} said on ${shortDate(s.date)}. ${pname(s.player)} is no longer with the team.`,
         });
@@ -898,7 +899,7 @@ function resolveStances(state: GameState): void {
       if (!made) {
         press(state, -4);
         addStory(state, {
-          outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "owner", teams: [us],
+          outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "owner", teams: [us],
           headline: `Remember when the ${nick(us)} owner called them a Super Bowl team?`,
           body: `The ${nick(us)} missed the playoffs. "He said it, not me," Big Lou Marchetti said. "Fans remember that stuff."`,
         });
@@ -911,7 +912,7 @@ function resolveStances(state: GameState): void {
       if (sold) {
         fans(state, -5);
         addStory(state, {
-          outlet: "ledger", by: MEDIA_BY_ID.ledger.columnist, kind: "owner", teams: [us],
+          outlet: "ledger", by: byline(state, "ledger", "columnist"), kind: "owner", teams: [us],
           headline: `"Buyers," the ${nick(us)} owner said. Then they sold.`,
           body: `A week after promising to buy, the ${nick(us)} moved a starter at the deadline. The fan base noticed.`,
         });

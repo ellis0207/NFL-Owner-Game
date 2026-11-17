@@ -13,6 +13,7 @@ import { money, news, send } from "./inbox";
 import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { capScale } from "./market";
 import { addStory, gradeLean, MEDIA, MEDIA_BY_ID } from "./outlets";
+import { byline } from "./media/corps";
 import { gaussian, rngFor } from "./rng";
 import { depthChart } from "./roster";
 import { seasonTotals } from "./stats";
@@ -164,7 +165,7 @@ function gradeOffseason(state: GameState, r: ReviewState): void {
   const ledger = grades[OUTLETS[0].name];
   const order = TEAMS.map((t) => t.id).sort((a, b) => gradePoints(ledger[b]) - gradePoints(ledger[a]) || delta[b] - delta[a]);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.analyst, kind: "trend", teams: [order[0], us],
+    outlet: "ledger", by: byline(state, "ledger", "analyst"), kind: "trend", teams: [order[0], us],
     headline: `Offseason grades: the ${nick(order[0])} had the best spring in the league`,
     body: order.map((t, i) => `${i + 1}. ${teamLabel(t)}: ${ledger[t]}`).join("\n"),
   });
@@ -179,7 +180,7 @@ function gradeOffseason(state: GameState, r: ReviewState): void {
   });
   const e = r.expect.wins;
   addStory(state, {
-    outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "trend", teams: [us],
+    outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "trend", teams: [us],
     headline: e >= 10.5 ? `${nick(us)} fans: anything short of January is a failure` : e <= 6.5 ? `${nick(us)} fans are being asked to be patient. Again.` : `Are the ${nick(us)} a playoff team? Fans think they might be`,
     body: `The phones lit up about the ${nick(us)} today. The consensus from callers: about ${e} wins. ${expectLabel(e)}.`,
   });
@@ -258,7 +259,7 @@ function settle(state: GameState, r: ReviewState): void {
   state.pressure.fans = Math.max(0, Math.min(100, state.pressure.fans + delta));
   r.settled = true;
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.columnist, kind: "trend", teams: [us],
+    outlet: "ledger", by: byline(state, "ledger", "columnist"), kind: "trend", teams: [us],
     headline: wins >= e + 1.5 ? `The ${nick(us)} beat every expectation` : wins <= e - 1.5 ? `A season that fell short for the ${nick(us)}` : `The ${nick(us)} were about what fans expected`,
     body: `Fans expected about ${e} wins in the summer; the ${nick(us)} finished ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}${inPlayoffs ? " and made the playoffs" : ""}. ` +
       r.storylines.map((s) => `${s.title} ${s.status === "answered" ? "Answered." : "Not yet."}`).join(" "),

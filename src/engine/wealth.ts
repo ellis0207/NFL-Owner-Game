@@ -25,7 +25,8 @@ import { addMemo, openMemos } from "./delegation";
 import { money, send } from "./inbox";
 import { investors, ownerShare } from "./investors";
 import { TEAM_BY_ID } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { equityAtPurchase, owner, ownerEquity } from "./ownership";
 import { gaussian, rngFor } from "./rng";
 import { standingState } from "./standing";
@@ -317,7 +318,7 @@ export function resolveWealthMemo(state: GameState, m: Memo, choice: number): st
     st.incidents.unshift({ date: state.date, text: "Owner: fined for an indirect gambling interest", good: false });
     sellHolding(state, "business", w.holdings.business * 0.05);
     addStory(state, {
-      outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+      outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
       headline: `League fines ${TEAM_BY_ID[state.userTeam].name} owner over a betting stake`,
       body: `${state.ownerName} was fined and ordered to sell an indirect stake in a sports-betting operator, the league said. Owners may not hold gambling interests.`,
     });

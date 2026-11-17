@@ -1176,6 +1176,73 @@ export interface Story {
   type?: string;
   format?: string;
   angle?: string;
+  /** The reporter who wrote it (engine/media/corps.ts), for composed stories. */
+  reporter?: string;
+}
+
+export type ReporterRole = "insider" | "columnist" | "analyst" | "draft" | "reporter" | "beat" | "host" | "anchor";
+
+/** A made-up member of the press corps (engine/media/corps.ts). */
+export interface Reporter {
+  id: string;
+  name: string;
+  /** Outlet id: a national outlet, or "local:TEAM", "radio:TEAM", "tv:TEAM". */
+  outlet: string;
+  role: ReporterRole;
+  /** The club a local reporter covers. */
+  team?: string;
+  born: number;
+  /** Season they joined their current outlet. */
+  since: number;
+  /** Leans to hot takes (1) or straight reporting (0). */
+  heat: number;
+  style: "stats" | "oldschool" | "balanced";
+  /** Engine only: how often what they hear is right, 0-1. */
+  accuracy: number;
+  /** Engine only: how well sourced they are inside each club, 0-100. */
+  sources: Record<string, number>;
+  /** Engine only: how they feel about our owner, -50 to 50. */
+  rel: number;
+  /** Their public record: reports that panned out and reports that didn't. */
+  hits: number;
+  misses: number;
+  awards: { season: number; name: string }[];
+  history: { season: number; outlet: string; role: ReporterRole }[];
+  retired?: number;
+}
+
+/** A sourced report about something that may or may not happen (engine/media/rumors.ts). */
+export interface Rumor {
+  id: string;
+  date: string;
+  reporter: string;
+  kind: string;
+  team: string;
+  player?: string;
+  /** Other clubs named: a destination, bidders. */
+  teams?: string[];
+  coach?: string;
+  /** Engine only: whether the report matched what was really going on. */
+  truth: boolean;
+  /** When the report is judged if nothing settles it first. */
+  until: string;
+  outcome?: "hit" | "miss" | "quiet";
+  headline?: string;
+}
+
+export interface PressCorps {
+  people: Reporter[];
+  next: number;
+  rumors: Rumor[];
+}
+
+/** Something from inside a building that reaches a reporter: a leak, an agent's account of contract talks. */
+export interface PressTip {
+  kind: "leak" | "talks";
+  team: string;
+  player?: string;
+  headline: string;
+  text: string;
 }
 
 /** A fact another system hands the media (engine/media/facts.ts `emit`), written up at the end of the day. */
@@ -1253,6 +1320,10 @@ export interface MediaState {
   asked: Record<string, string>;
   /** Facts handed over today by other systems, written up by the media at the end of the day. */
   queue?: MediaFactInput[];
+  /** The people who cover the league and their reports. */
+  corps?: PressCorps;
+  /** Leaks and agents' accounts waiting for a reporter. */
+  tips?: PressTip[];
 }
 
 export interface TeamFinance {

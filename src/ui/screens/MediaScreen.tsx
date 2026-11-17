@@ -3,7 +3,8 @@ import { initialTab } from "../ui";
 import { useMemo, useState } from "react";
 import { shortDate, weekday } from "../../engine/dates";
 import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
-import { MEDIA, MEDIA_BY_ID, relLabel, relOf } from "../../engine/outlets";
+import { NATIONAL, relLabel, relOf } from "../../engine/outlets";
+import { corps, isLocal, outletOf, recordLine, working } from "../../engine/media/corps";
 import { expectLabel } from "../../engine/review";
 import { gradePoints } from "../../engine/grades";
 import { TEAMS } from "../../engine/league";
@@ -14,7 +15,7 @@ import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
-const TABS = ["News", "Press room", "Storylines", "Outlets"] as const;
+const TABS = ["News", "Press room", "Storylines", "Outlets", "Reporters"] as const;
 type Tab = (typeof TABS)[number];
 
 const FILTERS = {
@@ -31,6 +32,13 @@ const KIND_LABEL: Record<Story["kind"], string> = {
   recap: "Game", injury: "Injury", signing: "Signing", release: "Release", trade: "Trade", rumor: "Rumor", leak: "Leak",
   interview: "Interview", trend: "Analysis", rankings: "Rankings", preview: "Preview", college: "College", draft: "Draft", owner: "Owner", league: "League",
 };
+
+function outletMatch(id: string, want: string, us: string): boolean {
+  if (!want) return true;
+  if (want === "local:us") return id === "beat" || (isLocal(id) && id.endsWith(`:${us}`));
+  if (want === "local:all") return isLocal(id);
+  return id === want;
+}
 
 function matches(s: Story, f: Filter, us: string): boolean {
   if (f === "all") return true;
@@ -60,6 +68,7 @@ export function MediaScreen({ game, changed }: { game: GameState; changed: () =>
       {tab === "Press room" && <PressRoom game={game} changed={changed} />}
       {tab === "Storylines" && <Storylines game={game} />}
       {tab === "Outlets" && <Outlets game={game} />}
+      {tab === "Reporters" && <Reporters game={game} />}
     </section>
   );
 }
@@ -69,7 +78,7 @@ function NewsFeed({ game }: { game: GameState }) {
   const [outlet, setOutlet] = useState<string>("");
   const [shown, setShown] = useState(60);
   const stories = useMemo(
-    () => (game.media?.stories ?? []).filter((s) => matches(s, filter, game.userTeam) && (!outlet || s.outlet === outlet)),
+    () => (game.media?.stories ?? []).filter((s) => matches(s, filter, game.userTeam) && outletMatch(s.outlet, outlet, game.userTeam)),
     [game.media?.stories, game.media?.stories.length, filter, outlet, game.userTeam],
   );
   let lastDate = "";
@@ -84,7 +93,9 @@ function NewsFeed({ game }: { game: GameState }) {
         <label className="field" style={{ marginLeft: "auto" }}>
           <select value={outlet} onChange={(e) => { setOutlet(e.target.value); setShown(60); }} aria-label="Outlet">
             <option value="">All outlets</option>
-            {MEDIA.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            {NATIONAL.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            <option value="local:us">Our local media</option>
+            <option value="local:all">Every club's local media</option>
           </select>
         </label>
       </div>
@@ -109,7 +120,7 @@ function NewsFeed({ game }: { game: GameState }) {
 export function StoryCard({ game, s, compact }: { game: GameState; s: Story; compact?: boolean }) {
   const ui = useUi();
   const [open, setOpen] = useState(!compact && (s.kind === "owner" || s.teams?.includes(game.userTeam) === true));
-  const o = MEDIA_BY_ID[s.outlet];
+  const o = outletOf(s.outlet);
   const dc = s.prospects?.length && game.college ? draftClass(game.seed) : null;
   return (
     <article className={`story${s.teams?.includes(game.userTeam) || s.kind === "owner" ? " ours" : ""}`}>
@@ -154,7 +165,7 @@ function PressRoom({ game, changed }: { game: GameState; changed: () => void }) 
           <h3>What you've said</h3>
           {past.map((q) => (
             <div key={q.id} className="said">
-              <span className="muted">{shortDate(q.answeredOn ?? q.date)} · {MEDIA_BY_ID[q.outlet]?.name}</span>
+              <span className="muted">{shortDate(q.answeredOn ?? q.date)} · {outletOf(q.outlet).name}</span>
               <div><strong>{q.question}</strong></div>
               <div>{q.answer === -1 || q.options[q.answer!]?.key === "noComment" ? <span className="muted">Declined to comment.</span> : <>"{q.options[q.answer!]?.text}"</>}</div>
             </div>
@@ -166,7 +177,7 @@ function PressRoom({ game, changed }: { game: GameState; changed: () => void }) 
 }
 
 function QuestionCard({ game, q, changed }: { game: GameState; q: PressQuestion; changed: () => void }) {
-  const o = MEDIA_BY_ID[q.outlet];
+  const o = outletOf(q.outlet);
   return (
     <section className="panel stack tight question">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
@@ -186,17 +197,45 @@ function QuestionCard({ game, q, changed }: { game: GameState; q: PressQuestion;
   );
 }
 
+const ROLE: Record<string, string> = { insider: "Insider", columnist: "Columnist", analyst: "Analyst", draft: "Draft", reporter: "Reporter", beat: "Beat writer", host: "Host", anchor: "Anchor" };
+
+function Staff({ game, outlet }: { game: GameState; outlet: string }) {
+  const people = working(game).filter((p) => p.outlet === outlet);
+  return (
+    <div className="stack tight">
+      {people.map((p) => (
+        <div key={p.id}>
+          <strong>{p.name}</strong> <span className="muted">{ROLE[p.role]}{p.awards.length ? ` · ${p.awards.map((a) => `${a.name} ${a.season}`).join(", ")}` : ""}</span>
+          <div className="muted small">{recordLine(p)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Outlets({ game }: { game: GameState }) {
   const fines = game.media?.fines ?? [];
+  const us = game.userTeam;
   return (
     <div className="stack">
+      <h3>National</h3>
       <div className="split">
-        {MEDIA.map((o) => (
+        {NATIONAL.map((o) => (
           <section key={o.id} className="panel stack tight">
             <h3>{o.name}</h3>
             <p className="muted">{o.what}</p>
-            <div><span className="label">Staff</span> {[...new Set([o.insider, o.columnist, o.analyst, o.draft, o.reporter])].join(", ")}</div>
+            <Staff game={game} outlet={o.id} />
             <div><span className="label">How they cover you</span> {relLabel(relOf(game, o.id))}</div>
+          </section>
+        ))}
+      </div>
+      <h3>Our local media</h3>
+      <div className="split">
+        {[`local:${us}`, `radio:${us}`, `tv:${us}`].map((id) => (
+          <section key={id} className="panel stack tight">
+            <h3>{outletOf(id).name}</h3>
+            <p className="muted">{outletOf(id).what}</p>
+            <Staff game={game} outlet={id} />
           </section>
         ))}
       </div>
@@ -210,6 +249,43 @@ function Outlets({ game }: { game: GameState }) {
   );
 }
 
+const OUTCOME = { hit: "Confirmed", miss: "Wrong", quiet: "Went quiet" } as const;
+
+/** Who broke what, and whether it turned out to be true: the only way to learn whom to believe. */
+function Reporters({ game }: { game: GameState }) {
+  const c = corps(game);
+  const byId = new Map(c.people.map((p) => [p.id, p]));
+  const judged = working(game).filter((p) => p.hits + p.misses >= 3).sort((a, b) => b.hits / (b.hits + b.misses) - a.hits / (a.hits + a.misses) || b.hits - a.hits);
+  const reports = c.rumors.filter((r) => r.headline).slice(0, 40);
+  return (
+    <div className="stack">
+      <section className="panel stack tight">
+        <h3>Track records</h3>
+        <p className="muted">Reports are judged when the trade, signing, hire or firing happens, or when it plainly doesn't.</p>
+        {judged.length === 0 ? <p className="muted">Nobody has enough reports on the record yet.</p> : (
+          <div className="table-wrap"><table>
+            <thead><tr><th>Reporter</th><th>Outlet</th><th>Record</th></tr></thead>
+            <tbody>
+              {judged.slice(0, 30).map((p) => (
+                <tr key={p.id}><td>{p.name}</td><td>{outletOf(p.outlet).name}</td><td>{recordLine(p)}</td></tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
+      </section>
+      <section className="panel stack tight">
+        <h3>Recent reports</h3>
+        {reports.length === 0 ? <p className="muted">No sourced reports yet.</p> : reports.map((r) => (
+          <div key={r.id}>
+            <span className="muted">{shortDate(r.date)}</span> {r.headline} <span className="muted">· {byId.get(r.reporter)?.name}</span>{" "}
+            <span className="pill">{r.outcome ? OUTCOME[r.outcome] : "Open"}</span>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function Storylines({ game }: { game: GameState }) {
   const r = game.review;
   const grades = r?.grades;
@@ -218,7 +294,7 @@ function Storylines({ game }: { game: GameState }) {
   const list = (items: Storyline[]) => items.map((s) => (
     <div key={s.id} className="report">
       <strong>{s.title}</strong>
-      <span className="muted">{MEDIA_BY_ID[s.outlet].name}{s.status === "open" ? "" : s.status === "answered" ? ": answered" : ": still open"}</span>
+      <span className="muted">{outletOf(s.outlet).name}{s.status === "open" ? "" : s.status === "answered" ? ": answered" : ": still open"}</span>
       {s.verdict && <span>{s.verdict}</span>}
     </div>
   ));

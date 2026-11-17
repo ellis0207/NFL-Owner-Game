@@ -23,7 +23,8 @@ import { honors } from "./honors";
 import { addDays } from "./dates";
 import { money, send } from "./inbox";
 import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAM_BY_ID } from "./league";
-import { MEDIA_BY_ID, addStory } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { payCash } from "./finance";
 import { rngFor, type Rng } from "./rng";
 import { teamSnapTotals } from "./seasons";
@@ -326,7 +327,7 @@ export function incentivesDaily(state: GameState): void {
   if (big.length) {
     const lines = big.slice(0, 4).map((b) => `${PLAYER_BY_ID[b.id].name} (${TEAM_BY_ID[b.team].name}) earned ${money(b.earned)}`);
     addStory(state, {
-      outlet: "capspace", by: MEDIA_BY_ID.capspace.insider, kind: "trend", teams: big.slice(0, 4).map((b) => b.team), players: big.slice(0, 4).map((b) => b.id),
+      outlet: "capspace", by: byline(state, "capspace", "insider"), kind: "trend", teams: big.slice(0, 4).map((b) => b.team), players: big.slice(0, 4).map((b) => b.id),
       headline: "The incentive payouts are in",
       body: `With the season over, the incentive bills come due. ${lines.join("; ")}. Bonuses the cap didn't expect land on next year's books.`,
     });

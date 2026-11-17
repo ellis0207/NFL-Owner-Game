@@ -22,7 +22,8 @@ import { fanBase, trustHit } from "./fans";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "./league";
 import { owner, ownerMoney } from "./ownership";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { gaussian, rngFor } from "./rng";
 import { cutShare } from "./treasury";
 import { officialsLean } from "./standing";
@@ -246,7 +247,7 @@ function outcomes(state: GameState): void {
       trustHit(state, -2, 0.5, `A foundation grant to ${g.org} was misused`);
       if (state.culture) state.culture.rel.community = Math.max(0, state.culture.rel.community - 5);
       addStory(state, {
-        outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "owner", teams: [state.userTeam],
+        outlet: "ledger", by: byline(state, "ledger", "reporter"), kind: "owner", teams: [state.userTeam],
         headline: `Questions about a ${TEAM_BY_ID[state.userTeam].name} Foundation grant`,
         body: `A ${money(g.amount)} grant to ${g.org} paid for salaries and a fundraising gala instead of the program it was meant for. The foundation says it is tightening its reviews.`,
       });
