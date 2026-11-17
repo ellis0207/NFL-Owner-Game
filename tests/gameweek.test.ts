@@ -43,7 +43,8 @@ describe("the game week", () => {
     const s = stateAt(TEAM, 3, "2026-10-31");
     const chart = depthChart(s, TEAM);
     const qbs = Object.keys(s.players).filter((id) => s.players[id].status === "fa" && PLAYER_BY_ID[id]?.position === "QB").slice(0, 3);
-    chart.QB = [...chart.QB.slice(0, 2), qbs[0]];
+    // Two quarterbacks dressed (a free agent stands in if injuries left the chart short), the third as the emergency.
+    chart.QB = [...[...chart.QB.slice(0, 2), ...qbs.slice(1)].slice(0, 2), qbs[0]];
     const { inactive, emergency } = gameDayActives(chart);
     expect(emergency).toBe(qbs[0]);
     expect(inactive).toContain(qbs[0]);

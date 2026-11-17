@@ -65,6 +65,19 @@ describe("incentives on the cap", () => {
       { kind: "snaps", threshold: 2, amount: 400_000, likely: true },
       { kind: "snaps", threshold: 0, amount: 1_000_000, likely: false },
     ];
+    // Only this player's incentives settle: the rest of the roster's incentives and per-game roster
+    // bonuses, paid at the same time, would move the cash by whatever their seasons earned.
+    for (const other of Object.keys(state.contracts)) {
+      if (other === id || state.contracts[other]?.team !== TEAM) continue;
+      const od = state.contracts[other];
+      const oy = od.years.find((x) => x.year === RULES.season);
+      if (oy && (oy.incentives || oy.perGame)) {
+        state.contracts[other] = structuredClone(od);
+        const year = state.contracts[other].years.find((x) => x.year === RULES.season)!;
+        delete year.incentives;
+        delete year.perGame;
+      }
+    }
     const cash = cashPaid(state, TEAM, RULES.season);
     until(state, addDays(K.superBowl, 3));
     expect(y.incentives.map((i) => i.earned)).toEqual([false, true]);

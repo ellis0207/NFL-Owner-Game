@@ -90,15 +90,17 @@ describe("owners and the league meeting", () => {
     // Enough games that the rule, not the bounce of a few kicks, decides the comparison.
     const games = SCHEDULE.filter((g) => g.type === "REG").slice(0, 144);
     const play = () => {
-      let plays = 0, xpAtt = 0;
+      let plays = 0, xpAtt = 0, tds = 0;
       // Each run starts from the same rosters: games played here leave injuries behind.
       const copy = structuredClone(state);
       for (const g of games) {
         const { box } = simulateGame(copy, g, g.away, g.home);
         plays += box.team.away.plays + box.team.home.plays;
-        xpAtt += [...Object.values(box.players.away), ...Object.values(box.players.home)].reduce((s, l) => s + stat(l, "xpa"), 0);
+        const lines = [...Object.values(box.players.away), ...Object.values(box.players.home)];
+        xpAtt += lines.reduce((s, l) => s + stat(l, "xpa"), 0);
+        tds += lines.reduce((s, l) => s + stat(l, "passTd") + stat(l, "rushTd") + stat(l, "defTd") + stat(l, "krTd") + stat(l, "prTd"), 0);
       }
-      return { plays, xpAtt };
+      return { plays, xpAtt, xpRate: xpAtt / tds };
     };
     const before = play();
     // One rule at a time: more snaps also mean more touchdowns, which would hide the extra point change.
@@ -114,6 +116,7 @@ describe("owners and the league meeting", () => {
     bindRules(state);
     // A shorter play clock means more snaps; a longer extra point means more teams go for two.
     expect(clock.plays).toBeGreaterThan(before.plays * 1.02);
-    expect(xp.xpAtt).toBeLessThan(before.xpAtt);
+    // Measured per touchdown, so a run of games with more scoring doesn't hide it.
+    expect(xp.xpRate).toBeLessThan(before.xpRate);
   });
 });
