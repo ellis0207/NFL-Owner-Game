@@ -225,6 +225,18 @@ more of our business in the papers. Reporters retire, move up from local papers
 to national jobs and change markets each summer, and two press awards are
 handed out each February.
 
+Running stories are arcs with a subject, chapters and several possible
+endings: a quarterback change (the new starter holds the job, or gets benched
+too), a hot seat (survived or fired), holdouts, contract years, trade requests,
+suspensions, stadium fights, relocations, club sales, labor talks, win and
+losing streaks, unbeaten and winless runs, rookies emerging, breakout seasons,
+comebacks, injury pileups, coaching searches, free-agent chases, cap crunches,
+the race for the top pick, division races, a veteran's last ride and a coach
+at odds with the GM. Our club's preseason questions and the owner's public
+promises run as arcs too, until the season answers them or the promise is kept
+or broken. Each chapter gets its own coverage, and Media > Storylines tracks
+what's running and how recent stories ended.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each

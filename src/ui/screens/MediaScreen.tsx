@@ -1,16 +1,17 @@
 import { FORMATS, type FormatId } from "../../engine/media/formats";
 import { initialTab } from "../ui";
 import { useMemo, useState } from "react";
-import { shortDate, weekday } from "../../engine/dates";
+import { daysBetween, shortDate, weekday } from "../../engine/dates";
 import { PLAYER_BY_ID, teamLabel } from "../../engine/league";
 import { NATIONAL, relLabel, relOf } from "../../engine/outlets";
 import { corps, isLocal, outletOf, recordLine, working } from "../../engine/media/corps";
 import { expectLabel } from "../../engine/review";
+import { ARC_LABEL, arcStage, arcState } from "../../engine/media/arcs";
 import { gradePoints } from "../../engine/grades";
 import { TEAMS } from "../../engine/league";
 import { answerQuestion, openQuestions } from "../../engine/press";
 import { draftClass } from "../../engine/prospects";
-import type { GameState, PressQuestion, Story, Storyline } from "../../engine/types";
+import type { Arc, GameState, PressQuestion, Story, Storyline } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
@@ -309,6 +310,7 @@ function Storylines({ game }: { game: GameState }) {
       ) : (
         <p className="muted">Fans and the media set their expectations in late June, once the offseason's work is done.</p>
       )}
+      <ArcTracker game={game} />
       {grades && (
         <section className="panel stack tight">
           <h3>Offseason grades</h3>
@@ -324,5 +326,44 @@ function Storylines({ game }: { game: GameState }) {
       )}
       <p className="muted">{teamLabel(us)} fans measure a season against what they expected in the summer.</p>
     </div>
+  );
+}
+
+/** The running stories around the league: ours first, then the biggest, with how far along each one is. */
+function ArcTracker({ game }: { game: GameState }) {
+  const us = game.userTeam;
+  const all = game.media?.arcs ? arcState(game).list : [];
+  const mine = (a: Arc) => a.team === us || a.other === us;
+  const open = all.filter((a) => !a.ending).sort((a, b) => Number(mine(b)) - Number(mine(a)) || b.beats.length - a.beats.length || a.opened.localeCompare(b.opened));
+  const ended = all.filter((a) => a.ending).sort((a, b) => b.ended!.localeCompare(a.ended!)).slice(0, 15);
+  const subject = (a: Arc) => a.title || [a.player && PLAYER_BY_ID[a.player]?.name, teamLabel(a.team), a.other && `and ${teamLabel(a.other)}`].filter(Boolean).join(", ");
+  const row = (a: Arc) => (
+    <tr key={a.id}>
+      <td>{ARC_LABEL[a.kind] ?? a.kind}{mine(a) && <span className="pill">Ours</span>}</td>
+      <td>{subject(a)}</td>
+      <td>{arcStage(a.ending ?? a.phase)}</td>
+      <td className="muted">{a.ending ? shortDate(a.ended!) : `${daysBetween(a.opened, game.date)} days`}</td>
+    </tr>
+  );
+  return (
+    <section className="panel stack tight">
+      <h3>Running stories</h3>
+      <p className="muted">The stories the media keep coming back to. Each one moves through its chapters and ends one way or another.</p>
+      {open.length === 0 ? <span className="muted">Nothing is running right now.</span> : (
+        <div className="table-wrap"><table>
+          <thead><tr><th>Story</th><th>About</th><th>Where it stands</th><th>Running</th></tr></thead>
+          <tbody>{open.slice(0, 40).map(row)}</tbody>
+        </table></div>
+      )}
+      {ended.length > 0 && (
+        <>
+          <h4>Recently ended</h4>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Story</th><th>About</th><th>How it ended</th><th>Ended</th></tr></thead>
+            <tbody>{ended.map(row)}</tbody>
+          </table></div>
+        </>
+      )}
+    </section>
   );
 }

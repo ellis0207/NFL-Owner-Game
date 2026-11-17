@@ -16,6 +16,7 @@ import { INJURY, PERFORMANCE } from "./content/players";
 import { WIRE_CONTENT } from "./content/wire";
 import { CAMP, SEAT, TALK } from "./content/talk";
 import { RUMOR_CONTENT } from "./content/rumors";
+import { ARC_CONTENT } from "./content/arcs";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
 import { choose, render, type Bank, type RenderContext, type Slots, type Tone } from "./grammar";
@@ -29,6 +30,7 @@ export const FAMILIES: Partial<Record<Family, FamilyContent>> = {
 export function contentFor(f: Fact): FamilyContent | undefined {
   if (f.family === "wire") return WIRE_CONTENT[String(f.slots.topic)] ?? WIRE_CONTENT.league;
   if (f.family === "rumor") return RUMOR_CONTENT[f.type.split(".")[1]];
+  if (f.family === "arc") return ARC_CONTENT[f.type.split(".")[1]];
   return FAMILIES[f.family];
 }
 
@@ -59,6 +61,7 @@ export function storiesFor(f: Fact): number {
     case "trade": return 2 + (f.tags.blockbuster ? 1 : 0) + (f.ours ? 1 : 0);
     case "talk": return 1 + (f.ours ? 1 : 0);
     case "rumor": return 1 + (v >= 60 ? 1 : 0) + (f.ours ? 1 : 0);
+    case "arc": return 1 + (v >= 60 ? 1 : 0) + (f.ours ? 1 : 0);
     case "camp": return 1 + (f.ours && v >= 50 ? 1 : 0);
     case "seat": return 1 + (v >= 60 ? 1 : 0);
     case "wire": return (v >= 40 ? 1 : 0) + (v >= 65 ? 1 : 0) + (f.ours ? 1 : 0);
@@ -184,8 +187,10 @@ export function withUs(state: GameState, f: Fact, team?: string): Fact {
 }
 
 /** Everything the desks file today from the day's facts. */
-export function composeDay(state: GameState): number {
-  return fileFacts(state, collectFacts(state));
+export function composeDay(state: GameState): Fact[] {
+  const facts = collectFacts(state);
+  fileFacts(state, facts);
+  return facts;
 }
 
 /** Writes up a set of facts: the day's own, or ones a weekly desk (interviews, camp, the hot seat) put together. */

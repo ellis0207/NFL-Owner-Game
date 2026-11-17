@@ -18,6 +18,7 @@ import { marketView } from "./market";
 import { pick, surname } from "./media";
 import { addStory, changeRel, MEDIA, MEDIA_BY_ID, mediaState, relOf } from "./outlets";
 import { byline } from "./media/corps";
+import { endArc, openArc } from "./media/arcs";
 import { isPendingFreeAgent } from "./offseason";
 import { rngFor, type Rng } from "./rng";
 import { depthChart } from "./roster";
@@ -856,16 +857,29 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
   }
 }
 
+/** How the media label each kind of promise on the storylines tracker. */
+const PROMISE_TITLE: Record<string, (p: string) => string> = {
+  untouchable: (p) => `"${p} isn't going anywhere"`,
+  willPay: (p) => `"We're going to get it done" with ${p}`,
+  playoffs: () => `"This is a Super Bowl team"`,
+  noSell: () => `"We're buyers at the deadline"`,
+};
+
 /** Public stances that come due. */
 function resolveStances(state: GameState): void {
   const m = mediaState(state);
   const us = state.userTeam;
   for (const s of m.stances) {
     if (s.resolved) continue;
+    // Every public promise runs as a storyline until it is kept or broken.
+    const key = `${s.kind}:${s.date}:${s.player ?? ""}`;
+    openArc(state, "promise", { key, team: us, player: s.player, title: PROMISE_TITLE[s.kind](s.player ? pname(s.player) : "") });
+    const done = (kept: boolean) => endArc(state, "promise", key, kept ? "kept" : "broken");
     const age = daysBetween(s.date, state.date);
     if (s.kind === "untouchable" && s.player) {
       if (state.players[s.player]?.team !== us && (state.trades?.log ?? []).some((t) => t.date >= s.date && t.teams.includes(us) && [...t.send[0], ...t.send[1]].some((a) => a.kind === "player" && a.id === s.player))) {
         s.resolved = true;
+        done(false);
         for (const o of MEDIA) changeRel(state, o.id, -5);
         teamMorale(state, -3); fans(state, -3);
         addStory(state, {
@@ -873,16 +887,18 @@ function resolveStances(state: GameState): void {
           headline: `So much for "not going anywhere"`,
           body: `On ${shortDate(s.date)}, ${state.ownerName} said ${pname(s.player)} wasn't going anywhere. Now he's gone. "Players around the league just learned what that owner's word is worth," Big Lou Marchetti said.`,
         });
-      } else if (age > 150) s.resolved = true;
+      } else if (age > 150) { s.resolved = true; done(true); }
     }
     if (s.kind === "willPay" && s.player) {
       const signed = state.signings.some((x) => x.player === s.player && x.team === us && x.date >= s.date);
       const gone = state.players[s.player]?.team !== us;
       if (signed) {
         s.resolved = true;
+        done(true);
         fans(state, 2);
       } else if (gone) {
         s.resolved = true;
+        done(false);
         fans(state, -6); press(state, -3);
         for (const o of MEDIA) changeRel(state, o.id, -2);
         addStory(state, {
@@ -896,6 +912,7 @@ function resolveStances(state: GameState): void {
       s.resolved = true;
       const made = state.seeds?.[TEAM_BY_ID[us].conference].includes(us);
       fans(state, made ? 5 : -8);
+      done(!!made);
       if (!made) {
         press(state, -4);
         addStory(state, {
@@ -909,6 +926,7 @@ function resolveStances(state: GameState): void {
       s.resolved = true;
       const sold = (state.trades?.log ?? []).some((t) => t.date >= s.date && t.teams.includes(us) &&
         t.send[t.teams[0] === us ? 0 : 1].some((a) => a.kind === "player" && marketView(state, a.id) >= 84));
+      done(!sold);
       if (sold) {
         fans(state, -5);
         addStory(state, {

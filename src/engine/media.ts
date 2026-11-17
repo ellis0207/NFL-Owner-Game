@@ -25,6 +25,7 @@ import { outlook, parsePick } from "./trades";
 import type { BoxScore, GameState, Position, ScheduledGame, Story } from "./types";
 import { money } from "./inbox";
 import { composeDay, fileFacts } from "./media/compose";
+import { arcsDaily } from "./media/arcs";
 import { campFact, seatFact, talkFacts } from "./media/desks";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
@@ -812,7 +813,9 @@ export function mediaDaily(state: GameState): void {
   mediaState(state);
   preseasonCoverage(state);
   // Games, big days, injuries, signings, releases, claims and trades go through the story engine.
-  composeDay(state);
+  const facts = composeDay(state);
+  // The running stories: arcs open from the day's facts and the league's state, move a phase, or end.
+  arcsDaily(state, facts);
   wireCoverage(state);
   corpsDaily(state);
   rumorDesk(state);
