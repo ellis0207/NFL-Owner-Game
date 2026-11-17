@@ -27,6 +27,7 @@ const { invariants } = await import("../src/engine/invariants");
 const { standings, winPct } = await import("../src/engine/standings");
 const { economy, shockEconomy } = await import("../src/engine/economy");
 const { compress, decompress } = await import("../src/save/codec");
+const { statSpread, spreadMisses } = await import("./statspread");
 type GameState = import("../src/engine/types").GameState;
 
 /** The documented ranges (docs/balance.md). A value outside one is a warning. */
@@ -44,7 +45,7 @@ const RANGES = {
 
 interface SeasonRow {
   seed: number; season: number; secs: number; saveKB: number; hc: number; trades: number; topQb: number; elite: number;
-  winSpread: number; overCapAtLeagueYear: number; relocations: number; cpuShort: number; errors: string[];
+  winSpread: number; overCapAtLeagueYear: number; relocations: number; cpuShort: number; statMisses: string[]; errors: string[];
 }
 
 function spread(state: GameState): number {
@@ -67,6 +68,7 @@ for (const seed of seeds) {
     const t0 = Date.now();
     let guard = 0;
     let spreadAtEnd = 0;
+    let statMisses: string[] = [];
     let overCap = 0;
     const errors: string[] = [];
     let firstBad = "";
@@ -74,7 +76,11 @@ for (const seed of seeds) {
     while ((state.season ?? RULES.season) === season && guard++ < 420) {
       const before = state.date;
       advanceDay(state);
-      if (before <= RULES.keyDates.regularSeasonEnd && state.date > RULES.keyDates.regularSeasonEnd) spreadAtEnd = spread(state);
+      if (before <= RULES.keyDates.regularSeasonEnd && state.date > RULES.keyDates.regularSeasonEnd) {
+        spreadAtEnd = spread(state);
+        // How the season's statistics split among players (tests/statspread.ts).
+        statMisses = spreadMisses(statSpread(state));
+      }
       // Cap compliance is required by 4 PM on the day the new league year opens,
       // so the check runs once that day has been played.
       if (before === RULES.keyDates.newLeagueYear) {
@@ -99,9 +105,9 @@ for (const seed of seeds) {
     const packed = await compress(state);
     const kb = packed.length / 1024;
     state = await decompress(packed);
-    const row: SeasonRow = { seed, season, secs, saveKB: kb, hc, trades, topQb, elite, winSpread: spreadAtEnd, overCapAtLeagueYear: overCap, relocations, cpuShort, errors };
+    const row: SeasonRow = { seed, season, secs, saveKB: kb, hc, trades, topQb, elite, winSpread: spreadAtEnd, overCapAtLeagueYear: overCap, relocations, cpuShort, statMisses, errors };
     rows.push(row);
-    console.log(`seed ${seed} ${season}: ${secs.toFixed(0)}s, save ${kb.toFixed(0)} KB (+${(kb - lastKB).toFixed(0)}), HC fired ${hc}, trades ${trades}, top QB ${(topQb * 100).toFixed(1)}%, elite ${elite}, win spread ${spreadAtEnd.toFixed(3)}, over cap at league year ${overCap}, relocations ${relocations}, CPU clubs short of cash ${cpuShort}${errors.length ? `, ERRORS ${errors.length}` : ""}`);
+    console.log(`seed ${seed} ${season}: ${secs.toFixed(0)}s, save ${kb.toFixed(0)} KB (+${(kb - lastKB).toFixed(0)}), HC fired ${hc}, trades ${trades}, top QB ${(topQb * 100).toFixed(1)}%, elite ${elite}, win spread ${spreadAtEnd.toFixed(3)}, over cap at league year ${overCap}, relocations ${relocations}, CPU clubs short of cash ${cpuShort}, stat marks outside the real ranges ${statMisses.length}${errors.length ? `, ERRORS ${errors.length}` : ""}`);
     if (errors.length) hard.push({ seed, date: firstBad, team: state.userTeam, errors: [...new Set(errors)].slice(0, 20) });
     lastKB = kb;
     void economy;
@@ -123,6 +129,8 @@ for (const r of rows) {
   check("topQbShare", r.topQb, where);
   if (r.winSpread) check("winSpread", r.winSpread, where);
   check("cpuClubsShortOfCash", r.cpuShort, where);
+  // Player statistics: a count or leader far outside the real league's spread.
+  for (const m of r.statMisses) warn.push(`${where}: player stats ${m}`);
 }
 for (const seed of seeds) {
   const mine = rows.filter((r) => r.seed === seed);

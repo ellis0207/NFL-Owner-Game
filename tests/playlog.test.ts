@@ -26,7 +26,8 @@ describe("play-by-play", () => {
       expect([last[9], last[10]]).toEqual([result.awayScore, result.homeScore]);
       // Every scoring play in the summary shows up as a scoring row.
       expect(log.plays.filter((p) => p[8] & F.score).length).toBe(box.scoring.length);
-      expect(log.drives.length).toBeGreaterThan(14);
+      // A ball-control game can run as few as seven possessions a side.
+      expect(log.drives.length).toBeGreaterThanOrEqual(14);
       expect(log.drives.length).toBeLessThan(34);
       // Touchdown drives in the chart match offensive touchdowns.
       for (const d of log.drives) expect(d[4]).toBeGreaterThan(0);

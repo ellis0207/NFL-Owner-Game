@@ -37,7 +37,12 @@ the plan). Names inside a card open their own card. On a phone, press and
 hold instead.
 
 Every game is simulated play by play, with box scores and per-game stats for
-preseason, regular season and playoffs, plus season totals and league leaders. Open-air games have weather
+preseason, regular season and playoffs, plus season totals and league leaders.
+Those numbers spread across players the way the real league's do: about 25
+receivers reach 1,000 yards and about 20 to 25 players reach 10 sacks in a
+season, the top target sees about a quarter of his team's looks, linemen
+rotate, and blitzing linebackers and defensive backs get their share of the
+sacks (`tests/stats-report.ts` checks this against the 2023-2025 seasons). Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
 cold and rain make the ball harder to hold, snow does both, and kicks carry in
 Denver. Domes and retractable roofs play indoors. Teams on a short week, on a
@@ -1101,7 +1106,8 @@ rosters on the same scale, without changing anyone else's rating.
   running a second game in the same page.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
-  real league averages (`npx vite-node tests/calibrate.ts 4`).
+  real league averages (`npx vite-node tests/calibrate.ts 4`), and the split
+  of stats among players to real seasons (`npx vite-node tests/stats-report.ts 3`).
 - Staff (`pipeline/staff_2026.py`) is hand-entered: real HCs, OCs, DCs, STCs and
   GMs with their schemes and play callers. Some birth years are estimates.
   Trainers and scouting directors are generated. Position coaches

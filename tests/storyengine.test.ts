@@ -12,6 +12,7 @@ import { ALERT, CLUB, FAN, NEWS_TAKE, PLAYER } from "../src/engine/media/content
 import { fanAccounts, sentiment, social, trending } from "../src/engine/media/social";
 import { opinionState } from "../src/engine/media/opinion";
 import { ARC_LABEL, ARCS, arcState } from "../src/engine/media/arcs";
+import { narrState } from "../src/engine/media/narratives";
 import { playerSlots, teamSlots } from "../src/engine/media/facts";
 import { corps, localStaff, outletOf } from "../src/engine/media/corps";
 import { collectFacts, emit, type Fact } from "../src/engine/media/facts";
@@ -324,7 +325,10 @@ describe("the story engine", () => {
     expect(mediaState(state).stories.filter((s) => s.type?.startsWith("arc.")).length).toBeGreaterThan(20);
     // The calendar's stories: ladders, the playoff picture, the deadline, retrospectives and more.
     const season = new Set(mediaState(state).stories.filter((s) => s.type?.startsWith("season.")).map((s) => s.type!.split("/")[0]));
-    for (const k of ["award", "playoffs", "retro"]) expect(season.has(`season.${k}`), [...season].join(",")).toBe(true);
+    for (const k of ["playoffs", "retro"]) expect(season.has(`season.${k}`), [...season].join(",")).toBe(true);
+    // Stories older than the kept window survive only when they're about our club, so the weekly
+    // award ladders show up in the saved stories only when one of ours leads a race; the races themselves always ran.
+    expect(season.has("season.award") || Object.keys(narrState(state).ladder).length === 5, [...season].join(",")).toBe(true);
     // The Huddle: fans, players, reporters and clubs all post; moods spread; something is trending; columnists hold theses.
     const posts = social(state).posts;
     for (const k of ["fan", "club", "press"]) expect(posts.some((p) => p.kind === k), k).toBe(true);

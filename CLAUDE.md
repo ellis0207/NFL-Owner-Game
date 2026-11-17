@@ -157,6 +157,12 @@ Calibration targets (what "healthy" looked like when each system shipped):
 
 - Season sim (`calibrate.ts`, `season.test.ts`): NFL-like scoring, home edge
   and parity; upsets common.
+- Player stats (`stats-report.ts 3`, about 40 s a season; ranges in
+  `tests/statspread.ts`, also judged by `balance-report.ts`, test
+  `statspread.test.ts`): how totals split among players: ~25 1,000-yard
+  receivers and ~20-25 10-sack players a year, top target ~24% of a team's
+  targets, sacks EDGE ~.5 / IDL ~.25 / LB+DB ~.2. Target weights in
+  `pickTarget`, sack credit in `sack`, rotation in `defenseLineup` (`sim.ts`).
 - Seasons loop (`seasons-report.ts 4 7`, about 1 min a season): top-30
   talent steady year to year; ~32 comp picks a year; 85+ players drift slowly
   (446 to ~420 over four seasons); every team near or under the cap by year 4.

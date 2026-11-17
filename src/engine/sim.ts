@@ -315,7 +315,7 @@ class GameSim {
     const nWr = { "10": 4, "11": 3, "12": 2, "13": 1, "21": 2 }[personnel];
     const nTe = { "10": 0, "11": 1, "12": 2, "13": 3, "21": 1 }[personnel];
     let wrs = this.pickN(team, "WR", Math.min(4, nWr + 1), new Set(used), 3);
-    if (nWr === 3 && wrs.length === 4 && this.rng() < 0.12) wrs = [wrs[0], wrs[1], wrs[3]];
+    if (nWr === 3 && wrs.length === 4 && this.rng() < 0.2) wrs = [wrs[0], wrs[1], wrs[3]];
     else wrs = wrs.slice(0, nWr);
     wrs.forEach((id) => used.add(id));
     const tes = this.pickN(team, "TE", nTe, used, 2);
@@ -327,8 +327,8 @@ class GameSim {
   defenseLineup(team: Team, pkg: Package): DefLineup {
     const used = new Set<string>();
     const threeFour = team.def.front === "34";
-    const rotate = (pos: Position, n: number, rate: number) => {
-      const list = this.pickN(team, pos, n + 1, new Set(used), n);
+    const rotate = (pos: Position, n: number, rate: number, starters = n) => {
+      const list = this.pickN(team, pos, n + 1, new Set(used), starters);
       const out = list.slice(0, n);
       if (list.length > n && this.rng() < rate * n) out[Math.floor(this.rng() * n)] = list[n];
       out.forEach((id) => used.add(id));
@@ -337,11 +337,13 @@ class GameSim {
     const nIdl = pkg === "base" && threeFour ? 3 : 2;
     const nLb = pkg === "base" ? (threeFour ? 2 : 3) : pkg === "nickel" ? 2 : 1;
     const nCb = pkg === "base" ? 2 : pkg === "nickel" ? 3 : 4;
-    const edge = rotate("EDGE", 2, 0.12);
-    const idl = rotate("IDL", nIdl, 0.14);
-    const lb = this.pickN(team, "LB", nLb, used, threeFour ? 2 : 3);
-    const cb = this.pickN(team, "CB", nCb, used, 3);
-    const s = this.pickN(team, "S", 2, used);
+    // Linemen rotate to stay fresh: a starting edge plays about four snaps in five, an interior lineman about three in four.
+    const edge = rotate("EDGE", 2, 0.2);
+    const idl = rotate("IDL", nIdl, 0.24);
+    // The back seven come off the field less, but a backup still spells a starter now and then.
+    const lb = rotate("LB", nLb, 0.13, threeFour ? 2 : 3);
+    const cb = rotate("CB", nCb, 0.05, 3);
+    const s = rotate("S", 2, 0.11);
     return { edge, idl, lb, cb, s, pkg };
   }
 
@@ -952,7 +954,8 @@ class GameSim {
       return list[list.length - 1];
     };
     const a = pickOne();
-    if (this.rng() < 0.2 && list.length > 1) {
+    // About two tackles in five are shared in the league's books (each man gets an assist).
+    if (this.rng() < 0.28 && list.length > 1) {
       let b = pickOne();
       if (b === a) b = list[(list.indexOf(a) + 1) % list.length];
       this.add(d, a, "tklAst");
@@ -1414,7 +1417,7 @@ class GameSim {
     const weights = tacklers.map((id) => {
       const pos = PLAYER_BY_ID[id].position;
       if (long) return pos === "S" ? 1.5 : pos === "CB" ? 1.2 : pos === "LB" ? 1.3 : 0.3;
-      return pos === "LB" ? 1.9 : pos === "IDL" ? 1.2 : pos === "EDGE" ? 1.2 : pos === "S" ? 1.0 : 0.8;
+      return pos === "LB" ? 1.6 : pos === "IDL" ? 1.3 : pos === "EDGE" ? 1.45 : pos === "S" ? 0.95 : 0.75;
     });
     const tk = this.tackle(d, tacklers, yards, weights);
     this.rec.say(`${runText}${tk ? ` (${this.name(tk)})` : ""}.${fumbleNote}`, yards >= 20 ? F.big : 0);
@@ -1461,7 +1464,9 @@ class GameSim {
     // Protection against the rush.
     const protect = this.avg(lu.ol, (id) => 0.75 * tr(id, "passBlock") + 0.25 * tr(id, "agility"));
     const rushers = [...def.edge, ...def.idl];
-    const blitzers = blitz ? [...def.lb.slice(0, 1), ...(this.rng() < 0.3 ? def.s.slice(1, 2) : [])] : [];
+    // A linebacker comes on every blitz; now and then a safety or the slot corner comes with him.
+    const extra = blitz && this.rng() < 0.3 ? (this.rng() < 0.6 || def.cb.length < 3 ? def.s.slice(1, 2) : def.cb.slice(2, 3)) : [];
+    const blitzers = blitz ? [...def.lb.slice(0, 1), ...extra] : [];
     const rushValue = this.avg(rushers, (id) => tr(id, "passRush")) + blitzers.length * 1.5 + (blitzers.length ? this.avg(blitzers, (id) => tr(id, "blitz") - 80) * 0.1 : 0);
     const holdTime = depth === "deep" ? 0.07 : depth === "inter" ? 0.02 : depth === "short" ? -0.07 : -0.25;
     const pocket = (tr(qb, "decisions") - 80) * 0.003 + (tr(qb, "mobility") - 80) * 0.001;
@@ -1490,7 +1495,7 @@ class GameSim {
     if (pressured && depth !== "screen") {
       const pSack = clamp(0.23 - (tr(qb, "mobility") - 80) * 0.004 - (tr(qb, "decisions") - 80) * 0.002 + (depth === "deep" ? 0.06 : 0), 0.07, 0.42);
       const r = this.rng();
-      if (r < pSack) return this.sack(o, d, qb, [...rushers, ...blitzers], pairs.blocker);
+      if (r < pSack) return this.sack(o, d, qb, [...rushers, ...blitzers], pairs.blocker, { blitzers, free: blitz && !pickedUp, chasers: [...def.lb, ...def.s].filter((id) => !blitzers.includes(id)) });
       const pScramble = clamp(0.1 + (tr(qb, "mobility") - 80) * 0.007, 0.02, 0.32);
       if (r < pSack + pScramble) return this.scramble(o, d, qb, def);
       const hitter = [...rushers, ...blitzers][Math.floor(this.rng() * (rushers.length + blitzers.length))];
@@ -1556,7 +1561,7 @@ class GameSim {
     const r = this.rng();
     if (r < pInt) {
       const backs = [...def.cb, ...def.s, ...def.lb];
-      const picker = this.rng() < 0.55 && cover ? cover : backs[Math.floor(this.rng() * backs.length)] ?? cover;
+      const picker = this.rng() < 0.68 && cover ? cover : backs[Math.floor(this.rng() * backs.length)] ?? cover;
       this.add(o, qb, "int");
       this.add(d, picker, "defInt");
       this.add(d, picker, "pd");
@@ -1645,8 +1650,13 @@ class GameSim {
         return { yards, ended: true, playTime: 0, clockStops: true, involved: [target, cover] };
       }
     }
-    const tacklers = [cover, ...def.lb, ...def.s, ...def.cb.filter((id) => id !== cover)].filter(Boolean) as string[];
-    const tk = this.tackle(d, tacklers, yards < 0 ? yards : 1, tacklers.map((id, i) => (i === 0 ? 2.5 : PLAYER_BY_ID[id].position === "CB" ? 0.5 : 1)));
+    // Short catches are often run down by a lineman chasing from the rush.
+    const front = yards <= 6 ? [...def.edge, ...def.idl] : [];
+    const tacklers = [cover, ...def.lb, ...def.s, ...def.cb.filter((id) => id !== cover), ...front].filter(Boolean) as string[];
+    const tk = this.tackle(d, tacklers, yards < 0 ? yards : 1, tacklers.map((id, i) => {
+      const pos = PLAYER_BY_ID[id].position;
+      return i === 0 ? 2.5 : pos === "CB" ? 0.5 : pos === "EDGE" || pos === "IDL" ? 0.3 : 1;
+    }));
     this.rec.say(`${catchText}${tk ? ` (${this.name(tk)})` : ""}.${ruling.note}`, yards >= 20 ? F.big : 0);
     const oob = this.rng() < (hurry ? 0.4 : 0.18);
     return { yards, ended: false, playTime: 7, clockStops: this.clockStopsOnOutOfBounds(oob), involved: [target, cover] };
@@ -1716,14 +1726,16 @@ class GameSim {
       cands.push(id);
       weights.push(w);
     };
-    const q = (id: string, keys: string[]) => Math.max(0.3, 1 + (keys.reduce((s, k) => s + this.tr(id, k), 0) / keys.length - 80) * 0.03);
+    // Better receivers draw more of the looks, but a progression spreads the ball: in the real league
+    // a team's top target sees about a quarter of its targets, and backs about a sixth of all of them.
+    const q = (id: string, keys: string[]) => Math.max(0.4, 1 + (keys.reduce((s, k) => s + this.tr(id, k), 0) / keys.length - 80) * 0.017);
     lu.wrs.forEach((id, i) => {
-      const role = [1, 0.82, 0.62, 0.45][i] ?? 0.4;
+      const role = [0.9, 0.78, 0.62, 0.5][i] ?? 0.45;
       const fit = depth === "deep" ? q(id, ["deep", "speed"]) : depth === "screen" ? q(id, ["yac"]) * 0.7 : q(id, ["routes", "hands"]);
       push(id, role * fit);
     });
-    lu.tes.forEach((id, i) => push(id, (i === 0 ? 0.62 : 0.25) * o.off.teTargets * q(id, ["receiving"]) * (depth === "deep" ? 0.5 : 1)));
-    lu.rbs.forEach((id) => push(id, 0.38 * o.off.rbTargets * q(id, ["receiving"]) * (depth === "screen" ? 2.2 : depth === "short" ? 1.1 : depth === "deep" ? 0.1 : 0.4)));
+    lu.tes.forEach((id, i) => push(id, (i === 0 ? 0.62 : 0.4) * o.off.teTargets * q(id, ["receiving"]) * (depth === "deep" ? 0.5 : 1)));
+    lu.rbs.forEach((id) => push(id, 0.72 * o.off.rbTargets * q(id, ["receiving"]) * (depth === "screen" ? 2.2 : depth === "short" ? 1.2 : depth === "deep" ? 0.1 : 0.45)));
     if (lu.fb) push(lu.fb, 0.06);
     // Game plans built to take away the top option.
     const top = weights.indexOf(Math.max(...weights));
@@ -1749,25 +1761,32 @@ class GameSim {
     return def.lb[Math.floor(this.rng() * def.lb.length)] ?? def.s[1] ?? def.s[0];
   }
 
-  sack(o: Team, d: Team, qb: string, rushers: string[], blockers: Record<string, string> = {}): PlayOutcome {
-    // The rusher who wins his one-on-one most often gets there.
-    const edgeOver = (id: string) => (blockers[id] ? (this.tr(id, "passRush") - this.tr(blockers[id], "passBlock")) * 0.02 : 0);
-    const weights = rushers.map((id) => Math.max(0.3, 1 + (this.tr(id, "passRush") - 80) * 0.03 + edgeOver(id)) * (PLAYER_BY_ID[id].position === "EDGE" ? 1.25 : 1));
+  sack(o: Team, d: Team, qb: string, rushers: string[], blockers: Record<string, string> = {}, how: { blitzers?: string[]; free?: boolean; chasers?: string[] } = {}): PlayOutcome {
+    // The rusher who wins his one-on-one most often gets there. Edges finish more sacks than interior
+    // linemen (about 57% and 23% of the league's); a blitzer nobody picked up has the clearest path;
+    // and now and then a quarterback who escapes the pocket is run down by a linebacker or safety.
+    const edgeOver = (id: string) => (blockers[id] ? (this.tr(id, "passRush") - this.tr(blockers[id], "passBlock")) * 0.015 : 0);
+    const blitzing = new Set(how.blitzers ?? []);
+    const weights = rushers.map((id) => blitzing.has(id) ? (how.free ? 2.4 : 1.1)
+      : Math.max(0.35, 1 + (this.tr(id, "passRush") - 80) * 0.018 + edgeOver(id)) * (PLAYER_BY_ID[id].position === "EDGE" ? 1.4 : 0.7));
+    const chaser = how.chasers?.length && this.rng() < 0.07 ? how.chasers[Math.floor(this.rng() * how.chasers.length)] : undefined;
+    const pool = chaser ? [chaser] : rushers;
+    const odds = chaser ? [1] : weights;
     const pick = () => {
-      const total = weights.reduce((a, b) => a + b, 0);
+      const total = odds.reduce((a, b) => a + b, 0);
       let r = this.rng() * total;
-      for (let i = 0; i < rushers.length; i++) {
-        r -= weights[i];
-        if (r <= 0) return rushers[i];
+      for (let i = 0; i < pool.length; i++) {
+        r -= odds[i];
+        if (r <= 0) return pool[i];
       }
-      return rushers[0];
+      return pool[0];
     };
     const a = pick();
     const loss = Math.min(this.ydl, 4 + Math.round(this.rng() * 6));
     let sackText = `${this.name(qb)} sacked by ${this.name(a)}`;
-    if (this.rng() < 0.12) {
+    if (pool.length > 1 && this.rng() < 0.12) {
       let b = pick();
-      if (b === a) b = rushers[(rushers.indexOf(a) + 1) % rushers.length];
+      if (b === a) b = pool[(pool.indexOf(a) + 1) % pool.length];
       sackText += ` and ${this.name(b)}`;
       this.add(d, a, "sacks", 0.5);
       this.add(d, b, "sacks", 0.5);
