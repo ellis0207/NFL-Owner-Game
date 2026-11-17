@@ -38,6 +38,7 @@ import { GameWeekScreen } from "./screens/GameWeekScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { SearchBox } from "./Search";
+import { CountUp } from "./kit";
 import { applyPrefs, readPrefs, writePrefs } from "./prefs";
 import { RosterScreen } from "./screens/RosterScreen";
 import { FreeAgentsScreen } from "./screens/FreeAgentsScreen";
@@ -277,7 +278,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <div className="figure" {...(game.settings.capRules === "off" ? {} : tip("cap", game.userTeam, capYear))}>
               <span className="label">{capYear ? `${capYear} cap space` : "Cap space"}</span>
               <strong className={cap.space < 0 && game.settings.capRules === "real" ? "bad" : undefined}>
-                {game.settings.capRules === "off" ? "No cap" : money(cap.space)}
+                {game.settings.capRules === "off" ? "No cap" : <CountUp text={money(cap.space)} />}
               </strong>
             </div>
           </div>

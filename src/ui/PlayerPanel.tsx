@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TEAM_COLORS } from "../engine/teamColors";
 import { askLine, openAsk, promiseTalks, refuseAsk } from "../engine/redo";
 import { releaseCost } from "../engine/cap";
 import { dealOf, leagueYear } from "../engine/contracts";
@@ -100,7 +101,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="drawer" role="dialog" aria-label={p.name} onClick={(e) => e.stopPropagation()}>
         <div className="btn-row" style={{ justifyContent: "flex-end" }}><button className="btn small" onClick={onClose}>Close</button></div>
-        <header>
+        <header style={clubBand(state.team ?? state.lastTeam)}>
           <div>
             <h2>{p.name}</h2>
             <span className="muted">{p.position} · {state.team ? `${TEAM_BY_ID[state.team].city} ${TEAM_BY_ID[state.team].name}` : onWaivers(game, id) ? `On waivers (from ${TEAM_BY_ID[onWaivers(game, id)!.from].name}, claims due ${claimDueLabel(onWaivers(game, id)!)})` : `Free agent${state.lastTeam ? `, last with the ${TEAM_BY_ID[state.lastTeam]?.name ?? state.lastTeam}` : ""}`}{state.status === "ps" ? " (practice squad)" : state.status === "ir" ? " (injured reserve)" : ""}</span>
@@ -360,4 +361,10 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
       </aside>
     </div>
   );
+}
+
+/** The club colors behind the player card's header band. */
+function clubBand(team: string | undefined) {
+  const c = team ? TEAM_COLORS[team] : undefined;
+  return c ? { ["--pc" as string]: c[0], ["--pc2" as string]: c[1] } : undefined;
 }

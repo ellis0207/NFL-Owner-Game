@@ -602,3 +602,15 @@ def chamber():
 
 
 ROOMS["chamber"] = chamber
+
+
+def title():
+    """The title screen: the same stadium, taller, from the near hash at the
+    25-yard line looking downfield under the lights. Rendered 1600 x 900."""
+    league()
+    sc = bpy.context.scene
+    sc.render.resolution_x, sc.render.resolution_y = 1600, 900
+    camera((-8, 18, 2.6), (6, 80, 9), lens=22, focus=(0, 60, 2), fstop=8)
+
+
+ROOMS["title"] = title

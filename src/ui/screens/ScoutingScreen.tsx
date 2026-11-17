@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { CountUp } from "../kit";
 import { COLLEGE_SEASON, injuryNote, mediaRank, prospectLine, prospectTotals } from "../../engine/college";
 import { RULES } from "../../engine/league";
 import { COLLEGE_TEAMS, CONFERENCE_IDS, CONFERENCES, DEFENSE_NAMES, OFFENSE_NAMES, REGIONS, schoolName } from "../../engine/collegeData";
@@ -56,10 +57,10 @@ function Budget({ game }: { game: GameState }) {
   return (
     <div className="panel stack tight">
       <div className="figures" style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-        <div className="figure"><span className="label">Budget left</span><strong>{money(left)}</strong></div>
-        <div className="figure"><span className="label">Spent</span><strong>{money(s.spent)}</strong></div>
-        <div className="figure"><span className="label">This week's plan</span><strong>{money(week)}</strong></div>
-        <div className="figure"><span className="label">Weeks to the draft</span><strong>{weeks}</strong></div>
+        <div className="figure"><span className="label">Budget left</span><strong><CountUp text={String(money(left))} fromZero /></strong></div>
+        <div className="figure"><span className="label">Spent</span><strong><CountUp text={String(money(s.spent))} fromZero /></strong></div>
+        <div className="figure"><span className="label">This week's plan</span><strong><CountUp text={String(money(week))} fromZero /></strong></div>
+        <div className="figure"><span className="label">Weeks to the draft</span><strong><CountUp text={String(weeks)} fromZero /></strong></div>
       </div>
       <div className="meter" aria-label="Budget used"><span style={{ width: `${Math.min(100, (100 * s.spent) / s.budget)}%`, background: "var(--team)" }} /></div>
       <span className={`muted${lasts < weeks ? " warn" : ""}`}>

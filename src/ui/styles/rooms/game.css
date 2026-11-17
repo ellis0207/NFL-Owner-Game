@@ -9,3 +9,22 @@
   --room-title-weight: 600;
   --room-title-spacing: -0.01em;
 }
+
+/* The manual: numbered chapters with a serif body at a reading measure, and
+   the settings and save pages as plain spec sheets with a thin rule. */
+.ut-manual { counter-reset: chapter; }
+.ut-chapter { counter-increment: chapter; border-left: 3px solid color-mix(in srgb, var(--team) 70%, var(--ink)); border-radius: 2px var(--radius) var(--radius) 2px; }
+.ut-chapter > summary { cursor: pointer; display: flex; align-items: baseline; gap: 0.7rem; list-style: none; }
+.ut-chapter > summary::-webkit-details-marker { display: none; }
+.ut-chapter > summary::before {
+  content: counter(chapter, decimal-leading-zero);
+  font-family: var(--font-broadcast);
+  font-size: 1.35rem;
+  color: color-mix(in srgb, var(--team) 55%, var(--ink));
+  min-width: 2ch;
+}
+.ut-chapter > summary::after { content: "+"; margin-left: auto; font-family: var(--font-mono); color: var(--muted); }
+.ut-chapter[open] > summary::after { content: "\2212"; }
+.ut-chapter > summary strong { font-family: var(--font-serif); font-size: 1.12rem; font-weight: 600; }
+.ut-text { max-width: 72ch; font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.6; }
+[data-room="game"] .panel > h3:first-child { padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
