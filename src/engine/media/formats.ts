@@ -7,7 +7,9 @@ import type { Bank } from "./grammar";
 
 export type FormatId =
   | "recap" | "alert" | "report" | "breakdown" | "analytics" | "film"
-  | "column" | "hottake" | "notebook" | "grades" | "feature";
+  | "column" | "hottake" | "notebook" | "grades" | "feature"
+  // Shared by every family (media/blend.ts).
+  | "explainer" | "qa" | "podcast";
 
 /** Which lede a family writes for the format. */
 export type Group = "news" | "analysis" | "opinion" | "beat" | "grades" | "feature";
@@ -36,6 +38,9 @@ export const FORMATS: Record<FormatId, FormatDef> = {
   hottake: { id: "hottake", group: "opinion", label: "Hot take", role: "columnist", outlets: [["blitz", 1]], style: "take", quote: false },
   notebook: { id: "notebook", group: "beat", label: "Beat notebook", role: "reporter", outlets: [["beat", 1]], style: "head", quote: true },
   grades: { id: "grades", group: "grades", label: "Grades", role: "analyst", outlets: [["capspace", 2], ["ledger", 1]], style: "head", quote: false },
+  explainer: { id: "explainer", group: "analysis", label: "Explainer", role: "insider", outlets: [["afw", 1], ["sideline", 1], ["ledger", 1], ["journal", 0.5]], style: "head", quote: false },
+  qa: { id: "qa", group: "analysis", label: "Ask the insider", role: "insider", outlets: [["ledger", 1], ["sideline", 1], ["capspace", 1], ["afw", 0.5]], style: "head", quote: false },
+  podcast: { id: "podcast", group: "opinion", label: "Podcast", role: "columnist", outlets: [["blitz", 1], ["xp", 1], ["sideline", 1], ["ledger", 0.5]], style: "take", quote: false },
   feature: { id: "feature", group: "feature", label: "Feature", role: "reporter", outlets: [["ledger", 1], ["sideline", 1], ["journal", 0.5]], style: "head", quote: true },
 };
 

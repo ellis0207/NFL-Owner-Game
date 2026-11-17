@@ -22,6 +22,8 @@ import { OPINION_CONTENT } from "./content/opinion";
 import { OWNER_CONTENT } from "./content/ownerdesk";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
+import { CONNECT } from "./content/blend";
+import { contextLine, GENERIC, genericFits, secondAngle, voiceLine, writeGeneric } from "./blend";
 import { choose, render, type Bank, type RenderContext, type Slots, type Tone } from "./grammar";
 import { standings } from "../standings";
 
@@ -41,7 +43,7 @@ export function contentFor(f: Fact): FamilyContent | undefined {
 }
 
 const banksCache = new WeakMap<FamilyContent, Bank>();
-function banksFor(c: FamilyContent): Bank {
+export function banksFor(c: FamilyContent): Bank {
   let b = banksCache.get(c);
   if (!b) {
     b = { ...SHARED_BANK, ...(c.bank ?? {}) };
@@ -102,7 +104,9 @@ function pickFormats(f: Fact, c: FamilyContent, n: number, rng: Rng): FormatId[]
   // A sourced report runs first in the format its reporter works in: a radio segment, a beat notebook, an insider report.
   const first = f.tags.scoop && c.formats.includes(f.tags.scoop as FormatId) ? (f.tags.scoop as FormatId) : c.formats[0];
   const out: FormatId[] = [first];
-  const usable = c.formats.filter((id) => id !== first).filter((id) => {
+  // The shared formats (explainer, Q&A, podcast) join any family's own when the news is big enough.
+  const own = [...c.formats, ...GENERIC.filter((g) => !c.formats.includes(g) && genericFits(f, g))];
+  const usable = own.filter((id) => id !== first).filter((id) => {
     if (id === "notebook") return f.ours;
     if (id === "grades") return f.family === "trade" || !!f.tags.graded;
     return true;
@@ -117,7 +121,7 @@ function pickFormats(f: Fact, c: FamilyContent, n: number, rng: Rng): FormatId[]
   return out.slice(0, n);
 }
 
-function pickAngles(f: Fact, c: FamilyContent, n: number, rng: Rng): AngleDef[] {
+export function pickAngles(f: Fact, c: FamilyContent, n: number, rng: Rng): AngleDef[] {
   const pool: [AngleDef, number][] = c.angles.map((a) => [a, a.when(f.tags)]);
   const out: AngleDef[] = [];
   for (let i = 0; i < n; i++) {
@@ -147,7 +151,7 @@ function pickOutlet(fmt: FormatDef, used: Set<string>, rng: Rng, f: Fact): strin
   return weighted(rng, fresh.length ? fresh : weights) ?? weights[0][0];
 }
 
-const KIND_BY_FORMAT: Partial<Record<FormatId, StoryKind>> = { column: "interview", hottake: "interview", analytics: "trend", film: "trend" };
+const KIND_BY_FORMAT: Partial<Record<FormatId, StoryKind>> = { column: "interview", hottake: "interview", analytics: "trend", film: "trend", podcast: "interview", qa: "interview", explainer: "trend" };
 
 export interface Draft { headline: string; body: string; outlet: string; by: string; reporter?: string; format: FormatId; angle: string; type: string; kind: StoryKind }
 
@@ -156,12 +160,21 @@ export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: F
   const c = contentFor(f)!;
   const fmt = FORMATS[format];
   const outlet = outletOf(outletId);
-  const role: ReporterRole = isLocal(outletId) ? (format === "hottake" ? "host" : format === "column" ? "columnist" : "beat") : fmt.role;
+  const role: ReporterRole = isLocal(outletId) ? (format === "hottake" || format === "podcast" ? "host" : format === "column" ? "columnist" : "beat") : fmt.role;
   const team = (f.slots.US as { id?: string } | undefined)?.id && f.ours ? (f.slots.US as { id: string }).id : f.teams[0];
   const rep = (f.reporter && f.outlet === outletId ? corps(state).people.find((p) => p.id === f.reporter) : undefined) ?? pickReporter(state, outletId, role, rng, team);
   const by = rep?.name ?? outlet[fmt.role] ?? "Staff";
   const ctx: RenderContext = { rng, banks: banksFor(c), tone: toneOf(outlet.heat), missing };
   const slots: Slots = { ...f.slots, tag: f.tags, fmt: { [format]: true }, angle: { [angle.id]: true }, by };
+  const second = secondAngle(c, f, angle, format, rng);
+  const type = `${f.type}/${angle.id}${second ? `+${second.id}` : ""}/${format}`;
+  if (GENERIC.includes(format)) {
+    const g = writeGeneric(state, f, c, format, angle, second, rep, { id: outletId, name: outlet.name }, slots, ctx);
+    return {
+      headline: g.headline.charAt(0).toUpperCase() + g.headline.slice(1), body: g.body.replace(/\s+/g, " ").trim(),
+      outlet: outletId, by, reporter: rep?.id, format, angle: angle.id, type, kind: KIND_BY_FORMAT[format] ?? f.kind,
+    };
+  }
   const headline = choose(fmt.style === "take" ? angle.take : angle.head, slots, ctx);
   const lede = choose(c.lede[fmt.group] ?? c.lede.news ?? [], slots, ctx);
   const para = choose(angle.para, slots, ctx);
@@ -173,11 +186,15 @@ export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: F
     if (q && line) quote = `"${/[.]$/.test(line) ? `${line.slice(0, -1)},` : line}" said ${q.who}, ${q.role}.`;
   }
   const kicker = format === "recap" || format === "alert" ? "" : render(`{@kick.${format}}`, slots, { ...ctx, missing: undefined });
-  const parts = format === "alert" ? [lede, details] : fmt.group === "grades" ? [lede, para, kicker] : [lede, para, details, quote, kicker];
+  // A second angle, the writer's own voice and the club's situation make the same news read differently.
+  const extra = second ? `${choose(CONNECT, slots, ctx)} ${choose(second.para, slots, ctx)}` : "";
+  const voice = voiceLine(rep, fmt.group, ctx, slots);
+  const context = format === "alert" || format === "recap" ? "" : contextLine(state, f, ctx);
+  const parts = format === "alert" ? [lede, details] : fmt.group === "grades" ? [lede, para, kicker] : [lede, para, extra, details, voice, context, quote, kicker];
   return {
     headline: headline.charAt(0).toUpperCase() + headline.slice(1),
     body: parts.filter((x) => x && x.trim()).join(" ").replace(/\s+/g, " ").trim(),
-    outlet: outletId, by, reporter: rep?.id, format, angle: angle.id, type: `${f.type}/${angle.id}/${format}`,
+    outlet: outletId, by, reporter: rep?.id, format, angle: angle.id, type,
     kind: KIND_BY_FORMAT[format] ?? f.kind,
   };
 }
@@ -269,6 +286,7 @@ function localFormat(f: Fact, c: FamilyContent, ours: boolean, rng: Rng): [Forma
   if (c.formats.includes("notebook") && !ours) options.push([["notebook", `local:${team}`], 3]);
   if (c.formats.includes("column")) options.push([["column", `local:${team}`], 1]);
   if (c.formats.includes("hottake") && f.value >= 45) options.push([["hottake", `radio:${team}`], 1.2]);
+  if (f.value >= 50 && f.family !== "opinion") options.push([["podcast", `radio:${team}`], 0.6]);
   if (c.formats.includes("recap") && !ours) options.push([["recap", `local:${team}`], 2]);
   return weighted(rng, options);
 }

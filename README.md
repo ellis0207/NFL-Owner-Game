@@ -270,6 +270,14 @@ word), post from the owner's own Huddle account, write a guest column, and set
 each reporter's access, up to banning one. What any of it does is never shown;
 the owner reads the coverage.
 
+The same news can be written many ways. Besides each kind of story's own
+formats, any big story can get an explainer, an "ask the insider" Q&A, or a
+podcast segment where a co-host pushes back with another angle; longer pieces
+fold in a second angle; numbers people and old-school voices sound different;
+and stories tie the news to a club's running storylines or its place in the
+division. Daily roundups collect the injuries, the transactions, the rumor mill,
+what we learned in each week's games, and notebooks for the busiest clubs.
+
 Coverage has consequences. How a club is written about builds up and fades
 over a few weeks, and it moves fan trust, sponsors' mood, players' morale and
 the leverage of an agent whose client the press is raving about; it makes CPU
