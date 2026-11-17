@@ -99,6 +99,21 @@ function prospectsOf(state: GameState) {
   return draftClass(state.seed);
 }
 
+/** Next year's class: the underclassmen who play this fall and come out a year later. */
+export function nextClass(state: GameState) {
+  return draftClass(state.seed, COLLEGE_SEASON + 2);
+}
+
+/** A tracked college player: this year's prospects and next year's underclassmen. */
+export function collegePlayer(state: GameState, id: string): Prospect | undefined {
+  return prospectsOf(state).byId[id] ?? nextClass(state).byId[id];
+}
+
+/** How far an underclassman is from his final college season (production points, engine only). */
+function youthGap(h: { overall: number; potential: number }): number {
+  return 3 + Math.max(0, h.potential - h.overall) * 0.3;
+}
+
 /** Starts the college universe for a save. */
 export function newCollege(state: GameState): CollegeState {
   const dc = prospectsOf(state);
@@ -414,17 +429,19 @@ function healthy(state: GameState, id: string, date: string): boolean {
 function prospectLines(state: GameState, rng: Rng, g: CollegeGame, us: Side, them: Side, edge: number): void {
   const c = state.college!;
   const dc = prospectsOf(state);
-  const ids = (dc.bySchool[us.team] ?? []).filter((id) => healthy(state, id, g.date));
+  const nx = nextClass(state);
+  // This year's prospects and next year's: the underclassmen compete for the same jobs.
+  const ids = [...(dc.bySchool[us.team] ?? []), ...(nx.bySchool[us.team] ?? []).filter((id) => !dc.byId[id])].filter((id) => healthy(state, id, g.date));
   if (!ids.length) return;
-  const P = (id: string) => dc.byId[id];
-  const H = (id: string) => dc.hidden[id];
-  const lvl = (id: string) => (H(id).college - 70) / 10;
+  const P = (id: string) => dc.byId[id] ?? nx.byId[id];
+  const H = (id: string) => dc.hidden[id] ?? nx.hidden[id];
+  const lvl = (id: string) => (H(id).college - (dc.byId[id] ? 0 : youthGap(H(id))) - 70) / 10;
   const tr = (id: string, t: string) => ((H(id).traits[t] ?? H(id).overall) - H(id).overall) / 10;
   const out: Record<string, Record<string, number>> = {};
   const line = (id: string) => (out[id] ??= {});
   const byPos = (pos: Position[]) => ids.filter((id) => pos.includes(P(id).position));
   const starterAt = (pos: Position) => {
-    const at = byPos([pos]).sort((a, b) => Number(P(b).starter) - Number(P(a).starter) || H(b).college - H(a).college);
+    const at = byPos([pos]).sort((a, b) => Number(P(b).starter) - Number(P(a).starter) || lvl(b) - lvl(a));
     return at[0];
   };
   const style = COLLEGE_TEAM[us.team].offense;
@@ -451,11 +468,11 @@ function prospectLines(state: GameState, rng: Rng, g: CollegeGame, us: Side, the
     }
   }
   // Backs.
-  const backs = byPos(["RB", "FB"]).sort((a, b) => H(b).college - H(a).college);
+  const backs = byPos(["RB", "FB"]).sort((a, b) => lvl(b) - lvl(a));
   const rushAtt = Math.max(15, Math.round(RUSH_ATT[style] + gaussian(rng) * 5 + (us.pts - them.pts) * 0.12));
   backs.forEach((id, i) => {
     const fb = P(id).position === "FB";
-    const share = fb ? 0.05 : i === 0 ? 0.48 : 0.26;
+    const share = fb ? 0.05 : i === 0 ? 0.48 : i === 1 ? 0.26 : 0.1;
     const car = Math.max(0, Math.round(rushAtt * share + gaussian(rng) * 2.5));
     const ypc = Math.max(1.5, 4.7 + lvl(id) * 0.6 + edge * 0.03 + tr(id, "vision") * 0.4 + gaussian(rng) * 1.3);
     const td = binomial(rng, us.rushTd, share * 1.15);
@@ -540,7 +557,7 @@ function prospectLines(state: GameState, rng: Rng, g: CollegeGame, us: Side, the
     if (!l) continue;
     const pos = P(id).position;
     (c.logs[id] ??= {})[g.id] = COLLEGE_STATS[pos].map((key) => Math.round(l[key] ?? 0));
-    c.hype[id] = Math.round((c.hype[id] + (performance(pos, l) - 1) * 0.35) * 10) / 10;
+    if (c.hype[id] !== undefined) c.hype[id] = Math.round((c.hype[id] + (performance(pos, l) - 1) * 0.35) * 10) / 10;
     const risk = 0.011 * Math.max(0.4, 1 + (75 - H(id).durability) / 25);
     if (rng() < risk) {
       const seasonEnding = rng() < 0.15;
@@ -713,7 +730,8 @@ function championship(state: GameState): void {
 export function prospectLog(state: GameState, id: string): CollegeLogRow[] {
   const c = state.college;
   if (!c) return [];
-  const p = prospectsOf(state).byId[id];
+  const p = collegePlayer(state, id);
+  if (!p) return [];
   const logs = c.logs[id] ?? {};
   return collegeGames(state)
     .filter((g) => (g.away === p.school || g.home === p.school) && c.results[g.id])
@@ -734,8 +752,9 @@ export function prospectLog(state: GameState, id: string): CollegeLogRow[] {
 
 /** Season totals for one prospect (empty if he hasn't played). */
 export function prospectTotals(state: GameState, id: string): Record<string, number> & { g: number } {
-  const p = prospectsOf(state).byId[id];
+  const p = collegePlayer(state, id);
   const out: Record<string, number> & { g: number } = { g: 0 };
+  if (!p) return out;
   for (const row of Object.values(state.college?.logs[id] ?? {})) {
     out.g++;
     COLLEGE_STATS[p.position].forEach((k, i) => {

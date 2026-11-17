@@ -463,7 +463,7 @@ export interface CfbProgram {
   strength: number;
   /** Engine only: the roster's talent, a rolling read of the last four recruiting classes. */
   talent: number;
-  /** Finished seasons: [season, wins, losses, final AP rank (0 unranked), conference title 0/1, playoff 0 out / 1 in / 2 quarterfinal / 3 semifinal / 4 final / 5 champion]. */
+  /** Finished seasons: [season, wins, losses, final AP rank (0 unranked), conference title 0/1, playoff 0 out / 1 in / 2 quarterfinal / 3 semifinal / 4 final / 5 champion, engine only: the head coach's development against the field that year, in tenths]. */
   seasons: number[][];
   /** The head coach (staff person id) of each finished season. */
   coaches: Record<number, string>;
@@ -505,6 +505,12 @@ export interface CfbWorld {
   log: CfbCoachMove[];
   /** Bumped on every change the draft classes read (signings, transfers, development). */
   rev: number;
+  /** Tracked players' finished college seasons: [season, school, position, games, totals in the position's stat order]. */
+  careers?: Record<string, (string | number)[][]>;
+  /** Transfers that have taken effect, by draft year: player, new school. */
+  transfers?: Record<number, Record<string, string>>;
+  /** This offseason's transfer portal: player, [old school, new school, date]; they move at the rollover. */
+  portal?: Record<string, [string, string, string]>;
 }
 
 // ---- Saved game ----
@@ -1412,6 +1418,8 @@ export interface MediaState {
   asked: Record<string, string>;
   /** Facts handed over today by other systems, written up by the media at the end of the day. */
   queue?: MediaFactInput[];
+  /** College football news for the story engine's college desk (cfbmedia.ts), written up at the end of the day. */
+  cfbq?: { kind: string; value: number; slots: Record<string, unknown>; tags: Record<string, boolean> }[];
   /** The people who cover the league and their reports. */
   corps?: PressCorps;
   /** Leaks and agents' accounts waiting for a reporter. */

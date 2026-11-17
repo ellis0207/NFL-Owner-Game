@@ -10,14 +10,16 @@
 //
 // What the owner sees is what anyone could: records, final ranks, titles,
 // recruiting class ranks and the coaching changes.
-import { collegeRecords, conferenceChampions, latestPoll } from "./college";
+import { AP_PRESEASON, COLLEGE_STATS, collegePlayer, collegeRecords, conferenceChampions, latestPoll, nextClass, prospectTotals } from "./college";
 import { COLLEGE_TEAMS } from "./collegeData";
 import { bindWorld } from "./prospects";
 import { catchUpRecruiting, recruitingDaily } from "./recruiting";
-import { cfbCoachesDaily, ensureCollegeCoaches, gameDay, headCoach } from "./cfbcoaches";
+import { cfbCoachesDaily, developer, ensureCollegeCoaches, gameDay, headCoach } from "./cfbcoaches";
+import { portalDaily, portalRollover } from "./portal";
+import { cfbFact, schoolSlots } from "./cfbmedia";
 import { RULES } from "./league";
 import { gaussian, rngFor } from "./rng";
-import type { CfbProgram, GameState } from "./types";
+import type { CfbProgram, CfbWorld, GameState, Position } from "./types";
 
 /** The 2026 field's average and spread (teams.json). */
 const MEAN = COLLEGE_TEAMS.reduce((s, t) => s + t.strength, 0) / COLLEGE_TEAMS.length;
@@ -49,7 +51,22 @@ export function bindCfb(state: GameState): void {
     bindWorld(state.seed, null);
     return;
   }
-  bindWorld(state.seed, { ref: w, rev: w.rev, get signed() { return Object.assign({}, ...Object.values(w.signed)); } });
+  const any = COLLEGE_TEAMS.some((t) => w.programs[t.id].seasons.length);
+  bindWorld(state.seed, {
+    ref: w, rev: w.rev,
+    // Transfers win over where a player first signed.
+    get signed() { return Object.assign({}, ...Object.values(w.signed), ...Object.values(w.transfers ?? {})); },
+    dev: any ? (school, from, to) => development(w, school, from, to) : undefined,
+  });
+}
+
+/** Engine only: overall points a school's coaching added from season `from` through `to` (each season about a third of a point per spread of teaching). */
+export function development(w: CfbWorld, school: string, from: number, to: number): number {
+  const p = w.programs[school];
+  if (!p) return 0;
+  let d = 0;
+  for (const r of p.seasons) if (r[0] >= from && r[0] <= to && r[6] !== undefined) d += (r[6] / 10) * 0.07;
+  return d;
 }
 
 /** Engine only: a program's strength this season. */
@@ -62,7 +79,34 @@ export function cfbDaily(state: GameState): void {
   bindCfb(state);
   cfbCoachesDaily(state);
   recruitingDaily(state);
+  portalDaily(state);
+  if (state.date === AP_PRESEASON) programStories(state);
   bindCfb(state);
+}
+
+/** The preseason poll's newcomers and dropouts: a few programs on the way up and a few on the way down. */
+function programStories(state: GameState): void {
+  const w = state.cfb!;
+  const ap = state.college?.ap[0];
+  if (!ap) return;
+  const rise: [string, number][] = [];
+  const fall: [string, number][] = [];
+  for (const t of COLLEGE_TEAMS) {
+    const last = w.programs[t.id].seasons.at(-1);
+    if (!last) continue;
+    const now = ap.ranks.indexOf(t.id) + 1;
+    // Ranked now after an unranked year, or out of the poll after a top-15 finish.
+    if (now && now <= 20 && !last[3]) rise.push([t.id, 21 - now]);
+    else if (!now && last[3] && last[3] <= 15) fall.push([t.id, 16 - last[3]]);
+  }
+  const pick = (xs: [string, number][], tag: "rise" | "fall") => {
+    for (const [id, x] of xs.sort((a, b) => b[1] - a[1]).slice(0, 3)) {
+      const last = w.programs[id].seasons.at(-1)!;
+      cfbFact(state, "program", 35 + x * 1.5, { S: schoolSlots(state, id), last: `${last[1]}-${last[2]}`, rank: ap.ranks.indexOf(id) + 1 }, { [tag]: true });
+    }
+  };
+  pick(rise, "rise");
+  pick(fall, "fall");
 }
 
 // ---- The rollover ----
@@ -82,17 +126,56 @@ export function closeCfbSeason(state: GameState): void {
     if (lvl) for (const t of [g.away, g.home]) round[t] = Math.max(round[t] ?? 0, lvl);
   }
   if (c.champion) round[c.champion] = 5;
+  // How each staff taught this year, against the field.
+  const teach = Object.fromEntries(COLLEGE_TEAMS.map((t) => [t.id, developer(headCoach(state, t.id))]));
+  const avg = Object.values(teach).reduce((a, b) => a + b, 0) / COLLEGE_TEAMS.length;
   for (const t of COLLEGE_TEAMS) {
     const p = w.programs[t.id];
     if (p.seasons.some((r) => r[0] === c.season)) continue;
     const r = recs[t.id];
     const rank = ap ? ap.ranks.indexOf(t.id) + 1 : 0;
-    p.seasons.push([c.season, r.w, r.l, rank, champs.has(t.id) ? 1 : 0, round[t.id] ?? 0]);
+    p.seasons.push([c.season, r.w, r.l, rank, champs.has(t.id) ? 1 : 0, round[t.id] ?? 0, Math.round((teach[t.id] - avg) * 10)]);
     if (p.seasons.length > 40) p.seasons.shift();
     const hc = headCoach(state, t.id);
     if (hc) p.coaches[c.season] = hc.id;
     for (const y of Object.keys(p.coaches)) if (Number(y) < c.season - 40) delete p.coaches[Number(y)];
   }
+  archiveCareers(state);
+  w.rev++;
+}
+
+/**
+ * The season's stat lines go into each player's college career: next year's class and the
+ * underclassmen who went back, plus this year's prospects who were drafted (their pro pages show it).
+ */
+function archiveCareers(state: GameState): void {
+  const w = state.cfb!;
+  const c = state.college!;
+  const careers = (w.careers ??= {});
+  const next = nextClass(state);
+  const back = new Set(state.draft?.returned ?? []);
+  for (const id of Object.keys(c.logs)) {
+    const p = collegePlayer(state, id);
+    if (!p) continue;
+    if (!next.byId[id] && !back.has(id) && !state.players[id]) continue;
+    const t = prospectTotals(state, id);
+    if (!t.g) continue;
+    const rows = (careers[id] ??= []);
+    if (rows.some((r) => r[0] === c.season)) continue;
+    rows.push([c.season, p.school, p.position, t.g, ...COLLEGE_STATS[p.position].map((k) => t[k] ?? 0)]);
+  }
+  // Careers of players long gone from college.
+  for (const [id, rows] of Object.entries(careers)) if (Number(rows[rows.length - 1][0]) < c.season - 6) delete careers[id];
+}
+
+/** A player's finished college seasons, oldest first. */
+export function collegeCareer(state: GameState, id: string): { season: number; school: string; position: Position; line: Record<string, number> & { g: number } }[] {
+  return (state.cfb?.careers?.[id] ?? []).map((r) => {
+    const position = r[2] as Position;
+    const line: Record<string, number> & { g: number } = { g: Number(r[3]) };
+    COLLEGE_STATS[position]?.forEach((k, i) => { line[k] = Number(r[4 + i]); });
+    return { season: Number(r[0]), school: String(r[1]), position, line };
+  });
 }
 
 function rescale(xs: Record<string, number>): Record<string, number> {
@@ -134,6 +217,7 @@ export function cfbRollover(state: GameState): void {
   }
   // Classes old enough to be drafted are done with college.
   for (const y of Object.keys(w.signed)) if (Number(y) < season - 6) delete w.signed[Number(y)];
+  portalRollover(state);
   w.rev++;
   bindCfb(state);
 }

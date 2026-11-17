@@ -7,7 +7,9 @@ import { DEPTHS, onScoutList, scoutPlayer, scoutReport, unscoutPlayer } from "..
 import type { GameState, ScoutDepth } from "../engine/types";
 import { mockSpot, selectionOf } from "../engine/draft";
 import { teamLabel } from "../engine/league";
-import { COLLEGE_SEASON } from "../engine/college";
+import { COLLEGE_SEASON, collegePlayer } from "../engine/college";
+import { collegeCareer } from "../engine/cfbworld";
+import { coachName } from "../engine/cfbcoaches";
 import { height } from "./format";
 import { canVisit, canWorkOut, inviteVisit, INTERVIEWS, preDraftNotes, privateWorkout, toggleInterview, VISITS, WORKOUTS } from "../engine/visits";
 import { COMBINE_DATE } from "../engine/draft";
@@ -17,9 +19,15 @@ import { enrollYear } from "../engine/prospects";
 
 export function ProspectPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
   const ui = useUi();
-  const p = draftClass(game.seed).byId[id];
-  const r0 = p ? recruitingProfile(game.seed, id, p.classYear, COLLEGE_SEASON + 1) : null;
-  const recruit = r0 && p ? { ...r0, year: enrollYear(p.classYear, COLLEGE_SEASON + 1) } : null;
+  // Next year's underclassmen are tracked too, and the portal follows the class after that.
+  const draftYear = [1, 2, 3].map((k) => COLLEGE_SEASON + k).find((y) => draftClass(game.seed, y).byId[id]) ?? COLLEGE_SEASON + 1;
+  const p = collegePlayer(game, id) ?? draftClass(game.seed, draftYear).byId[id];
+  const r0 = p ? recruitingProfile(game.seed, id, p.classYear, draftYear) : null;
+  const recruit = r0 && p ? { ...r0, year: enrollYear(p.classYear, draftYear) } : null;
+  const career = collegeCareer(game, id);
+  // Only this year's draft class can be scouted, interviewed and worked out.
+  const now = draftYear === COLLEGE_SEASON + 1;
+  const move = game.cfb?.portal?.[id];
   const report = scoutReport(game, id);
   const log = prospectLog(game, id);
   const totals = prospectTotals(game, id);
@@ -61,11 +69,14 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           <span className="jersey" style={{ marginLeft: "auto" }}>{p.jersey}</span>
         </header>
         <dl className="kv">
-          <dt>Class</dt><dd>{CLASS_LABEL[p.classYear]}{p.classYear === "JR" || p.classYear === "RS SO" || p.classYear === "RS JR" ? " (has to declare for the draft)" : ""}</dd>
+          {now
+            ? <><dt>Class</dt><dd>{CLASS_LABEL[p.classYear]}{p.classYear === "JR" || p.classYear === "RS SO" || p.classYear === "RS JR" ? " (has to declare for the draft)" : ""}</dd></>
+            : <><dt>Draft</dt><dd>Eligible for the {draftYear} draft</dd></>}
           <dt>Age</dt><dd>{prospectAge(p, game.date)}</dd>
           <dt>Listed</dt><dd>{height(p.heightIn)}, {p.weightLb} lb</dd>
           <dt>Hometown state</dt><dd>{p.hometown}</dd>
           {recruit && <><dt>Recruited</dt><dd>{"★".repeat(recruit.stars)} · No. {recruit.rank} in the class of {recruit.year}</dd></>}
+          {move && move[1] && move[1] !== "+" && move[1] !== move[0] && move[2] <= game.date && <><dt>Transfer</dt><dd>To <button className="link" onClick={() => ui.openSchool(move[1])}>{schoolName(move[1])}</button> next season</dd></>}
           <dt>Media big board</dt><dd>{mediaRank(game, id) <= 300 ? `No. ${mediaRank(game, id)}` : "Not ranked"}</dd>
           <dt>Role</dt><dd>{p.starter ? "Starter" : "Backup"}</dd>
           {hurt && <><dt>Injury</dt><dd className="bad">{hurt}</dd></>}
@@ -99,7 +110,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           </section>
         )}
 
-        <section className="panel stack tight">
+        {now && <section className="panel stack tight">
           <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
             <h3 style={{ margin: 0 }}>Our scouting report</h3>
             <span className="muted">{report.level}</span>
@@ -125,9 +136,9 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
             ))}
             {listed && <button className="btn small" onClick={() => { unscoutPlayer(game, id); changed(); }}>Take off the list</button>}
           </div>
-        </section>
+        </section>}
 
-        {!picked && !udfa && (game.date < COMBINE_DATE ? !!game.college : true) && (
+        {now && !picked && !udfa && (game.date < COMBINE_DATE ? !!game.college : true) && (
           <section className="panel stack tight">
             <h3 style={{ margin: 0 }}>Pre-draft work</h3>
             {notes.map((n) => (
@@ -188,7 +199,27 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
             </div>
           </section>
         )}
-        <p className="muted">{rankedName(game, p.school)} is {school.coach}'s team ({school.city}, {school.state}).</p>
+        {career.length > 0 && (
+          <section className="stack tight">
+            <h3>College career</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Season</th><th>School</th><th className="num">G</th>{keys.map((k) => <th key={k} className="num">{STAT_LABEL[k]}</th>)}</tr></thead>
+                <tbody>
+                  {career.map((r) => (
+                    <tr key={r.season}>
+                      <td>{r.season}</td>
+                      <td className="name"><button className="link" onClick={() => ui.openSchool(r.school)}>{schoolName(r.school)}</button></td>
+                      <td className="num">{r.line.g}</td>
+                      {keys.map((k) => <td key={k} className="num">{(r.line[k] ?? 0).toLocaleString("en-US")}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+        <p className="muted">{rankedName(game, p.school)} is {coachName(game, p.school)}'s team ({school.city}, {school.state}).</p>
       </aside>
     </div>
   );

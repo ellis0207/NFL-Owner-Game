@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { COLLEGE_TEAM, COLLEGE_TEAMS, CONFERENCE_IDS, CONFERENCES, conferenceName, schoolName } from "../../engine/collegeData";
 import { shortDate } from "../../engine/dates";
 import { activeClass, classRanking, earlySigningDay, recruitPool, signingDay } from "../../engine/recruiting";
+import { portalMoves } from "../../engine/portal";
 import { coachName, headCoach, recentMoves, seatHeat, tenureRows } from "../../engine/cfbcoaches";
 import type { CollegeConference, GameState, Position } from "../../engine/types";
 import { height } from "../format";
@@ -27,7 +28,7 @@ export function Recruiting({ game }: { game: GameState }) {
   const now = activeClass(game.date);
   const years = [now, now - 1].filter((y) => game.cfb?.classes[y]);
   const [year, setYear] = useState(now);
-  const [view, setView] = useState<"players" | "teams">("players");
+  const [view, setView] = useState<"players" | "teams" | "portal">("players");
   const cls = game.cfb?.classes[year];
   if (!game.cfb || !cls) return <p className="muted">Recruiting starts when the college world does.</p>;
   const pool = recruitPool(game.seed, year);
@@ -38,6 +39,7 @@ export function Recruiting({ game }: { game: GameState }) {
         <div className="tabs" role="group" aria-label="Recruiting view">
           <button aria-pressed={view === "players"} onClick={() => setView("players")}>Top recruits</button>
           <button aria-pressed={view === "teams"} onClick={() => setView("teams")}>Team rankings</button>
+          <button aria-pressed={view === "portal"} onClick={() => setView("portal")}>Transfer portal</button>
         </div>
         {years.length > 1 && (
           <select value={year} onChange={(e) => setYear(Number(e.target.value))} aria-label="Class">
@@ -51,7 +53,7 @@ export function Recruiting({ game }: { game: GameState }) {
           : `Class of ${year}: ${committed.toLocaleString("en-US")} of the top ${pool.recruits.length.toLocaleString("en-US")} have committed. Early signing period ${shortDate(earlySigningDay(year))}, National Signing Day ${shortDate(signingDay(year))}.`}
         {" "}Stars and ranks are the recruiting services' composite: a read on high school players, often wrong.
       </p>
-      {view === "players" ? <Recruits game={game} year={year} /> : <ClassRanks game={game} year={year} />}
+      {view === "players" ? <Recruits game={game} year={year} /> : view === "teams" ? <ClassRanks game={game} year={year} /> : <Portal game={game} />}
     </div>
   );
 }
@@ -121,6 +123,33 @@ function ClassRanks({ game, year }: { game: GameState; year: number }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function Portal({ game }: { game: GameState }) {
+  const ui = useUi();
+  const moves = portalMoves(game).filter((m) => m.date <= game.date);
+  if (!moves.length) return <p className="muted">The portal opens for three weeks after the conference title games and for ten days in April. Players we track who enter show up here.</p>;
+  return (
+    <div className="stack tight">
+      <p className="muted">Draft prospects for the next two years who entered the portal. A transfer plays for his new school from next season.</p>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Entered</th><th>Player</th><th>Pos</th><th>From</th><th>To</th></tr></thead>
+          <tbody>
+            {moves.map((m) => (
+              <tr key={m.id}>
+                <td>{shortDate(m.date)}</td>
+                <td className="name"><button className="link" onClick={() => ui.openProspect(m.id)}>{m.name}</button></td>
+                <td>{m.position}</td>
+                <td><School id={m.from} /></td>
+                <td>{!m.to ? <span className="muted">Looking</span> : m.to === m.from ? <span className="muted">Stayed</span> : <School id={m.to} />}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

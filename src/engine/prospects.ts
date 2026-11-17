@@ -153,7 +153,13 @@ const raw = new Map<string, DraftClass>();
  * What the save's college world says about future classes (cfbworld.ts): the school each recruit
  * signed with in this save. Bound per seed, like the returners.
  */
-interface WorldView { ref: object; rev: number; signed: Record<string, string> }
+interface WorldView {
+  ref: object;
+  rev: number;
+  signed: Record<string, string>;
+  /** Engine only: what a school's coaches added to a player's development from his first fall through `to`. */
+  dev?: (school: string, from: number, to: number) => number;
+}
 const worlds = new Map<number, WorldView>();
 
 export function bindWorld(seed: number, view: WorldView | null): void {
@@ -164,8 +170,8 @@ export function bindWorld(seed: number, view: WorldView | null): void {
   } else {
     if (before && before.ref === view.ref && before.rev === view.rev) return;
     const signed = view.signed;
-    worlds.set(seed, { ref: view.ref, rev: view.rev, signed });
-    if (Object.keys(signed).length === 0 && (!before || Object.keys(before.signed).length === 0)) return;
+    worlds.set(seed, { ref: view.ref, rev: view.rev, signed, dev: view.dev });
+    if (!view.dev && !before?.dev && Object.keys(signed).length === 0 && (!before || Object.keys(before.signed).length === 0)) return;
   }
   for (const k of [...cache.keys()]) if (k.startsWith(`${seed}:`)) cache.delete(k);
 }
@@ -199,7 +205,7 @@ export function draftClass(seed: number, year = RULES.season + 1): DraftClass {
   const hit = cache.get(key);
   if (hit) return hit;
   const dc = generate(seed, year);
-  applyWorld(dc, worlds.get(seed));
+  applyWorld(dc, worlds.get(seed), year);
   const back = carries.get(`${seed}:${year - 1}`);
   if (back?.length) addReturners(dc, draftClass(seed, year - 1), back, seed, year);
   if (cache.size > 8) cache.clear();
@@ -337,8 +343,13 @@ function depthCharts(dc: DraftClass): void {
   dc.bySchool = bySchool;
 }
 
-/** Recruits who signed somewhere in this save play there. */
-function applyWorld(dc: DraftClass, w: WorldView | undefined): void {
+/**
+ * Recruits who signed somewhere in this save (or transferred) play there, and the seasons they spent
+ * with a program's coaches in this save show in what they become: a little better under good teachers,
+ * a little worse under poor ones. Only seasons finished before the class's last fall count, so a class
+ * is settled by the time anyone scouts it.
+ */
+function applyWorld(dc: DraftClass, w: WorldView | undefined, year: number): void {
   if (!w) return;
   let moved = false;
   for (const p of dc.prospects) {
@@ -347,8 +358,19 @@ function applyWorld(dc: DraftClass, w: WorldView | undefined): void {
       p.school = school;
       moved = true;
     }
+    const d = w.dev ? w.dev(p.school, enrollYear(p.classYear, year), year - 2) : 0;
+    if (Math.abs(d) < 0.5) continue;
+    const h = dc.hidden[p.id];
+    const step = Math.round(d);
+    h.overall = Math.round(clamp(h.overall + step, 38, 94));
+    h.potential = Math.max(h.overall, Math.round(h.potential + d * 0.5));
+    for (const k of Object.keys(h.traits)) h.traits[k] = Math.round(clamp(h.traits[k] + step, 25, 99));
+    h.college += step * 0.75;
+    h.value = 0.65 * h.overall + 0.35 * h.potential;
   }
   if (moved) depthCharts(dc);
+  const values = dc.prospects.map((p) => dc.hidden[p.id].value).sort((a, b) => b - a);
+  dc.roundCuts = [32, 64, 100, 138, 176, 216, 257].map((r) => values[r - 1]);
 }
 
 function pickSchool(rng: Rng, teams: CollegeTeam[], rank: number): CollegeTeam {
