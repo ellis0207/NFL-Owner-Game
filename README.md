@@ -26,7 +26,12 @@ Each sidebar group is a room with its own look: the owner's desk, the film
 room, the cap office, the draft war room, the boardroom, the stadium and the
 game manual. Every page opens under a header picture of its room, rendered in
 Blender, with the room's own type and colors; your club's colors stay the
-accent everywhere, and the date header is a stadium board.
+accent everywhere, and the date header is a stadium board. Today reads as a
+morning brief, the Inbox as a mail tray, Standings as a wall of division
+boards, and Owners shows each vote as a 32-seat chamber. In the film room
+the Roster opens as a depth-chart board (defense, the line of scrimmage,
+offense, specialists), with the full table a tap away and the choice
+remembered; the game plan sits on Game week beside the practice plan.
 
 Business > Grounds draws the stadium from above: the seating bowl by section,
 the club's land, its lots and garages, the independent lots nearby and how fans
@@ -672,7 +677,7 @@ turned each game (with a film note on why). The Analytics page has team and
 player EPA, adjusted for opponents, and an analytics department you staff
 and point at a research focus. Its fourth-down advice changes calls only when
 the head coach takes it; credibility grows when advice works. Every club
-builds a weekly game plan from the opponent's numbers (better coaches,
+builds a weekly game plan from the opponent's numbers, shown on Game week (better coaches,
 analysts and a full week make better plans), coordinators adjust at
 halftime, and the league's play calling drifts toward what worked last
 season. The Outlook tab explains the record (point margin, close games,

@@ -10,3 +10,166 @@
   --room-title-weight: 600;
   --room-title-spacing: 0.02em;
 }
+
+/* Chalk and slate shared by the band and the board, in both themes: the
+   slate is a dark object on the page, like the scoreboard. */
+[data-room="team"] {
+  --tm-slate: #15241d;
+  --tm-chalk: #e9f0ea;
+  --tm-chalk-dim: #a9bdb0;
+  --tm-field: color-mix(in srgb, var(--panel) 93%, #2f8f55);
+  --tm-yard: color-mix(in srgb, var(--rule) 70%, #2f8f55);
+  --tm-press: var(--tm-slate);
+}
+/* On a dark page the slate disappears, so a pressed tab takes the field green. */
+:root[data-theme="dark"] [data-room="team"] { --tm-press: #2a7a4a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [data-room="team"] { --tm-press: #2a7a4a; } }
+
+/* The chalkboard header band: a panel's first heading becomes a strip of
+   slate across its top, chalk lettering with a faint smudge. */
+[data-room="team"] .panel > h3:first-child {
+  margin: -1.1rem -1.2rem 0.35rem;
+  padding: 0.55rem 1.2rem 0.5rem;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background:
+    radial-gradient(120% 140% at 12% 0%, rgba(255, 255, 255, 0.07), transparent 60%),
+    var(--tm-slate);
+  color: var(--tm-chalk);
+  font-family: var(--font-broadcast);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--room-accent);
+}
+[data-room="team"] h2 {
+  font-family: var(--font-broadcast);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+[data-room="team"] .tabs button[aria-pressed="true"] {
+  background: var(--tm-press);
+  color: var(--tm-chalk);
+  border-color: var(--tm-press);
+}
+[data-room="team"] thead th { border-bottom: 2px solid color-mix(in srgb, var(--room-accent) 60%, var(--rule)); }
+
+/* Game week: the plan the coaches drew up, under a chalk rule. */
+.tm-plan > h2 { margin: 0; padding-bottom: 0.3rem; border-bottom: 2px dashed color-mix(in srgb, var(--room-accent) 55%, transparent); }
+
+/* ---- Roster: the depth-chart board ---- */
+.tm-viewbar { justify-content: flex-end; }
+.tm-board {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--tm-yard) calc(10% - 1px) 10%),
+    var(--tm-field);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.tm-unit { display: grid; gap: 0.4rem; min-width: 0; }
+.tm-unit-label {
+  font-family: var(--font-broadcast);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.tm-grid { display: grid; gap: 0.6rem; min-width: 0; }
+.tm-defense { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.tm-offense {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-areas: "wr ot og c te" "wr qb rb fb te";
+}
+.tm-special { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 60%; }
+.tm-offense .tm-slot-wr { grid-area: wr; }
+.tm-offense .tm-slot-ot { grid-area: ot; }
+.tm-offense .tm-slot-og { grid-area: og; }
+.tm-offense .tm-slot-c { grid-area: c; }
+.tm-offense .tm-slot-te { grid-area: te; }
+.tm-offense .tm-slot-qb { grid-area: qb; }
+.tm-offense .tm-slot-rb { grid-area: rb; }
+.tm-offense .tm-slot-fb { grid-area: fb; }
+.tm-los {
+  position: relative;
+  height: 1.2rem;
+  border-top: 2px dashed var(--room-accent);
+  margin-top: 0.5rem;
+}
+.tm-los span {
+  position: absolute;
+  top: -0.65rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 0.6rem;
+  background: var(--tm-field);
+  font-family: var(--font-broadcast);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--room-accent);
+}
+.tm-slot {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 0;
+  align-self: start;
+}
+.tm-slot-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--tm-slate);
+  color: var(--tm-chalk);
+}
+.tm-pos { font-family: var(--font-broadcast); font-weight: 600; font-size: 1rem; letter-spacing: 0.05em; }
+.tm-pos-name { font-size: 0.72rem; color: var(--tm-chalk-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-depth { list-style: none; margin: 0; padding: 0.25rem 0; }
+.tm-depth li {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.tm-depth li .pill { grid-column: 2 / -1; justify-self: start; }
+.tm-depth li.tm-starter { color: var(--ink); font-weight: 600; }
+.tm-depth li.tm-starter .tm-rank { color: var(--room-accent); }
+.tm-depth li.tm-cut .tm-name { text-decoration: line-through; opacity: 0.65; }
+.tm-rank { font-family: var(--font-mono, monospace); font-size: 0.72rem; color: var(--muted); text-align: right; }
+.tm-name {
+  all: unset;
+  cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-name:hover, .tm-name:focus-visible { text-decoration: underline; }
+.tm-name:focus-visible { outline: 2px solid var(--team); outline-offset: 1px; }
+.tm-jersey { display: inline-block; min-width: 1.5rem; font-family: var(--font-broadcast); color: var(--muted); font-weight: 500; }
+.tm-grade { grid-column: 2; font-size: 0.7rem; line-height: 1.2; color: var(--muted); font-weight: 400; padding-left: 1.5rem; }
+.tm-empty { display: block; padding: 0.4rem 0.6rem; font-size: 0.85rem; }
+.tm-off-chart {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88rem;
+}
+@media (max-width: 1100px) {
+  .tm-defense, .tm-offense, .tm-special {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    grid-template-areas: none;
+    max-width: none;
+  }
+  .tm-offense .tm-slot { grid-area: auto; }
+}

@@ -1,20 +1,25 @@
 import { useState } from "react";
 import { addAdv, emptyAdv, perPlay } from "../../engine/analytics";
 import { shortDate } from "../../engine/dates";
-import { PLAYER_BY_ID, SCHEDULE, TEAM_BY_ID } from "../../engine/league";
+import { PLAYER_BY_ID, TEAM_BY_ID } from "../../engine/league";
 import { attribution, teamOutlook } from "../../engine/outlook";
-import { matchup } from "../../engine/standings";
 import {
-  adjustedEpa, analytics, ANALYTICS_LEVELS, buyIn, buyInWord, credibilityWord, gamePlan, leaders, leagueTrend, PRIORITIES,
+  adjustedEpa, analytics, ANALYTICS_LEVELS, buyIn, buyInWord, credibilityWord, leaders, leagueTrend, PRIORITIES,
   seasonAdv, setAnalyticsLevel, setPriority, type Priority,
 } from "../../engine/strategy";
 import type { GameState } from "../../engine/types";
 import { AnalyticsStaffTab, AssessmentsTab } from "./AnalyticsLab";
+import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
-const TABS = ["Team", "Players", "Assessments", "Game plan", "Department", "Analysts", "Outlook", "Trends"] as const;
-type Tab = (typeof TABS)[number];
+type Tab = "Team" | "Players" | "Assessments" | "Outlook" | "Department" | "Analysts" | "Trends";
+// Our own numbers first, then the department that produces them. The game plan
+// lives on the Game week page, next to the practice plan it feeds.
+const GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: "Our team", tabs: ["Team", "Players", "Assessments", "Outlook"] },
+  { label: "Department", tabs: ["Department", "Analysts", "Trends"] },
+];
 
 const f2 = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(2);
 const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -23,15 +28,10 @@ export function AnalyticsScreen({ game, changed }: { game: GameState; changed: (
   const [tab, setTab] = useState<Tab>("Team");
   return (
     <section className="stack">
-      <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <div className="tabs" role="group" aria-label="Analytics">
-          {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
-        </div>
-      </div>
+      <GroupedTabs label="Analytics" groups={GROUPS} value={tab} onChange={setTab} />
       {tab === "Team" && <TeamTab game={game} />}
       {tab === "Players" && <PlayersTab game={game} />}
       {tab === "Assessments" && <AssessmentsTab game={game} />}
-      {tab === "Game plan" && <PlanTab game={game} />}
       {tab === "Department" && <DepartmentTab game={game} changed={changed} />}
       {tab === "Analysts" && <AnalyticsStaffTab game={game} changed={changed} />}
       {tab === "Outlook" && <OutlookTab game={game} />}
@@ -115,46 +115,6 @@ function PlayersTab({ game }: { game: GameState }) {
   );
 }
 
-function nextGame(game: GameState) {
-  for (const g of SCHEDULE) {
-    if (g.date < game.date || game.results[g.id] || g.type === "PRE") continue;
-    const m = matchup(game, g);
-    if (m && (m.away === game.userTeam || m.home === game.userTeam)) return { g, opp: m.away === game.userTeam ? m.home : m.away };
-  }
-  return null;
-}
-
-function PlanTab({ game }: { game: GameState }) {
-  const a = analytics(game);
-  const next = nextGame(game);
-  const plan = next ? gamePlan(game, game.userTeam, next.opp, next.g) : null;
-  const past = Object.values(a.plans).filter((p) => game.results[p.gameId]).reverse().slice(0, 6);
-  return (
-    <div className="stack">
-      {plan && next && (
-        <div className="panel stack tight">
-          <h3>Next: {TEAM_BY_ID[next.opp].name}, {shortDate(next.g.date)}</h3>
-          {plan.notes.map((n, i) => <span key={i}>{n}</span>)}
-          <span className="muted">The coaches make the plan; you see it, you don't call it. Better coaches, a stronger analytics staff and a full week make better plans.</span>
-        </div>
-      )}
-      {!plan && <p className="muted">No game coming up.</p>}
-      <div className="panel stack tight">
-        <h3>Fourth downs this season</h3>
-        <span>{a.advice.advised} calls where the analysts disagreed with the coach's first instinct; the coach took the advice {a.advice.followed} times. Ignored advice cost about {a.advice.lost.toFixed(1)} expected points.</span>
-      </div>
-      {past.map((p) => (
-        <div key={p.gameId} className="panel stack tight">
-          <h3>Last {past.length > 1 ? "games" : "game"}: vs {TEAM_BY_ID[p.opp].name}</h3>
-          <span>{p.attack === "run" ? "Attacked with the run." : "Attacked through the air."} {p.stop === "pass" ? "Took away the pass." : "Stopped the run first."}</span>
-          {p.adjust.map((t, i) => <span key={i} className="muted">{t}</span>)}
-          {p.fourth.map(([adv, coach, ok, ev], i) => <span key={i}>Fourth down: the analysts said {adv}; {ok ? "the coach agreed" : `the coach chose to ${coach} (about ${ev.toFixed(2)} expected points given up)`}.</span>)}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function DepartmentTab({ game, changed }: { game: GameState; changed: () => void }) {
   const a = analytics(game);
   const b = buyIn(game);
@@ -183,7 +143,7 @@ function DepartmentTab({ game, changed }: { game: GameState; changed: () => void
             <dt>The analysts</dt><dd>{a.level ? credibilityWord(a.credibility) : "No department"}</dd>
             <dt>The head coach</dt><dd>{buyInWord(b)}</dd>
           </dl>
-          <span className="muted">Trust grows when advice is taken and works. Coaches can disagree for good reasons; the Game plan tab shows both sides.</span>
+          <span className="muted">Trust grows when advice is taken and works. Coaches can disagree for good reasons; the game plan on Game week shows both sides.</span>
         </div>
         <div className="panel stack tight">
           <h3>Is it paying off?</h3>
