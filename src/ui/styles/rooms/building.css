@@ -1,0 +1,12 @@
+/* The capologist's office: ledger green-gray, money green, red for dead
+   money. Pages: Contracts, Cap, Free agents, Trades. */
+[data-room="building"] {
+  --room-base: #0c1712;
+  --room-accent: #2b7d52;
+  --room-glint: #8fd7a8;
+  --room-hue: #5f8f74;
+  --room-font: var(--font-display);
+  --room-title-case: uppercase;
+  --room-title-weight: 700;
+  --room-title-spacing: 0.015em;
+}

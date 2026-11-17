@@ -19,7 +19,6 @@ export function LeagueScreen({ game }: { game: GameState }) {
   const shown = groups.find((g) => g.key === key)!;
   return (
     <section className="stack">
-      <h2>League scoreboard</h2>
       <div className="tabs" role="group" aria-label="Week">
         {groups.map((g) => <button key={g.key} aria-pressed={g.key === key} onClick={() => setKey(g.key)}>{g.label}</button>)}
       </div>

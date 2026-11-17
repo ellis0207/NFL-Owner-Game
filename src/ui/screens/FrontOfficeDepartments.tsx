@@ -56,7 +56,7 @@ export function Departments({ game, changed }: { game: GameState; changed: () =>
       <div className="split">
         <div className="panel stack tight">
           <h3>Core systems</h3>
-          <table>
+          <div className="table-wrap"><table>
             <thead><tr><th>System</th><th className="num">In since</th><th className="num">Life</th><th></th></tr></thead>
             <tbody>
               {Object.entries(SYSTEMS).map(([k, sys]) => {
@@ -72,7 +72,7 @@ export function Departments({ game, changed }: { game: GameState; changed: () =>
                 );
               })}
             </tbody>
-          </table>
+          </table></div>
           <span className="muted">Chance of a serious attack this quarter, by the staff's estimate: about {Math.round(cyberRisk(game) * 1000) / 10}%.</span>
         </div>
         <div className="panel stack tight">

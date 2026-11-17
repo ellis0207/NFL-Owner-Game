@@ -25,7 +25,6 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
 
   return (
     <section className="stack">
-      <h2>Salary cap</h2>
       {off && <p className="notice">Real salary cap rules are off in this game. Figures are shown for reference only.</p>}
       <div className="split">
         <div className="panel stack">

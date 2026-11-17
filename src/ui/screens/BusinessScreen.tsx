@@ -50,7 +50,6 @@ export function BusinessScreen({ game, changed }: { game: GameState; changed: ()
   const [tab, setTab] = useState<Tab>(() => initialTab("Business", TABS, offers ? "Stadium" : "Overview"));
   return (
     <section className="stack">
-      <h2>Business</h2>
       <GroupedTabs label="Business" groups={GROUPS} value={tab} onChange={setTab}
         note={(t) => t === "Stadium" && offers ? ` (${offers})` : t === "Sponsors" && deals ? ` (${deals})` : ""} />
       {tab === "New stadium" && <NewStadium game={game} changed={changed} />}

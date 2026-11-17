@@ -21,7 +21,6 @@ export function LegalScreen({ game, changed }: { game: GameState; changed: () =>
   const say = (t: string | null) => { setSaid(t); changed(); };
   return (
     <section className="stack">
-      <h2>Compliance and legal</h2>
       <div className="tabs" role="group" aria-label="View">
         <button aria-pressed={tab === "compliance"} onClick={() => setTab("compliance")}>Compliance</button>
         <button aria-pressed={tab === "crisis"} onClick={() => setTab("crisis")}>Crises</button>

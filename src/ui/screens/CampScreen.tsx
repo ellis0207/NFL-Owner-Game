@@ -56,7 +56,6 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
 
   return (
     <section className="stack">
-      <h2>Camp</h2>
       <p className="muted">
         {phase(game)}.{" "}
         {game.date < RULES.keyDates.otasStart && `OTAs open ${shortDate(RULES.keyDates.otasStart)} and minicamp ${shortDate(RULES.keyDates.minicampStart)}. `}

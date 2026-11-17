@@ -116,14 +116,32 @@ to `GameLog.who` and `PlayRow[15]` (`"offSet.defSet.call"`, via `Recorder.stage`
 never touch the game's rng. Variety comes from `frac(row, k)`, not `Math.random`. Art in `assets/anim/` (Vite
 `publicDir`, so it is served and built as `anim/`) comes from `pipeline/anim/*.py` (Blender via `pip install bpy`:
 `render_sprites.py`, `pack_atlas.py`, `export_plays.py`); rerun them only when the art changes, and republish with
-the `anim/` files in the artifact's files map. `tests/anim.test.ts`; `npx vite-node tests/anim-report.ts [games]
+the `anim/` and `art/` files in the artifact's files map. `tests/anim.test.ts`; `npx vite-node tests/anim-report.ts [games]
 [seed]` counts rows that fall back to the arrow (under 2%), players too fast and balls off the spot.
 
 UI: `src/ui/nav.ts` lists the pages by sidebar group (`NAV`, with `PAGE_HINT`
 for page search); `src/ui/GameShell.tsx` holds the sidebar and renders
-`src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `format.ts`,
+`src/ui/screens/<Name>Screen.tsx`; shared pieces are `ui.tsx`, `kit.tsx`
+(`StatTile`, `Card`, `Callout`, `EmptyState`, `Meter`), `format.ts`,
 `PlayerPanel.tsx`, `ContractTable.tsx`. A new screen is a file in `screens/`,
-a name in a `NAV` group plus a `PAGE_HINT` line, and one render line.
+a name in a `NAV` group plus a `PAGE_HINT` line, and one render line; its
+title comes from the `Masthead` (`PAGE_TITLE` when it differs from the page
+name), so a screen doesn't open with its own `h2`.
+
+Rooms: each sidebar group is a room (`ROOM` in nav.ts: desk, team, building,
+draft, office, league, game) with `data-room` on the page, its tokens
+(`--room-base`, `--room-accent`, `--room-glint`, `--room-hue`, `--room-font`)
+in `src/ui/styles/rooms/<room>.css`, and a header picture rendered in Blender
+(`pipeline/art`, `assets/art/<room>.webp`, served as `art/`). Styles are split
+in `src/ui/styles/`: `base.css` (tokens, shell, tables), `kit.css`,
+`masthead.css`, the room files, and `field.css`/`tips.css`/`app.css`/
+`hall.css`/`mediapages.css`. A room file defines only classes with its prefix
+(desk `dk-`, team `tm-`, building `rb-`, draft `wr-`, office `bd-`, league
+`lg-`, game `ut-`); `tests/styles.test.ts` fails when two files define the
+same class. `npx vite-node tests/ui-tour.ts <out> [save] [--quick]` (after
+`npm run build`) opens every page and top tab from a save in `tests/saves`,
+light/dark and desktop/phone, fails on errors or sideways scroll, and saves
+screenshots.
 
 ## Reading big files
 

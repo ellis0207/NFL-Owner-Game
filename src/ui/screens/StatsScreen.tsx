@@ -50,7 +50,6 @@ export function StatsScreen({ game }: { game: GameState }) {
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h2>Stats</h2>
         {past.length > 0 && (
           <label className="muted">Season{" "}
             <select value={year ?? ""} onChange={(e) => { const y = e.target.value ? Number(e.target.value) : null; setYear(y); if (y !== null && view === "league") setView("leaders"); }}>

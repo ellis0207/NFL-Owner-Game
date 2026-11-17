@@ -73,7 +73,6 @@ export function StaffScreen({ game, changed }: { game: GameState; changed: () =>
 
   return (
     <section className="stack">
-      <h2>Staff</h2>
       <div className="tabs" role="group" aria-label="View">
         <button aria-pressed={view === "ours"} onClick={() => setView("ours")}>Our staff</button>
         <button aria-pressed={view === "search"} onClick={() => setView("search")}>Searches{top.length ? ` (${top.length})` : ""}</button>

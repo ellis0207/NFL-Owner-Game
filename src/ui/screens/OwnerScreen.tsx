@@ -26,7 +26,6 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
   const weight = (g: OwnerGoal, v: number) => { setWeights(game, { ...o.weights, [g]: v }); changed(); };
   return (
     <section className="stack">
-      <h2>Owner's office</h2>
       <div className="tabs" role="group" aria-label="View">
         <button aria-pressed={tab === "overview"} onClick={() => setTab("overview")}>Overview</button>
         <button aria-pressed={tab === "money"} onClick={() => setTab("money")}>Money</button>

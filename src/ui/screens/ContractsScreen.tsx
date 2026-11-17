@@ -36,7 +36,6 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
 
   return (
     <section className="stack">
-      <h2>Contracts</h2>
       <div className="tabs" role="group" aria-label="View">
         {tabs.map(([k, label]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
       </div>

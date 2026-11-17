@@ -29,7 +29,6 @@ export function FreeAgentsScreen({ game, changed }: { game: GameState; changed: 
   const onWire = Object.keys(game.waivers ?? {}).length;
   return (
     <section className="stack">
-      <h2>Free agents</h2>
       <p className="muted">
         {counts.roster} of {rosterLimit(game)} roster spots used{counts.ps ? `, ${counts.ps} of ${RULES.rosterLimits.practiceSquad} on the practice squad` : ""}.
         {" "}We're {ordinal(order.indexOf(us) + 1)} in the waiver order.

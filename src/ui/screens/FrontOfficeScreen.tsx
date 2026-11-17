@@ -25,7 +25,6 @@ export function FrontOfficeScreen({ game, changed }: { game: GameState; changed:
   return (
     <section className="stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2>Front office</h2>
         <div className="tabs" role="group" aria-label="Front office">
           {TABS.map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}{t === "Memos" && memos ? ` (${memos})` : ""}</button>)}
         </div>

@@ -23,7 +23,6 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
   return (
     <section className="panel stack">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h2>Inbox</h2>
         <div className="btn-row">
           <button className="btn small" aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>{urgent ? "Newest first" : "Urgent first"}</button>
           <button className="btn small" onClick={markAll}>Mark all read</button>

@@ -30,7 +30,6 @@ export function TradesScreen({ game, changed, start }: { game: GameState; change
   const offers = trades(game).offers.filter((o) => o.status === "open").length;
   return (
     <section className="stack">
-      <h2>Trades</h2>
       <div className={`notice${w.open ? "" : " error"}`}>{w.text}</div>
       <div className="tabs" role="group" aria-label="View">
         {TABS.map(([k, label]) => (

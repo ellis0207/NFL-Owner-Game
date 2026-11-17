@@ -22,6 +22,12 @@ show what's waiting in them. The search box finds pages as well as people.
 On a phone the sidebar becomes a Menu button with the section's other pages
 under the date. Settings has a light, dark or device theme.
 
+Each sidebar group is a room with its own look: the owner's desk, the film
+room, the cap office, the draft war room, the boardroom, the stadium and the
+game manual. Every page opens under a header picture of its room, rendered in
+Blender, with the room's own type and colors; your club's colors stay the
+accent everywhere, and the date header is a stadium board.
+
 Business > Grounds draws the stadium from above: the seating bowl by section,
 the club's land, its lots and garages, the independent lots nearby and how fans
 arrive. It's the same model the gate uses. Parking pays only for cars in lots
@@ -1069,7 +1075,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, the stadium's grounds (seating sections, parking lots, transit, closures for work) `grounds.ts`, and offseason grades, fan expectations and storylines `review.ts`.
   Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
-- `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page). Hover cards: `tip.ts` (`tip(kind, ...)` marks an element), `tips.tsx` (each card, read from live state), `TipLayer.tsx` (hover, nested cards, long press, plain `title` text in the same style).
+- `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search, and names each group's room; `Masthead.tsx` is every page's header (room picture, title, hint) and the sidebar icons; `kit.tsx` holds shared tiles, cards, callouts and meters; styles are in `ui/styles/` (`base.css`, `masthead.css`, `kit.css`, one file per room in `rooms/`, and the field view, hover cards, Hall of Fame and media front pages in their own files). The room pictures in `assets/art/` come from the Blender scenes in `pipeline/art/` and ship beside the page as `art/`; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page). Hover cards: `tip.ts` (`tip(kind, ...)` marks an element), `tips.tsx` (each card, read from live state), `TipLayer.tsx` (hover, nested cards, long press, plain `title` text in the same style).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 
 ## College data

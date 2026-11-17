@@ -1,0 +1,12 @@
+/* The owner's desk early in the morning: warm walnut, paper, ink blue and a
+   red mark for what needs the owner. Pages: Today, Calendar, Inbox, Media. */
+[data-room="desk"] {
+  --room-base: #1f150d;
+  --room-accent: #b5452c;
+  --room-glint: #f0a07a;
+  --room-hue: #c79a5b;
+  --room-font: var(--font-warm);
+  --room-title-case: none;
+  --room-title-weight: 600;
+  --room-title-spacing: -0.005em;
+}

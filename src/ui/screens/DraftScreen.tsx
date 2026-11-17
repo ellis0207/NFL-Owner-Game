@@ -4,7 +4,7 @@ import { schoolName } from "../../engine/collegeData";
 import { shortDate } from "../../engine/dates";
 import {
   advancePick, advanceToEndOfDay, advanceToOurPick, CLOCK_MINUTES, setGmFrom, ourBoardValue, currentSlot, DAY_ROUNDS, dayDone, dayLabel, dayOfRound, draftCalls,
-  draftDayOf, DRAFT_DAYS, DRAFT_YEAR, draftPool, makePick, mockSpot, ourPicksLeft, prepareClock, slotAt, slotLabel, staffRecommendations,
+  draftDayOf, DRAFT_DAYS, draftPool, makePick, mockSpot, ourPicksLeft, prepareClock, slotAt, slotLabel, staffRecommendations,
 } from "../../engine/draft";
 import { teamLabel, TEAM_BY_ID } from "../../engine/league";
 import { draftClass } from "../../engine/prospects";
@@ -25,7 +25,6 @@ export function DraftScreen({ game, changed }: { game: GameState; changed: () =>
   const [tab, setTab] = useState<Tab>(live ? "room" : game.draft?.order ? "order" : "mocks");
   return (
     <section className="stack">
-      <h2>The {DRAFT_YEAR} NFL Draft</h2>
       <p className="muted">
         Three days at the end of April: the first round on Thursday, rounds two and three on Friday, rounds four through seven on Saturday.
         There's no clock: the draft moves only when you move it. Any pick of ours you skip, the GM makes.

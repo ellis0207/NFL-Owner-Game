@@ -259,7 +259,6 @@ const SECTIONS: { title: string; body: string[] }[] = [
 export function GuideScreen() {
   return (
     <section className="stack">
-      <h2>Owner's guide</h2>
       {SECTIONS.map((s) => (
         <details key={s.title} className="panel">
           <summary><strong>{s.title}</strong></summary>

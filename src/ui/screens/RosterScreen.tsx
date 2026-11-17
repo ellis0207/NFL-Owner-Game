@@ -65,7 +65,6 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
 
   return (
     <section className="stack">
-      <h2>Roster</h2>
       {beforeCutdown && (
         <div className="notice stack">
           <strong>Cutdown to 53 is due {shortDate(RULES.keyDates.rosterCutdown)}.</strong>

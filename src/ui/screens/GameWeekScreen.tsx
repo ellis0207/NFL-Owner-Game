@@ -27,7 +27,6 @@ export function GameWeekScreen({ game, changed }: { game: GameState; changed: ()
   const Name = ({ id }: { id: string }) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
   return (
     <section className="stack">
-      <h2>Game week</h2>
       <p className="muted">{g && opp ? `Next: ${m!.home === us ? "vs" : "at"} the ${TEAM_BY_ID[opp].name}, ${weekday(g.date)} ${shortDate(g.date)}.${rivalryWord(rivalryHeat(game, us, opp)) !== "Quiet" ? ` A ${rivalryWord(rivalryHeat(game, us, opp)).toLowerCase()} rivalry.` : ""}` : "No game in the next ten days."} Anyone signed or claimed on game day can't play until the next game.</p>
       <div className="panel stack tight">
         <h3>This week's practice plan</h3>

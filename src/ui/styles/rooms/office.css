@@ -1,0 +1,12 @@
+/* The boardroom at dusk: navy, brass and mahogany, serif headings. Pages:
+   Owner, Ownership, Front office, Business, Reports, Agreements, Legal. */
+[data-room="office"] {
+  --room-base: #0b1222;
+  --room-accent: #9c7a35;
+  --room-glint: #e2c27c;
+  --room-hue: #4d5f8c;
+  --room-font: var(--font-serif);
+  --room-title-case: none;
+  --room-title-weight: 600;
+  --room-title-spacing: -0.01em;
+}
