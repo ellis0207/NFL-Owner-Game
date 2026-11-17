@@ -11,6 +11,7 @@
 // Retirements are decided after the Super Bowl and announced over the next
 // weeks, mostly by older players, more often by those who are slipping or
 // have no contract. Free agents nobody signs by the spring mostly move on.
+import { noteRetirement } from "./media/narratives";
 import { FORMAT } from "./format";
 import { retirementLean } from "./playercare";
 import { addDeadMoney, adjustRollover, chargeYear, invalidateRosters, releaseCost } from "./cap";
@@ -232,6 +233,8 @@ export function retirePlayer(state: GameState, id: string, quiet = false): void 
   }
   const hist = state.history;
   if (hist) hist.retired[id] = RULES.season;
+  // The media decide whether the career earns a tribute.
+  noteRetirement(state, id);
   invalidateRosters(state);
   if (quiet) return;
   const age = ageOn(data.birthDate, state.date);

@@ -1250,6 +1250,13 @@ export interface Arc {
   ended?: string;
 }
 
+/** What the season narratives desk remembers: last week's award ladders, marks already written up, careers to pay tribute to. */
+export interface NarrState {
+  ladder: Record<string, string[]>;
+  marks: Record<string, string>;
+  retired: string[];
+}
+
 export interface ArcState {
   list: Arc[];
   next: number;
@@ -1355,6 +1362,8 @@ export interface MediaState {
   tips?: PressTip[];
   /** The storylines running around the league. */
   arcs?: ArcState;
+  /** The season narratives desk (media/narratives.ts). */
+  narr?: NarrState;
 }
 
 export interface TeamFinance {

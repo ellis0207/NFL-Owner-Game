@@ -6,6 +6,7 @@ import { campFact, seatFact, talkFacts } from "../src/engine/media/desks";
 import { TEAMS } from "../src/engine/league";
 import { RUMOR_CONTENT } from "../src/engine/media/content/rumors";
 import { ARC_CONTENT } from "../src/engine/media/content/arcs";
+import { SEASON_CONTENT } from "../src/engine/media/content/season";
 import { ARC_LABEL, ARCS, arcState } from "../src/engine/media/arcs";
 import { playerSlots, teamSlots } from "../src/engine/media/facts";
 import { corps, localStaff, outletOf } from "../src/engine/media/corps";
@@ -226,6 +227,45 @@ describe("the story engine", () => {
     expect(written).toBeGreaterThan(1000);
   });
 
+  it("writes every season narrative cleanly", async () => {
+    const state = await stateAt("DET", 7, "regularSeasonStart");
+    const ids = Object.keys(state.players).filter((id) => state.players[id].team === "CHI");
+    const flags = ["newLeader", "holds", "climber", "rookie", "late", "early", "final", "today", "eve", "buyer", "seller", "rise", "fall", "firstRound", "gone", "top10", "fromNowhere",
+      "round", "long", "fresh", "firstWasBest", "hasFirst", "close", "champion", "runnerUp", "playoffs", "beat", "fell", "bad", "good", "repeat", "legend", "oneTeam", "ring", "honored"];
+    let written = 0;
+    for (const [kind, c] of Object.entries(SEASON_CONTENT)) {
+      for (const [ours, on, trim] of [[false, false, false], [true, true, false], [false, true, true]] as const) {
+        const tags: Record<string, boolean> = { [kind]: true, ours };
+        if (on) for (const t of flags) tags[t] = true;
+        const slots: Fact["slots"] = {
+          T: teamSlots(state, "CHI"), X: teamSlots(state, "GB"), Y: teamSlots(state, "MIN"), P: playerSlots(state, ids[0]), Q: playerSlots(state, ids[1]), W: playerSlots(state, ids[2]),
+          D: { name: "Joe Smith", pos: "QB", school: "Ohio State" }, award: "Most Valuable Player", short: "MVP", week: 6, list: "1. A; 2. B", div: "NFC North", conf: "NFC",
+          line: "1. Lions (5-1)", left: 3, bubble: "Packers, Vikings", days: 3, buyers: "Lions, Eagles", sellers: "Jets, Giants", now: 12, was: 30, analyst: "Pat Doe", outlet: "The Ledger",
+          years: 5, headline: "Bears trade for a quarterback", then: "2021-11-17", title: "The seat license fight", year: 2016, pb: 4, size: 32, mark: "10,000", need: "120",
+          what: "rushing yards", holder: "Emmitt Smith", season: 2026, seasons: 12, ap: 1, rings: 1, from: 2014, to: 2026, clubs: 2,
+        };
+        // Optional people and clubs drop out in the trimmed pass.
+        if (trim) {
+          for (const k of ["Q", "W", "Y", "T"]) delete slots[k];
+          tags.newLeader = tags.climber = false;
+        }
+        const raw: Fact = { id: `t:${kind}:${ours}:${on}:${trim}`, type: `season.${kind}`, family: "season", kind: "trend", teams: trim ? [] : ["CHI"], players: [ids[0]], value: 60, ours, tags, slots };
+        const f = ours ? withUs(state, raw) : raw;
+        for (const angle of c.angles.filter((a) => a.id === "plain" || a.when(f.tags) > 0)) {
+          for (const format of c.formats.filter((x) => x !== "notebook" || f.ours)) {
+            const missing: string[] = [];
+            const d = writeStory(state, f, angle, format, FORMATS[format].outlets[0][0], rngFor(1, `${f.id}:${angle.id}:${format}`), missing);
+            const text = `${d.headline} ${d.body}`;
+            if (!trim || !["clinch", "eliminated", "playoffs", "deadline", "anniversary", "saga", "retro", "yearinreview", "milestone", "recordwatch"].includes(kind)) expect(missing, `${d.type}: ${text}`).toEqual([]);
+            expect(text, d.type).not.toMatch(/undefined|NaN|\[object|[{}<>[\]]/);
+            written++;
+          }
+        }
+      }
+    }
+    expect(written).toBeGreaterThan(300);
+  });
+
   it("runs storylines through a season: they open, move and end, and get written up", async () => {
     const state = await stateAt("DET", 7);
     const list = arcState(state).list;
@@ -234,6 +274,9 @@ describe("the story engine", () => {
     expect(list.some((a) => a.ending && a.beats.length >= 2)).toBe(true);
     expect(list.some((a) => a.kind === "question")).toBe(true);
     expect(mediaState(state).stories.filter((s) => s.type?.startsWith("arc.")).length).toBeGreaterThan(20);
+    // The calendar's stories: ladders, the playoff picture, the deadline, retrospectives and more.
+    const season = new Set(mediaState(state).stories.filter((s) => s.type?.startsWith("season.")).map((s) => s.type!.split("/")[0]));
+    for (const k of ["award", "playoffs", "retro"]) expect(season.has(`season.${k}`), [...season].join(",")).toBe(true);
   });
 
   it("files the day's coverage with story types, every game gets a story, and other systems can hand over facts", async () => {

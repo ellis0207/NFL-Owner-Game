@@ -89,7 +89,7 @@ export const NFL_CAREER: Record<string, [number, string, string]> = {
 };
 
 /** Round numbers the league notices along the way. */
-const MILESTONES: Record<string, number[]> = {
+export const MILESTONES: Record<string, number[]> = {
   passYds: [30000, 40000, 50000, 60000, 70000, 80000],
   passTd: [200, 300, 400, 500, 600],
   rushYds: [8000, 10000, 12000, 14000, 16000],

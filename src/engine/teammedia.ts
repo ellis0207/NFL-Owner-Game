@@ -312,26 +312,11 @@ export function searchArchive(state: GameState, q: string): { date: string; outl
   return teamMedia(state).archive.filter((x) => words.every((w) => x.headline.toLowerCase().includes(w))).slice(0, 100);
 }
 
-/** A story that will come back each year for a while: a rename, seat licenses, a scandal. */
+/** A story that will come back each year for a while: a rename, seat licenses, a scandal. The anniversary desk (media/narratives.ts) retells it. */
 export function startSaga(state: GameState, key: string, title: string, years: number): void {
   const t = teamMedia(state);
   if (t.sagas.some((s) => s.key === key)) return;
   t.sagas.push({ key, title, start: state.date, until: RULES.season + years, told: [] });
-}
-
-function retell(state: GameState): void {
-  const t = teamMedia(state);
-  for (const s of t.sagas) {
-    if (RULES.season > s.until || s.told.includes(RULES.season)) continue;
-    if (state.date.slice(5) !== s.start.slice(5) || state.date === s.start) continue;
-    s.told.push(RULES.season);
-    const years = Number(state.date.slice(0, 4)) - Number(s.start.slice(0, 4));
-    addStory(state, {
-      outlet: "beat", by: beatWriters(state)[0], kind: "owner", teams: [state.userTeam],
-      headline: `${years} year${years === 1 ? "" : "s"} later: ${s.title}`,
-      body: `It still comes up on the radio and in the stands. ${years >= 3 ? "Time has softened some of it." : "For a lot of fans it's still fresh."}`,
-    });
-  }
 }
 
 export function teamMediaDaily(state: GameState): void {
@@ -340,7 +325,6 @@ export function teamMediaDaily(state: GameState): void {
   if (wd === 1) weekly(state);
   const K = RULES.keyDates;
   if (wd === 3 && state.date >= K.regularSeasonStart && state.date <= K.regularSeasonEnd) notebook(state);
-  retell(state);
   // The streaming market moves a little each year, and with it what the next TV deals look like.
   if (state.date === addDays(K.superBowl, 3)) {
     const rng = rngFor(state.seed, `streaming:${RULES.season}`);
