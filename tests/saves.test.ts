@@ -9,6 +9,7 @@ import { capSummary } from "../src/engine/cap";
 import { RULES, TEAM_BY_ID } from "../src/engine/league";
 import { advanceDay } from "../src/engine/season";
 import { compress, decompress, parseSaveFile } from "../src/save/codec";
+import { headCoach } from "../src/engine/cfbcoaches";
 
 // Saves written by earlier versions of the game (made with the code of the
 // pull request in the name, and gzipped). Every version has been published,
@@ -402,6 +403,22 @@ describe("saves from older versions", () => {
     for (let i = 0; i < 8; i++) advanceDay(state);
     expect(Object.keys(state.pbp ?? {}).length).toBeGreaterThan(0);
   }, 90_000);
+
+  it("a save made during the college coaching carousel keeps its searches and recruiting; older saves start the college world", () => {
+    const state = load("pr89-2026-12-08");
+    const open = Object.keys(state.cfb!.openings).length;
+    expect(open).toBeGreaterThan(0);
+    // Open jobs stay open until their searches end.
+    for (const t of Object.keys(state.cfb!.openings)) expect(headCoach(state, t)).toBeUndefined();
+    const commits = Object.keys(state.cfb!.classes[2027].commits).length;
+    for (let i = 0; i < 20; i++) advanceDay(state);
+    expect(Object.keys(state.cfb!.openings).length).toBeLessThan(open);
+    expect(Object.keys(state.cfb!.classes[2027].commits).length).toBeGreaterThanOrEqual(commits);
+    const old = load("pr54-2026-10-10");
+    expect(old.cfb!.classes[2027]).toBeDefined();
+    expect(Object.keys(old.cfb!.classes[2027].commits).length).toBeGreaterThan(300);
+    for (let i = 0; i < 3; i++) advanceDay(old);
+  }, 120_000);
 
   it("a save from when the game ended with the draft moves on to the next season", () => {
     const state = load("pr12-2027-05-02");

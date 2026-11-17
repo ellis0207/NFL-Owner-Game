@@ -91,6 +91,7 @@ import { tradesDaily } from "./trades";
 import { mediaDaily } from "./media";
 import { pressDaily } from "./press";
 import { collegeDaily, newCollege } from "./college";
+import { cfbDaily, ensureCfb } from "./cfbworld";
 import { scoutingDaily } from "./scouting";
 import { treasuryDaily } from "./treasury";
 import { investorsDaily } from "./investors";
@@ -167,6 +168,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
   bindBrand(state);
   ensurePositionCoaches(state);
   state.college = newCollege(state);
+  ensureCfb(state);
   business(state);
   debt(state);
   books(state);
@@ -567,6 +569,7 @@ export function advanceDay(state: GameState): void {
   visitsDaily(state);
   proDayDaily(state);
   collegeDaily(state);
+  cfbDaily(state);
   scoutingDaily(state);
   scoutOpsDaily(state);
   if (weekday(date) === "Tuesday" && !offseason && date > KEY.rosterCutdown) {

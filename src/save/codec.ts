@@ -6,6 +6,7 @@ import { bindBrand } from "../engine/merch";
 import { clearPathway, restorePathway } from "../engine/global";
 import { ensurePositionCoaches } from "../engine/positionCoaches";
 import { ensureCollege } from "../engine/college";
+import { ensureCfb } from "../engine/cfbworld";
 import { clearDraftees, DRAFT_OVER, ensureDraft } from "../engine/draft";
 import { ensureBusiness } from "../engine/business";
 import { ensureBooks } from "../engine/books";
@@ -99,6 +100,8 @@ export function migrate(state: GameState): GameState {
   }
   // Saves from before the college universe get the season played up to today.
   ensureCollege(state);
+  // Saves from before the living college world start it today: programs as of 2026, this year's recruiting so far.
+  ensureCfb(state);
   // The draft calendar (mocks, declarations, combine, order, comp picks), and this save's draftees.
   ensureDraft(state);
   // Credited seasons and career stats, for the draftees too.

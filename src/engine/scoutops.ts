@@ -165,7 +165,7 @@ export function adjustedProduction(state: GameState, id: string): { games: numbe
   let opp = 0;
   for (const g of log) {
     const s = score(g.line);
-    const strength = COLLEGE_TEAM[g.opp]?.strength ?? 50;
+    const strength = state.cfb?.programs[g.opp]?.strength ?? COLLEGE_TEAM[g.opp]?.strength ?? 50;
     const w = Math.max(0.6, Math.min(1.5, 1 + (strength - 60) / 50));
     raw += s;
     adj += s * w;

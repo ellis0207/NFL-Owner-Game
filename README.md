@@ -174,6 +174,25 @@ The only players are the 2027 NFL draft prospects (about 640, generated for
 each save), and each has season totals and a game log. Award watch lists turn
 into semifinalists, finalists and winners on the real award calendar.
 
+The college world carries from season to season. Each year's high school
+class (about 1,300 recruits) is ranked by the recruiting services with stars
+and composite ratings, and its players commit through the summer visits, the
+season and the December early signing period, with the rest signing on
+National Signing Day in February. Recruits pick programs by brand, how good the
+team is now, the head coach, distance from home and how crowded their position
+is; a few flip, more when the coach who recruited them is fired. The services'
+read is often wrong: about 60% of five-stars are drafted, and half of every
+draft class was a three-star. The future draft prospects are in those classes
+and play where they signed. Programs rise and fall with their classes and
+their coaches, and the field is kept on the same scale every year so the sport
+never inflates. Every program has a head coach; the bigger the brand, the
+shorter the leash. Firings come the week after rivalry weekend (a few in
+October), searches run through December, and a coach who wins at a smaller
+school is the first call when a bigger job opens. NFL teams still hire college
+coaches, and that school starts a search. College > Recruiting, Programs and
+Coaching changes show the classes, each program's recent seasons and class
+ranks, the hot seat and the carousel.
+
 Scouting is how the owner learns who those prospects are. Each week the owner
 points up to six assignments at a region, a conference, a school, positions, a
 college system, or specific players, at one of three depths: film study,
@@ -1006,6 +1025,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   Executives and searches are `executives.ts`, decision rights and the audit trail `delegation.ts`, and memos, meetings, tasks, incidents and reviews `memos.ts`; culture rules and relationships are `culture.ts` and the monthly workplace (disputes, complaints, resignations, leaks, readings) `workplace.ts`.
   The locker room (character, chemistry, leaders, mentors, coach trust, roles, marketability, personal leave) is `clubhouse.ts`; practice load, the strength staff, development plans and position changes `training.ts`; diagnoses, rehab, medical clearance, protocol reviews and injury insurance `medical.ts`.
   Practice reports, the practice plan, the emergency list and game-day eligibility are `gameweek.ts`; the scouting staff and its leans `scouts.ts`; per-game and workout bonuses, the rookie escalator and the cash floor `bonuses.ts`.
+  The living college world (programs, the rollover, binding recruits to the draft classes) is `cfbworld.ts`, high school recruiting `recruiting.ts`, and college head coaches and their carousel `cfbcoaches.ts`.
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
@@ -1033,7 +1053,10 @@ teams with 2026 conferences and head coaches (Wikipedia's current-coaches list,
 October 2026), campus locations, college schemes (hand-entered for most
 programs), NFL facility locations for travel costs, the real bowl and CFP dates,
 and the generated regular-season schedule. Program strength is our own read and
-stays hidden. Check a season with `npx vite-node tests/college-report.ts [seed]`.
+stays hidden; it is the 2026 starting point, and programs move from there.
+Check a season with `npx vite-node tests/college-report.ts [seed]`, and how
+programs, recruiting and the carousel move over several seasons with
+`npx vite-node tests/cfb-report.ts [seasons] [seed]`.
 
 ## League data
 

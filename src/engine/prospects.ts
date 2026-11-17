@@ -89,7 +89,7 @@ export const POSITION_TRAITS: Record<Position, string[]> = {
 };
 
 // Share of the class at each position, close to recent drafts.
-const POSITION_SHARE: [Position, number][] = [
+export const POSITION_SHARE: [Position, number][] = [
   ["QB", 0.05], ["RB", 0.065], ["FB", 0.006], ["WR", 0.13], ["TE", 0.06], ["OT", 0.08], ["OG", 0.07], ["C", 0.035],
   ["EDGE", 0.1], ["IDL", 0.09], ["LB", 0.08], ["CB", 0.12], ["S", 0.08], ["K", 0.012], ["P", 0.012], ["LS", 0.004],
 ];
@@ -115,7 +115,7 @@ const MEDICAL = [
   "Wrist surgery after the {2} season",
 ];
 
-const HOMETOWN_STATES = ["TX", "FL", "GA", "CA", "AL", "LA", "OH", "PA", "NC", "SC", "MS", "TN", "VA", "MD", "NJ", "MI", "IL", "AZ", "WA", "OK", "KY", "MO", "IN", "NY", "UT", "HI"];
+export const HOMETOWN_STATES = ["TX", "FL", "GA", "CA", "AL", "LA", "OH", "PA", "NC", "SC", "MS", "TN", "VA", "MD", "NJ", "MI", "IL", "AZ", "WA", "OK", "KY", "MO", "IN", "NY", "UT", "HI"];
 
 function pick<T>(rng: Rng, xs: T[]): T {
   return xs[Math.floor(rng() * xs.length)];
@@ -147,6 +147,40 @@ function interp(points: [number, number][], x: number): number {
 }
 
 const cache = new Map<string, DraftClass>();
+const raw = new Map<string, DraftClass>();
+
+/**
+ * What the save's college world says about future classes (cfbworld.ts): the school each recruit
+ * signed with in this save. Bound per seed, like the returners.
+ */
+interface WorldView { ref: object; rev: number; signed: Record<string, string> }
+const worlds = new Map<number, WorldView>();
+
+export function bindWorld(seed: number, view: WorldView | null): void {
+  const before = worlds.get(seed);
+  if (!view) {
+    if (!before) return;
+    worlds.delete(seed);
+  } else {
+    if (before && before.ref === view.ref && before.rev === view.rev) return;
+    const signed = view.signed;
+    worlds.set(seed, { ref: view.ref, rev: view.rev, signed });
+    if (Object.keys(signed).length === 0 && (!before || Object.keys(before.signed).length === 0)) return;
+  }
+  for (const k of [...cache.keys()]) if (k.startsWith(`${seed}:`)) cache.delete(k);
+}
+
+/** A class as the generator made it, before any save's recruiting (recruiting.ts reads it for the high school pool). */
+export function rawClass(seed: number, year: number): DraftClass {
+  const key = `${seed}:${year}`;
+  let dc = raw.get(key);
+  if (!dc) {
+    dc = generate(seed, year);
+    if (raw.size > 12) raw.clear();
+    raw.set(key, dc);
+  }
+  return dc;
+}
 /** Underclassmen from each class who went back to school, by seed and draft year (set by the save). */
 const carries = new Map<string, string[]>();
 
@@ -165,6 +199,7 @@ export function draftClass(seed: number, year = RULES.season + 1): DraftClass {
   const hit = cache.get(key);
   if (hit) return hit;
   const dc = generate(seed, year);
+  applyWorld(dc, worlds.get(seed));
   const back = carries.get(`${seed}:${year - 1}`);
   if (back?.length) addReturners(dc, draftClass(seed, year - 1), back, seed, year);
   if (cache.size > 8) cache.clear();
@@ -276,21 +311,44 @@ function generate(seed: number, year: number): DraftClass {
       starter: true,
     });
   }
-  // One starter per school at QB and K/P; a second running back shares the load.
-  const bySchool: Record<string, string[]> = {};
-  for (const p of prospects) (bySchool[p.school] ??= []).push(p.id);
-  for (const ids of Object.values(bySchool)) {
-    for (const pos of ["QB", "K", "P", "LS"] as Position[]) {
-      const at = ids.filter((id) => prospects.find((p) => p.id === id)!.position === pos);
-      at.sort((a, b) => hidden[b].college - hidden[a].college);
-      for (const id of at.slice(1)) prospects.find((p) => p.id === id)!.starter = false;
-    }
-  }
   const values = prospects.map((p) => hidden[p.id].value).sort((a, b) => b - a);
   const roundCuts = [32, 64, 100, 138, 176, 216, 257].map((r) => values[r - 1]);
   const byId = Object.fromEntries(prospects.map((p) => [p.id, p]));
   const index = Object.fromEntries(prospects.map((p, i) => [p.id, i]));
-  return { prospects, byId, hidden, index, roundCuts, bySchool };
+  const dc: DraftClass = { prospects, byId, hidden, index, roundCuts, bySchool: {} };
+  depthCharts(dc);
+  return dc;
+}
+
+/** One starter per school at QB and K/P; a second running back shares the load. */
+function depthCharts(dc: DraftClass): void {
+  const bySchool: Record<string, string[]> = {};
+  for (const p of dc.prospects) {
+    p.starter = true;
+    (bySchool[p.school] ??= []).push(p.id);
+  }
+  for (const ids of Object.values(bySchool)) {
+    for (const pos of ["QB", "K", "P", "LS"] as Position[]) {
+      const at = ids.filter((id) => dc.byId[id].position === pos);
+      at.sort((a, b) => dc.hidden[b].college - dc.hidden[a].college);
+      for (const id of at.slice(1)) dc.byId[id].starter = false;
+    }
+  }
+  dc.bySchool = bySchool;
+}
+
+/** Recruits who signed somewhere in this save play there. */
+function applyWorld(dc: DraftClass, w: WorldView | undefined): void {
+  if (!w) return;
+  let moved = false;
+  for (const p of dc.prospects) {
+    const school = w.signed[p.id];
+    if (school && school !== p.school) {
+      p.school = school;
+      moved = true;
+    }
+  }
+  if (moved) depthCharts(dc);
 }
 
 function pickSchool(rng: Rng, teams: CollegeTeam[], rank: number): CollegeTeam {
@@ -318,3 +376,8 @@ export function prospectAge(p: Prospect, iso: string): number {
 export const CLASS_LABEL: Record<ClassYear, string> = {
   SR: "Senior", "RS SR": "Redshirt senior", JR: "Junior", "RS JR": "Redshirt junior", "RS SO": "Redshirt sophomore",
 };
+
+/** The fall a prospect started college, from his class in his draft year. */
+export function enrollYear(classYear: ClassYear, draftYear: number): number {
+  return draftYear - ({ JR: 3, "RS SO": 3, SR: 4, "RS JR": 4, "RS SR": 5 } as const)[classYear];
+}
