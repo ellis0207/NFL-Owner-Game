@@ -16,8 +16,12 @@ const index = JSON.parse(readFileSync("assets/anim/sprites.json", "utf8"));
 let log: GameLog, players: never, report: AnimReport;
 beforeAll(() => {
   const s = newGame("DET", "Owner", { capRules: "real" } as never, 7);
-  const g = SCHEDULE.filter((x) => x.type === "REG")[0];
-  const out = simulateGame(s, g, g.away, g.home);
+  // The first game of the season that has a sack in it (nearly every game does).
+  let out = null as unknown as ReturnType<typeof simulateGame>;
+  for (const g of SCHEDULE.filter((x) => x.type === "REG").slice(0, 6)) {
+    out = simulateGame(s, g, g.away, g.home);
+    if (out.log.plays.some((p) => / sacked by /.test(p[7]))) break;
+  }
   log = out.log; players = out.box.players as never;
   report = animReport(6, 11);
 });

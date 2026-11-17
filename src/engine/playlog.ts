@@ -68,6 +68,8 @@ export class Recorder {
   plays: PlayRow[] = [];
   drives: DriveRow[] = [];
   queue: PlayRow[] = [];
+  /** The score when the first line was queued behind the play: the play's own row shows the score it made, not a kickoff return touchdown that followed it. */
+  queuedAt: [number, number] | null = null;
   drive: OpenDrive | null = null;
   driveNo = 0;
   inPlay = false;
@@ -185,7 +187,8 @@ export class Recorder {
     if (this.text) {
       const p = this.pre;
       const epa = p.dn > 0 ? this.value(g) : undefined;
-      const row: PlayRow = [p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, g.t.away.score, g.t.home.score, this.look,
+      const [away, home] = this.queuedAt ?? [g.t.away.score, g.t.home.score];
+      const row: PlayRow = [p.q, p.c, p.o, p.dn, p.ds, p.y, p.dr, this.text + this.tail, this.flags, away, home, this.look,
         epa === undefined ? undefined : Math.round(epa * 100) / 100, this.wp(g), this.timeouts(g)];
       if (this.cast) row.push(`${this.cast}.${this.call}`);
       this.push(g, row);
@@ -196,6 +199,12 @@ export class Recorder {
       this.push(g, row);
     }
     this.queue = [];
+    this.queuedAt = null;
+  }
+
+  enqueue(g: LiveGame, row: PlayRow): void {
+    if (!this.queue.length) this.queuedAt = [g.t.away.score, g.t.home.score];
+    this.queue.push(row);
   }
 
   /** Timeouts each team has left, packed as away * 4 + home, for the scoreboard. */
@@ -262,7 +271,7 @@ export class Recorder {
   /** A line in the feed that isn't a play: halftime adjustments, timeouts. */
   note(g: LiveGame, text: string, flags = 0): void {
     const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), g.pos === "away" ? 0 : 1, 0, 0, g.ydl, this.driveNo, text, flags | PLAY_FLAGS.note, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
-    if (this.inPlay) this.queue.push(row);
+    if (this.inPlay) this.enqueue(g, row);
     else this.push(g, row);
   }
 
@@ -275,7 +284,7 @@ export class Recorder {
   /** A kick: written after the play it follows (a kickoff after a touchdown), or now. */
   kick(g: LiveGame, kicking: Side, text: string, flags = 0): PlayRow {
     const row: PlayRow = [g.q, Math.max(0, Math.round(g.clock)), kicking === "away" ? 0 : 1, 0, 0, 35, this.driveNo, text, flags | PLAY_FLAGS.kick, g.t.away.score, g.t.home.score, "", undefined, undefined, this.timeouts(g)];
-    if (this.inPlay) this.queue.push(row);
+    if (this.inPlay) this.enqueue(g, row);
     else this.push(g, row);
     return row;
   }

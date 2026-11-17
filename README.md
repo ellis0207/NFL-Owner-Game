@@ -42,7 +42,11 @@ Those numbers spread across players the way the real league's do: about 25
 receivers reach 1,000 yards and about 20 to 25 players reach 10 sacks in a
 season, the top target sees about a quarter of his team's looks, linemen
 rotate, and blitzing linebackers and defensive backs get their share of the
-sacks (`tests/stats-report.ts` checks this against the 2023-2025 seasons). Open-air games have weather
+sacks (`tests/stats-report.ts` checks this against the 2023-2025 seasons,
+down to whole leaderboards for 27 stats). A clear lead back is a workhorse
+while two close backs share the load, receivers and tight ends rotate so about
+fifteen players catch passes for a team, and coaches go for it on fourth and
+short about as often as today's do. Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
 cold and rain make the ball harder to hold, snow does both, and kicks carry in
 Denver. Domes and retractable roofs play indoors. Teams on a short week, on a

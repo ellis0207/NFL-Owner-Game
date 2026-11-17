@@ -6,10 +6,12 @@ import { PLAYER_BY_ID } from "../src/engine/league";
 import { advanceDay, isSeasonOver, newGame } from "../src/engine/season";
 import { seasonTotals } from "../src/engine/stats";
 import { STAT_RANGES, spreadMisses, statSpread, type SpreadKey } from "./statspread";
+import { METRICS, RANKS, curve, realLines } from "./realcurves";
 
 const n = Number(process.argv[2] ?? 2);
 const seed0 = Number(process.argv[3] ?? 1000);
 const all: Record<string, number[]> = {};
+const simCurves: Record<string, number[][]> = {};
 for (let s = 0; s < n; s++) {
   const t0 = Date.now();
   const state = newGame("DET", "Stats", { capRules: "real" }, seed0 + s);
@@ -17,6 +19,8 @@ for (let s = 0; s < n; s++) {
   const spread = statSpread(state);
   for (const [k, v] of Object.entries(spread)) (all[k] ??= []).push(v);
   const tot = Object.entries(seasonTotals(state, "REG"));
+  const simLines = tot.map(([, x]) => x.line as Record<string, number>);
+  for (const m of METRICS) (simCurves[m.key] ??= []).push(curve(simLines, m));
   const top = (key: string, k = 5) => tot.map(([id, x]) => [PLAYER_BY_ID[id]?.name ?? id, (x.line as Record<string, number>)[key] ?? 0] as const)
     .sort((a, b) => b[1] - a[1]).slice(0, k).map(([nm, v]) => `${nm} ${Math.round(v * 10) / 10}`).join(", ");
   // Share of each team's targets that went to its top target, and of its sacks to its top rusher.
@@ -51,6 +55,15 @@ for (let s = 0; s < n; s++) {
   for (const [, x] of tot) { const l = x.line as Record<string, number>; (byTeamTk[x.team] ??= []).push((l.tklSolo ?? 0) + (l.tklAst ?? 0)); }
   for (const v of Object.values(byTeamTk)) v.sort((a, b) => b - a).slice(0, 12).forEach((x, i) => (ranks[i] ??= []).push(x));
   console.log(`  tacklers by rank: ${ranks.map((r) => Math.round(r.reduce((a, b) => a + b, 0) / r.length)).join(" ")}`);
+  // Each team's share by rank (real 2024-25 targets .24 .18 .135 .11 .09 .067; carries .50 .23 .12 .07 .03 .02).
+  const shares = (key: string) => {
+    const byTeam: Record<string, number[]> = {};
+    for (const [, x] of tot) (byTeam[x.team] ??= []).push((x.line as Record<string, number>)[key] ?? 0);
+    const out = [0, 0, 0, 0, 0, 0];
+    for (const v of Object.values(byTeam)) { const sum = v.reduce((a, b) => a + b, 0) || 1; v.sort((a, b) => b - a).slice(0, 6).forEach((x, i) => (out[i] += x / sum / 32)); }
+    return out.map((x) => x.toFixed(2)).join(" ");
+  };
+  console.log(`  team shares by rank: targets ${shares("tgt")} | carries ${shares("car")}`);
   const miss = spreadMisses(spread);
   console.log(`  outside the real ranges: ${miss.length ? miss.join("; ") : "none"}`);
 }
@@ -59,4 +72,18 @@ for (const key of Object.keys(STAT_RANGES) as SpreadKey[]) {
   const v = all[key];
   const m = v.reduce((a, b) => a + b, 0) / v.length;
   console.log(`  ${key.padEnd(12)} ${m.toFixed(1).padStart(7)}  [${STAT_RANGES[key][0]}-${STAT_RANGES[key][1]}]  (${v.join(", ")})`);
+}
+
+// Whole leaderboards against the real league: the value at each rank.
+const r24 = realLines(2024);
+const r25 = realLines(2025);
+const fmt = (x: number) => (!Number.isFinite(x) ? "  -" : Math.abs(x) >= 100 ? x.toFixed(0) : x.toFixed(1)).padStart(6);
+console.log(`\nLeaderboards by rank (${RANKS.join(", ")}): real 2024 | real 2025 | simulated (mean)`);
+for (const m of METRICS) {
+  const sims = simCurves[m.key];
+  const mean = RANKS.map((_, i) => sims.reduce((a, c) => a + (Number.isFinite(c[i]) ? c[i] : 0), 0) / sims.length);
+  console.log(`  ${m.label}`);
+  console.log(`    real 24 ${curve(r24, m).map(fmt).join("")}`);
+  console.log(`    real 25 ${curve(r25, m).map(fmt).join("")}`);
+  console.log(`    sim     ${mean.map(fmt).join("")}`);
 }
