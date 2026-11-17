@@ -363,7 +363,7 @@ export function endArc(state: GameState, kind: string, key: string, ending: stri
 }
 
 /** Opens, moves and ends the league's storylines, and writes each step. */
-export function arcsDaily(state: GameState, facts: Fact[]): void {
+export function arcsDaily(state: GameState, facts: Fact[]): Fact[] {
   const s = arcState(state);
   const date = state.date;
   const table = standings(state);
@@ -415,6 +415,7 @@ export function arcsDaily(state: GameState, facts: Fact[]): void {
   if (facts2.length) fileFacts(state, facts2, 10);
   // Ended storylines stay on the tracker for a season.
   s.list = s.list.filter((a) => !a.ending || daysBetween(a.ended!, date) <= 365).slice(0, 200);
+  return facts2;
 }
 
 export function openArcs(state: GameState): Arc[] {

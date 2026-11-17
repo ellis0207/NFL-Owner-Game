@@ -245,6 +245,19 @@ twenty years on, milestone and record watches from career stats, a
 retrospective for every club when its season ends, the league's year in
 review, and tributes when a long or decorated career ends.
 
+The Huddle is the league's made-up social platform. Every club has its own fan
+accounts (the diehard, the homer, the doomer, the numbers guy, the casual fan,
+the old-timer, the rival troll and the draftnik) reacting to games and news;
+players post celebrations, signings, injuries, trash talk after rivalry wins
+and cryptic posts when a holdout or trade request is brewing; reporters break
+news first and clubs post the official word. Media > Huddle shows the feed,
+what's trending and each club's fan mood, and our fans' mood online moves fan
+trust and pressure a little every week. Columnists argue a running thesis
+about a club ("the Panthers are frauds") until the season proves them right
+or wrong, radio stations and the national podcast run down what people are
+talking about, outlets debate each other, mailbags answer questions from fans'
+own accounts, and Overreaction Monday runs early in the season.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each

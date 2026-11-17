@@ -319,7 +319,7 @@ function tributes(state: GameState, out: Fact[]): void {
 }
 
 /** The season's calendar stories for today. Runs after the day's own coverage. */
-export function narrativesDaily(state: GameState): void {
+export function narrativesDaily(state: GameState): Fact[] {
   const date = state.date;
   const out: Fact[] = [];
   const start = K().regularSeasonStart;
@@ -335,4 +335,5 @@ export function narrativesDaily(state: GameState): void {
   tributes(state, out);
   // Retrospective days carry a story for every club out of it.
   if (out.length) fileFacts(state, out, Math.max(14, out.length * 2));
+  return out;
 }

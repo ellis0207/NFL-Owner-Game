@@ -7,6 +7,7 @@ import { NATIONAL, relLabel, relOf } from "../../engine/outlets";
 import { corps, isLocal, outletOf, recordLine, working } from "../../engine/media/corps";
 import { expectLabel } from "../../engine/review";
 import { ARC_LABEL, arcStage, arcState } from "../../engine/media/arcs";
+import { sentiment, sentimentWord, trending } from "../../engine/media/social";
 import { gradePoints } from "../../engine/grades";
 import { TEAMS } from "../../engine/league";
 import { answerQuestion, openQuestions } from "../../engine/press";
@@ -16,7 +17,7 @@ import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
-const TABS = ["News", "Press room", "Storylines", "Outlets", "Reporters"] as const;
+const TABS = ["News", "Huddle", "Press room", "Storylines", "Outlets", "Reporters"] as const;
 type Tab = (typeof TABS)[number];
 
 const FILTERS = {
@@ -66,6 +67,7 @@ export function MediaScreen({ game, changed }: { game: GameState; changed: () =>
         </div>
       </div>
       {tab === "News" && <NewsFeed game={game} />}
+      {tab === "Huddle" && <Huddle game={game} />}
       {tab === "Press room" && <PressRoom game={game} changed={changed} />}
       {tab === "Storylines" && <Storylines game={game} />}
       {tab === "Outlets" && <Outlets game={game} />}
@@ -365,5 +367,51 @@ function ArcTracker({ game }: { game: GameState }) {
         </>
       )}
     </section>
+  );
+}
+
+const HUDDLE_FILTERS = { ours: "Our team", all: "Everyone", player: "Players", press: "Reporters" } as const;
+type HuddleFilter = keyof typeof HUDDLE_FILTERS;
+
+/** The Huddle, the league's social platform: the feed, what's trending and how each club's fans feel. */
+function Huddle({ game }: { game: GameState }) {
+  const [f, setF] = useState<HuddleFilter>("ours");
+  const us = game.userTeam;
+  const posts = (game.media?.social?.posts ?? []).filter((p) => f === "all" || (f === "ours" ? p.team === us : p.kind === f)).slice(0, 80);
+  const trend = game.media?.social ? trending(game) : [];
+  const moods = TEAMS.map((t) => ({ id: t.id, v: sentiment(game, t.id) })).sort((a, b) => b.v - a.v);
+  const ours = sentiment(game, us);
+  return (
+    <div className="split">
+      <section className="panel stack tight">
+        <div className="tabs" role="group" aria-label="Huddle filter">
+          {(Object.keys(HUDDLE_FILTERS) as HuddleFilter[]).map((k) => (
+            <button key={k} aria-pressed={f === k} onClick={() => setF(k)}>{HUDDLE_FILTERS[k]}</button>
+          ))}
+        </div>
+        {posts.length === 0 ? <span className="muted">Nothing posted yet.</span> : posts.map((p) => (
+          <div key={p.id} className="report">
+            <span><strong>{p.who}</strong>{p.kind === "press" && p.by ? <span className="muted"> · {p.by}</span> : null}{p.kind === "player" ? <span className="pill">Player</span> : p.kind === "club" ? <span className="pill">Club</span> : null}</span>
+            <span>{p.text}</span>
+            <span className="muted">{shortDate(p.date)}</span>
+          </div>
+        ))}
+      </section>
+      <div className="stack">
+        <section className="panel stack tight">
+          <h3>Trending</h3>
+          {trend.length === 0 ? <span className="muted">Nothing yet.</span> : <ol>{trend.map((t) => <li key={t.topic}>{t.topic} <span className="muted">{t.posts} posts</span></li>)}</ol>}
+        </section>
+        <section className="panel stack tight">
+          <h3>Fan mood</h3>
+          <span>{teamLabel(us)} fans are {sentimentWord(ours)} ({Math.round(ours)} of 100).</span>
+          <p className="muted">How fans feel online moves trust in the club and the pressure on it a little each week.</p>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Club</th><th>Mood</th></tr></thead>
+            <tbody>{moods.map((m) => <tr key={m.id}><td>{teamLabel(m.id)}{m.id === us && <span className="pill">Ours</span>}</td><td>{sentimentWord(m.v)} ({Math.round(m.v)})</td></tr>)}</tbody>
+          </table></div>
+        </section>
+      </div>
+    </div>
   );
 }

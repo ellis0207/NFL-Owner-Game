@@ -24,7 +24,6 @@ import { RULES, TEAM_BY_ID } from "./league";
 import { merchLift } from "./clubhouse";
 import { localStaff } from "./media/corps";
 import { addStory, changeRel, mediaState } from "./outlets";
-import { rivalryHeat } from "./records";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
 import { standings, winPct } from "./standings";
@@ -174,37 +173,7 @@ export function audienceLift(state: GameState): number {
 }
 
 // ---- Social ----
-
-const VOICES = [
-  { who: "@MotorCityLifer", kind: "diehard" }, { who: "@CapSheetCarl", kind: "numbers" }, { who: "@SundayFundayJen", kind: "casual" },
-  { who: "@RivalRoastBot", kind: "rival" }, { who: "@OldSchoolFootball", kind: "oldtimer" },
-];
-
-function react(state: GameState, g: ScheduledGame, r: GameResult): void {
-  const t = teamMedia(state);
-  const us = state.userTeam;
-  const ours = r.home === us ? r.homeScore : r.awayScore;
-  const theirs = r.home === us ? r.awayScore : r.homeScore;
-  const opp = r.home === us ? r.away : r.home;
-  const name = TEAM_BY_ID[us].name;
-  const won = ours > theirs;
-  const close = Math.abs(ours - theirs) <= 7;
-  const rival = rivalryHeat(state, us, opp) >= 3.5;
-  const rng = rngFor(state.seed, `social:${g.id}`);
-  const lines: Record<string, string[]> = {
-    diehard: won ? [`${rival ? "Beat them again. " : ""}This team is different. LET'S GO ${name.toUpperCase()}`, `Never doubted them for a second (I doubted them all week)`] : [`I can't keep doing this every Sunday`, `${ours}-${theirs}. Fire everyone. Not really. Maybe.`],
-    numbers: won ? [`Win probability says that one was ${close ? "a coin flip until the end" : "over by halftime"}. Good process.`] : [`The fourth-down decisions cost us. Run the numbers.`, `Turnover margin tells the story again.`],
-    casual: won ? [`Great day at the game with the kids!`, `Wings and a win, perfect Sunday`] : [`At least the tailgate was fun`, `Tough one. Same time next week.`],
-    rival: won ? [`Enjoy it, ${name} fans. It won't last.`] : [`Same old ${name}`, `${ours} points? lol`],
-    oldtimer: won ? [`Reminds me of the good teams. Run the ball, stop the run.`] : [`In my day they'd have run it on third and short.`],
-  };
-  const pick = VOICES.slice().sort(() => rng() - 0.5).slice(0, 3);
-  for (const v of pick) {
-    const options = lines[v.kind];
-    t.feed.unshift({ date: state.date, who: v.who, text: options[Math.floor(rng() * options.length)] });
-  }
-  t.feed.length = Math.min(t.feed.length, 30);
-}
+// Fans, players and reporters post on the Huddle (media/social.ts).
 
 /** Our games on national TV in prime time, Thanksgiving and Christmas: the league sets them; they grow the audience. */
 function nationalGame(g: ScheduledGame): boolean {
@@ -212,9 +181,8 @@ function nationalGame(g: ScheduledGame): boolean {
 }
 
 /** After each of our games: the audience, the fans' voices online, and national exposure. */
-export function afterOurGame(state: GameState, g: ScheduledGame, r: GameResult): void {
+export function afterOurGame(state: GameState, g: ScheduledGame, _r: GameResult): void {
   const t = teamMedia(state);
-  react(state, g, r);
   if (nationalGame(g) && !t.prime.includes(g.id)) {
     t.prime.push(g.id);
     t.prime = t.prime.slice(-40);

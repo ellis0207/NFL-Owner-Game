@@ -18,6 +18,7 @@ import { CAMP, SEAT, TALK } from "./content/talk";
 import { RUMOR_CONTENT } from "./content/rumors";
 import { ARC_CONTENT } from "./content/arcs";
 import { SEASON_CONTENT } from "./content/season";
+import { OPINION_CONTENT } from "./content/opinion";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
 import { choose, render, type Bank, type RenderContext, type Slots, type Tone } from "./grammar";
@@ -33,6 +34,7 @@ export function contentFor(f: Fact): FamilyContent | undefined {
   if (f.family === "rumor") return RUMOR_CONTENT[f.type.split(".")[1]];
   if (f.family === "arc") return ARC_CONTENT[f.type.split(".")[1]];
   if (f.family === "season") return SEASON_CONTENT[f.type.split(".")[1]];
+  if (f.family === "opinion") return OPINION_CONTENT[f.type.split(".")[1]];
   return FAMILIES[f.family];
 }
 
@@ -64,6 +66,7 @@ export function storiesFor(f: Fact): number {
     case "talk": return 1 + (f.ours ? 1 : 0);
     case "rumor": return 1 + (v >= 60 ? 1 : 0) + (f.ours ? 1 : 0);
     case "arc": return 1 + (v >= 60 ? 1 : 0) + (f.ours ? 1 : 0);
+    case "opinion": return 1;
     case "season": return 1 + (v >= 55 ? 1 : 0) + (v >= 75 ? 1 : 0) + (f.ours ? 1 : 0);
     case "camp": return 1 + (f.ours && v >= 50 ? 1 : 0);
     case "seat": return 1 + (v >= 60 ? 1 : 0);
@@ -236,7 +239,8 @@ export function fileFacts(state: GameState, all: Fact[], budgetOverride?: number
       file(f, angles[i], format, outlet);
     });
     // Each club's local media cover their own team's news: the paper's beat writers, its columnist, the sports radio hosts.
-    if (f.value < LOCAL_LINE || f.family === "performance") continue;
+    // Opinion pieces belong to the voice that wrote them; the local papers don't rewrite them.
+    if (f.value < LOCAL_LINE || f.family === "performance" || f.family === "opinion") continue;
     for (const team of f.teams.slice(0, 2)) {
       if (team === state.userTeam ? f.value < 50 : budget <= 0) continue;
       const g = withUs(state, raw, team);
