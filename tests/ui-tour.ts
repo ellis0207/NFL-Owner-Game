@@ -101,7 +101,9 @@ for (const view of VIEWS) {
       // Every top tab of the page, once, in desktop light.
       const tabs = page.locator(".page-body :is(.tabs, .tab-groups)").first().locator("button");
       const n = await tabs.count();
-      for (let i = 1; i < n; i++) {
+      const first = await tabs.evaluateAll((bs) => bs.findIndex((b) => b.getAttribute("aria-pressed") === "true"));
+      for (let i = 0; i < n; i++) {
+        if (i === first) continue;
         const name = (await tabs.nth(i).innerText()).split("\n")[0].trim();
         here = `${screen} > ${name}`;
         await tabs.nth(i).click();

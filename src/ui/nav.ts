@@ -98,6 +98,13 @@ export function roomOf(s: Screen): Room {
   return ROOM[groupOf(s).id];
 }
 
+/** Pages with a header picture of their own instead of their room's (assets/art/<name>.webp). */
+export const PAGE_ART: Partial<Record<Screen, string>> = {
+  Media: "press",
+  History: "archive",
+  Owners: "chamber",
+};
+
 /** A page's title in its header, where it says more than the sidebar name. */
 export const PAGE_TITLE: Partial<Record<Screen, string>> = {
   Football: "Football overview",

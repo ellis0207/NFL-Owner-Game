@@ -3,7 +3,7 @@
 // page holds. The picture is optional: if it doesn't arrive, the band keeps
 // the room's own color.
 import type { ReactNode } from "react";
-import { PAGE_HINT, PAGE_TITLE, ROOM_PLACE, roomOf, type Screen } from "./nav";
+import { PAGE_ART, PAGE_HINT, PAGE_TITLE, ROOM_PLACE, roomOf, type Screen } from "./nav";
 
 export function Masthead({ screen, title, children }: {
   screen: Screen;
@@ -14,7 +14,7 @@ export function Masthead({ screen, title, children }: {
 }) {
   const room = roomOf(screen);
   return (
-    <header className="mh" data-room={room} style={{ ["--mh-art" as string]: `url("art/${room}.webp")` }}>
+    <header className="mh" data-room={room} style={{ ["--mh-art" as string]: `url("art/${PAGE_ART[screen] ?? room}.webp")` }}>
       <div className="mh-text">
         <span className="mh-kicker">{ROOM_PLACE[room]}</span>
         <h1 className="mh-title">{title ?? PAGE_TITLE[screen] ?? screen}</h1>

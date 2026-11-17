@@ -295,17 +295,19 @@ function Huddle({ game }: { game: GameState }) {
   const ours = sentiment(game, us);
   return (
     <div className="split">
-      <section className="panel stack tight">
+      <section className="panel stack tight dk-feed">
         <div className="tabs" role="group" aria-label="Huddle filter">
           {(Object.keys(HUDDLE_FILTERS) as HuddleFilter[]).map((k) => (
             <button key={k} aria-pressed={f === k} onClick={() => setF(k)}>{HUDDLE_FILTERS[k]}</button>
           ))}
         </div>
         {posts.length === 0 ? <span className="muted">Nothing posted yet.</span> : posts.map((p) => (
-          <div key={p.id} className="report">
-            <span><strong>{p.who}</strong>{p.kind === "press" && p.by ? <span className="muted"> · {p.by}</span> : null}{p.kind === "player" ? <span className="pill">Player</span> : p.kind === "club" ? <span className="pill">Club</span> : null}</span>
-            <span>{p.text}</span>
-            <span className="muted">{shortDate(p.date)}</span>
+          <div key={p.id} className={`dk-post kind-${p.kind}`}>
+            <span className="dk-avatar" aria-hidden="true">{p.who.replace(/^@/, "").slice(0, 1).toUpperCase()}</span>
+            <div className="dk-post-body">
+              <span><strong>{p.who}</strong>{p.kind === "press" && p.by ? <span className="muted"> · {p.by}</span> : null}{p.kind === "player" ? <span className="pill">Player</span> : p.kind === "club" ? <span className="pill">Club</span> : null}<span className="muted"> · {shortDate(p.date)}</span></span>
+              <span>{p.text}</span>
+            </div>
           </div>
         ))}
       </section>

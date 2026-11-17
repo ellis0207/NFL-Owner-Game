@@ -18,8 +18,8 @@ export function LeagueScreen({ game }: { game: GameState }) {
   const [key, setKey] = useState(current.key);
   const shown = groups.find((g) => g.key === key)!;
   return (
-    <section className="stack">
-      <div className="tabs" role="group" aria-label="Week">
+    <section className="stack lg-scoreboard">
+      <div className="tabs lg-weeks" role="group" aria-label="Week">
         {groups.map((g) => <button key={g.key} aria-pressed={g.key === key} onClick={() => setKey(g.key)}>{g.label}</button>)}
       </div>
       <h3>{gameTypeLabel(shown.games[0])}</h3>

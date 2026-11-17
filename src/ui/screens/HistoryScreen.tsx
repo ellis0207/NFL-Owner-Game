@@ -26,7 +26,7 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
 export function HistoryScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>("Honors");
   return (
-    <section className="stack">
+    <section className="stack lg-archive">
       <GroupedTabs label="History" groups={GROUPS} value={tab} onChange={setTab} />
       {tab === "Honors" && <Honors game={game} />}
       {tab === "Hall of Fame" && <HallTab game={game} />}
