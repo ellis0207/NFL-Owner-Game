@@ -1367,6 +1367,8 @@ export interface MediaState {
   social?: SocialState;
   /** The opinion desk (media/opinion.ts). */
   opinion?: OpinionState;
+  /** The owner's own dealings with the press (media/ownerdesk.ts). */
+  desk?: OwnerDesk;
 }
 
 export interface TeamFinance {
@@ -1553,7 +1555,7 @@ export interface SocialPost {
   text: string;
   /** The Huddle (media/social.ts): post id, who posted (fan, player, reporter, club), the club and player it's about, the topic it counts toward in trending, the fan's mood. */
   id?: number;
-  kind?: "fan" | "player" | "press" | "club";
+  kind?: "fan" | "player" | "press" | "club" | "owner";
   team?: string;
   player?: string;
   by?: string;
@@ -1575,6 +1577,61 @@ export interface Thesis {
 
 export interface OpinionState {
   theses: Thesis[];
+}
+
+/** How the owner answers a question: straight, with a promise, with nothing, or at the critics. */
+export type OwnerTone = "candid" | "confident" | "deflect" | "defiant";
+
+/** One question at a press conference or interview, with the four ways to answer it. */
+export interface PresserQuestion {
+  /** The reporter asking (a press corps id). */
+  by: string;
+  topic: string;
+  text: string;
+  /** Engine only: how much the answer matters, 10-30. */
+  value: number;
+  player?: string;
+  /** The storyline the question comes from. */
+  arc?: string;
+  options: { tone: OwnerTone; text: string }[];
+  answer?: number;
+}
+
+/** A press conference the owner is called to, or an interview the owner asked for. */
+export interface Presser {
+  id: string;
+  kind: "presser" | "interview" | "offrecord";
+  occasion: string;
+  title: string;
+  date: string;
+  expires: string;
+  /** The reporter of a one-on-one interview. */
+  reporter?: string;
+  questions: PresserQuestion[];
+  /** When it was held, or skipped (no answers). */
+  held?: string;
+  skipped?: boolean;
+}
+
+export interface OwnerDesk {
+  next: number;
+  pressers: Presser[];
+  /** Reporters with special access, or banned from the building. */
+  access: Record<string, "favored" | "banned">;
+  /** How the owner answered reports about the club; judged once the report is. */
+  responses: { rumor: string; how: "confirm" | "deny" | "ignore"; date: string; judged?: boolean }[];
+  /** Engine only: how far the press and fans believe the owner's word, 0-100. */
+  cred: number;
+  /** Engine only: promises made at the podium, checked against the record a month later. */
+  claims: { date: string; due: string; w: number; l: number }[];
+  /** The last time the owner did each thing: interview, exclusive, oped, post, presser. */
+  last: Record<string, string>;
+  /** The head coach at the last look, to call a press conference when that changes. */
+  hc?: string;
+  opeds: { date: string; outlet: string; topic: string }[];
+  exclusives: { date: string; reporter: string; topic: string }[];
+  /** Engine only: off-the-record remarks a reporter will print. */
+  burns?: { date: string; reporter: string; quote: string }[];
 }
 
 /** The Huddle: the feed, and each club's fan sentiment (0-100). */

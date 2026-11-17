@@ -258,6 +258,18 @@ or wrong, radio stations and the national podcast run down what people are
 talking about, outlets debate each other, mailbags answer questions from fans'
 own accounts, and Overreaction Monday runs early in the season.
 
+The owner deals with the press directly in the Press room. The club calls a
+press conference of three to six questions for the season opener, the end of
+the season, a coaching change, a big signing, and when a storyline about the
+club heats up; the questions come from what's actually going on, and each can
+be answered candidly, confidently, with a deflection or defiantly. The owner
+can also sit down with a reporter on or off the record (off the record
+sometimes ends up in print), hand one reporter an exclusive, confirm, deny or
+ignore a report about the club (a denial that proves false costs the owner's
+word), post from the owner's own Huddle account, write a guest column, and set
+each reporter's access, up to banning one. What any of it does is never shown;
+the owner reads the coverage.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each

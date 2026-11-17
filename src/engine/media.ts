@@ -29,6 +29,7 @@ import { arcsDaily } from "./media/arcs";
 import { narrativesDaily } from "./media/narratives";
 import { socialDaily } from "./media/social";
 import { opinionDaily } from "./media/opinion";
+import { ownerDeskDaily } from "./media/ownerdesk";
 import { campFact, seatFact, talkFacts } from "./media/desks";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
@@ -777,6 +778,7 @@ export function mediaDaily(state: GameState): void {
   // The Huddle reacts to all of it; then the opinion desk argues about it.
   socialDaily(state, [...facts, ...arcFacts, ...seasonFacts]);
   opinionDaily(state);
+  ownerDeskDaily(state, facts);
   wireCoverage(state);
   corpsDaily(state);
   rumorDesk(state);

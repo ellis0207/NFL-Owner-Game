@@ -11,6 +11,7 @@ import { reportStart } from "./fixtures";
 import { arcState } from "../src/engine/media/arcs";
 import { sentiment, social, trending } from "../src/engine/media/social";
 import { TEAMS } from "../src/engine/league";
+import { holdPresser, openPressers, ownerDesk, ownerPost, ownerPostOptions, reportsAboutUs, respondToReport } from "../src/engine/media/ownerdesk";
 
 const seed = Number(process.argv[2] ?? 7);
 const t0 = Date.now();
@@ -24,6 +25,10 @@ let lastPost = 0;
 // One season: through the draft, until the league moves on.
 while ((state.season ?? 2026) === 2026) {
   for (const q of openQuestions(state)) if (i++ % 4 !== 3) answerQuestion(state, q.id, (i * 7) % q.options.length);
+  // The owner's desk: answer most press conferences, post now and then, answer some reports.
+  for (const p of openPressers(state)) if (i++ % 5 !== 4) holdPresser(state, p.id, p.questions.map((_, j) => (i + j) % 4));
+  if (days % 9 === 0 && ownerPostOptions(state).length) ownerPost(state, ownerPostOptions(state)[days % ownerPostOptions(state).length].key);
+  for (const r of reportsAboutUs(state)) if (i++ % 3 === 0) respondToReport(state, r.id, i % 2 ? "deny" : "confirm");
   advanceDay(state);
   days++;
   for (const s of mediaState(state).stories) if (!seen.has(s.id)) { seen.add(s.id); all.push(s); }
@@ -79,6 +84,10 @@ for (const x of narr) {
   console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 260)}`);
 }
 for (const x of typed.filter((x) => x.type!.startsWith("arc.")).slice(0, 4)) console.log(`  ${x.date} [${x.outlet}] ${x.headline}\n      ${x.body.slice(0, 220)}`);
+const desk = ownerDesk(state);
+console.log(`\nOwner desk: ${desk.pressers.length} press conferences (${desk.pressers.map((p) => `${p.date} ${p.occasion}${p.skipped ? " skipped" : ""}`).join(", ")}); cred ${desk.cred}, responses ${desk.responses.length}, claims open ${desk.claims.length}`);
+for (const p of desk.pressers.slice(-2)) for (const q of p.questions) console.log(`  [${p.occasion}/${q.topic}] ${q.text}\n      ${q.options.map((o) => `${o.tone}: ${o.text}`).join("\n      ")}`);
+console.log(`  Owner stories by type: ${count((s) => (s.kind === "owner" ? (s.type ?? "old").split("/")[0] : "-"))}`);
 const m = mediaState(state);
 console.log(`\nQuestions: ${m.questions.length} (${count.call(null, () => "") && ""}${Object.entries(m.questions.reduce<Record<string, number>>((a, q) => ((a[q.topic] = (a[q.topic] ?? 0) + 1), a), {})).map(([k, v]) => `${k} ${v}`).join(", ")})`);
 for (const q of m.questions.slice(0, 12)) console.log(`  ${q.date} [${q.topic}] ${q.question} -> ${q.answer === -1 ? "(no answer)" : q.options[q.answer!]?.text}`);
