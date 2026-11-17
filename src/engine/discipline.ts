@@ -88,7 +88,7 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
     state.players[id].suspended = { games: GAMBLING_GAMES, reason: "the league's gambling policy" };
     const text = `Suspended ${GAMBLING_GAMES} games for betting on other sports from a team facility`;
     log.push({ date: state.date, team, player: id, kind, games: GAMBLING_GAMES, text });
-    news(state, `${p.name} (${teamLabel(team)}) suspended ${GAMBLING_GAMES} games under the league's gambling policy`);
+    news(state, "discipline", `${p.name} (${teamLabel(team)}) suspended ${GAMBLING_GAMES} games under the league's gambling policy`);
     if (ours) send(state, "league", "League Office", `${p.name} suspended`,
       `${p.name} placed bets on other sports while at the team facility, which the gambling policy forbids. He is suspended ${GAMBLING_GAMES} regular-season games without pay.`);
     return;
@@ -98,7 +98,7 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
     const when = state.date >= KEY.regularSeasonStart && state.date <= KEY.regularSeasonEnd ? "effective immediately" : "to start the regular season";
     const text = `Suspended ${PED_GAMES} games without pay for violating the policy on performance-enhancing substances`;
     log.push({ date: state.date, team, player: id, kind, games: PED_GAMES, text });
-    news(state, `${p.name} (${teamLabel(team)}) suspended ${PED_GAMES} games for violating the league's PED policy`);
+    news(state, "discipline", `${p.name} (${teamLabel(team)}) suspended ${PED_GAMES} games for violating the league's PED policy`);
     addStory(state, {
       outlet: "sideline", by: MEDIA_BY_ID.sideline.insider, kind: "league", teams: [team], players: [id],
       headline: `${p.name} suspended ${PED_GAMES} games`,
@@ -113,7 +113,7 @@ function incident(state: GameState, kind: Exclude<IncidentKind, "minicamp">, rng
   if (kind === "substance") {
     const fine = Math.round(gameCheck(state, id) / 2 / 1000) * 1000;
     log.push({ date: state.date, team, player: id, kind, fine, text: `Fined ${money(fine)} under the substance abuse policy` });
-    news(state, `${p.name} (${teamLabel(team)}) fined half a game check under the substance abuse policy`);
+    news(state, "discipline", `${p.name} (${teamLabel(team)}) fined half a game check under the substance abuse policy`);
     if (ours) send(state, "league", "League Office", `${p.name} fined`,
       `${p.name} has been fined half a game check (${money(fine)}) under the substance abuse policy. There's no suspension; he stays in the program.`);
     return;

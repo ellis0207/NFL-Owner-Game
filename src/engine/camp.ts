@@ -188,7 +188,7 @@ function decideBattles(state: GameState): void {
     if (b.team === state.userTeam) {
       ours.push(`${cap(POS_WORDS[b.pos])}: ${name(lead)}${next ? ` over ${name(next)}` : ""}.`);
     } else if (b.pos === "QB" && next) {
-      news(state, `${name(lead)} wins the ${teamLabel(b.team)} starting quarterback job over ${name(next)}`);
+      news(state, "camp", `${name(lead)} wins the ${teamLabel(b.team)} starting quarterback job over ${name(next)}`);
     }
   }
   if (ours.length) send(state, "staff", hcLine(state), "Camp battles decided", `Here's where we landed:\n${ours.join("\n")}\n\nThe depth chart on the Roster page reflects it.`);

@@ -34,13 +34,13 @@ export function eraNewSeason(state: GameState): void {
     const now = eraOwner(t.id, season) ?? CONTROL[t.id];
     if (now && (f.control[t.id] ?? CONTROL[t.id]) !== now) {
       f.control[t.id] = now;
-      news(state, `Control of the ${TEAM_BY_ID[t.id].name} passes to ${now}`);
+      news(state, "ownership", `Control of the ${TEAM_BY_ID[t.id].name} passes to ${now}`);
     }
   }
   for (const h of HOMES) if (season === h.until && e.start < h.until && !state.relocation?.moves.some((m) => m.team === h.team)) {
-    news(state, `The ${TEAM_BY_ID[h.team].name} play their first season in ${TEAM_BY_ID[h.team].city} after leaving ${h.city}`);
+    news(state, "ownership", `The ${TEAM_BY_ID[h.team].name} play their first season in ${TEAM_BY_ID[h.team].city} after leaving ${h.city}`);
   }
-  if (washingtonName(season) !== washingtonName(season - 1)) news(state, `Washington's club plays this season as the ${washingtonName(season)}`);
+  if (washingtonName(season) !== washingtonName(season - 1)) news(state, "ownership", `Washington's club plays this season as the ${washingtonName(season)}`);
 }
 
 /** The real sales of clubs, on the day the owners approved them. */
@@ -53,6 +53,6 @@ export function erasDaily(state: GameState): void {
     if (f.sales.some((s) => s.team === x.team && s.date === x.date)) continue;
     f.sales.push({ ...x });
     f.control[x.team] = x.buyer;
-    news(state, `League owners approve the sale of the ${TEAM_BY_ID[x.team].name} to ${x.buyer}`);
+    news(state, "ownership", `League owners approve the sale of the ${TEAM_BY_ID[x.team].name} to ${x.buyer}`);
   }
 }

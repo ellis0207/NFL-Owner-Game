@@ -148,7 +148,7 @@ function awardCompPicks(state: GameState, quiet = false): void {
   });
   d.order = buildOrder(state);
   if (quiet) return;
-  news(state, `The league awards ${d.comp.length} compensatory picks for the ${DRAFT_YEAR} draft`);
+  news(state, "draft", `The league awards ${d.comp.length} compensatory picks for the ${DRAFT_YEAR} draft`);
   const lines = [3, 4, 5, 6, 7].map((r) => `Round ${r}: ${d.comp!.filter((c) => parsePick(c.pick).round === r)
     .map((c) => `${parsePick(c.pick).from} (No. ${pickOverall(state, c.pick)}, for ${c.player})`).join(", ")}`);
   const ours = d.comp.filter((c) => parsePick(c.pick).from === state.userTeam);
@@ -445,7 +445,7 @@ export function makePick(state: GameState, player: string, by: DraftSelection["b
   invalidateRosters(state);
   d.made.push({ pick: slot.pick, overall: slot.overall, team: slot.team, player, by, need: Math.round(need * 100) / 100 });
   logMove(state, slot.team, player, "drafted", `drafted ${p.position} ${p.name} (${schoolName(p.school)}), round ${slot.round}, No. ${slot.overall}`);
-  if (slot.round === 1) news(state, `Round 1, No. ${slot.overall}: the ${teamLabel(slot.team)} select ${p.position} ${p.name}, ${schoolName(p.school)}`);
+  if (slot.round === 1) news(state, "draft", `Round 1, No. ${slot.overall}: the ${teamLabel(slot.team)} select ${p.position} ${p.name}, ${schoolName(p.school)}`);
   // Calls about this pick are over.
   for (const o of trades(state).offers) if (o.status === "open" && o.id.startsWith(`draft-${slot.overall}-`)) o.status = "expired";
   const next = slotAt(state, d.made.length);
@@ -790,7 +790,7 @@ function finishDay(state: GameState, day: number): void {
     `\n\nBiggest reaches:\n${worst.map((m) => `${m.team} ${line(m)}: ${m.grade}`).join("\n")}` +
     `\n\nI graded every pick from ${label.toLowerCase()} on the Draft page.` +
     (day < 3 ? ` Day ${day + 1} starts tomorrow.` : ""));
-  news(state, `Day ${day} of the ${DRAFT_YEAR} draft is complete (${label.toLowerCase()})`);
+  news(state, "draft", `Day ${day} of the ${DRAFT_YEAR} draft is complete (${label.toLowerCase()})`);
   if (state.day?.date === state.date) state.day.done.draft = ours.length ? `We drafted ${ours.map((m) => `${dc.byId[m.player].position} ${dc.byId[m.player].name}`).join(", ")}.` : "Day complete.";
   if (day === 3) udfaRush(state);
 }
@@ -855,7 +855,7 @@ function udfaRush(state: GameState): void {
     }
   }
   const total = Object.values(signed).reduce((s, x) => s + x.length, 0);
-  news(state, `Teams sign ${total} undrafted free agents after the draft`);
+  news(state, "draft", `Teams sign ${total} undrafted free agents after the draft`);
   const ours = signed[state.userTeam] ?? [];
   const dc = draftClass(state.seed);
   send(state, "transaction", gmOf(state.userTeam), "Undrafted free agents",
@@ -929,7 +929,7 @@ export function releaseMock(state: GameState, quiet = false): MockDraft {
   if (state.date < LAST_MOCK && next > LAST_MOCK) next = LAST_MOCK;
   d.nextMock = state.date >= LAST_MOCK ? "9999-12-31" : next;
   if (!quiet) {
-    news(state, `${outlet.name} releases ${ANALYSTS[outlet.name]}'s mock draft ${version}.0 (${rounds === 1 ? "first round" : `${rounds} rounds`})`);
+    news(state, "draft", `${outlet.name} releases ${ANALYSTS[outlet.name]}'s mock draft ${version}.0 (${rounds === 1 ? "first round" : `${rounds} rounds`})`);
     const ours = slots.map((s, i) => [s, i] as const).filter(([, i]) => teams[i] === state.userTeam).slice(0, 4);
     if (ours.length) {
       send(state, "media", `${mock.analyst}, ${outlet.name}`, `Mock draft ${version}.0`,
@@ -958,7 +958,7 @@ function declarations(state: GameState, quiet = false): void {
   }
   d.returned = returned;
   if (quiet) return;
-  news(state, `The underclassman deadline passes: ${declared} declare for the ${DRAFT_YEAR} draft, ${returned.length} go back to school`);
+  news(state, "draft", `The underclassman deadline passes: ${declared} declare for the ${DRAFT_YEAR} draft, ${returned.length} go back to school`);
   const tracked = returned.filter((id) => knowledge(state, id) >= 30);
   const dc = draftClass(state.seed);
   const col = teamStaff(state.userTeam).COL;
@@ -1001,7 +1001,7 @@ function combine(state: GameState, quiet = false): void {
   }
   if (quiet) return;
   const fastest = Object.entries(results).filter(([, r]) => r.forty).sort((a, b) => a[1].forty! - b[1].forty!).slice(0, 5);
-  news(state, `${invited.length} prospects work out at the scouting combine`);
+  news(state, "draft", `${invited.length} prospects work out at the scouting combine`);
   const col = teamStaff(state.userTeam).COL;
   send(state, "staff", `${col?.name ?? "Director of college scouting"}, director of college scouting`, "Combine wrap-up",
     `${invited.length} prospects were invited to Indianapolis. Official heights, weights and workout numbers are on each prospect's page now.\n\n` +

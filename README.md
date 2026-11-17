@@ -196,8 +196,11 @@ playoff pictures, cover the college season and grade every team's draft. Agents
 who leak contract talks leak to them. The Media page has the feed, filters and
 each outlet's staff.
 
-Game stories, big individual days, injuries, signings, releases, waiver claims
-and trades are written by a story engine. Each story is a fact (what happened),
+Game stories, big individual days, injuries, signings, releases, waiver claims,
+trades, the league wire (coaching, contracts, free agency, league business,
+labor, discipline, stadiums, relocation, ownership, honors, retirements and
+more), weekly press conferences, camp notebooks and the hot seat are written by
+a story engine. Each story is a fact (what happened),
 an angle (an upset, a comeback, a revenge game, a contract year, a cap crunch, a
 reunion and dozens more, chosen from what the engine knows) and a format (game
 story, breaking alert, report, cap breakdown, numbers piece, film room, column,

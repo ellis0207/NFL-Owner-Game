@@ -921,14 +921,14 @@ export function completeTrade(state: GameState, deal: TradeDeal): TradeRecord {
   if (failed) {
     rec.status = "voided";
     ts.log.unshift(rec);
-    news(state, `A trade between the ${teamLabel(deal.teams[0])} and ${teamLabel(deal.teams[1])} is called off: ${failed}`);
+    news(state, "trades", `A trade between the ${teamLabel(deal.teams[0])} and ${teamLabel(deal.teams[1])} is called off: ${failed}`);
     send(state, "transaction", gmOf(state.userTeam), "Trade voided", `The trade is off: ${failed}. Everyone stays where they were.`);
     return rec;
   }
   ts.log.unshift(rec);
   const text = headline(state, deal);
   if (official) execute(state, deal);
-  news(state, `${rec.blockbuster ? "Blockbuster: " : "Trade: "}${text}${official ? "" : `, pending the new league year`}`);
+  news(state, "log", `${rec.blockbuster ? "Blockbuster: " : "Trade: "}${text}${official ? "" : `, pending the new league year`}`);
   // Offers to the owner that involve anything that just moved are off the table.
   const moved = new Set([...deal.send[0], ...deal.send[1]].map((a) => (a.kind === "player" ? a.id : a.pick)));
   for (const o of ts.offers) {
@@ -955,12 +955,12 @@ function processAgreed(state: GameState): void {
     const check = checkTrade(state, rec);
     if (!check.ok) {
       rec.status = "voided";
-      news(state, `The trade between the ${teamLabel(rec.teams[0])} and the ${teamLabel(rec.teams[1])} falls through: ${check.problems[0]}`);
+      news(state, "trades", `The trade between the ${teamLabel(rec.teams[0])} and the ${teamLabel(rec.teams[1])} falls through: ${check.problems[0]}`);
       continue;
     }
     rec.status = "done";
     execute(state, rec);
-    news(state, `The league processes the trade: ${headline(state, rec)}`);
+    news(state, "log", `The league processes the trade: ${headline(state, rec)}`);
   }
 }
 
@@ -1147,7 +1147,7 @@ function tradeRequests(state: GameState): void {
         "We don't have to move him, but an unhappy player can drag on the locker room. The Trades page has the calls.");
       if (!ts.block.includes(id)) ts.block.push(id);
     }
-    news(state, `Report: ${p.position} ${p.name} has asked the ${teamLabel(ps.team)} for a trade`);
+    news(state, "log", `Report: ${p.position} ${p.name} has asked the ${teamLabel(ps.team)} for a trade`);
   }
 }
 
@@ -1232,7 +1232,7 @@ export function tradesDaily(state: GameState): void {
   }
   if (state.date === KEY.tradeDeadline) {
     const week = ts.log.filter((t) => t.status === "done" && daysBetween(t.date, state.date) <= 7).length;
-    news(state, `The trade deadline passes at 4 PM ET: ${week} trade${week === 1 ? "" : "s"} in the final week`);
+    news(state, "trades", `The trade deadline passes at 4 PM ET: ${week} trade${week === 1 ? "" : "s"} in the final week`);
     for (const o of ts.offers) if (o.status === "open") o.status = "expired";
   }
   // Requests are forgotten once a player is happy again.

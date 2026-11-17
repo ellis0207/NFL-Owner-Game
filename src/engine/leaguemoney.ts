@@ -182,7 +182,7 @@ function negotiate(state: GameState, from: number): void {
   const text = `New national media deals from ${from}: rights fees ${pct >= 0 ? "up" : "down"} about ${Math.abs(pct)}% a year, with ${Math.round(6 + rng() * 5)}-year terms.`;
   lm.tv.renewals.push({ from, factor: Math.round(factor * 1000) / 1000, text });
   lm.log.unshift({ date: state.date, text });
-  news(state, `The league signs new national TV deals starting in ${from}; rights fees ${pct >= 0 ? "rise" : "fall"} about ${Math.abs(pct)}%`);
+  news(state, "league", `The league signs new national TV deals starting in ${from}; rights fees ${pct >= 0 ? "rise" : "fall"} about ${Math.abs(pct)}%`);
   send(state, "league", "League Office", "New national media agreements",
     `${text} The salary cap and every club's distribution move with them from the ${from} league year. ` +
     (state.leagueOffice?.committees.media.includes(state.userTeam) ? "As a member of the media committee you saw the terms before the vote; the owners approved them." : "The media committee recommended them and the owners approved."));
@@ -198,7 +198,7 @@ function optOutDecision(state: GameState): void {
   else {
     const text = `The league kept its national media deals through ${DEALS_END} instead of opting out: the market didn't promise more.`;
     lm.log.unshift({ date: state.date, text });
-    news(state, "The league passes on its TV opt-out and keeps its media deals in place");
+    news(state, "league", "The league passes on its TV opt-out and keeps its media deals in place");
   }
 }
 
@@ -302,6 +302,6 @@ export function leagueMoneyDaily(state: GameState): void {
   // Other clubs dispute their numbers now and then, and it makes the business pages.
   if (state.date.endsWith("-05-20") && rngFor(state.seed, `cpudispute:${state.date}`)() < 0.12) {
     const t = TEAMS.filter((x) => x.id !== state.userTeam)[Math.floor(rngFor(state.seed, `cpudisputeteam:${state.date}`)() * 31)];
-    news(state, `${teamLabel(t.id)} challenge the league's accounting of central costs in last year's distributions`);
+    news(state, "league", `${teamLabel(t.id)} challenge the league's accounting of central costs in last year's distributions`);
   }
 }

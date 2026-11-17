@@ -183,7 +183,7 @@ function gradeOffseason(state: GameState, r: ReviewState): void {
     headline: e >= 10.5 ? `${nick(us)} fans: anything short of January is a failure` : e <= 6.5 ? `${nick(us)} fans are being asked to be patient. Again.` : `Are the ${nick(us)} a playoff team? Fans think they might be`,
     body: `The phones lit up about the ${nick(us)} today. The consensus from callers: about ${e} wins. ${expectLabel(e)}.`,
   });
-  news(state, `Offseason grades are out: the ${nick(order[0])} rank first; the ${nick(us)} get a ${ledger[us]} from The Gridiron Ledger`);
+  news(state, "league", `Offseason grades are out: the ${nick(order[0])} rank first; the ${nick(us)} get a ${ledger[us]} from The Gridiron Ledger`);
 }
 
 // ---- Storylines ----

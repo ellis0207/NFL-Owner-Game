@@ -131,7 +131,7 @@ function selectProBowl(state: GameState): void {
   const ours = ids.filter((id) => state.players[id]?.team === state.userTeam);
   send(state, "league", "League office", `Pro Bowl rosters: ${ours.length} of ours`,
     ours.length ? `Voted to the Pro Bowl from our roster: ${namesFor(state, ours)}.` : "Nobody from our roster made the Pro Bowl this year.");
-  news(state, `Pro Bowl rosters are out: ${ids.length} players named.`);
+  news(state, "honors", `Pro Bowl rosters are out: ${ids.length} players named.`);
 }
 
 function selectAllPro(state: GameState): void {
@@ -149,7 +149,7 @@ function selectAllPro(state: GameState): void {
       [ours1.length ? `First team: ${namesFor(state, ours1)}.` : "", ours2.length ? `Second team: ${namesFor(state, ours2)}.` : ""].filter(Boolean).join(" "));
   }
   const qb = first.find((id) => PLAYER_BY_ID[id].position === "QB");
-  news(state, `The All-Pro teams are out${qb ? `; ${PLAYER_BY_ID[qb].name} is the first-team quarterback` : ""}.`);
+  news(state, "honors", `The All-Pro teams are out${qb ? `; ${PLAYER_BY_ID[qb].name} is the first-team quarterback` : ""}.`);
 }
 
 // ---- Awards ----
@@ -201,7 +201,7 @@ function presentAwards(state: GameState): void {
   if (best.length) results.push({ award: "COY", winner: best[0].hc!.id, team: best[0].team, name: best[0].hc!.name, finalists: best.slice(1, 3).map((c) => c.hc!.id) });
   h.awards[season] = results;
   const lines = results.map((r) => `${AWARD_NAME[r.award]}: ${r.name}, ${teamLabel(r.team)}`);
-  news(state, `NFL Honors: ${lines.slice(0, 3).join("; ")}.`);
+  news(state, "honors", `NFL Honors: ${lines.slice(0, 3).join("; ")}.`);
   const ours = results.filter((r) => r.team === state.userTeam);
   send(state, "league", "League office", "NFL Honors", `${lines.join(". ")}.${ours.length ? ` Ours: ${ours.map((r) => AWARD_NAME[r.award]).join(", ")}.` : ""}`);
 }

@@ -127,7 +127,7 @@ function sign(state: GameState, team: string, o: LeaseOffer): void {
   delete l.talks;
   l.log.unshift({ date: state.date, text: `Signed a new lease through ${l.through}: ${describe(o)}.` });
   bindLeases(state);
-  news(state, `The ${teamLabel(team)} sign a new lease at ${STADIUM_BY_TEAM[team].name} through ${l.through}, with ${money(o.publicMoney)} in public money for renovations`);
+  news(state, "stadiums", `The ${teamLabel(team)} sign a new lease at ${STADIUM_BY_TEAM[team].name} through ${l.through}, with ${money(o.publicMoney)} in public money for renovations`);
 }
 
 // ---- The owner's side of the talks ----
@@ -189,7 +189,7 @@ function answer(state: GameState): void {
       delete l.talks;
       l.log.unshift({ date: state.date, text: `${from} broke off talks for the year.` });
       send(state, "business", from, "Lease talks are off", "We've gone as far as we can this year. We can pick this up next spring.");
-      news(state, `Lease talks between the ${teamLabel(state.userTeam)} and ${from} break off`);
+      news(state, "stadiums", `Lease talks between the ${teamLabel(state.userTeam)} and ${from} break off`);
       return;
     }
     send(state, "business", from, "Lease talks: no movement", `That's not something we can do. Our offer stands: ${describe(t.offer)}.`);
@@ -210,7 +210,7 @@ function newLeagueYear(state: GameState): void {
       l.holdover = true;
       l.log.unshift({ date: state.date, text: `The lease ran out; we're playing ${next} on a one-year extension at ${money(l.rent)}.` });
       bindLeases(state);
-      news(state, `The ${teamLabel(team)} play ${next} at ${STADIUM_BY_TEAM[team].name} on a one-year lease extension`);
+      news(state, "stadiums", `The ${teamLabel(team)} play ${next} at ${STADIUM_BY_TEAM[team].name} on a one-year lease extension`);
     }
     if (team === state.userTeam) {
       if (left <= 3 && !l.talks) {

@@ -241,7 +241,7 @@ export function sellClub(state: GameState): string | null {
   if (s.sale && !["closed", "failed"].includes(s.sale.stage)) return "The club is already for sale.";
   s.sale = { stage: "marketing", opened: state.date, due: addDays(state.date, 75), bids: [] };
   post(state, "legal", -3 * M, "Bankers' and lawyers' retainer for the sale");
-  news(state, `The ${TEAM_BY_ID[state.userTeam].name} hire bankers to explore a sale`);
+  news(state, "ownership", `The ${TEAM_BY_ID[state.userTeam].name} hire bankers to explore a sale`);
   note(state, "Put the club up for sale.");
   return null;
 }
@@ -352,7 +352,7 @@ function death(state: GameState): void {
   const name = state.ownerName;
   const liq = liquidity(state);
   s.estate = { date: state.date, tax: liq.tax, paid: 0, short: liq.short, owner: name };
-  news(state, `${name}, owner of the ${TEAM_BY_ID[state.userTeam].name}, has died at ${ownerAge(state)}`);
+  news(state, "ownership", `${name}, owner of the ${TEAM_BY_ID[state.userTeam].name}, has died at ${ownerAge(state)}`);
   addStory(state, {
     outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
     headline: `What comes next for the ${TEAM_BY_ID[state.userTeam].name}`,
@@ -469,7 +469,7 @@ function continueAsHeir(state: GameState): void {
     });
   }
   s.history.unshift({ date: state.date, text: `${heir.name} became controlling owner (generation ${s.generation}).` });
-  news(state, `${heir.name} takes control of the ${TEAM_BY_ID[state.userTeam].name}`);
+  news(state, "ownership", `${heir.name} takes control of the ${TEAM_BY_ID[state.userTeam].name}`);
   s.pending = undefined;
   s.estate = undefined;
 }

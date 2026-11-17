@@ -86,7 +86,7 @@ export function startPolitics(state: GameState, ask: number, round = 1): void {
     councilDate: addDays(state.date, 150 + Math.floor(r() * 45)),
   };
   note(state, `Asked ${site.jurisdiction} for ${money(ask)} in public money.`);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} ask ${site.jurisdiction} for ${money(ask)} toward a new stadium`);
+  news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name} ask ${site.jurisdiction} for ${money(ask)} toward a new stadium`);
   send(state, "business", businessChief(state), "Stadium talks with the public side",
     `We've asked ${site.jurisdiction} for ${money(ask)}. The city's budget office will publish its own impact study, the environmental review takes a few months, and the council votes around ${shortDate(politics(state).talks!.councilDate)}. ` +
     "We can commission our own impact study, meet the officials, and add community commitments to help.");
@@ -177,7 +177,7 @@ export function answerRival(state: GameState, how: "leverage" | "accepted" | "de
     plan.sites.push(site);
     plan.site = "rival";
     for (const o of standingState(state).officials) o.lean = Math.max(0, o.lean - 12);
-    news(state, `${TEAM_BY_ID[state.userTeam].name} take ${t.rival.name}'s offer and move their stadium plan out of the city`);
+    news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name} take ${t.rival.name}'s offer and move their stadium plan out of the city`);
     note(state, `Moved the plan to ${t.rival.name}.`);
     // A fresh, friendlier jurisdiction: its board votes sooner.
     t.councilDate = addDays(state.date, 60);
@@ -199,7 +199,7 @@ function independentStudy(state: GameState): void {
       ? `The city's budget office says most stadium spending would happen in town anyway; it credits only ${Math.round(holds * 100)}% of the activity the team's case assumes, and warns of the bonds' long tail.`
       : `The budget office finds real but modest gains: about ${Math.round(holds * 100)}% of the team's projected activity holds up once spending that would happen anyway is taken out.`,
   };
-  news(state, `City budget office releases its review of the ${TEAM_BY_ID[state.userTeam].name}' stadium request`);
+  news(state, "stadiums", `City budget office releases its review of the ${TEAM_BY_ID[state.userTeam].name}' stadium request`);
   send(state, "business", businessChief(state), "The city's impact study", t.independent.text);
 }
 
@@ -222,7 +222,7 @@ function rivalBid(state: GameState): void {
   if (plan.site === "suburb" || r() >= 0.35) return;
   const name = ["Riverside Township", "North County", "Lakeview", "Westfield", "Harbor City"][Math.floor(r() * 5)];
   t.rival = { date: state.date, name, subsidy: Math.round(baseCost(state, plan) * (0.1 + 0.1 * r()) / M) * M };
-  news(state, `${name} officials pitch the ${TEAM_BY_ID[state.userTeam].name} on a stadium site of their own`);
+  news(state, "stadiums", `${name} officials pitch the ${TEAM_BY_ID[state.userTeam].name} on a stadium site of their own`);
   send(state, "business", businessChief(state), `${name} wants the stadium`,
     `${name} offers a site and ${money(t.rival.subsidy)} if we build there. We can use it as leverage with the city, take it, or turn it down.`);
 }
@@ -241,7 +241,7 @@ function councilVote(state: GameState): void {
   if (yes < 5) return reject(state, `The council voted the package down, ${yes}-${9 - yes}.`);
   if (t.parts.district > 0) {
     t.referendum = { required: true, date: electionDay(state.date) };
-    news(state, `Council approves the stadium package ${yes}-${9 - yes}; the tax district goes to voters on ${shortDate(t.referendum.date!)}`);
+    news(state, "stadiums", `Council approves the stadium package ${yes}-${9 - yes}; the tax district goes to voters on ${shortDate(t.referendum.date!)}`);
     send(state, "business", businessChief(state), "Council approved: now the voters",
       `The council approved it ${yes}-${9 - yes}. The tax district needs a referendum on ${shortDate(t.referendum.date!)}. Support is about ${support}% today.`);
     return;
@@ -282,7 +282,7 @@ function approve(state: GameState, how: string): void {
   plan.commitments.push(`Non-relocation pledge: the team stays through ${plan.stayUntil}, with penalties if it leaves.`);
   plan.stage = "finance";
   note(state, how);
-  news(state, `${how.replace(/\.$/, "")}: ${money(t.ask)} in public money for the ${TEAM_BY_ID[state.userTeam].name}' new stadium`);
+  news(state, "stadiums", `${how.replace(/\.$/, "")}: ${money(t.ask)} in public money for the ${TEAM_BY_ID[state.userTeam].name}' new stadium`);
   send(state, "business", businessChief(state), "Stadium approved",
     `${how} The development agreement is signed, with a promise to stay through ${plan.stayUntil}. Next: the financing package on the Business page.`);
 }
@@ -291,7 +291,7 @@ function reject(state: GameState, how: string): void {
   const t = politics(state).talks!;
   t.status = "rejected";
   note(state, how);
-  news(state, `${how.replace(/\.$/, "")}, a setback for the ${TEAM_BY_ID[state.userTeam].name}' stadium plan`);
+  news(state, "stadiums", `${how.replace(/\.$/, "")}, a setback for the ${TEAM_BY_ID[state.userTeam].name}' stadium plan`);
   send(state, "business", businessChief(state), "The stadium package failed",
     `${how} Our options: renovate the building we have, fund it privately, go back for another round at a smaller ask in six months, or look at other markets.`);
 }
@@ -328,7 +328,7 @@ export function afterRejection(state: GameState, choice: FailureChoice): string 
   if (choice === "relocate") {
     c.exploreRelocation = state.date;
     for (const o of standingState(state).officials) o.lean = Math.max(0, o.lean - 8);
-    news(state, `${TEAM_BY_ID[state.userTeam].name} say they will explore other markets after the stadium vote`);
+    news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name} say they will explore other markets after the stadium vote`);
     return "We've said publicly that other markets are an option. The city's officials are not happy.";
   }
   return "Plan shelved. Renovations are on the stadium projects list.";
@@ -350,7 +350,7 @@ export function politicsDaily(state: GameState): void {
   sponsorQuestion(state);
   const t = state.politics?.talks;
   if (!t || t.status !== "talks") return;
-  if (t.impact && state.date === t.impact.date) news(state, `${TEAM_BY_ID[state.userTeam].name}' study projects ${money(t.impact.claim)} a year in new activity and ${t.impact.jobs.toLocaleString("en-US")} jobs`);
+  if (t.impact && state.date === t.impact.date) news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name}' study projects ${money(t.impact.claim)} a year in new activity and ${t.impact.jobs.toLocaleString("en-US")} jobs`);
   if (!t.independent && daysBetween(t.opened, state.date) >= 45) independentStudy(state);
   if (!t.rival && daysBetween(t.opened, state.date) === 30) rivalBid(state);
   if (!t.env && state.date >= t.envDue) envReview(state);

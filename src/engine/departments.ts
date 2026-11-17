@@ -233,7 +233,7 @@ function quarterly(state: GameState): void {
   // Security: someone gets where they shouldn't, a threat comes in, a report through the channel.
   if (rng() < 0.12 * (off(s, "credentials", "strict") ? 0.4 : 1) * [1.4, 1, 0.8, 0.6][s.budget]) {
     log(state, "security", "Someone without a credential got into the locker room hallway after practice; the badge audit traced how.");
-    if (rng() < 0.3) news(state, `Reports: unauthorized visitor found in the ${TEAM_BY_ID[state.userTeam].name}' locker room area`);
+    if (rng() < 0.3) news(state, "business", `Reports: unauthorized visitor found in the ${TEAM_BY_ID[state.userTeam].name}' locker room area`);
   }
   if (rng() < 0.08) {
     const caught = rng() < [0.5, 0.75, 0.9, 0.95][s.budget];
@@ -250,7 +250,7 @@ function quarterly(state: GameState): void {
   }
   if (rng() < 0.06 * (off(d.it, "data", "strict") ? 0.5 : 1) * (off(s, "credentials", "strict") ? 0.7 : 1)) {
     log(state, "security", "A printed draft of the trade-deadline board left the building; the staff couldn't say how.");
-    news(state, `Leaked: what the ${TEAM_BY_ID[state.userTeam].name} were discussing ahead of the deadline`);
+    news(state, "business", `Leaked: what the ${TEAM_BY_ID[state.userTeam].name} were discussing ahead of the deadline`);
   }
   // Technology: the big ones become decision memos.
   if (rng() < cyberRisk(state)) ransomware(state);
@@ -320,7 +320,7 @@ export function resolveIncident(state: GameState, p: Record<string, unknown>, ch
     else {
       post(state, "technology", -(p.ask as number) - 0.3 * M, "Ransom paid, and the responders who checked the key");
       trustHit(state, -1, 0.3, "Paid a ransom");
-      news(state, `Reports: the ${TEAM_BY_ID[state.userTeam].name} paid hackers to unlock their systems`);
+      news(state, "business", `Reports: the ${TEAM_BY_ID[state.userTeam].name} paid hackers to unlock their systems`);
     }
     return null;
   }

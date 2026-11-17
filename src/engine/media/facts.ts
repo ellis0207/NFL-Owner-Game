@@ -23,7 +23,7 @@ import { describe, headline as tradeHeadline } from "../trades";
 import type { BoxScore, GameState, MediaFactInput, Position, ScheduledGame, StoryKind, TradeRecord } from "../types";
 import type { Slots } from "./grammar";
 
-export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire";
+export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat";
 
 export interface Fact {
   id: string;
@@ -483,21 +483,93 @@ function tradeFact(state: GameState, rec: TradeRecord, table: Record<string, Rec
   };
 }
 
-// ---- Facts other systems handed over ----
+// ---- The league wire and facts other systems handed over ----
 
-function queuedFacts(state: GameState, table: Record<string, Record_>): Fact[] {
+/** Topics the wire desk writes up; games, the draft and college have their own desks, and "log" lines are already covered. */
+const WIRE_SKIP = new Set(["games", "draft", "college", "log"]);
+/** How much each kind of league news matters to the national desks before anything else is known. */
+const TOPIC_VALUE: Record<string, number> = {
+  coaching: 55, contracts: 38, freeagency: 40, trades: 40, league: 40, labor: 62, discipline: 50, business: 30, stadiums: 45,
+  relocation: 72, ownership: 50, frontoffice: 32, honors: 50, retirement: 45, camp: 38,
+};
+
+let nameIndex: Map<string, string> | null = null;
+/** Players named in a line of text, longest names first so "Josh Allen" doesn't match inside another name. */
+function playersIn(text: string): string[] {
+  nameIndex ??= new Map(Object.values(PLAYER_BY_ID).filter((p) => p.name && p.name.includes(" ")).map((p) => [p.name, p.id]));
+  const out: string[] = [];
+  for (const m of text.matchAll(/[A-Z][\w'.-]+(?: [A-Z][\w'.-]+){1,3}/g)) {
+    const words = m[0].split(" ");
+    for (let n = words.length; n >= 2; n--) {
+      const id = nameIndex.get(words.slice(0, n).join(" "));
+      if (id) { out.push(id); break; }
+    }
+  }
+  return [...new Set(out)];
+}
+
+function teamsInText(text: string): string[] {
+  return Object.values(TEAM_BY_ID).filter((t) => text.includes(`${t.city} ${t.name}`) || new RegExp(`\\b${t.name}\\b`).test(text)).map((t) => t.id);
+}
+
+/** Words in a wire line that point a story toward an angle (the topic itself comes from the system that filed it). */
+const WORD_TAGS: Record<string, RegExp> = {
+  interim: /\binterim\b/i, coordinator: /coordinator/i, tag: /\b(franchise|transition) tag/i, option: /option/i,
+  holdout: /seeking a new contract|holdout|standoff|skips|not attending|hold-in|wants a new contract/i, payCut: /pay cut/i,
+  overCap: /over the cap|under the cap/i, offerSheet: /offer sheet|match/i, visit: /\bvisits?\b/i, interest: /interest|pursue/i,
+  bidding: /bidding war/i, deadline: /deadline/i, lockout: /lockout|locked out|strike/i, deal: /\b(agree|agreement|deal|ratif)/i,
+  suspended: /suspend/i, fine: /\bfine[sd]?\b/i, sponsor: /sponsor|naming/i, opens: /\bopens?\b|first season in/i,
+  apply: /appl(y|ies|ication)/i, withdraw: /withdraw/i, sale: /\b(sale|sell|sells|buyer)\b/i, stake: /stake/i,
+  hof: /Hall of Fame/i, snub: /misses|snub/i, award: /\b(award|awards|wins the)\b/i, retire: /retire/i, qbJob: /starting quarterback/i,
+  tv: /\b(TV|media deals?|rights fees|media money)\b/, cap: /salary cap/i, injury: /injur|damaged/i,
+};
+function wordTags(text: string): Record<string, boolean> {
+  return Object.fromEntries(Object.entries(WORD_TAGS).map(([k, re]) => [k, re.test(text)]));
+}
+
+interface WireInput { topic: string; text: string; kind?: StoryKind; teams?: string[]; players?: string[]; value?: number; data?: Record<string, string | number | boolean> }
+
+function wireFact(state: GameState, table: Record<string, Record_>, w: WireInput, id: string): Fact {
+  const us = state.userTeam;
+  const teams = w.teams ?? teamsInText(w.text);
+  const players = w.players ?? playersIn(w.text);
+  const ours = teams.includes(us);
+  const star = players.some((p) => PLAYER_BY_ID[p] && marketView(state, p) >= 86);
+  const t = w.text;
+  const tags: Fact["tags"] = {
+    ours, rival: !ours && teams.some((x) => x !== us && TEAM_BY_ID[x] && sameDivision(x, us)), leaguewide: teams.length === 0, two: teams.length >= 2,
+    star, qb: players.some((p) => PLAYER_BY_ID[p]?.position === "QB"), money: /\$\d/.test(t),
+    vote: /\b(vote|approve|approves|reject|rejects|owners)\b/i.test(t), fired: /\b(fire|fires|fired|dismiss|out\b|steps down|leaves)/i.test(t),
+    hired: /\b(hire|hires|name|names|promote|promotes)\b/i.test(t), report: /^(Report|Reports|Sources|Speculation)/i.test(t),
+    fail: /\b(falls through|fails|stalls|reject|rejects|called off|short|misses|bankruptcy|damaged|supervise|supervision)\b/i.test(t),
+    record: /\b(record|career|milestone|reached)\b/i.test(t), ...wordTags(t), ...(w.data ?? {}),
+  };
+  const P = players[0] && PLAYER_BY_ID[players[0]] ? playerSlots(state, players[0]) : undefined;
+  const value = Math.min(95, (w.value ?? TOPIC_VALUE[w.topic] ?? 35) + (ours ? 20 : 0) + (star ? 12 : 0) + (tags.rival ? 5 : 0));
+  return {
+    id, type: `wire.${w.topic}`, family: "wire", kind: w.kind ?? (w.topic === "contracts" || w.topic === "freeagency" ? "signing" : tags.report ? "rumor" : "league"),
+    teams, players, value, ours, tags,
+    slots: {
+      ...(w.data ?? {}), text: t.replace(/\.$/, ""), topic: w.topic,
+      T: teams[0] ? teamSlots(state, teams[0], table) : undefined, T2: teams[1] ? teamSlots(state, teams[1], table) : undefined, P,
+    },
+  };
+}
+
+function wireFacts(state: GameState, table: Record<string, Record_>): Fact[] {
+  const out: Fact[] = [];
+  let i = 0;
+  for (const n of state.news) {
+    if (n.date !== state.date) break;
+    i++;
+    if (!n.topic || WIRE_SKIP.has(n.topic)) continue;
+    out.push(wireFact(state, table, { topic: n.topic, text: n.text.replace(/^Report: /, ""), data: /^Report: /.test(n.text) ? { report: true } : undefined }, `w:${state.date}:${i}`));
+  }
   const m = mediaState(state);
   const q = m.queue ?? [];
   m.queue = [];
-  return q.map((f, i) => ({
-    id: `q:${state.date}:${i}`, type: f.type, family: "wire" as const, kind: f.kind ?? "league", teams: f.teams ?? [], players: f.players ?? [],
-    value: f.value ?? 30, ours: !!f.teams?.includes(state.userTeam), tags: { ...(f.data ?? {}) },
-    slots: {
-      ...(f.data ?? {}), text: f.text,
-      T: f.teams?.[0] && TEAM_BY_ID[f.teams[0]] ? teamSlots(state, f.teams[0], table) : undefined,
-      P: f.players?.[0] && PLAYER_BY_ID[f.players[0]] ? playerSlots(state, f.players[0]) : undefined,
-    },
-  }));
+  q.forEach((f, j) => out.push(wireFact(state, table, { topic: f.type.split(".")[0], ...f }, `q:${state.date}:${j}`)));
+  return out;
 }
 
 /** Every fact of the day, before the desks decide what to write. */
@@ -505,6 +577,6 @@ export function collectFacts(state: GameState): Fact[] {
   const table = standings(state);
   return [
     ...gameFacts(state, table), ...injuryFacts(state, table), ...signingFacts(state, table),
-    ...releaseFacts(state, table), ...tradeFacts(state, table), ...queuedFacts(state, table),
+    ...releaseFacts(state, table), ...tradeFacts(state, table), ...wireFacts(state, table),
   ];
 }

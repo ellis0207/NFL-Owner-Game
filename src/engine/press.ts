@@ -792,7 +792,7 @@ function runEcho(state: GameState, e: { kind: string; question: string; player?:
       fans(state, e.kind === "fineRefs" ? 1 : 0);
       send(state, "league", "League Office", "Fine notice",
         `The league has fined you ${money(amount)} for ${reason}. The fine is charged to the club's accounts and does not count against the salary cap.`);
-      news(state, `The league fines ${teamLabel(us)} owner ${owner} ${money(amount)} for ${e.kind === "fineRefs" ? "criticizing officials" : "tampering comments"}`);
+      news(state, "discipline", `The league fines ${teamLabel(us)} owner ${owner} ${money(amount)} for ${e.kind === "fineRefs" ? "criticizing officials" : "tampering comments"}`);
       addStory(state, {
         outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [us], players: p ? [p] : undefined,
         headline: `League fines ${nick(us)} owner ${owner} ${money(amount)}`,

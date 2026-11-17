@@ -381,7 +381,7 @@ function closeSale(state: GameState, sale: StakeSale, vet = true): void {
   sale.stage = "closed";
   s.sales.unshift({ date: state.date, kind: sale.seller ? "partner exit" : sale.kind, pct: p.pct, price: bid.price, buyer: bid.name });
   note(state, `${bid.name} bought ${pctText(p.pct)} of the club for ${money(bid.price)}.`);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} sell a ${pctText(p.pct)} stake to ${bid.name}, valuing the club near ${billions(bid.price / p.pct)}`);
+  news(state, "ownership", `${TEAM_BY_ID[state.userTeam].name} sell a ${pctText(p.pct)} stake to ${bid.name}, valuing the club near ${billions(bid.price / p.pct)}`);
   addStory(state, {
     outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
     headline: `${bid.name} buys into the ${TEAM_BY_ID[state.userTeam].name}`,

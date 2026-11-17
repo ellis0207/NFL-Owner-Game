@@ -343,7 +343,7 @@ function hireExec(state: GameState, role: ExecRole, id: string, o: { salary: num
   closeExecSearch(state, role);
   if (fee) postFee(state, -fee, `${firm!.id}: search fee for the ${EXEC_ROLES[role].label.toLowerCase()}`);
   x.log.unshift({ date: state.date, text: `Hired ${e.name} as ${EXEC_ROLES[role].label.toLowerCase()} (${money(o.salary)} a year through ${e.contract.through}).` });
-  news(state, `${TEAM_BY_ID[state.userTeam].name} name ${e.name} ${EXEC_ROLES[role].label.toLowerCase()}`);
+  news(state, "frontoffice", `${TEAM_BY_ID[state.userTeam].name} name ${e.name} ${EXEC_ROLES[role].label.toLowerCase()}`);
   noteDecision(state, "executives", `Hired ${e.name} as ${EXEC_ROLES[role].label.toLowerCase()}`, o.salary);
 }
 
@@ -411,7 +411,7 @@ export function execLeaves(state: GameState, role: ExecRole, where: string): voi
   delete x.chart[role];
   x.departures.unshift({ date: state.date, role, why: "left", cost: 0 });
   x.log.unshift({ date: state.date, text: `${e.name} left to become ${where}.` });
-  news(state, `${TEAM_BY_ID[state.userTeam].name} ${EXEC_ROLES[role].label.toLowerCase()} ${e.name} leaves to become ${where}`);
+  news(state, "frontoffice", `${TEAM_BY_ID[state.userTeam].name} ${EXEC_ROLES[role].label.toLowerCase()} ${e.name} leaves to become ${where}`);
   delete x.people[e.id];
 }
 

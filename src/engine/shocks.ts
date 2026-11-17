@@ -183,7 +183,7 @@ export function startDisruption(state: GameState, kind?: Disruption["kind"], sev
   send(state, "business", businessChief(state), `Stadium emergency: ${def.text}`,
     `Overnight ${def.text}. ${d.capacity === 0 ? "The stadium is closed and the league is moving our home games until it reopens" : d.capacity < 0.7 ? `Only ${Math.round(d.capacity * 100)}% of the seats are usable` : "Part of the building is closed"} until about ${d.until}. ` +
     `Repairs come to about ${money(d.repair)}${cover ? "; we've filed with the property insurer" : ", and the insurer won't cover it"}.`);
-  news(state, `${teamLabel(state.userTeam)} stadium damaged: ${def.text}`);
+  news(state, "business", `${teamLabel(state.userTeam)} stadium damaged: ${def.text}`);
   return d;
 }
 
@@ -247,7 +247,7 @@ function revenueShock(state: GameState, rng: () => number): void {
     d.years = Math.max(0, year - d.start);
     send(state, "business", businessChief(state), `${d.partner} has collapsed`,
       `${d.partner}, one of our biggest partners, filed for bankruptcy this morning. Its ${money(d.value)}-a-year deal is gone, and the receivable will be worth cents on the dollar. We'll resell the category in February.`);
-    news(state, `${d.partner} files for bankruptcy, leaving a hole in the ${teamLabel(state.userTeam)}' sponsorship roster`);
+    news(state, "business", `${d.partner} files for bankruptcy, leaving a hole in the ${teamLabel(state.userTeam)}' sponsorship roster`);
     note(state, `Revenue shock: ${d.partner} collapsed, taking ${money(d.value)} a year.`);
   } else {
     const s = shocks(state);
@@ -269,7 +269,7 @@ function costShock(state: GameState, rng: () => number): void {
   } else if (r < 0.7) {
     shockEconomy(state, { inflation: 1.5 + rng() * 1.5 });
     note(state, "Cost shock: an inflation spike is coming through prices and wages.");
-    news(state, "Inflation jumps as energy and supply costs spike");
+    news(state, "business", "Inflation jumps as energy and supply costs spike");
   } else {
     const p = (business(state).projects ?? []).find((x) => !x.opened);
     if (!p) return;
@@ -310,7 +310,7 @@ export function distressOption(state: GameState, key: string): string | null {
     o.liquid += Math.max(0, money_ - o.personalDebt);
     d.options.push(key);
     note(state, `${key === "investors" ? "Minority investors" : "A control partner"} bought ${Math.round(share * 100)}% of the club for ${money(money_)}, approved by the league's finance committee.`);
-    news(state, `The ${teamLabel(state.userTeam)} owner sells a ${Math.round(share * 100)}% stake to ${key === "investors" ? "outside investors" : "a new partner"}`);
+    news(state, "business", `The ${teamLabel(state.userTeam)} owner sells a ${Math.round(share * 100)}% stake to ${key === "investors" ? "outside investors" : "a new partner"}`);
     if (!ownerTapped(state)) recover(state);
     return null;
   }
@@ -336,7 +336,7 @@ function distressMonthly(state: GameState): void {
       s.distress = { since: state.date, stage: "distress", stakeSold: d?.stakeSold ?? 0, options: [] };
       send(state, "business", businessChief(state), "The club is in financial distress",
         "You can't put more money in, and the club has run through its credit. The options are on the Owner page: outside investors, refinancing, or a control partner. If nothing changes in two months, the league will step in.");
-      news(state, `Questions grow about the ${teamLabel(state.userTeam)} owner's finances`);
+      news(state, "business", `Questions grow about the ${teamLabel(state.userTeam)} owner's finances`);
     }
     return;
   }
@@ -352,7 +352,7 @@ function distressMonthly(state: GameState): void {
     if (state.business) for (const k of Object.keys(state.business.budget) as (keyof typeof state.business.budget)[]) state.business.budget[k] = Math.min(1, state.business.budget[k]) as never;
     send(state, "league", "League Office", "League supervision of the club",
       `The league's finance committee is supervising the club under a three-year recovery plan: ${d.plan.join("; ")}.`);
-    news(state, `The league steps in to supervise the ${teamLabel(state.userTeam)}' finances`);
+    news(state, "business", `The league steps in to supervise the ${teamLabel(state.userTeam)}' finances`);
   }
   if (d.stage === "supervised" && state.business) {
     for (const k of Object.keys(state.business.budget) as (keyof typeof state.business.budget)[]) state.business.budget[k] = Math.min(1, state.business.budget[k]) as never;
@@ -394,7 +394,7 @@ export function shocksDaily(state: GameState): void {
     // Other clubs: one lands in league supervision about once every fifteen years.
     if (rng() < 1 / 180) {
       const others = TEAMS.filter((t) => t.id !== state.userTeam);
-      news(state, `The league's finance committee places the ${teamLabel(others[Math.floor(rng() * others.length)].id)} under supervision after their owner misses capital calls`);
+      news(state, "business", `The league's finance committee places the ${teamLabel(others[Math.floor(rng() * others.length)].id)} under supervision after their owner misses capital calls`);
     }
   }
 }

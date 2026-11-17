@@ -13,7 +13,15 @@ export function send(state: GameState, kind: InboxItem["kind"], from: string, ti
   state.inbox.unshift({ id: `${state.date}-${state.inbox.length}`, date: state.date, kind, from, title, body, read: false, gameId });
 }
 
-export function news(state: GameState, text: string): void {
-  state.news.unshift({ date: state.date, text });
+/**
+ * Where a league news line comes from. The media writes stories from the wire by topic (engine/media);
+ * "games", "draft" and "college" are covered by their own desks, and "log" lines are already written up elsewhere.
+ */
+export type NewsTopic =
+  | "coaching" | "contracts" | "freeagency" | "trades" | "league" | "labor" | "discipline" | "business" | "stadiums"
+  | "relocation" | "ownership" | "frontoffice" | "honors" | "retirement" | "camp" | "draft" | "college" | "games" | "log";
+
+export function news(state: GameState, topic: NewsTopic, text: string): void {
+  state.news.unshift({ date: state.date, text, topic });
   if (state.news.length > 600) state.news.length = 600;
 }

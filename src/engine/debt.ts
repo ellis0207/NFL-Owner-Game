@@ -308,7 +308,7 @@ export function acceptLoan(state: GameState, id: string): string | null {
   post(state, "professional", -0.25 * M, `Lawyers on the ${o.lender} loan`);
   if (refi) payOff(state, refi, "Refinanced");
   log(state, `Borrowed ${money(o.amount)} from ${o.lender} (${o.kind}, ${o.years} years${refi ? `, refinancing ${refi.lender}` : ""}).`);
-  if (o.amount >= 150 * M) news(state, `${TEAM_BY_ID[state.userTeam].name} close a ${money(o.amount)} loan with ${o.lender}`);
+  if (o.amount >= 150 * M) news(state, "ownership", `${TEAM_BY_ID[state.userTeam].name} close a ${money(o.amount)} loan with ${o.lender}`);
   return null;
 }
 

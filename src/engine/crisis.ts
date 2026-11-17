@@ -85,7 +85,7 @@ export function startCrisis(state: GameState, kind: string, opts: { title?: stri
   send(state, "league", "Crisis team", `Crisis: ${x.title}`,
     `Early this morning ${x.text}. The crisis team (${c.team.map((r) => CRISIS_ROLES[r].split(":")[0].toLowerCase()).join(", ") || "nobody assigned"}) is assembled. ` +
     "Work through the playbook on the Legal page: the first response is due today, and every step we skip is decided by default.");
-  news(state, `${x.title}: ${x.text}`);
+  news(state, "discipline", `${x.title}: ${x.text}`);
   return x;
 }
 

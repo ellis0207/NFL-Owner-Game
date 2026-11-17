@@ -244,7 +244,7 @@ export function commissionStudies(state: GameState): string | null {
     name: `New ${TEAM_BY_ID[state.userTeam].city} Stadium`, funding: { equity: 0, loan: 0, league: 0, public: 0, psl: 0 }, bids: [], paid: 0, events: [], milestones: {}, commitments: [],
   };
   note(state, "Commissioned feasibility studies for a new stadium.");
-  news(state, `${TEAM_BY_ID[state.userTeam].name} commission studies for a new stadium`);
+  news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name} commission studies for a new stadium`);
   return `The consultants report back around ${shortDate(c.plan.studyDue!)}.`;
 }
 
@@ -410,7 +410,7 @@ export function awardContract(state: GameState, contractor: string, kind: Contra
   p.permitsDue = addDays(state.date, 60 + Math.floor(r() * 60) + Math.round(site.envRisk * 60));
   p.stage = "permits";
   note(state, `Awarded the contract to ${b.contractor} (${CONTRACTS[kind].label.toLowerCase()}, ${money(p.price)}).`);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} pick ${b.contractor} to build ${p.name}`);
+  news(state, "stadiums", `${TEAM_BY_ID[state.userTeam].name} pick ${b.contractor} to build ${p.name}`);
   return `Permits should come through around ${shortDate(p.permitsDue)}; construction starts then.`;
 }
 
@@ -428,7 +428,7 @@ function startBuild(state: GameState): void {
     send(state, "business", businessChief(state), "Our temporary home",
       `The old stadium comes down to make room, so we play at ${c.temporary.name} until ${p.name} opens. Smaller crowds and less premium seating until then.`);
   }
-  news(state, `Construction begins on ${p.name}; it should open in ${p.opens.slice(0, 4)}`);
+  news(state, "stadiums", `Construction begins on ${p.name}; it should open in ${p.opens.slice(0, 4)}`);
   addStory(state, {
     outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "owner", teams: [state.userTeam],
     headline: `Ground broken on ${p.name}`,
@@ -494,7 +494,7 @@ function applyEvent(state: GameState, e: BuildEvent): void {
       p.opens = opens;
       const c = construction(state);
       if (c.temporary) c.temporary.until = addDays(opens, -1);
-      news(state, `${p.name} slips a season: it now opens in ${opens.slice(0, 4)}`);
+      news(state, "stadiums", `${p.name} slips a season: it now opens in ${opens.slice(0, 4)}`);
     }
   }
   send(state, "business", businessChief(state), `${p.name}: ${e.text.split(":")[0].toLowerCase()}`,
@@ -553,7 +553,7 @@ function replaceStadium(state: GameState, n: NewStadium): void {
     else leases[n.team] = { through: n.opened + 29, rent: n.rent, upkeep: n.upkeep, eventShare: n.structure === "publicAuthority" ? 0.1 : 1, fund: 0, log: [{ date: state.date, text: `New lease for the new stadium through ${n.opened + 29}.` }] };
   }
   bindConstruction(state);
-  if (n.team !== state.userTeam) news(state, `The ${teamLabel(n.team)} open ${n.name}`);
+  if (n.team !== state.userTeam) news(state, "stadiums", `The ${teamLabel(n.team)} open ${n.name}`);
 }
 
 // ---- Other clubs ----
@@ -568,10 +568,10 @@ function cpuYear(state: GameState): void {
     if (daysBetween(b.announced, state.date) > 330 && r() < 0.55) {
       b.approved = state.date;
       b.opens = year + 3 + (r() < 0.4 ? 1 : 0);
-      news(state, `Officials approve the ${teamLabel(b.team)}' new stadium: ${money(b.cost)}, opening in ${b.opens}`);
+      news(state, "stadiums", `Officials approve the ${teamLabel(b.team)}' new stadium: ${money(b.cost)}, opening in ${b.opens}`);
     } else if (daysBetween(b.announced, state.date) > 1000) {
       b.failed = true;
-      news(state, `The ${teamLabel(b.team)}' new-stadium plan stalls after public money falls through`);
+      news(state, "stadiums", `The ${teamLabel(b.team)}' new-stadium plan stalls after public money falls through`);
       failedDeal(state, b.team);
     }
   }
@@ -585,7 +585,7 @@ function cpuYear(state: GameState): void {
     const roof: Roof = r() < 0.5 ? "dome" : r() < 0.6 ? "retractable" : "open";
     const cost = Math.round(1_600 * M * ROOFS[roof].build * inflation(year, 0.04) * constructionFactor(state) / 10 / M) * 10 * M;
     c.cpu.push({ team: t.id, announced: state.date, name: `New ${t.city} Stadium`, roof, cost, structure: r() < 0.5 ? "publicTeam" : "owned" });
-    news(state, `The ${teamLabel(t.id)} unveil plans for a ${money(cost)} stadium to replace ${s.name}`);
+    news(state, "stadiums", `The ${teamLabel(t.id)} unveil plans for a ${money(cost)} stadium to replace ${s.name}`);
   }
 }
 

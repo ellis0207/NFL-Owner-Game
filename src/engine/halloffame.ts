@@ -435,10 +435,10 @@ function electClass(state: GameState, year: number): void {
   h.classes[year] = elected;
   h.finalists[year] = rest.modern.filter((e) => e.stage <= 15).map((e) => e.id);
   const names = elected.map((id) => hofCase(state, id)?.name ?? id);
-  if (names.length) news(state, `The Pro Football Hall of Fame class of ${year}: ${names.join(", ")}.`);
+  if (names.length) news(state, "honors", `The Pro Football Hall of Fame class of ${year}: ${names.join(", ")}.`);
   // The snub the papers write about: the strongest case left out.
   const snub = rest.modern.filter((e) => e.stage <= 10 && !e.elected).map((e) => hofCase(state, e.id)!).sort((a, b) => hofMerit(b) - hofMerit(a))[0];
-  if (snub) news(state, `${snub.name} misses the Hall of Fame again. ${rest.modern.find((e) => e.id === snub.id)?.why ?? ""}`.trim());
+  if (snub) news(state, "honors", `${snub.name} misses the Hall of Fame again. ${rest.modern.find((e) => e.id === snub.id)?.why ?? ""}`.trim());
   const ours = elected.map((id) => hofCase(state, id)!).filter((c) => c.teams.includes(state.userTeam));
   if (ours.length) send(state, "league", "Pro Football Hall of Fame", `${ours.map((c) => c.name).join(" and ")} elected to the Hall of Fame`,
     `${ours.map((c) => c.name).join(" and ")}, who played for us, ${ours.length === 1 ? "is" : "are"} in the class of ${year}. The enshrinement is in Canton in August, before the Hall of Fame Game, and the club is planning a ring ceremony at halftime of a home game.`);

@@ -201,7 +201,7 @@ export function legalDaily(state: GameState): void {
       l.breaches.unshift({ date: state.date, text: m ? `Privileged notes on the ${m.kind} reached the other side.` : "Internal crisis notes leaked to a reporter." });
       l.breaches.length = Math.min(l.breaches.length, 20);
       standingState(state).league -= 1;
-      news(state, `Leaked documents from the ${TEAM_BY_ID[state.userTeam].city} ${TEAM_BY_ID[state.userTeam].name} front office are making the rounds`);
+      news(state, "discipline", `Leaked documents from the ${TEAM_BY_ID[state.userTeam].city} ${TEAM_BY_ID[state.userTeam].name} front office are making the rounds`);
     }
     // New disputes: about two a year.
     if (rng() < 2 / 12) {

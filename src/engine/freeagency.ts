@@ -233,7 +233,7 @@ function runVisits(state: GameState): void {
       if (fa.status !== "open") continue;
       const p = PLAYER_BY_ID[fa.player];
       if (v.team === state.userTeam) send(state, "transaction", gmName(state), `${p.name} visited`, visitReport(state, fa.player, v.team));
-      else if (fa.base >= 8_000_000 * capScale(state, NEXT)) news(state, `${p.position} ${p.name} visits the ${teamLabel(v.team)}`);
+      else if (fa.base >= 8_000_000 * capScale(state, NEXT)) news(state, "freeagency", `${p.position} ${p.name} visits the ${teamLabel(v.team)}`);
     }
   }
 }
@@ -296,7 +296,7 @@ function tamperingRumors(state: GameState): void {
     (linked[pick.id] ??= []).push(team);
     const p = PLAYER_BY_ID[pick.id];
     const where = state.date < addDays(KEY.scoutingCombineStart, 7) ? "Word out of Indianapolis" : "League sources";
-    news(state, `${where}: the ${teamLabel(team)} are expected to pursue ${teamLabel(pick.team)} ${p.position} ${p.name} in free agency`);
+    news(state, "freeagency", `${where}: the ${teamLabel(team)} are expected to pursue ${teamLabel(pick.team)} ${p.position} ${p.name} in free agency`);
   }
 }
 
@@ -371,7 +371,7 @@ export function signFreeAgent(state: GameState, id: string, team: string, t: Off
   delete fa.lastLook;
   const verb = inWindow(state.date) ? "agrees to terms with" : reSigned ? "re-signs with" : "signs with";
   if (deal.apy >= 4_000_000 || team === state.userTeam) {
-    news(state, `${p.position} ${p.name} ${verb} the ${teamLabel(team)}: ${t.years} year${t.years === 1 ? "" : "s"}, ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
+    news(state, "log", `${p.position} ${p.name} ${verb} the ${teamLabel(team)}: ${t.years} year${t.years === 1 ? "" : "s"}, ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
   }
   changeMorale(state, id, 6);
   changeTrust(state, agentFor(id).id, team, 4);
@@ -469,7 +469,7 @@ export function signStreetFreeAgent(state: GameState, team: string, id: string, 
       grades: gradeDeal(state, { player: id, team, date: state.date, years: 1, apy: deal.apy, guaranteed: deal.guaranteedAtSigning, total: deal.total }, year, false),
       valueAtSigning: teamValue(state, team, id, year),
     });
-    if (deal.total >= 3_000_000) news(state, `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} signs with the ${teamLabel(team)}: one year, ${money(deal.total)}`);
+    if (deal.total >= 3_000_000) news(state, "log", `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} signs with the ${teamLabel(team)}: one year, ${money(deal.total)}`);
   }
   changeMorale(state, id, 4);
   install(state, id, team, deal);
@@ -990,7 +990,7 @@ function cpuOfferSheets(state: GameState): void {
       compensation: tenderCompensation(id, tender.level),
     });
     const p = PLAYER_BY_ID[id];
-    news(state, `${p.name} signs an offer sheet with the ${teamLabel(bidder.t)}; the ${teamLabel(tender.team)} have five days to match`);
+    news(state, "freeagency", `${p.name} signs an offer sheet with the ${teamLabel(bidder.t)}; the ${teamLabel(tender.team)} have five days to match`);
     if (tender.team === state.userTeam) {
       send(state, "transaction", gmName(state), `Offer sheet: ${p.name}`,
         `${p.name} signed an offer sheet with the ${teamLabel(bidder.t)}: ${terms.years} years, ${money(terms.total)}, ${money(terms.guaranteed)} guaranteed. ` +
@@ -1025,7 +1025,7 @@ export function resolveSheet(state: GameState, player: string, match: boolean): 
     if (!transferOwnPick(state, NEXT, round, sheet.to, sheet.from)) o.picksOwed.push({ from: sheet.to, to: sheet.from, pick: sheet.compensation, player });
   }
   if (match) lockMatchedSheet(state, player, sheet.to);
-  news(state, match
+  news(state, "freeagency", match
     ? `The ${teamLabel(sheet.from)} match the offer sheet and keep ${p.name}`
     : `The ${teamLabel(sheet.from)} decline to match; ${p.name} joins the ${teamLabel(sheet.to)}${sheet.compensation ? ` for a ${compLabel(sheet.compensation)} pick` : ""}`);
 }
@@ -1053,8 +1053,8 @@ function rumors(state: GameState): void {
     const teams = fa.offers.map((o) => teamLabel(o.team));
     const top = Math.max(...fa.offers.map((o) => o.apy));
     if (fa.offers.length >= 3 && top >= fa.base * 1.08) {
-      news(state, `Bidding war: ${PLAYER_BY_ID[fa.player].name}'s price is past ${money(Math.floor(top / 1_000_000) * 1_000_000)} a year with the ${teams.slice(0, 3).join(", the ")} in the mix`);
-    } else news(state, `Report: ${PLAYER_BY_ID[fa.player].name} is drawing interest from the ${teams.slice(0, 3).join(", the ")}${teams.length > 3 ? " and others" : ""}`);
+      news(state, "freeagency", `Bidding war: ${PLAYER_BY_ID[fa.player].name}'s price is past ${money(Math.floor(top / 1_000_000) * 1_000_000)} a year with the ${teams.slice(0, 3).join(", the ")} in the mix`);
+    } else news(state, "freeagency", `Report: ${PLAYER_BY_ID[fa.player].name} is drawing interest from the ${teams.slice(0, 3).join(", the ")}${teams.length > 3 ? " and others" : ""}`);
   }
 }
 

@@ -24,7 +24,8 @@ import { seasonTotals, stat, type StatLine } from "./stats";
 import { direction, outlook, parsePick, trades, tradeWindow } from "./trades";
 import type { BoxScore, GameState, Position, ScheduledGame, Story } from "./types";
 import { money } from "./inbox";
-import { composeDay } from "./media/compose";
+import { composeDay, fileFacts } from "./media/compose";
+import { campFact, seatFact, talkFacts } from "./media/desks";
 
 const KEY = RULES.keyDates;
 
@@ -282,6 +283,8 @@ function teamsIn(text: string): string[] {
 function wireCoverage(state: GameState): void {
   for (const n of state.news) {
     if (n.date !== state.date) break;
+    // Everything but the draft and college goes through the story engine's wire desk.
+    if (n.topic && n.topic !== "draft" && n.topic !== "college") continue;
     const w = WIRE.find((x) => x.re.test(n.text));
     if (!w) continue;
     const text = n.text.replace(/^CFB · /, "").replace(/^Report: /, "");
@@ -431,59 +434,7 @@ function interviews(state: GameState): void {
   const date = state.date;
   const inSeason = date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd;
   if (!inSeason || weekday(date) !== "Wednesday") return;
-  const rng = rngFor(state.seed, `media:talk:${date}`);
-  const table = standings(state);
-  const us = state.userTeam;
-  // Our head coach's weekly press conference: how he talks says something about the building.
-  const coach = mediaState(state).coach;
-  const hc = hcName(us);
-  const next = SCHEDULE.find((g) => g.date > date && (() => {
-    const m = matchup(state, g);
-    return !!m && (m.home === us || m.away === us);
-  })());
-  const opp = next && (() => {
-    const m = matchup(state, next)!;
-    return m.home === us ? m.away : m.home;
-  })();
-  const relationLine = coach >= 70 ? `Asked about ownership, ${last(hc)} smiled: "We're all pulling in the same direction. I feel supported."`
-    : coach >= 45 ? ""
-    : coach >= 25 ? `Asked about the owner's recent comments, ${last(hc)} paused. "I'll keep those conversations in house."`
-    : `${last(hc)} bristled at a question about his relationship with ownership: "Next question."`;
-  story(state, O.ledger, "reporter", {
-    kind: "interview", teams: [us],
-    headline: `${last(hc)}: "${pick(rng, ["We know what's in front of us", "It's a one-week season", "We have to clean some things up", "The guys are locked in"])}"`,
-    body: `${hc} met with reporters ahead of ${opp ? `the game against the ${teamLabel(opp)}` : "the week"}. ` +
-      `"${pick(rng, [
-        "We had a good Wednesday. The focus is where it needs to be.",
-        "Every week in this league is hard. We respect who we're playing.",
-        "We've got to take care of the football and win on third down. Simple as that.",
-        "The injury report is what it is. Next man up.",
-      ])}" ${relationLine}`,
-  });
-  // A couple of other players around the league.
-  const pool = TEAMS.map((t) => t.id).filter((t) => t !== us);
-  for (let i = 0; i < 2; i++) {
-    const team = pick(rng, pool);
-    const r = table[team];
-    const ids = teamPlayerIds(state, team).filter((id) => PLAYER_BY_ID[id] && !state.players[id].injury);
-    const stars = ids.map((id) => [id, marketView(state, id)] as const).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    if (!stars.length) continue;
-    const [id] = pick(rng, stars);
-    const yearsLeft = contractYearsLeft(id, RULES.season, state);
-    const losing = r.streak.startsWith("L") && Number(r.streak.slice(1)) >= 3;
-    const winning = r.streak.startsWith("W") && Number(r.streak.slice(1)) >= 3;
-    const quote = yearsLeft <= 1
-      ? pick(rng, ["I don't think about the contract. My agent handles that. I handle Sundays.", "I want to be here. That's all I'll say about it."])
-      : losing ? pick(rng, ["Nobody's coming to save us. We have to look in the mirror.", "We're not far off. I know how that sounds at this record."])
-      : winning ? pick(rng, ["We're not satisfied. Nobody in here is talking about January yet.", "It's fun right now. Practice is fun. That's how you know."])
-      : pick(rng, ["I feel good. Body feels good. I'm just trying to stack days.", "We've got a lot of football left. I like this group."]);
-    story(state, O.sideline, "reporter", {
-      kind: "interview", teams: [team], players: [id],
-      headline: yearsLeft <= 1 ? `${pname(id)} on his contract year: "${quote.split(".")[0]}"` : `${pname(id)}: "${quote.split(/[.!]/)[0]}"`,
-      body: `${ppos(id)} ${pname(id)} talked to reporters at the ${nick(team)} facility. "${quote}" The ${nick(team)} are ${recordOf(r)}.` +
-        (yearsLeft <= 1 ? ` ${last(pname(id))} is in the last year of his deal.` : ""),
-    });
-  }
+  fileFacts(state, talkFacts(state, rngFor(state.seed, `media:talk:${date}`)), 3);
 }
 
 // ---- Weekly trends ----
@@ -631,21 +582,8 @@ function trends(state: GameState): void {
 }
 
 function hotSeat(state: GameState): void {
-  const table = standings(state);
-  const rng = rngFor(state.seed, `media:hot:${state.date}`);
-  const cold = TEAMS.map((t) => t.id).filter((t) => {
-    const r = table[t];
-    const g = r.w + r.l + r.t;
-    return g >= 6 && r.w / g <= 0.3;
-  });
-  if (!cold.length) return;
-  const t = pick(rng, cold);
-  story(state, O.blitz, "insider", {
-    kind: "rumor", teams: [t],
-    headline: `Hot seat watch: ${hcName(t)}`,
-    body: `At ${recordOf(table[t])}, the ${teamLabel(t)} are ${t === state.userTeam ? "testing their owner's patience" : "running out of time"}. ` +
-      `"You can feel it in that building," Kara Voss said on The Blitz. "${last(hcName(t))} needs wins, and he needs them now."`,
-  });
+  const f = seatFact(state, rngFor(state.seed, `media:hot:${state.date}`));
+  if (f) fileFacts(state, [f], 2);
 }
 
 function offseasonTrends(state: GameState): void {
@@ -874,44 +812,8 @@ function draftCoverage(state: GameState): void {
 // ---- Every day: the evergreen beats that fill the quiet days ----
 
 function campNotebook(state: GameState, team: string): void {
-  const rng = rngFor(state.seed, `media:camp:${team}:${state.date}`);
-  const chart = depthChart(state, team);
-  const battles = (["QB", "RB", "WR", "TE", "OT", "OG", "C", "EDGE", "IDL", "LB", "CB", "S", "K"] as Position[]).flatMap((pos) => {
-    const [a, b] = (chart[pos] ?? []).filter((x) => PLAYER_BY_ID[x] && !state.players[x]?.injury);
-    if (!a || !b) return [];
-    const gap = Math.abs(marketView(state, a) - marketView(state, b));
-    return gap < 3 ? [[pos, a, b, gap] as const] : [];
-  }).sort((x, y) => x[3] - y[3]);
-  const rookies = teamPlayerIds(state, team).filter((id) => PLAYER_BY_ID[id] && PLAYER_BY_ID[id].yearsExp === 0 && PLAYER_BY_ID[id].draft.round)
-    .sort((a, b) => marketView(state, b) - marketView(state, a));
-  const lines: string[] = [];
-  const players: string[] = [];
-  const battle = battles.length ? pick(rng, battles.slice(0, 3)) : null;
-  if (battle) {
-    lines.push(`The fight to watch: ${pname(battle[1])} and ${pname(battle[2])} for the starting ${battle[0]} job. ${pick(rng, [
-      `${last(pname(battle[1]))} has taken more first-team reps, but the gap is small.`,
-      `Coaches have rotated them with the ones all week.`,
-      `${last(pname(battle[2]))} had the better day today.`,
-    ])}`);
-    players.push(battle[1], battle[2]);
-  }
-  const rookie = rookies.length ? pick(rng, rookies.slice(0, 3)) : null;
-  if (rookie) {
-    lines.push(`${pick(rng, ["Rookie", "First-year"])} ${ppos(rookie)} ${pname(rookie)} ${pick(rng, ["keeps showing up on the practice tape.", "had a rough day and heard about it from the position coach.", "is getting work with the starters.", "looks every bit like a draft pick who'll play early."])}`);
-    players.push(rookie);
-  }
-  const hold = teamPlayerIds(state, team).find((id) => state.players[id].holdout && PLAYER_BY_ID[id]);
-  if (hold) {
-    lines.push(`${pname(hold)} is still ${state.players[hold].holdout!.kind === "holdout" ? "away from the team" : "not practicing"} while he waits on a new deal.`);
-    players.push(hold);
-  }
-  if (!lines.length) return;
-  lines.push(`"${pick(rng, ["Competition brings out the best in everybody.", "We're not putting anybody in pads in the depth chart yet. It's earned.", "Good, physical day. We needed that one."])}" ${hcName(team)} said.`);
-  story(state, team === state.userTeam ? O.ledger : O.sideline, "reporter", {
-    kind: "interview", teams: [team], players,
-    headline: `${nick(team)} camp notebook: ${battle ? `${last(pname(battle[1]))} vs. ${last(pname(battle[2]))}` : rookie ? `${last(pname(rookie))} turning heads` : `${last(pname(hold!))} watch continues`}`,
-    body: lines.join(" "),
-  });
+  const f = campFact(state, team, rngFor(state.seed, `media:camp:${team}:${state.date}`));
+  if (f) fileFacts(state, [f], 2);
 }
 
 function injuryRoundup(state: GameState): void {

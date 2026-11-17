@@ -161,7 +161,7 @@ export function committeeProposal(state: GameState, rule: string, proposable: st
   if (meeting.proposals.some((p) => p.viaUs)) return "We've already brought a committee proposal this year.";
   if (!proposable.includes(rule)) return "That can't be proposed right now.";
   meeting.proposals.push({ id: `${meeting.year}:${rule}`, rule, sponsor: "committee", committee: "for", lobby: {}, ourVote: true, viaUs: true });
-  news(state, `The ${COMMITTEES[com].label} proposes: ${c.title.toLowerCase()}`);
+  news(state, "league", `The ${COMMITTEES[com].label} proposes: ${c.title.toLowerCase()}`);
   return null;
 }
 
@@ -259,7 +259,7 @@ function runTrial(state: GameState): void {
   lo.trials[t.trial!] = RULES.season;
   const verdict = rng() < 0.7 ? "worked well enough to bring to a vote" : "had problems the committee wants fixed, but it can still be proposed";
   lo.log.unshift({ date: state.date, text: `Preseason trial: ${t.title.toLowerCase()}. It ${verdict}.` });
-  news(state, `The Competition Committee tests a new system in preseason games: ${t.title.toLowerCase()}`);
+  news(state, "league", `The Competition Committee tests a new system in preseason games: ${t.title.toLowerCase()}`);
 }
 
 // ---- The commissioner ----
@@ -294,11 +294,11 @@ function commissionerVote(state: GameState): void {
   r.passed = yes >= 24;
   if (r.passed) {
     c.through += 5;
-    news(state, `Owners extend Commissioner ${c.name} through ${c.through} (${yes}-${32 - yes})`);
+    news(state, "league", `Owners extend Commissioner ${c.name} through ${c.through} (${yes}-${32 - yes})`);
   } else {
     const rng = rngFor(state.seed, `newcommish:${r.year}`);
     const name = `${FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)]}`;
-    news(state, `Owners decline to extend Commissioner ${c.name}; ${name} is chosen to succeed`);
+    news(state, "league", `Owners decline to extend Commissioner ${c.name}; ${name} is chosen to succeed`);
     lo.commissioner = { name, since: r.year, through: r.year + 5, approval: 60 };
   }
   lo.log.unshift({ date: state.date, text: `Commissioner's contract vote: ${yes}-${32 - yes}${r.passed ? ", extended" : ", not extended"}` });
@@ -333,7 +333,7 @@ export function flex(state: GameState): void {
   night.timeET = t;
   const text = `${teamLabel(best.away!)} at ${teamLabel(best.home!)} flexed into Sunday night on ${shortDate(sunday)}; ${teamLabel(night.away!)} at ${teamLabel(night.home!)} moves to ${t === "13:00" ? "1 p.m." : "the afternoon"}.`;
   lo.moves.unshift({ game: best.id, date: state.date, kind: "flex", text });
-  news(state, text);
+  news(state, "league", text);
   if ([best.home, best.away, night.home, night.away].includes(state.userTeam)) send(state, "league", "League Office", "Schedule change: Sunday night flex", text);
 }
 
@@ -387,7 +387,7 @@ export function emergencies(state: GameState, odds = 1): void {
     if (!kind) continue;
     moved = true;
     lo.moves.unshift({ game: g.id, date: state.date, kind, text });
-    news(state, text);
+    news(state, "league", text);
     if (g.home === state.userTeam || g.away === state.userTeam) send(state, "league", "League Office", "Emergency schedule change", `${text} The commissioner's office made the call under the league's emergency procedures, after hearing from both clubs, local officials and the stadium.`);
   }
   if (moved) reindexSchedule();

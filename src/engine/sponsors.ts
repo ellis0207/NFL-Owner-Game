@@ -169,7 +169,7 @@ function monthlyRisk(state: GameState): void {
       send(state, "business", businessChief(state), `${d.partner} has stopped paying`,
         `${d.partner} missed its payments and its lawyers say it can't pay the rest of the deal. We wrote off ${money(lost)} we had billed. ` +
         `The ${LOCAL_CATS[d.cat]?.label.toLowerCase() ?? "naming rights"} category is open; we'll shop it when the renewal window opens in February.`);
-      news(state, `${d.partner} defaults on its ${TEAM_BY_ID[state.userTeam].name} sponsorship`);
+      news(state, "business", `${d.partner} defaults on its ${TEAM_BY_ID[state.userTeam].name} sponsorship`);
       continue;
     }
     if (!d.scandal && rng() < (TOUCHY.has(d.cat) ? 0.04 : 0.015) / 12) {
@@ -190,7 +190,7 @@ export function dropPartner(state: GameState, cat: string): string | null {
   d.years = Math.max(0, year - d.start);
   delete d.scandal;
   trustHit(state, 1, 0, `Ended the partnership with ${d.partner}`);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} end their partnership with ${d.partner}`);
+  news(state, "business", `${TEAM_BY_ID[state.userTeam].name} end their partnership with ${d.partner}`);
   return null;
 }
 

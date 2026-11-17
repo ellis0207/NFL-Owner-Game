@@ -407,7 +407,7 @@ function allocate(state: GameState): void {
     state.contracts[p.id] = pathwayDeal(team, state.date, year);
   });
   const ours = g.pathway.players.filter((p) => p.year === year && p.team === us);
-  news(state, `The league places ${teams.length} International Player Pathway athletes, with the ${div} clubs${teams.length > 4 ? " and one more" : ""}`);
+  news(state, "business", `The league places ${teams.length} International Player Pathway athletes, with the ${div} clubs${teams.length > 4 ? " and one more" : ""}`);
   if (ours.length) {
     const p = ours[0];
     send(state, "staff", "Player personnel", "A pathway player joins us",

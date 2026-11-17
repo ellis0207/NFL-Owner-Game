@@ -166,7 +166,7 @@ function monthlyCash(state: GameState): void {
     if (c.cash < -250 * M && !c.saleLooked) {
       c.saleLooked = state.date;
       c.cash += 150 * M;
-      news(state, `The ${teamLabel(team)} owners are said to be exploring a sale after years of losses`);
+      news(state, "ownership", `The ${teamLabel(team)} owners are said to be exploring a sale after years of losses`);
       remember(state, team, "The owners explored a sale after losses.", 2);
     }
   }
@@ -198,12 +198,12 @@ function meddle(state: GameState): void {
       if (id) {
         fire(state, id);
         openSearch(state, team, role, "fired", id);
-        news(state, `The ${teamLabel(team)} owner orders a coaching change: the ${role === "OC" ? "offensive" : "defensive"} coordinator is out`);
+        news(state, "ownership", `The ${teamLabel(team)} owner orders a coaching change: the ${role === "OC" ? "offensive" : "defensive"} coordinator is out`);
         c.meddles.unshift({ date: state.date, text: `Forced out the ${role === "OC" ? "offensive" : "defensive"} coordinator.` });
       }
     } else {
       const text = MEDDLES[Math.floor(r() * MEDDLES.length)](team);
-      news(state, text);
+      news(state, "ownership", text);
       c.meddles.unshift({ date: state.date, text });
     }
     c.meddles.splice(10);
@@ -265,7 +265,7 @@ function suddenExits(state: GameState): void {
     const why = r() < 0.5 ? "a family health matter" : "personal reasons";
     fire(state, id, true);
     openSearch(state, t.id, role, "retired", id);
-    news(state, `${teamLabel(t.id)} ${role === "OC" ? "offensive coordinator" : role === "DC" ? "defensive coordinator" : "special teams coordinator"} ${who.name} steps away for ${why}`);
+    news(state, "coaching", `${teamLabel(t.id)} ${role === "OC" ? "offensive coordinator" : role === "DC" ? "defensive coordinator" : "special teams coordinator"} ${who.name} steps away for ${why}`);
     if (t.id === state.userTeam) send(state, "staff", "General Manager", `${who.name} is leaving`, `${who.name} told us he has to step away for ${why}. We'll need a new coordinator; the search is open on the Staff page.`);
   }
 }
@@ -284,7 +284,7 @@ function scoutCareers(state: GameState): void {
     // A new area scout comes in for the same group.
     if (i < 0) continue;
     replaceScout(state, x.id);
-    news(state, `The ${teamLabel(to)} hire ${x.name} from the ${teamLabel(state.userTeam)} as ${title}`);
+    news(state, "frontoffice", `The ${teamLabel(to)} hire ${x.name} from the ${teamLabel(state.userTeam)} as ${title}`);
     send(state, "staff", "Director of college scouting", `${x.name} is leaving for the ${teamLabel(to)}`,
       `${x.name} took the ${title} job with the ${teamLabel(to)}. It's a step up we can't match. I've hired a new area scout to cover his positions.`);
     remember(state, to, `Hired ${x.name} away from us.`);

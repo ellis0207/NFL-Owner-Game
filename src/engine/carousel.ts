@@ -405,7 +405,7 @@ function finalize(state: GameState, search: StaffSearch): void {
   if (from) openSearch(state, from.team, from.role, "promoted", id);
   const text = `The ${teamLabel(search.team)} hire ${c.name} as ${ROLE_NAME[search.role]}${fromLabel ? ` (from ${fromLabel})` : ""}`;
   log(state, search.team, text);
-  if (search.role === "HC" || search.role === "GM" || search.team === state.userTeam || from?.team === state.userTeam) news(state, text);
+  if (search.role === "HC" || search.role === "GM" || search.team === state.userTeam || from?.team === state.userTeam) news(state, "coaching", text);
   if (search.role === "HC") newHeadCoach(state, search.team, id);
   else afterHire(state, search.team, search.role, id);
   if (from?.team === state.userTeam) {
@@ -457,7 +457,7 @@ export function fire(state: GameState, id: string, quiet = false): void {
   if (!quiet) {
     const text = `The ${teamLabel(team)} fire ${ROLE_NAME[role]} ${c.name}`;
     log(state, team, text);
-    if (role === "HC" || role === "GM" || team === state.userTeam) news(state, text);
+    if (role === "HC" || role === "GM" || team === state.userTeam) news(state, "coaching", text);
   }
   clearStaffCaches();
 }
@@ -701,7 +701,7 @@ function seasonEnded(state: GameState, team: string): void {
     retire(state, c.id);
     const text = `${teamLabel(team)} ${ROLE_NAME[role]} ${c.name} retires`;
     log(state, team, text);
-    if (role === "HC" || role === "GM" || team === state.userTeam) news(state, text);
+    if (role === "HC" || role === "GM" || team === state.userTeam) news(state, "coaching", text);
     if (team === state.userTeam) send(state, "staff", gmName(state), `${c.name} is retiring`, `${c.name} told us it's time to retire. We'll need a new ${ROLE_NAME[role]}.`);
     openSearch(state, team, role, "retired", c.id);
   }
@@ -970,7 +970,7 @@ function midseason(state: GameState): void {
       const fill = newHireFromWithin(state, t.id, from);
       install(state, fill.id, t.id, from, 1, salaryFor(from, reputation(state, fill)));
       search.interim = interim.id;
-      news(state, `${interim.name} is the ${teamLabel(t.id)} interim head coach`);
+      news(state, "coaching", `${interim.name} is the ${teamLabel(t.id)} interim head coach`);
     }
     clearStaffCaches();
   }

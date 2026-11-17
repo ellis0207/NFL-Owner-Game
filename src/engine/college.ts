@@ -577,8 +577,8 @@ function gameNews(state: GameState, g: CollegeGame, a: number, h: number, ot: nu
   const wr = rankOf(state, winner);
   const lr = rankOf(state, loser);
   const label = g.kind === "cfpF" ? "National championship" : g.kind?.startsWith("cfp") ? "College Football Playoff" : g.kind === "ccg" ? g.name : g.kind === "bowl" ? g.name : null;
-  if (label) news(state, `CFB · ${label}: ${rankedName(state, winner)} beats ${rankedName(state, loser)}, ${score}`);
-  else if (lr && lr <= 10 && (!wr || wr > lr + 5)) news(state, `CFB · Upset: ${rankedName(state, winner)} knocks off ${rankedName(state, loser)}, ${score}`);
+  if (label) news(state, "college", `CFB · ${label}: ${rankedName(state, winner)} beats ${rankedName(state, loser)}, ${score}`);
+  else if (lr && lr <= 10 && (!wr || wr > lr + 5)) news(state, "college", `CFB · Upset: ${rankedName(state, winner)} knocks off ${rankedName(state, loser)}, ${score}`);
 }
 
 // ---- Postseason ----
@@ -652,7 +652,7 @@ function selectionDay(state: GameState, quiet = false): void {
     c.post.push({ id: `bowl-${i}`, week: 17, date, away, home, conference: false, kind: "bowl", name, site: name, city });
   }
   if (!quiet) {
-    news(state, `CFB · Playoff field set: ${field.map((t, i) => `${i + 1}. ${schoolName(t)}`).join(", ")}`);
+    news(state, "college", `CFB · Playoff field set: ${field.map((t, i) => `${i + 1}. ${schoolName(t)}`).join(", ")}`);
     void final;
   }
 }
@@ -881,7 +881,7 @@ function awardsDaily(state: GameState, quiet = false): void {
       st.winner = finalists.map((id) => [id, awardScore(state, id, a)] as const).sort((x, y) => y[1] - x[1])[0]?.[0];
       if (!quiet && st.winner && (a.id === "heisman" || a.id === "maxwell" || a.id === "bednarik")) {
         const p = prospectsOf(state).byId[st.winner];
-        news(state, `CFB · ${schoolName(p.school)} ${p.position} ${p.name} wins the ${a.name}`);
+        news(state, "college", `CFB · ${schoolName(p.school)} ${p.position} ${p.name} wins the ${a.name}`);
       }
     }
   }

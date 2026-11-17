@@ -95,7 +95,7 @@ export function setStance(state: GameState, stance: Stance): void {
   if (s.stance && s.stance !== stance) s.broken.push({ date: state.date, text: `Changed the public line on football decisions from "${STANCES[s.stance]}"` });
   s.stance = stance;
   s.stanceSince = state.date;
-  news(state, `${TEAM_BY_ID[state.userTeam].name} owner: "${STANCES[stance]}"`);
+  news(state, "frontoffice", `${TEAM_BY_ID[state.userTeam].name} owner: "${STANCES[stance]}"`);
 }
 
 /** Football calls the owner made personally in the last month while saying the football people decide. */
@@ -161,7 +161,7 @@ function officialsMonthly(state: GameState): void {
       if (rng() < 0.45) {
         const n = official(state, o.role, o.up);
         s.officials[i] = { ...n, lean: Math.round(45 + (voters - 50) * 0.3), up: o.up + 4 };
-        news(state, `${n.name} wins the race for ${o.role.toLowerCase()}`);
+        news(state, "frontoffice", `${n.name} wins the race for ${o.role.toLowerCase()}`);
       } else o.up += 4;
     }
   }

@@ -204,7 +204,7 @@ export function closeDeal(state: GameState, deal: ClubDeal): void {
   if (!sameClub || priorStake) t.clubs.push({ team: deal.team, from: state.date, how: priorStake ? "Bought control as a minority partner" : "Bought", price, share });
   else { const rec = t.clubs.find((c) => c.team === deal.team && !c.to); if (rec) { rec.how = "Bought"; rec.price = price; rec.share = share; } }
   o.log.unshift({ date: state.date, text: `Bought the ${TEAM_BY_ID[deal.team].name} for ${billions(price)}, with ${Math.round(share * 100)}% of the club yours.` });
-  news(state, `League owners approve ${state.ownerName}'s purchase of the ${TEAM_BY_ID[deal.team].name} for about ${billions(price)}`);
+  news(state, "ownership", `League owners approve ${state.ownerName}'s purchase of the ${TEAM_BY_ID[deal.team].name} for about ${billions(price)}`);
   addStory(state, {
     outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [deal.team],
     headline: `${state.ownerName} takes over the ${TEAM_BY_ID[deal.team].name}`,

@@ -155,7 +155,7 @@ export function askPayCut(state: GameState, team: string, id: string, newBase: n
     applyPayCut(state, id, info.year, newBase);
     changeMorale(state, id, -4);
     record({ team, year: info.year, date: state.date, asked: newBase, answer: "accepted" });
-    if (team === state.userTeam) news(state, `${name} takes a pay cut to stay with the ${teamLabel(team)}`);
+    if (team === state.userTeam) news(state, "contracts", `${name} takes a pay cut to stay with the ${teamLabel(team)}`);
     return { answer: "accepted", text: `${agent.name} calls back: ${name} will take ${money(newBase)} for ${info.year}, down from ${money(info.base)}. It saves ${money(info.base - newBase)} on the cap.` };
   }
   changeMorale(state, id, again ? -8 : -5);
@@ -180,7 +180,7 @@ export function acceptCounter(state: GameState, team: string, id: string): PayCu
   applyPayCut(state, id, info.year, ask.counter);
   ask.answer = "accepted";
   ask.asked = ask.counter;
-  if (team === state.userTeam) news(state, `${PLAYER_BY_ID[id].name} takes a pay cut to stay with the ${teamLabel(team)}`);
+  if (team === state.userTeam) news(state, "contracts", `${PLAYER_BY_ID[id].name} takes a pay cut to stay with the ${teamLabel(team)}`);
   return { answer: "accepted", text: `Done: ${PLAYER_BY_ID[id].name} plays ${info.year} for ${money(ask.counter)}, saving ${money(info.base - ask.counter)}.` };
 }
 
@@ -214,7 +214,7 @@ export function cpuPayCut(state: GameState, team: string, id: string, worth: num
   applyPayCut(state, id, info.year, salary);
   changeMorale(state, id, -4);
   ((state.league ??= { caps: {} }).payCuts ??= {})[id] = { team, year: info.year, date: state.date, asked: salary, answer: "accepted" };
-  news(state, `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} takes a pay cut to stay with the ${teamLabel(team)}`);
+  news(state, "contracts", `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} takes a pay cut to stay with the ${teamLabel(team)}`);
   return info.base - salary;
 }
 

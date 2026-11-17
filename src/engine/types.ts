@@ -2004,7 +2004,8 @@ export interface GameState {
   gameOps?: GameOpsState;
   inbox: InboxItem[];
   /** Short league news feed, newest first. */
-  news: { date: string; text: string }[];
+  /** The league wire; `topic` (engine/inbox.ts NewsTopic) is absent on lines from older saves. */
+  news: { date: string; text: string; topic?: string }[];
   /** The owner's say in the coach's room: preseason snaps, the bubble meeting, contingency lineups, special teams (coachroom.ts). */
   coachRoom?: CoachRoomState;
   /** The scouting operation: budget split, national and pro scouts, advance reports, undrafted offers (scoutops.ts). */

@@ -13,21 +13,29 @@ import type { AngleDef, FamilyContent } from "./angles";
 import { GAME } from "./content/game";
 import { CLAIM, RELEASE, SIGNING, TRADE } from "./content/moves";
 import { INJURY, PERFORMANCE } from "./content/players";
+import { WIRE_CONTENT } from "./content/wire";
+import { CAMP, SEAT, TALK } from "./content/talk";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
 import { choose, render, type Bank, type RenderContext, type Slots, type Tone } from "./grammar";
 import { standings } from "../standings";
 
 export const FAMILIES: Partial<Record<Family, FamilyContent>> = {
-  game: GAME, performance: PERFORMANCE, injury: INJURY, signing: SIGNING, release: RELEASE, claim: CLAIM, trade: TRADE,
+  game: GAME, performance: PERFORMANCE, talk: TALK, camp: CAMP, seat: SEAT, injury: INJURY, signing: SIGNING, release: RELEASE, claim: CLAIM, trade: TRADE,
 };
 
-const banksCache = new Map<Family, Bank>();
+/** The words for a fact: its family's, or for the league wire, its topic's. */
+export function contentFor(f: Fact): FamilyContent | undefined {
+  if (f.family === "wire") return WIRE_CONTENT[String(f.slots.topic)] ?? WIRE_CONTENT.league;
+  return FAMILIES[f.family];
+}
+
+const banksCache = new WeakMap<FamilyContent, Bank>();
 function banksFor(c: FamilyContent): Bank {
-  let b = banksCache.get(c.family);
+  let b = banksCache.get(c);
   if (!b) {
     b = { ...SHARED_BANK, ...(c.bank ?? {}) };
-    banksCache.set(c.family, b);
+    banksCache.set(c, b);
   }
   return b;
 }
@@ -47,6 +55,10 @@ export function storiesFor(f: Fact): number {
     case "release": return 1 + (v >= 70 ? 1 : 0);
     case "claim": return 1;
     case "trade": return 2 + (f.tags.blockbuster ? 1 : 0) + (f.ours ? 1 : 0);
+    case "talk": return 1 + (f.ours ? 1 : 0);
+    case "camp": return 1 + (f.ours && v >= 50 ? 1 : 0);
+    case "seat": return 1 + (v >= 60 ? 1 : 0);
+    case "wire": return (v >= 40 ? 1 : 0) + (v >= 65 ? 1 : 0) + (f.ours ? 1 : 0);
     default: return v >= 40 ? 1 : 0;
   }
 }
@@ -108,12 +120,12 @@ export interface Draft { headline: string; body: string; outlet: string; by: str
 
 /** Writes one story about a fact. `missing` collects empty slots for the template linter. */
 export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: FormatId, outletId: string, rng: Rng, missing?: string[]): Draft {
-  const c = FAMILIES[f.family]!;
+  const c = contentFor(f)!;
   const fmt = FORMATS[format];
   const outlet = MEDIA_BY_ID[outletId];
   const by = outletId === "beat" ? beatWriters(state)[Math.floor(rng() * 2)] : outlet[fmt.role];
   const ctx: RenderContext = { rng, banks: banksFor(c), tone: toneOf(outlet.heat), missing };
-  const slots: Slots = { ...f.slots, tag: f.tags, fmt: { [format]: true }, by };
+  const slots: Slots = { ...f.slots, tag: f.tags, fmt: { [format]: true }, angle: { [angle.id]: true }, by };
   const headline = choose(fmt.style === "take" ? angle.take : angle.head, slots, ctx);
   const lede = choose(c.lede[fmt.group] ?? c.lede.news ?? [], slots, ctx);
   const para = choose(angle.para, slots, ctx);
@@ -135,28 +147,33 @@ export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: F
 }
 
 /** Adds the slots that depend on whose story it is: US and THEM for our club's coverage. */
-function withUs(state: GameState, f: Fact): Fact {
-  if (!f.ours) return f;
+export function withUs(state: GameState, f: Fact): Fact {
   const us = state.userTeam;
-  const them = f.teams.find((t) => t !== us);
   const table = standings(state);
   const US: Slots = { ...teamSlots(state, us, table) };
+  if (!f.ours) return { ...f, slots: { ...f.slots, US } };
+  const them = f.teams.find((t) => t !== us);
   if (f.family === "game") US.won = (f.slots.W as { id: string }).id === us && !f.tags.tie;
   return { ...f, slots: { ...f.slots, US, THEM: them ? teamSlots(state, them, table) : US } };
 }
 
 /** Everything the desks file today from the day's facts. */
 export function composeDay(state: GameState): number {
-  const facts = collectFacts(state).filter((f) => FAMILIES[f.family]).sort((a, b) => b.value - a.value || a.id.localeCompare(b.id));
+  return fileFacts(state, collectFacts(state));
+}
+
+/** Writes up a set of facts: the day's own, or ones a weekly desk (interviews, camp, the hot seat) put together. */
+export function fileFacts(state: GameState, all: Fact[], budgetOverride?: number): number {
+  const facts = all.filter((f) => contentFor(f)).sort((a, b) => b.value - a.value || a.id.localeCompare(b.id));
   if (!facts.length) return 0;
   const m = mediaState(state);
   const since = addDays(state.date, -30);
   const recent = new Set(m.stories.filter((s) => s.date >= since).map((s) => s.headline));
-  let budget = dailyBudget(state);
+  let budget = budgetOverride ?? dailyBudget(state);
   let filed = 0;
   for (const raw of facts) {
     const f = withUs(state, raw);
-    const c = FAMILIES[f.family]!;
+    const c = contentFor(f)!;
     // Every game gets its game story and our club always gets its coverage; the rest waits for room.
     const must = f.family === "game" || f.ours;
     let n = storiesFor(f);

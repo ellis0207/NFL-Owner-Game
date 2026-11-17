@@ -257,7 +257,7 @@ function cashFloor(state: GameState): void {
       send(state, "league", "League office", "Minimum cash spending",
         `Over ${s.from}-${s.to} we paid players ${Math.round(s.share * 100)}% of the salary caps in cash, below the CBA's ${Math.round(termsFor(s.to).cashFloor * 100)}% floor. The ${money(short)} shortfall is paid to the players on our roster.`);
     } else if (short > 5_000_000) {
-      news(state, `The ${teamLabel(team)} fell short of the CBA's cash spending floor for ${s.from}-${s.to} and will pay ${money(short)} to their players.`);
+      news(state, "contracts", `The ${teamLabel(team)} fell short of the CBA's cash spending floor for ${s.from}-${s.to} and will pay ${money(short)} to their players.`);
     }
   }
 }
