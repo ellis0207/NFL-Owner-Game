@@ -339,7 +339,7 @@ export function backCoach(state: GameState): string | null {
   if (!hc) return "There's no head coach to back.";
   people(state).backed = { coach: hc.id, until: addDays(state.date, 120) };
   remember(state, hc.name, "Backed publicly by the owner", 3);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} owner gives ${hc.name} a public vote of confidence`);
+  news(state, "coaching", `${TEAM_BY_ID[state.userTeam].name} owner gives ${hc.name} a public vote of confidence`);
   return null;
 }
 
@@ -478,7 +478,7 @@ function monthly(state: GameState): void {
   const h = hotSeat(state);
   if (h > 0.7 && state.date.slice(8) === "01" && state.date >= RULES.keyDates.regularSeasonStart) {
     const hc = teamStaff(state.userTeam).HC;
-    if (hc) news(state, `Speculation grows about ${hc.name}'s future with the ${TEAM_BY_ID[state.userTeam].name}`);
+    if (hc) news(state, "coaching", `Speculation grows about ${hc.name}'s future with the ${TEAM_BY_ID[state.userTeam].name}`);
   }
 }
 

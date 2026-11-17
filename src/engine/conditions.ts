@@ -143,7 +143,7 @@ function settle(state: GameState, c: ConditionalPick, ok: boolean, note: string)
   c.settled = state.date;
   c.note = note;
   const text = `Conditional pick: ${pickLabel(state, c.pick, c.to)} from the ${teamLabel(c.from)} (${describeCondition(state, c.pick, c.cond)}): ${ok ? "condition met" : "condition not met"}${note ? `, ${note}` : ""}`;
-  news(state, text);
+  news(state, "trades", text);
   if (c.from === state.userTeam || c.to === state.userTeam) send(state, "league", "League Office", "Conditional pick settled", `${text}.`);
 }
 

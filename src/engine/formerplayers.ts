@@ -162,7 +162,7 @@ export function startCoaching(state: GameState, id: string, forceLevel?: "nfl" |
   const where = level === "nfl" ? `the ${TEAM_BY_ID[team].name}` : COLLEGE_TEAMS.find((t) => t.id === team)?.school ?? team;
   s.log.unshift({ date: state.date, team: level === "nfl" ? team : "", text: `Former ${data.position} ${data.name} joins ${where} as ${title}` });
   const notable = exp >= 8 || played.includes(state.userTeam);
-  if (notable) news(state, `Former ${data.position} ${data.name} starts coaching: ${title} at ${where}`);
+  if (notable) news(state, "coaching", `Former ${data.position} ${data.name} starts coaching: ${title} at ${where}`);
   if (level === "nfl" && team === state.userTeam) {
     const hc = Object.values(s.people).find((p) => p.team === team && p.role === "HC");
     send(state, "staff", hc ? `${hc.name}, Head Coach` : "Head Coach", `${data.name} joins our staff`,

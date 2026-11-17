@@ -267,7 +267,7 @@ export function openCase(state: GameState, team: string, kind: string, severity?
       "Choose on the Legal page whether we cooperate fully, give only what's required, or contest it. Club records are under a litigation hold.");
     note(state, `League inquiry opened: ${CASE_KINDS[kind].label.toLowerCase()}.`);
   } else if (sev >= 2) {
-    news(state, `The league is investigating the ${teamLabel(team)} over ${CASE_KINDS[kind].label.toLowerCase()}`);
+    news(state, "discipline", `The league is investigating the ${teamLabel(team)} over ${CASE_KINDS[kind].label.toLowerCase()}`);
   }
   return k;
 }
@@ -322,7 +322,7 @@ function sanction(state: GameState, k: LeagueCase, rng: () => number): void {
     note(state, `Sanctioned: ${k.sanction}.`);
     if (sev >= 3) startCrisis(state, "league", { title: "League discipline", text: `the league disciplined the club for ${CASE_KINDS[k.kind].label.toLowerCase()} (${k.sanction})`, fault: 0.8, severity: 2 });
   }
-  news(state, `The league disciplines the ${teamLabel(k.team)} for ${CASE_KINDS[k.kind].label.toLowerCase()}: ${k.sanction}`);
+  news(state, "discipline", `The league disciplines the ${teamLabel(k.team)} for ${CASE_KINDS[k.kind].label.toLowerCase()}: ${k.sanction}`);
 }
 
 /** Appeal a sanction to the commissioner (club discipline is heard by the league office). */
@@ -380,7 +380,7 @@ function advanceCase(state: GameState, k: LeagueCase): void {
       c.forfeited = c.forfeited.filter((p) => !(k.picks ?? []).includes(p));
       k.outcome = `Reduced on appeal to a ${money(k.fine)} fine`;
       if (ours) post(state, "fines", k.fine, "League fine reduced on appeal");
-      news(state, `The commissioner reduces the ${teamLabel(k.team)}' penalty on appeal`);
+      news(state, "discipline", `The commissioner reduces the ${teamLabel(k.team)}' penalty on appeal`);
     } else k.outcome = `Upheld on appeal: ${k.sanction}`;
     k.stage = "closed";
     if (ours) send(state, "league", "League Office", "Appeal decided", `The commissioner decided our appeal: ${k.outcome.toLowerCase()}.`);

@@ -136,7 +136,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "coachReview": {
       const md = mediaState(state);
       md.coach = clamp(md.coach + [6, -1, -10][choice]);
-      if (choice === 2) news(state, `Reports: ${TEAM_BY_ID[state.userTeam].name} quietly gauging interest in head coaching candidates`);
+      if (choice === 2) news(state, "coaching", `Reports: ${TEAM_BY_ID[state.userTeam].name} quietly gauging interest in head coaching candidates`);
       return null;
     }
     case "execReview": {

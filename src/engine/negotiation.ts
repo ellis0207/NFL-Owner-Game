@@ -506,7 +506,7 @@ function maybeLeak(state: GameState, neg: Negotiation, t: OfferTerms, v: number)
   const text = lowball
     ? `Report: the ${team} offered ${p.name} about ${money(reported)} a year, well short of what the player's camp wants`
     : `Report: ${p.name} and the ${team} are talking; the latest offer is said to be around ${money(reported)} a year`;
-  news(state, text);
+  news(state, "log", text);
   leakStory(state, {
     player: neg.player, name: p.name, position: p.position, team: neg.team, teamName: TEAM_BY_ID[neg.team].name,
     apy: money(reported), lowball, agent: agent.name,
@@ -585,7 +585,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
   state.signings.unshift(signing);
   if (neg.team === state.userTeam) cause(state, "contracts", `Signed ${p.name}: ${t.years} years, ${money(deal.total)}.`, [`${money(deal.guaranteedAtSigning)} guaranteed at signing on the cap and in cash.`], { kind: "player", id });
   const what = neg.kind === "extension" ? `${t.years}-year extension` : `${t.years}-year deal`;
-  news(state, `${p.name} agrees to a ${what} with the ${teamLabel(neg.team)}: ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
+  news(state, "log", `${p.name} agrees to a ${what} with the ${teamLabel(neg.team)}: ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
   if (neg.team === state.userTeam) {
     state.pressure.fans = Math.min(100, state.pressure.fans + (p.position === "QB" ? 4 : 2));
     const gradeLine = signing.grades.map((g) => `${g.outlet}: ${g.grade}`).join(" · ");
@@ -797,7 +797,7 @@ function startHoldout(state: GameState, id: string, kind: "holdout" | "holdin"):
     changeMorale(state, id, -10);
     const p = PLAYER_BY_ID[id];
     const word = ps.holdout.kind === "holdout" ? "is holding out of camp" : "reported to camp but isn't practicing";
-    news(state, `${p.name} ${word} while seeking a new contract with the ${teamLabel(team)}`);
+    news(state, "contracts", `${p.name} ${word} while seeking a new contract with the ${teamLabel(team)}`);
     if (team === state.userTeam) {
       openTalks(state, team, id, "extension", "owner");
       send(state, "staff", gmName(state), `${p.name} ${ps.holdout.kind === "holdout" ? "is holding out" : "is holding in"}`,
@@ -824,7 +824,7 @@ function resolveHoldouts(state: GameState): void {
       delete ps.holdout;
       changeMorale(state, id, -5);
       const p = PLAYER_BY_ID[id];
-      news(state, `${p.name} ends the standoff and reports to the ${teamLabel(ps.team!)} without a new deal`);
+      news(state, "contracts", `${p.name} ends the standoff and reports to the ${teamLabel(ps.team!)} without a new deal`);
     } else ps.holdout.kind = "holdout";
   }
 }

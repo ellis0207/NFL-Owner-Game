@@ -238,7 +238,7 @@ export function hindsightDaily(state: GameState): void {
       h.drafts.unshift(r);
       const best = r.teams[0];
       const ours = r.teams.find((t) => t.team === state.userTeam);
-      news(state, `${after} years later: the ${year} draft re-graded. Best class: the ${teamLabel(best.team)} (${best.grade}).`);
+      news(state, "honors", `${after} years later: the ${year} draft re-graded. Best class: the ${teamLabel(best.team)} (${best.grade}).`);
       if (ours) send(state, "media", "The Gridiron Ledger", `The ${year} draft, ${after} years later`,
         `Our ${year} class grades out ${ours.grade} now (${ours.picks} picks). On draft day the picks were graded ${r.picks.filter((p) => p.team === state.userTeam).map((p) => `${PLAYER_BY_ID[p.player]?.name ?? p.player} ${p.dayGrade ?? "?"} then, ${p.grade} now`).join("; ")}.`);
       const sg = regradeSignings(state, year, after);

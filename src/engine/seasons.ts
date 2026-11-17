@@ -299,8 +299,8 @@ export function startNewSeason(state: GameState): void {
   }
 
   const champ = record.champion;
-  news(state, `The league turns to the ${next} season${champ ? `, with the ${teamLabel(champ)} as defending champions` : ""}`);
-  if (retired) news(state, `${retired} free agents who went unsigned through the spring have moved on from the game`);
+  news(state, "league", `The league turns to the ${next} season${champ ? `, with the ${teamLabel(champ)} as defending champions` : ""}`);
+  if (retired) news(state, "league", `${retired} free agents who went unsigned through the spring have moved on from the game`);
   letter(state, record);
 }
 

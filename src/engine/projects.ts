@@ -133,7 +133,7 @@ export function startProject(state: GameState, id: string): string {
   const deposit = Math.round(t.ours * 0.2);
   projects(state).push({ id, started: state.date, opens, cost: t.ours, paid: deposit });
   post(state, "projects", -deposit, `${def.title}: deposit`);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} announce: ${def.title.toLowerCase()} (${money(t.cost)})`);
+  news(state, "business", `${TEAM_BY_ID[state.userTeam].name} announce: ${def.title.toLowerCase()} (${money(t.cost)})`);
   return `Work starts this spring and should finish by ${shortDate(opens)}. We paid ${money(deposit)} down; the rest goes out monthly.`;
 }
 

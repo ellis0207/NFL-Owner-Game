@@ -87,7 +87,7 @@ function optionsDaily(state: GameState): void {
     const hit = dealCapHit(deal, o.year) + o.amount / 3;
     const worth = (state.players[id]?.injury ? 0.6 : 1) * (age >= 32 ? 0.7 : 1) * salaryCap(state, o.year) * 0.06;
     if (hit <= worth * 3 || capSummary(state, deal.team, o.year).space > o.amount) exercise(state, deal);
-    else { decline(state, id, deal); news(state, `The ${teamLabel(deal.team)} decline ${p.name}'s option bonus; he becomes a free agent`); }
+    else { decline(state, id, deal); news(state, "contracts", `The ${teamLabel(deal.team)} decline ${p.name}'s option bonus; he becomes a free agent`); }
   }
 }
 
@@ -243,7 +243,7 @@ export function sendOfferSheet(state: GameState, id: string, terms: OfferTerms, 
   const apy = terms.total / terms.years;
   if (apy < Math.max(ask, tender.amount * 1.1)) return `${PLAYER_BY_ID[id].name}'s agent says he won't sign for that. It has to beat his tender clearly.`;
   state.offseason!.sheets.push({ player: id, from: tender.team, to: state.userTeam, terms, date: state.date, decideBy: addDays(state.date, 5), compensation });
-  news(state, `${PLAYER_BY_ID[id].name} signs an offer sheet with the ${teamLabel(state.userTeam)}; the ${teamLabel(tender.team)} have five days to match`);
+  news(state, "contracts", `${PLAYER_BY_ID[id].name} signs an offer sheet with the ${teamLabel(state.userTeam)}; the ${teamLabel(tender.team)} have five days to match`);
   return `He signed it. The ${teamLabel(tender.team)} have until ${shortDate(addDays(state.date, 5))} to match.`;
 }
 

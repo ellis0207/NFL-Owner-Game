@@ -96,7 +96,7 @@ function checkGames(state: GameState): void {
 
 function broke(state: GameState, team: string, text: string): void {
   records(state).broken.unshift({ date: state.date, text });
-  news(state, text);
+  news(state, "honors", text);
   if (team === state.userTeam) send(state, "league", "League office", "An NFL record falls", text);
 }
 
@@ -381,7 +381,7 @@ function anniversaries(state: GameState): void {
     const n = season - s.season;
     if (!s.champion || !MILESTONES.includes(n)) continue;
     const text = `${n} years ago the ${teamLabel(s.champion)} won the Super Bowl${s.runnerUp ? `, beating the ${teamLabel(s.runnerUp)}` : ""}. The team is marking the anniversary this week.`;
-    news(state, text);
+    news(state, "honors", text);
     if (s.champion === state.userTeam) send(state, "media", "Team communications", `${n} years since our title`, `${text} Former players are coming back for the celebration, and the fans are into it.`);
   }
   const first = hist.seasons[0]?.season ?? season;

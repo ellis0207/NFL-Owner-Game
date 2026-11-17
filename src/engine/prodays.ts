@@ -142,7 +142,7 @@ export function proDayDaily(state: GameState): void {
   for (const id of notable.slice(0, 3)) {
     const p = dc.byId[id];
     const r = results[id];
-    news(state, `${p.position} ${p.name} runs a ${r.forty!.toFixed(2)} forty at ${schoolName(p.school)}'s pro day`);
+    news(state, "draft", `${p.position} ${p.name} runs a ${r.forty!.toFixed(2)} forty at ${schoolName(p.school)}'s pro day`);
   }
   // Our people at the workouts.
   const crews = d.proDayCrews ?? {};
@@ -173,7 +173,7 @@ export function proDayDaily(state: GameState): void {
       const fit = fitRead(state, best, state.userTeam) + gaussian(rngFor(state.seed, `proday-hc:${best}`)) * 2;
       coach = `\n\n${hc?.name ?? "The head coach"} on ${dc.byId[best].name}: ` +
         (fit >= 2 ? "\"He fits what we do. I'd want him on the board early.\"" : fit >= -1 ? "\"Good workout. He'd have a role with us.\"" : "\"Talented, but I'm not sure he fits our scheme.\"");
-      news(state, `${teamStaff(state.userTeam).GM?.name ?? "The GM"} and ${hc?.name ?? "the head coach"} take in ${schoolName(school)}'s pro day`);
+      news(state, "draft", `${teamStaff(state.userTeam).GM?.name ?? "The GM"} and ${hc?.name ?? "the head coach"} take in ${schoolName(school)}'s pro day`);
     }
     send(state, "staff", `${director}, director of college scouting`, `${schoolName(school)} pro day`,
       `${c.label} ${crew === "brass" ? "were" : "was"} at ${schoolName(school)}'s pro day (${money(cost)}).\n\n` +

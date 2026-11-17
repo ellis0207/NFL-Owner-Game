@@ -307,8 +307,8 @@ export function fileRelocation(state: GameState, id: string, opts: { identity?: 
   const fight = f.core >= 55 || (state.construction?.plan?.stayUntil ?? 0) > RULES.season;
   trustHit(state, fight ? -14 : -9, fight ? 6 : 3, `Applied to move the club to ${m.city}`);
   f.core = Math.max(10, f.core - 6);
-  news(state, `The ${teamLabel(us)} apply to relocate to ${m.city}`);
-  if (fight) news(state, `"Keep the ${TEAM_BY_ID[us].name}" campaign forms; the city vows to hold the club to its commitments`);
+  news(state, "relocation", `The ${teamLabel(us)} apply to relocate to ${m.city}`);
+  if (fight) news(state, "relocation", `"Keep the ${TEAM_BY_ID[us].name}" campaign forms; the city vows to hold the club to its commitments`);
   send(state, "league", "League Office", "Your relocation application",
     `The relocation committee will review the application: the market, the stadium plan there, our efforts to stay, and the effect on the league. The owners vote on ${shortDate(bid.voteDate)}; a move needs ${VOTES_TO_PASS} votes and a relocation fee of about ${money(relocationFee(state, m))}, paid over ten years.`);
   return null;
@@ -320,7 +320,7 @@ export function withdrawBid(state: GameState): string | null {
   b.status = "withdrawn";
   delete relocation(state).lameDuck;
   note(state, "Withdrew the relocation application.");
-  news(state, `The ${teamLabel(state.userTeam)} withdraw their relocation application`);
+  news(state, "relocation", `The ${teamLabel(state.userTeam)} withdraw their relocation application`);
   return null;
 }
 
@@ -366,7 +366,7 @@ function decide(state: GameState, b: Bid): void {
   const m = marketById(state, b.market)!;
   if (yes < VOTES_TO_PASS) {
     b.status = "denied";
-    news(state, `Owners reject the ${teamLabel(b.team)}' move to ${m.city}, ${yes}-${32 - yes}`);
+    news(state, "relocation", `Owners reject the ${teamLabel(b.team)}' move to ${m.city}, ${yes}-${32 - yes}`);
     if (b.team === state.userTeam) {
       delete relocation(state).lameDuck;
       note(state, `The owners voted the move down, ${yes}-${32 - yes}.`);
@@ -447,7 +447,7 @@ function move(state: GameState, b: Bid, m: MarketData, yes: number): void {
     if (us) send(state, "business", businessChief(state), "A stadium in the new market", `The league approved the move on our promise of a new stadium in ${m.city}. Commission studies on the New stadium tab; the public side here has signaled it could fund about ${Math.round(m.publicLean * 100)}%.`);
     else c.cpu.push({ team, announced: state.date, approved: state.date, opens: season + 3, name: `${m.city} Stadium`, roof: m.climate.snow > 0.2 ? "dome" : "open", cost: Math.round(2_000 * M * inflation(season, 0.04) / (10 * M)) * 10 * M, structure: "publicTeam" });
   }
-  news(state, `Owners approve the ${mv.fromCity} ${mv.fromName}' move to ${m.city}, ${yes}-${32 - yes}`);
+  news(state, "relocation", `Owners approve the ${mv.fromCity} ${mv.fromName}' move to ${m.city}, ${yes}-${32 - yes}`);
 }
 
 function payFee(state: GameState): void {
@@ -647,7 +647,7 @@ function realignVote(state: GameState, x: Realign): void {
   }
   x.yes = yes;
   x.status = yes >= VOTES_TO_PASS ? "approved" : "denied";
-  news(state, x.status === "approved" ? `Owners approve realignment: the ${teamLabel(x.team)} and ${teamLabel(x.with)} swap divisions from ${x.season}` : `Owners keep the divisions as they are (${yes} votes to realign)`);
+  news(state, "relocation", x.status === "approved" ? `Owners approve realignment: the ${teamLabel(x.team)} and ${teamLabel(x.with)} swap divisions from ${x.season}` : `Owners keep the divisions as they are (${yes} votes to realign)`);
 }
 
 // ---- CPU clubs ----
@@ -664,7 +664,7 @@ export function cpuStadiumFailed(state: GameState, team: string): void {
   // Files in the next window.
   relocation(state).bids.unshift({ team, market: best.id, filed: `${year}-02-01`, voteDate: "", identity: "keep", staff: "protect", legacy: false, status: "filed" });
   note(state, `${teamLabel(team)} will explore a move to ${best.city}.`);
-  news(state, `After their stadium plan failed, the ${teamLabel(team)} say they will explore other markets`);
+  news(state, "relocation", `After their stadium plan failed, the ${teamLabel(team)} say they will explore other markets`);
 }
 
 // ---- Each day ----
@@ -678,7 +678,7 @@ export function relocationDaily(state: GameState): void {
     if (b.team !== state.userTeam && !b.voteDate && state.date >= b.filed) {
       b.filed = state.date;
       b.voteDate = addDays(meeting, 2);
-      news(state, `The ${teamLabel(b.team)} apply to relocate to ${marketById(state, b.market)?.city ?? b.market}`);
+      news(state, "relocation", `The ${teamLabel(b.team)} apply to relocate to ${marketById(state, b.market)?.city ?? b.market}`);
     }
     if (!b.voteDate) continue;
     if (!b.review && daysBetween(b.filed, state.date) >= 30) review(state, b);

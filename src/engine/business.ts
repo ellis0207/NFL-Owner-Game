@@ -1232,7 +1232,7 @@ function valuationsStory(state: GameState): void {
     body: `Our annual estimates put the average NFL team at ${billions(avg)}. Top five: ${values.slice(0, 5).map(([t, v]) => `${TEAM_BY_ID[t].name} ${billions(v)}`).join(", ")}. ` +
       `The ${TEAM_BY_ID[us].name} rank ${rank}${["st", "nd", "rd"][((rank + 90) % 100 - 10) % 10 - 1] ?? "th"} at ${billions(valuation(state, us))}. Teams that own and run their stadiums keep the most of what the building earns, and it shows.`,
   });
-  news(state, `The Gridiron Ledger values the ${teamLabel(values[0][0])} at ${billions(values[0][1])}, the most in the league`);
+  news(state, "business", `The Gridiron Ledger values the ${teamLabel(values[0][0])} at ${billions(values[0][1])}, the most in the league`);
 }
 
 // ---- Owner decisions ----

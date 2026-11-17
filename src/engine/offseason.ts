@@ -122,7 +122,7 @@ export function applyTag(state: GameState, team: string, id: string, kind: TagKi
     guaranteed: amount, grades: [], valueAtSigning: teamValue(state, team, id, NEXT),
   });
   const label = kind === "franchise" ? `${exclusive ? "exclusive " : ""}franchise tag` : "transition tag";
-  news(state, `The ${teamLabel(team)} place the ${label} on ${p.position} ${p.name} (${money(amount)} for ${NEXT})`);
+  news(state, "contracts", `The ${teamLabel(team)} place the ${label} on ${p.position} ${p.name} (${money(amount)} for ${NEXT})`);
   if (team === state.userTeam) {
     const agent = agentFor(id);
     send(state, "transaction", `${agent.name}, agent`, `${p.name} tagged`,
@@ -165,7 +165,7 @@ export function applyTender(state: GameState, team: string, id: string, level: T
   addDeadMoney(state, team, NEXT, voided);
   off(state).tenders[id] = { team, level, amount };
   const p = PLAYER_BY_ID[id];
-  if (level !== "erfa" && amount >= 5_000_000) news(state, `The ${teamLabel(team)} tender restricted free agent ${p.name} at the ${TENDER_LABEL[level]} level`);
+  if (level !== "erfa" && amount >= 5_000_000) news(state, "contracts", `The ${teamLabel(team)} tender restricted free agent ${p.name} at the ${TENDER_LABEL[level]} level`);
 }
 
 export const TENDER_LABEL: Record<TenderChoice, string> = {
@@ -221,7 +221,7 @@ export function decideOption(state: GameState, team: string, id: string, exercis
   }
   state.contracts[id] = next;
   if (exercise || (p.draft.overall ?? 99) <= 15) {
-    news(state, `The ${teamLabel(team)} ${exercise ? "exercise" : "decline"} the fifth-year option on ${p.name} (${money(info.amount)} for ${info.year})`);
+    news(state, "contracts", `The ${teamLabel(team)} ${exercise ? "exercise" : "decline"} the fifth-year option on ${p.name} (${money(info.amount)} for ${info.year})`);
   }
 }
 
@@ -494,13 +494,13 @@ function cpuCapWindow(state: GameState): void {
         const normal = releaseCost(c.id, state).deadThisYear;
         if (normal - pv.dead >= 6_000_000 && capSummary(state, team, NEXT).space - (pv.now - capHit(c.id, NEXT, state)) > 0) {
           releaseJune1(state, c.id);
-          news(state, `The ${teamLabel(team)} release ${name} with a post-June 1 designation, spreading ${money(pv.dead + pv.deadNext)} in dead money over two years`);
+          news(state, "log", `The ${teamLabel(team)} release ${name} with a post-June 1 designation, spreading ${money(pv.dead + pv.deadNext)} in dead money over two years`);
           continue;
         }
       }
       const dead = releaseOffseason(state, c.id);
       space += c.saved;
-      news(state, `The ${teamLabel(team)} release ${name}${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
+      news(state, "log", `The ${teamLabel(team)} release ${name}${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
     }
   }
 }
@@ -551,7 +551,7 @@ export function comply(state: GameState, team: string, floor = 60): void {
     .sort((a, b) => a.v / a.saved - b.v / b.saved);
   const cut = (id: string) => {
     const dead = releaseOffseason(state, id);
-    news(state, `The ${teamLabel(team)} release ${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
+    news(state, "log", `The ${teamLabel(team)} release ${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} to get under the cap${dead > 1_000_000 ? `, taking ${money(dead)} in dead money` : ""}`);
   };
   for (const c of cands.slice(0, 8)) {
     if (capSummary(state, team).space >= 0 || rosterCount(state, team).roster <= floor) break;
@@ -580,7 +580,7 @@ export function comply(state: GameState, team: string, floor = 60): void {
     if (state.players[c.id]?.team === team) cut(c.id);
   }
   if (capSummary(state, team).space < 0 && team !== state.userTeam && state.date === KEY.newLeagueYear) {
-    news(state, `The ${teamLabel(team)} are still over the cap after the league year opened; the league won't approve a signing until they get under`);
+    news(state, "contracts", `The ${teamLabel(team)} are still over the cap after the league year opened; the league won't approve a signing until they get under`);
   }
 }
 
@@ -676,8 +676,8 @@ function setCap(state: GameState): void {
   league.caps[NEXT] = cap;
   invalidateMarket(state);
   const diff = cap - projectedCap(NEXT);
-  if (media > 0.01) news(state, "The league's new national media money kicks in: rights fees jump, and so does the cap");
-  news(state, `The league sets the ${NEXT} salary cap at ${money(cap)}, ${money(Math.abs(diff))} ${diff >= 0 ? "above" : "below"} projections`);
+  if (media > 0.01) news(state, "contracts", "The league's new national media money kicks in: rights fees jump, and so does the cap");
+  news(state, "contracts", `The league sets the ${NEXT} salary cap at ${money(cap)}, ${money(Math.abs(diff))} ${diff >= 0 ? "above" : "below"} projections`);
   const space = capSummary(state, state.userTeam, NEXT);
   send(state, "league", "League Office", `${NEXT} salary cap: ${money(cap)}`,
     `The ${NEXT} cap is ${money(cap)} per team. With rollover our adjusted cap is ${money(space.limit)}; ` +
@@ -723,7 +723,7 @@ function newLeagueYear(state: GameState): void {
   invalidateRosters(state);
   invalidateMarket(state);
   const cap = capSummary(state, state.userTeam);
-  news(state, `The ${NEXT} league year begins: ${expired} contracts expire and free agency opens`);
+  news(state, "contracts", `The ${NEXT} league year begins: ${expired} contracts expire and free agency opens`);
   send(state, "league", "League Office", `The ${NEXT} league year has begun`,
     `Contracts that ran through ${RULES.season} have expired, and void years on them have accelerated onto ${NEXT} caps. ` +
     `Free agents can sign with any team from 4 PM ET today. Our adjusted cap is ${money(cap.limit)} with ${money(cap.space)} in space; ` +

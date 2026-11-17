@@ -696,7 +696,7 @@ function runCutdown(state: GameState): void {
     }
   }
   state.cutPlan = undefined;
-  news(state, "All 32 teams trimmed their rosters to 53.");
+  news(state, "games", "All 32 teams trimmed their rosters to 53.");
 }
 
 function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxScore): void {
@@ -705,7 +705,7 @@ function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxS
   const line = tie
     ? `${r.away} and ${r.home} tie ${r.awayScore}-${r.homeScore}`
     : `${winnerHome ? r.home : r.away} ${Math.max(r.homeScore, r.awayScore)}, ${winnerHome ? r.away : r.home} ${Math.min(r.homeScore, r.awayScore)}${r.overtime ? " (OT)" : ""}`;
-  news(state, `${gameTypeLabel(g)}: ${line}`);
+  news(state, "games", `${gameTypeLabel(g)}: ${line}`);
   // League injury news for starters.
   for (const inj of box.injuries) {
     if (inj.team === state.userTeam) continue;
@@ -714,7 +714,7 @@ function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxS
     if (chart[pos].slice(0, STARTERS[pos] ?? 1).includes(inj.player) && state.players[inj.player].injury?.date === state.date) {
       const out = state.players[inj.player].injury!;
       if (daysBetween(state.date, out.returnDate) >= 7) {
-        news(state, `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, knownReturn(state, out), out.seasonEnding)}`);
+        news(state, "games", `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, knownReturn(state, out), out.seasonEnding)}`);
       }
     }
   }

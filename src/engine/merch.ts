@@ -323,7 +323,7 @@ function launchRebrand(state: GameState): void {
     const f = fanBase(state);
     f.core = Math.max(10, f.core - 4);
     startSaga(state, "rename", `The ${old} became the ${r.name}`, 6);
-    news(state, `The ${TEAM_BY_ID[us].city} ${old} are now the ${TEAM_BY_ID[us].city} ${r.name}`);
+    news(state, "business", `The ${TEAM_BY_ID[us].city} ${old} are now the ${TEAM_BY_ID[us].city} ${r.name}`);
   }
   addStory(state, {
     outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "owner", teams: [us],

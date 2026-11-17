@@ -123,7 +123,7 @@ function monthly(state: GameState): void {
     const t = pool[Math.floor(r() * pool.length)];
     const reasons: Listing["reason"][] = ["estate", "estate", "family", "liquidity", "governance"];
     const l = list(state, t.id, reasons[Math.floor(r() * reasons.length)]);
-    news(state, `The ${TEAM_BY_ID[t.id].name} are for sale: ${l.seller} hired bankers to find a buyer`);
+    news(state, "ownership", `The ${TEAM_BY_ID[t.id].name} are for sale: ${l.seller} hired bankers to find a buyer`);
     note(state, `The ${TEAM_BY_ID[t.id].name} came up for sale. ${REASONS[l.reason]}`);
   }
 }
@@ -154,7 +154,7 @@ export function sold(state: GameState, team: string, price: number, buyer: strin
   const f = franchise(state);
   f.sales.push({ team, date: state.date, price, pct: 1, buyer });
   f.control[team] = buyer;
-  news(state, `League owners approve the sale of the ${TEAM_BY_ID[team].name} to ${buyer} for about ${billions(price)}`);
+  news(state, "ownership", `League owners approve the sale of the ${TEAM_BY_ID[team].name} to ${buyer} for about ${billions(price)}`);
   note(state, `The ${TEAM_BY_ID[team].name} sold to ${buyer} for ${billions(price)}.`);
 }
 

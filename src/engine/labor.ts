@@ -223,7 +223,7 @@ function openTalks(state: GameState): void {
   const r = rngFor(state.seed, `talks:${cur.through}`);
   const w = settlePoint(state, r);
   l.talks = { through: cur.through, opened: state.date, owners: ownersOpening(state), union: { ...UNION_OPEN }, w, status: "talks", rounds: 0 };
-  news(state, `The league and the players' union open talks on a new labor agreement; the current one runs through the ${cur.through} season`);
+  news(state, "labor", `The league and the players' union open talks on a new labor agreement; the current one runs through the ${cur.through} season`);
   note(state, `Talks opened. The deal expires on ${shortDate(deadline(cur.through))}.`);
   send(state, "league", "Management Council", "Labor talks open",
     `Formal talks with the players' union start today. The current agreement expires on ${shortDate(deadline(cur.through))}. ` +
@@ -252,7 +252,7 @@ function tentative(state: GameState): void {
   t.tentative = { date: state.date, terms: dealTerms(owners, t.w), votesDue: addDays(state.date, 7) };
   t.status = "tentative";
   const d = t.tentative.terms;
-  news(state, `The league and the players' union reach a tentative labor agreement; owners vote within a week, then the players`);
+  news(state, "labor", `The league and the players' union reach a tentative labor agreement; owners vote within a week, then the players`);
   note(state, "Tentative deal reached.");
   send(state, "league", "Management Council", "Tentative labor deal: your vote",
     `${termsLine(d)}. The owners vote on ${shortDate(t.tentative.votesDue)} (24 of 32 needed), then the players ratify. ` +
@@ -286,14 +286,14 @@ function vote(state: GameState): void {
   const p = Math.max(0.6, Math.min(0.98, 0.85 + 0.6 * (t.w - 0.5)));
   const yes = TEAMS.filter((x) => x.id !== state.userTeam && r() < p).length + (ours ? 1 : 0);
   if (yes < VOTES_NEEDED) {
-    news(state, `Owners reject the tentative labor deal, ${yes}-${32 - yes}; the committee goes back to the table`);
+    news(state, "labor", `Owners reject the tentative labor deal, ${yes}-${32 - yes}; the committee goes back to the table`);
     note(state, `Owners voted the deal down ${yes}-${32 - yes}.`);
     back(state, 0.04);
     return;
   }
   const ratify = Math.max(0.5, Math.min(0.97, 0.97 - Math.max(0, t.w - 0.55) * 3));
   if (r() >= ratify) {
-    news(state, `Players vote down the tentative labor deal after the owners approved it ${yes}-${32 - yes}`);
+    news(state, "labor", `Players vote down the tentative labor deal after the owners approved it ${yes}-${32 - yes}`);
     note(state, "The players voted the deal down.");
     back(state, -0.04);
     return;
@@ -332,7 +332,7 @@ function sign(state: GameState, terms: CbaTerms, yes: number): void {
   const owners = (state.owners ??= { relations: {}, rules: [], history: [] } as never);
   if (terms.games === 18 && rulesFor(state, start).games === 17) owners.rules.push({ rule: "games18", year: start, yes: 32, sponsor: "labor" });
   const len = `${from}-${a.through}`;
-  news(state, `Owners (${yes}-${32 - yes}) and players ratify a new labor agreement for ${len}${a.lockout ? `, ending the lockout${lost ? ` after ${lost} regular-season games were lost` : ""}` : ""}`);
+  news(state, "labor", `Owners (${yes}-${32 - yes}) and players ratify a new labor agreement for ${len}${a.lockout ? `, ending the lockout${lost ? ` after ${lost} regular-season games were lost` : ""}` : ""}`);
   note(state, `New agreement for ${len} signed.`);
   send(state, "league", "Management Council", `New labor agreement, ${len}`,
     `${termsLine(terms)}. ${terms.games === 18 ? `The 18-game season starts in ${start}. ` : ""}Contracts already signed stay as written; ` +
@@ -343,7 +343,7 @@ function startLockout(state: GameState): void {
   const t = labor(state).talks!;
   t.status = "lockout";
   t.lockout = { start: state.date, cancelled: [] };
-  news(state, "The labor agreement expires without a new deal, and the owners lock out the players: free agency, trades and team activities stop");
+  news(state, "labor", "The labor agreement expires without a new deal, and the owners lock out the players: free agency, trades and team activities stop");
   note(state, "Lockout began.");
   send(state, "league", "Management Council", "Lockout",
     "The agreement expired without a deal and the league has locked out the players. Until a new deal is ratified there's no free agency, no trades or signings, and no team activities. " +
@@ -370,7 +370,7 @@ export function cancelGame(state: GameState, g: ScheduledGame): void {
   if (g.home === state.userTeam && !g.neutral) refundDeposit(state, g);
   const day = SCHEDULE.filter((x) => x.date === g.date && x.type === g.type).length;
   if (SCHEDULE.filter((x) => x.date === g.date && t.lockout!.cancelled.includes(x.id)).length === day) {
-    news(state, `Lockout: the league cancels the ${g.type === "PRE" ? "preseason" : "regular-season"} games of ${shortDate(g.date)}`);
+    news(state, "labor", `Lockout: the league cancels the ${g.type === "PRE" ? "preseason" : "regular-season"} games of ${shortDate(g.date)}`);
   }
 }
 
@@ -410,7 +410,7 @@ function grievancesDaily(state: GameState): void {
           `The union filed ${KIND_TEXT[kind]} for ${PLAYER_BY_ID[player]?.name ?? "a player"}, claiming ${money(claim)}. An arbitrator hears it around ${shortDate(g.due)}. We can settle now on the Owners page.`);
       }
     }
-    if (r() < 0.6) news(state, `The players' union files a grievance against the ${teamLabel(TEAMS[Math.floor(r() * TEAMS.length)].id)}`);
+    if (r() < 0.6) news(state, "labor", `The players' union files a grievance against the ${teamLabel(TEAMS[Math.floor(r() * TEAMS.length)].id)}`);
   }
   for (const g of l.grievances) {
     if (g.status !== "open" || state.date < g.due) continue;
@@ -474,7 +474,7 @@ export function laborDaily(state: GameState): void {
     l.agreements.push({ from: 2021, through: 2030, signed: "2020-03-15", terms: { ...BASE_TERMS } });
     bindLabor(state);
     note(state, "The players ratified a new agreement through 2030: a 48.5% share with the 17th game, and bigger minimums.");
-    news(state, "Players ratify a new labor deal through 2030: a 17th game from 2021, an expanded playoff field and higher minimum salaries");
+    news(state, "labor", "Players ratify a new labor deal through 2030: a 17th game from 2021, an expanded playoff field and higher minimum salaries");
     return;
   }
   if (!l.talks && !real2020 && state.date >= `${cur.through - 1}-03-01` && state.date < deadline(cur.through)) openTalks(state);

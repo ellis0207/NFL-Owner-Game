@@ -154,7 +154,7 @@ function holdHostVotes(state: GameState): void {
   }
   h.bids = {};
   bindHosts(state);
-  if (results.length) news(state, `Owners award ${results.join(" and ")}`);
+  if (results.length) news(state, "league", `Owners award ${results.join(" and ")}`);
 }
 
 function superBowlTitle(season: number): string {

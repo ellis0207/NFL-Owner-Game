@@ -137,7 +137,7 @@ function publishAgenda(state: GameState): void {
     `The proposals for the annual league meeting are out. The owners vote on ${shortDate(m.voteDate)}; a change needs ${VOTES_TO_PASS} of 32 votes.\n\n` +
     m.proposals.map((p) => `- ${RULE_BY_ID[p.rule].title} (${sponsorName(p.sponsor)})`).join("\n") +
     `\n\nClubs can submit their own until ${shortDate(m.deadline)}. The Owners page has the agenda, where each owner stands and how to vote.`);
-  news(state, `The league releases ${m.proposals.length} rule change proposals ahead of the annual meeting`);
+  news(state, "league", `The league releases ${m.proposals.length} rule change proposals ahead of the annual meeting`);
 }
 
 export function sponsorName(sponsor: string): string {
@@ -153,7 +153,7 @@ export function submitProposal(state: GameState, rule: string): string | null {
   if (!proposable(state).includes(rule)) return "That can't be proposed right now.";
   const c = RULE_BY_ID[rule];
   m.proposals.push({ id: `${m.year}:${rule}`, rule, sponsor: state.userTeam, committee: committeeView(c.appeal), lobby: {}, ourVote: true });
-  news(state, `${teamLabel(state.userTeam)} propose: ${c.title.toLowerCase()}`);
+  news(state, "league", `${teamLabel(state.userTeam)} propose: ${c.title.toLowerCase()}`);
   return null;
 }
 
@@ -248,7 +248,7 @@ function holdVote(state: GameState): void {
     if (p.sponsor !== "committee" && p.sponsor !== us) changeRapport(state, p.sponsor, votes[us] ? 6 : -4);
     if (p.sponsor === us) for (const [team, v] of Object.entries(votes)) if (team !== us) changeRapport(state, team, v ? 2 : -2);
     lines.push(`${p.passed ? "Approved" : "Voted down"}, ${p.yes}-${32 - p.yes}: ${c.title}${p.amended ? " (as a one-season trial)" : ""}. We voted ${votes[us] ? "yes" : "no"}.`);
-    news(state, `Owners ${p.passed ? "approve" : "reject"} proposal (${p.yes}-${32 - p.yes}): ${c.title.toLowerCase()}`);
+    news(state, "league", `Owners ${p.passed ? "approve" : "reject"} proposal (${p.yes}-${32 - p.yes}): ${c.title.toLowerCase()}`);
   }
   m.done = true;
   const passed = m.proposals.filter((p) => p.passed);
@@ -305,7 +305,7 @@ export function ownersDaily(state: GameState): void {
       const yes = whipCount(state, p).yes.length + 1;
       if (yes >= 19 && yes < VOTES_TO_PASS) {
         p.amended = true;
-        news(state, `${sponsorName(p.sponsor)} narrow their proposal to a one-season trial to win votes: ${RULE_BY_ID[p.rule].title.toLowerCase()}`);
+        news(state, "league", `${sponsorName(p.sponsor)} narrow their proposal to a one-season trial to win votes: ${RULE_BY_ID[p.rule].title.toLowerCase()}`);
       }
     }
   }

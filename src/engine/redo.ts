@@ -78,7 +78,7 @@ function makeAsks(state: GameState): void {
     const ask: RedoAsk = { year, asked: state.date, stance, apy: Math.round(price / 100_000) * 100_000 };
     state.players[id].redo = ask;
     const p = PLAYER_BY_ID[id];
-    news(state, `${p.name}'s camp wants a new contract from the ${teamLabel(team)} with ${dealYearsLeft(deal, year)} years left on his deal`);
+    news(state, "contracts", `${p.name}'s camp wants a new contract from the ${teamLabel(team)} with ${dealYearsLeft(deal, year)} years left on his deal`);
     if (team === state.userTeam) {
       const threat = stance === "camp" ? `If there's no new deal by camp, ${p.name.split(" ").slice(-1)[0]} won't practice.`
         : stance === "spring" ? "Until there's progress, he'll train on his own instead of attending the voluntary spring program."
@@ -148,7 +148,7 @@ function endLongHoldouts(state: GameState): void {
     if (rng() > 0.05) continue;
     delete ps.holdout;
     changeMorale(state, id, -5);
-    news(state, `${PLAYER_BY_ID[id].name} ends his holdout and reports to the ${teamLabel(ps.team!)}`);
+    news(state, "contracts", `${PLAYER_BY_ID[id].name} ends his holdout and reports to the ${teamLabel(ps.team!)}`);
   }
 }
 

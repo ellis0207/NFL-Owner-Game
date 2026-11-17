@@ -226,7 +226,7 @@ export function signLocalOffer(state: GameState, id: string): string | null {
     ret.after += o.value;
   }
   l.vacant = l.vacant.filter((c) => c !== o.cat);
-  news(state, `${TEAM_BY_ID[state.userTeam].name} ${o.incumbent ? "renew" : "sign"} ${o.partner} as ${LOCAL_CATS[o.cat].label.toLowerCase()} (${o.years} years)`);
+  news(state, "business", `${TEAM_BY_ID[state.userTeam].name} ${o.incumbent ? "renew" : "sign"} ${o.partner} as ${LOCAL_CATS[o.cat].label.toLowerCase()} (${o.years} years)`);
   return null;
 }
 

@@ -148,7 +148,7 @@ export function ownerGift(state: GameState, amount: number): string | null {
   c.foundation.balance += amount;
   c.foundation.ownerGiven += amount;
   fanBase(state).trust = Math.min(100, fanBase(state).trust + Math.min(2, amount / (5 * M)));
-  news(state, `${state.ownerName} gives ${money(amount)} to the ${TEAM_BY_ID[state.userTeam].name} Foundation`);
+  news(state, "business", `${state.ownerName} gives ${money(amount)} to the ${TEAM_BY_ID[state.userTeam].name} Foundation`);
   return null;
 }
 

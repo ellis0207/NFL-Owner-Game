@@ -237,7 +237,7 @@ export function retirePlayer(state: GameState, id: string, quiet = false): void 
   const age = ageOn(data.birthDate, state.date);
   const notable = current(state, id) >= 70 || (data.yearsExp ?? 0) >= 10;
   if (notable || team === state.userTeam) {
-    news(state, `${data.position} ${data.name}${team ? ` of the ${teamLabel(team)}` : ""} retires${age ? ` at ${age}` : ""}${data.yearsExp ? ` after ${data.yearsExp + 1} seasons` : ""}`);
+    news(state, "retirement", `${data.position} ${data.name}${team ? ` of the ${teamLabel(team)}` : ""} retires${age ? ` at ${age}` : ""}${data.yearsExp ? ` after ${data.yearsExp + 1} seasons` : ""}`);
   }
   if (team === state.userTeam) {
     const gm = teamStaff(team).GM;

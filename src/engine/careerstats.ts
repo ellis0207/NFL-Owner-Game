@@ -120,7 +120,7 @@ export function checkCareerMarks(state: GameState, played: Iterable<string>): vo
         // A player who was already past the mark when the save began has it noted quietly.
         if (v - m > m * 0.05) continue;
         const what = NFL_CAREER[key][2];
-        news(state, `${p.name} reached ${m.toLocaleString()} career ${what}.`);
+        news(state, "honors", `${p.name} reached ${m.toLocaleString()} career ${what}.`);
       }
       const [mark, holder, what] = NFL_CAREER[key];
       const tag = `${key}:record`;
@@ -128,7 +128,7 @@ export function checkCareerMarks(state: GameState, played: Iterable<string>): vo
         marks.push(tag);
         const text = `${p.name} passed ${holder} for the NFL career record in ${what}: ${Math.round(v).toLocaleString()}.`;
         r.broken.unshift({ date: state.date, text });
-        news(state, text);
+        news(state, "honors", text);
         const team = state.players[pid]?.team;
         if (team === state.userTeam) send(state, "media", "Team communications", `${p.name} sets the career record`, `${text} The ball is going to Canton, and the stadium is planning a ceremony.`);
       }

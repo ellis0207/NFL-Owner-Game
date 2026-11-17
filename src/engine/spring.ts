@@ -151,7 +151,7 @@ function otasOpen(state: GameState): void {
   for (const [id, plan] of Object.entries(p.spring)) {
     const ps = state.players[id];
     if (plan.reason !== "contract" || !ps?.team || !isStarter(state, id)) continue;
-    news(state, `${PLAYER_BY_ID[id].name} is not attending ${teamLabel(ps.team)} OTAs while he seeks a new contract`);
+    news(state, "camp", `${PLAYER_BY_ID[id].name} is not attending ${teamLabel(ps.team)} OTAs while he seeks a new contract`);
   }
   const team = state.userTeam;
   const away = rostered(state, team).filter((id) => p.spring[id]?.plan === "away");
@@ -214,7 +214,7 @@ function minicampOpens(state: GameState): void {
       continue;
     }
     plan.minicamp = "absent";
-    news(state, `${PLAYER_BY_ID[id].name} skips ${teamLabel(ps.team)} mandatory minicamp`);
+    news(state, "camp", `${PLAYER_BY_ID[id].name} skips ${teamLabel(ps.team)} mandatory minicamp`);
     if (ps.team === state.userTeam) {
       const d: OwnerDecision = {
         id: `minicamp:${RULES.season}:${id}`, date: state.date, expires: addDays(KEY.minicampStart, 3), player: id, kind: "minicamp",
