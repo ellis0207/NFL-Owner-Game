@@ -22,7 +22,7 @@ import { fanBase } from "./fans";
 import { send } from "./inbox";
 import { RULES, TEAM_BY_ID } from "./league";
 import { merchLift } from "./clubhouse";
-import { FIRST_NAMES, LAST_NAMES } from "./names";
+import { localStaff } from "./media/corps";
 import { addStory, changeRel, mediaState } from "./outlets";
 import { rivalryHeat } from "./records";
 import { gaussian, rngFor } from "./rng";
@@ -245,8 +245,8 @@ function weekly(state: GameState): void {
 // ---- The beat ----
 
 export function beatWriters(state: GameState): string[] {
-  const rng = rngFor(state.seed, `beat:${state.userTeam}`);
-  return [0, 1].map(() => `${FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)]}`);
+  const names = localStaff(state, state.userTeam, "beat").map((p) => p.name);
+  return names.length >= 2 ? names : [...names, "Staff writer", "Staff writer"].slice(0, 2);
 }
 
 /** The beat writers' midweek notebook: warmer when they have access and the team wins, sharper when they don't. */

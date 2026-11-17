@@ -3,7 +3,7 @@
 // about the owner (engine only; the owner reads it from the coverage).
 import { addDays } from "./dates";
 import { archiveStory } from "./teammedia";
-import type { GameState, MediaState, Story } from "./types";
+import type { GameState, MediaState, PressTip, Story } from "./types";
 
 export interface MediaOutlet {
   id: string;
@@ -49,11 +49,29 @@ export const MEDIA: MediaOutlet[] = [
     heat: 0.3,
   },
   {
+    id: "afw", name: "American Football Wire", what: "The wire service: first with the transaction, the injury report and the final score, and nothing else.",
+    insider: "Hal Brennan", columnist: "", analyst: "Joy Takeda", draft: "", reporter: "Mo Adeyemi",
+    heat: 0.05,
+  },
+  {
+    id: "xp", name: "Expected Points", what: "The analytics site: models, win probability, fourth-down calls and the numbers behind every take.",
+    insider: "", columnist: "Iris Lindgren", analyst: "Devin Achebe", draft: "", reporter: "",
+    heat: 0.25,
+  },
+  {
+    id: "journal", name: "The Franchise Journal", what: "The sports business paper: owners, stadiums, TV money, sales, labor and the league office.",
+    insider: "Margaret Osei", columnist: "Paul Verhoeven", analyst: "", draft: "", reporter: "Gina Castellano",
+    heat: 0.15,
+  },
+  {
     id: "beat", name: "Local beat", what: "The writers who cover our club every day for the local paper and its site (made up).",
     insider: "Beat desk", columnist: "Beat desk", analyst: "Beat desk", draft: "Beat desk", reporter: "Beat desk",
     heat: 0.3,
   },
 ];
+
+/** The national outlets, without the old shared beat desk (stories filed before the local media existed). */
+export const NATIONAL = MEDIA.filter((o) => o.id !== "beat");
 
 export const MEDIA_BY_ID: Record<string, MediaOutlet> = Object.fromEntries(MEDIA.map((o) => [o.id, o]));
 
@@ -121,25 +139,19 @@ export function relLabel(rel: number): string {
   return "Hostile: they're looking for a story.";
 }
 
-/** An agent's leak about contract talks, as an insider reports it. */
+/** An agent's leak about contract talks: an insider with sources on the team writes it up at the end of the day. */
 export function leakStory(state: GameState, o: { player: string; name: string; position: string; team: string; teamName: string; apy: string; lowball: boolean; agent: string }): void {
-  const outlet = MEDIA[hashPick(`${state.date}:${o.player}`, 3)];
   const last = o.name.split(" ").slice(-1)[0];
-  addStory(state, {
-    outlet: outlet.id, by: outlet.insider, kind: "leak", teams: [o.team], players: [o.player],
-    headline: o.lowball
-      ? `Sources: ${o.teamName}' offer to ${o.name} comes in well short`
-      : `Sources: ${o.name}, ${o.teamName} trade offers on a new deal`,
-    body: o.lowball
-      ? `The ${o.teamName}' latest offer to ${o.position} ${o.name} is said to be around ${o.apy} a year, and people close to ${last} describe it as ` +
-        `"not a serious number." ${o.agent}, who represents ${last}, has a history of taking talks public when they stall. The sides are expected to keep talking, but the gap is real.`
-      : `${o.position} ${o.name} and the ${o.teamName} are trading proposals, with the latest offer said to be around ${o.apy} a year. ` +
-        `Nothing is imminent, according to people familiar with the talks, but both sides describe the conversations as productive. ${o.agent} represents ${last}.`,
+  tip(state, {
+    kind: "talks", team: o.team, player: o.player,
+    headline: o.lowball ? `the ${o.teamName}' offer to ${o.name} comes in well short` : `${o.name} and the ${o.teamName} trade offers on a new deal`,
+    text: o.lowball
+      ? `The ${o.teamName}' latest offer to ${o.position} ${o.name} is said to be around ${o.apy} a year, and people close to ${last} describe it as "not a serious number." ${o.agent}, who represents ${last}, has a history of taking talks public when they stall`
+      : `${o.position} ${o.name} and the ${o.teamName} are trading proposals, with the latest offer said to be around ${o.apy} a year. Nothing is imminent, but both sides describe the conversations as productive. ${o.agent} represents ${last}`,
   });
 }
 
-function hashPick(key: string, n: number): number {
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
-  return (h >>> 0) % n;
+/** Hands a reporter something from inside a building (engine/media/rumors.ts files it). */
+export function tip(state: GameState, t: PressTip): void {
+  (mediaState(state).tips ??= []).push(t);
 }

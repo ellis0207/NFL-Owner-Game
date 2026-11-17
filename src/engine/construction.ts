@@ -32,7 +32,8 @@ import { bindRelocation, cpuStadiumFailed, restoreStadiums } from "./relocation"
 import { metroPop } from "./fans";
 import { money, news, send } from "./inbox";
 import { RULES, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { startPolitics } from "./politics";
 import { gaussian, rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium, type Structure } from "./stadiums";
@@ -430,7 +431,7 @@ function startBuild(state: GameState): void {
   }
   news(state, "stadiums", `Construction begins on ${p.name}; it should open in ${p.opens.slice(0, 4)}`);
   addStory(state, {
-    outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "owner", teams: [state.userTeam],
+    outlet: "sideline", by: byline(state, "sideline", "reporter"), kind: "owner", teams: [state.userTeam],
     headline: `Ground broken on ${p.name}`,
     body: `${TEAM_BY_ID[state.userTeam].name} broke ground today on a ${p.capacity.toLocaleString("en-US")}-seat ${ROOFS[p.roof].label.toLowerCase()} stadium budgeted at ${money(p.price!)}, due in ${p.opens.slice(0, 4)}.`,
   });
@@ -529,7 +530,7 @@ function openStadium(state: GameState): void {
   send(state, "business", businessChief(state), `${p.name} is open`,
     `It came in at ${money(p.cost ?? 0)} against a ${money(p.price ?? 0)} contract (${Math.round(overrun(p) * 100)}% over), ${daysBetween(p.started, state.date) > 0 ? `${(daysBetween(p.started, state.date) / 365).toFixed(1)} years after the first study` : ""}. Expect a jump in demand for the first few seasons.`);
   addStory(state, {
-    outlet: "sideline", by: MEDIA_BY_ID.sideline.reporter, kind: "owner", teams: [us],
+    outlet: "sideline", by: byline(state, "sideline", "reporter"), kind: "owner", teams: [us],
     headline: `${p.name} opens its doors`,
     body: `The ${TEAM_BY_ID[us].name} open their new ${ROOFS[p.roof].label.toLowerCase()} home this season. The final bill: ${money(p.cost ?? 0)}.`,
   });

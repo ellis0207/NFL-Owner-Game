@@ -23,7 +23,8 @@ import { trustHit } from "./fans";
 import { money, news, send } from "./inbox";
 import { RULES, TEAM_BY_ID, teamLabel } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { gaussian, rngFor } from "./rng";
 import type { DepartmentsState, DeptState, ExecRole, GameState, ScheduledGame, TripReport } from "./types";
 
@@ -245,7 +246,7 @@ function quarterly(state: GameState): void {
     log(state, "security", outside ? "A staff member reported a supervisor's misconduct through the hotline; outside investigators handled it and the supervisor left." : "A staff member reported a supervisor's misconduct to the general counsel.");
     if (!outside && rng() < 0.35) {
       trustHit(state, -1.5, 0.3, "A misconduct report handled inside the club");
-      addStory(state, { outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "owner", teams: [state.userTeam], headline: `Former ${TEAM_BY_ID[state.userTeam].name} employee says complaint was buried`, body: "A former staff member says a misconduct complaint went nowhere inside the team. The club says it took the complaint seriously." });
+      addStory(state, { outlet: "ledger", by: byline(state, "ledger", "reporter"), kind: "owner", teams: [state.userTeam], headline: `Former ${TEAM_BY_ID[state.userTeam].name} employee says complaint was buried`, body: "A former staff member says a misconduct complaint went nowhere inside the team. The club says it took the complaint seriously." });
     }
   }
   if (rng() < 0.06 * (off(d.it, "data", "strict") ? 0.5 : 1) * (off(s, "credentials", "strict") ? 0.7 : 1)) {
@@ -332,7 +333,7 @@ export function resolveIncident(state: GameState, p: Record<string, unknown>, ch
     } else {
       post(state, "technology", -fans * 3 - 0.75 * M, "Breach response, and a regulator's fine for late notice");
       trustHit(state, -3, 1, "A fan data breach disclosed late");
-      addStory(state, { outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "owner", teams: [state.userTeam], headline: `${TEAM_BY_ID[state.userTeam].name} waited weeks to tell fans about breach`, body: "The club knew fans' data had been exposed well before it told them, according to a state regulator who fined the team." });
+      addStory(state, { outlet: "ledger", by: byline(state, "ledger", "reporter"), kind: "owner", teams: [state.userTeam], headline: `${TEAM_BY_ID[state.userTeam].name} waited weeks to tell fans about breach`, body: "The club knew fans' data had been exposed well before it told them, according to a state regulator who fined the team." });
     }
     return null;
   }

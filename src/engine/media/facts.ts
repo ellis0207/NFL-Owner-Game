@@ -23,7 +23,7 @@ import { describe, headline as tradeHeadline } from "../trades";
 import type { BoxScore, GameState, MediaFactInput, Position, ScheduledGame, StoryKind, TradeRecord } from "../types";
 import type { Slots } from "./grammar";
 
-export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat";
+export type Family = "game" | "performance" | "injury" | "signing" | "release" | "trade" | "claim" | "wire" | "talk" | "camp" | "seat" | "rumor";
 
 export interface Fact {
   id: string;
@@ -40,6 +40,9 @@ export interface Fact {
   ours: boolean;
   tags: Record<string, number | boolean | string | undefined>;
   slots: Slots;
+  /** A sourced report is first written by the reporter who has it (engine/media/rumors.ts). */
+  outlet?: string;
+  reporter?: string;
 }
 
 const M = 1_000_000;

@@ -26,17 +26,17 @@ export interface FormatDef {
 }
 
 export const FORMATS: Record<FormatId, FormatDef> = {
-  recap: { id: "recap", group: "news", label: "Game story", role: "reporter", outlets: [["ledger", 1], ["sideline", 1]], style: "head", quote: true },
-  alert: { id: "alert", group: "news", label: "Breaking", role: "insider", outlets: [["sideline", 2], ["capspace", 1], ["ledger", 1]], style: "head", quote: false },
-  report: { id: "report", group: "news", label: "Report", role: "insider", outlets: [["sideline", 1], ["ledger", 1], ["capspace", 1]], style: "head", quote: true },
-  breakdown: { id: "breakdown", group: "analysis", label: "Cap breakdown", role: "analyst", outlets: [["capspace", 1]], style: "head", quote: false },
-  analytics: { id: "analytics", group: "analysis", label: "By the numbers", role: "analyst", outlets: [["ledger", 2], ["sideline", 1]], style: "head", quote: false },
-  film: { id: "film", group: "analysis", label: "Film room", role: "analyst", outlets: [["sideline", 1], ["ledger", 1]], style: "head", quote: false },
-  column: { id: "column", group: "opinion", label: "Column", role: "columnist", outlets: [["ledger", 2], ["sideline", 1], ["capspace", 1]], style: "take", quote: false },
+  recap: { id: "recap", group: "news", label: "Game story", role: "reporter", outlets: [["ledger", 1], ["sideline", 1], ["afw", 1]], style: "head", quote: true },
+  alert: { id: "alert", group: "news", label: "Breaking", role: "insider", outlets: [["afw", 3], ["sideline", 2], ["capspace", 1], ["ledger", 1]], style: "head", quote: false },
+  report: { id: "report", group: "news", label: "Report", role: "insider", outlets: [["sideline", 1], ["ledger", 1], ["capspace", 1], ["afw", 1], ["journal", 1]], style: "head", quote: true },
+  breakdown: { id: "breakdown", group: "analysis", label: "Cap breakdown", role: "analyst", outlets: [["capspace", 1], ["journal", 0.5]], style: "head", quote: false },
+  analytics: { id: "analytics", group: "analysis", label: "By the numbers", role: "analyst", outlets: [["xp", 3], ["ledger", 1], ["sideline", 0.5]], style: "head", quote: false },
+  film: { id: "film", group: "analysis", label: "Film room", role: "analyst", outlets: [["sideline", 1], ["ledger", 1], ["xp", 1]], style: "head", quote: false },
+  column: { id: "column", group: "opinion", label: "Column", role: "columnist", outlets: [["ledger", 2], ["sideline", 1], ["capspace", 1], ["journal", 1], ["xp", 0.5]], style: "take", quote: false },
   hottake: { id: "hottake", group: "opinion", label: "Hot take", role: "columnist", outlets: [["blitz", 1]], style: "take", quote: false },
   notebook: { id: "notebook", group: "beat", label: "Beat notebook", role: "reporter", outlets: [["beat", 1]], style: "head", quote: true },
   grades: { id: "grades", group: "grades", label: "Grades", role: "analyst", outlets: [["capspace", 2], ["ledger", 1]], style: "head", quote: false },
-  feature: { id: "feature", group: "feature", label: "Feature", role: "reporter", outlets: [["ledger", 1], ["sideline", 1]], style: "head", quote: true },
+  feature: { id: "feature", group: "feature", label: "Feature", role: "reporter", outlets: [["ledger", 1], ["sideline", 1], ["journal", 0.5]], style: "head", quote: true },
 };
 
 /** Words every family shares: openers, kickers and verbs, with tone variants. */

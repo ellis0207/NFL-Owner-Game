@@ -17,7 +17,8 @@ import { addDays, shortDate } from "./dates";
 import { inflation, post } from "./business";
 import { money, news, send } from "./inbox";
 import { RULES, TEAMS, TEAM_BY_ID } from "./league";
-import { MEDIA_BY_ID, addStory } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { owners } from "./owners";
 import { projects } from "./projects";
 import { gaussian, rngFor } from "./rng";
@@ -166,7 +167,7 @@ function hostNews(state: GameState, kind: "sb" | "draft", key: number, a: HostAw
   const what = kind === "sb" ? `the Super Bowl after the ${key} season` : `the ${key} NFL Draft`;
   const others = a.bidders.filter((t) => t !== a.team).map((t) => TEAM_BY_ID[t].city);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "league", teams: [a.team],
+    outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "league", teams: [a.team],
     headline: `${a.city} lands ${what}`,
     body: `The owners voted ${a.city} the host of ${what}${a.ballots > 1 ? " on a second ballot" : ""}, ${a.votes} votes in favor` +
       (others.length ? `, ahead of bids from ${others.join(", ")}.` : ".") +

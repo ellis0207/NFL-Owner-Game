@@ -5,16 +5,17 @@
 // about us. A daily budget keeps the volume near a real outlet's output.
 import { addDays } from "../dates";
 import { GAMES_BY_DATE, RULES } from "../league";
-import { addStory, MEDIA_BY_ID, mediaState } from "../outlets";
+import { addStory, mediaState } from "../outlets";
 import { rngFor, type Rng } from "../rng";
-import { beatWriters } from "../teammedia";
-import type { GameState, StoryKind } from "../types";
+import type { GameState, ReporterRole, StoryKind } from "../types";
+import { corps, isLocal, outletOf, pickReporter } from "./corps";
 import type { AngleDef, FamilyContent } from "./angles";
 import { GAME } from "./content/game";
 import { CLAIM, RELEASE, SIGNING, TRADE } from "./content/moves";
 import { INJURY, PERFORMANCE } from "./content/players";
 import { WIRE_CONTENT } from "./content/wire";
 import { CAMP, SEAT, TALK } from "./content/talk";
+import { RUMOR_CONTENT } from "./content/rumors";
 import { collectFacts, teamSlots, type Fact, type Family } from "./facts";
 import { FORMATS, SHARED_BANK, type FormatDef, type FormatId } from "./formats";
 import { choose, render, type Bank, type RenderContext, type Slots, type Tone } from "./grammar";
@@ -27,6 +28,7 @@ export const FAMILIES: Partial<Record<Family, FamilyContent>> = {
 /** The words for a fact: its family's, or for the league wire, its topic's. */
 export function contentFor(f: Fact): FamilyContent | undefined {
   if (f.family === "wire") return WIRE_CONTENT[String(f.slots.topic)] ?? WIRE_CONTENT.league;
+  if (f.family === "rumor") return RUMOR_CONTENT[f.type.split(".")[1]];
   return FAMILIES[f.family];
 }
 
@@ -56,6 +58,7 @@ export function storiesFor(f: Fact): number {
     case "claim": return 1;
     case "trade": return 2 + (f.tags.blockbuster ? 1 : 0) + (f.ours ? 1 : 0);
     case "talk": return 1 + (f.ours ? 1 : 0);
+    case "rumor": return 1 + (v >= 60 ? 1 : 0) + (f.ours ? 1 : 0);
     case "camp": return 1 + (f.ours && v >= 50 ? 1 : 0);
     case "seat": return 1 + (v >= 60 ? 1 : 0);
     case "wire": return (v >= 40 ? 1 : 0) + (v >= 65 ? 1 : 0) + (f.ours ? 1 : 0);
@@ -83,8 +86,10 @@ function weighted<T>(rng: Rng, items: [T, number][]): T | undefined {
 }
 
 function pickFormats(f: Fact, c: FamilyContent, n: number, rng: Rng): FormatId[] {
-  const out: FormatId[] = [c.formats[0]];
-  const usable = c.formats.slice(1).filter((id) => {
+  // A sourced report runs first in the format its reporter works in: a radio segment, a beat notebook, an insider report.
+  const first = f.tags.scoop && c.formats.includes(f.tags.scoop as FormatId) ? (f.tags.scoop as FormatId) : c.formats[0];
+  const out: FormatId[] = [first];
+  const usable = c.formats.filter((id) => id !== first).filter((id) => {
     if (id === "notebook") return f.ours;
     if (id === "grades") return f.family === "trade" || !!f.tags.graded;
     return true;
@@ -109,21 +114,39 @@ function pickAngles(f: Fact, c: FamilyContent, n: number, rng: Rng): AngleDef[] 
   return out;
 }
 
-function pickOutlet(fmt: FormatDef, used: Set<string>, rng: Rng): string {
-  const fresh = fmt.outlets.filter(([o]) => !used.has(o));
-  return weighted(rng, fresh.length ? fresh : fmt.outlets) ?? fmt.outlets[0][0];
+/** What each national outlet goes looking for: the business paper chases money stories, the analytics site numbers. */
+const OUTLET_BEATS: Record<string, string[]> = {
+  journal: ["business", "stadiums", "ownership", "relocation", "labor", "league", "frontoffice", "contracts", "signing"],
+  capspace: ["contracts", "freeagency", "signing", "release", "trade", "trades"],
+  sentinel: ["draft", "college", "camp"],
+  xp: ["game", "performance"],
+};
+
+function pickOutlet(fmt: FormatDef, used: Set<string>, rng: Rng, f: Fact): string {
+  const subject = String(f.slots.topic ?? f.family);
+  const home = (f.slots.US as { id?: string } | undefined)?.id ?? f.teams[0];
+  const weights: [string, number][] = fmt.outlets.map(([o, w]) => {
+    if (o === "beat") return [`local:${home}`, w];
+    const beats = OUTLET_BEATS[o];
+    return [o, beats ? w * (beats.includes(subject) ? 3 : 0.5) : w];
+  });
+  const fresh = weights.filter(([o]) => !used.has(o));
+  return weighted(rng, fresh.length ? fresh : weights) ?? weights[0][0];
 }
 
 const KIND_BY_FORMAT: Partial<Record<FormatId, StoryKind>> = { column: "interview", hottake: "interview", analytics: "trend", film: "trend" };
 
-export interface Draft { headline: string; body: string; outlet: string; by: string; format: FormatId; angle: string; type: string; kind: StoryKind }
+export interface Draft { headline: string; body: string; outlet: string; by: string; reporter?: string; format: FormatId; angle: string; type: string; kind: StoryKind }
 
 /** Writes one story about a fact. `missing` collects empty slots for the template linter. */
 export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: FormatId, outletId: string, rng: Rng, missing?: string[]): Draft {
   const c = contentFor(f)!;
   const fmt = FORMATS[format];
-  const outlet = MEDIA_BY_ID[outletId];
-  const by = outletId === "beat" ? beatWriters(state)[Math.floor(rng() * 2)] : outlet[fmt.role];
+  const outlet = outletOf(outletId);
+  const role: ReporterRole = isLocal(outletId) ? (format === "hottake" ? "host" : format === "column" ? "columnist" : "beat") : fmt.role;
+  const team = (f.slots.US as { id?: string } | undefined)?.id && f.ours ? (f.slots.US as { id: string }).id : f.teams[0];
+  const rep = (f.reporter && f.outlet === outletId ? corps(state).people.find((p) => p.id === f.reporter) : undefined) ?? pickReporter(state, outletId, role, rng, team);
+  const by = rep?.name ?? outlet[fmt.role] ?? "Staff";
   const ctx: RenderContext = { rng, banks: banksFor(c), tone: toneOf(outlet.heat), missing };
   const slots: Slots = { ...f.slots, tag: f.tags, fmt: { [format]: true }, angle: { [angle.id]: true }, by };
   const headline = choose(fmt.style === "take" ? angle.take : angle.head, slots, ctx);
@@ -141,20 +164,23 @@ export function writeStory(state: GameState, f: Fact, angle: AngleDef, format: F
   return {
     headline: headline.charAt(0).toUpperCase() + headline.slice(1),
     body: parts.filter((x) => x && x.trim()).join(" ").replace(/\s+/g, " ").trim(),
-    outlet: outletId, by, format, angle: angle.id, type: `${f.type}/${angle.id}/${format}`,
+    outlet: outletId, by, reporter: rep?.id, format, angle: angle.id, type: `${f.type}/${angle.id}/${format}`,
     kind: KIND_BY_FORMAT[format] ?? f.kind,
   };
 }
 
-/** Adds the slots that depend on whose story it is: US and THEM for our club's coverage. */
-export function withUs(state: GameState, f: Fact): Fact {
+/** Adds the slots that depend on whose story it is: US and THEM for our club's coverage, or for the local media of the club `team`. */
+export function withUs(state: GameState, f: Fact, team?: string): Fact {
   const us = state.userTeam;
   const table = standings(state);
-  const US: Slots = { ...teamSlots(state, us, table) };
-  if (!f.ours) return { ...f, slots: { ...f.slots, US } };
-  const them = f.teams.find((t) => t !== us);
-  if (f.family === "game") US.won = (f.slots.W as { id: string }).id === us && !f.tags.tie;
-  return { ...f, slots: { ...f.slots, US, THEM: them ? teamSlots(state, them, table) : US } };
+  const side = team ?? (f.ours ? us : undefined);
+  if (!side) return { ...f, slots: { ...f.slots, US: { ...teamSlots(state, us, table) } } };
+  const US: Slots = { ...teamSlots(state, side, table) };
+  const them = f.teams.find((t) => t !== side);
+  if (f.family === "game") US.won = (f.slots.W as { id: string }).id === side && !f.tags.tie;
+  // Local media write as their club's own paper, the way our beat writers write about us.
+  const tags = team && team !== us ? { ...f.tags, ours: true, local: true } : f.tags;
+  return { ...f, tags, slots: { ...f.slots, US, THEM: them ? teamSlots(state, them, table) : US } };
 }
 
 /** Everything the desks file today from the day's facts. */
@@ -183,21 +209,50 @@ export function fileFacts(state: GameState, all: Fact[], budgetOverride?: number
     const formats = pickFormats(f, c, n, rng);
     const angles = pickAngles(f, c, formats.length, rng);
     const used = new Set<string>();
-    formats.forEach((format, i) => {
-      const fmt = FORMATS[format];
-      const outlet = pickOutlet(fmt, used, rng);
-      used.add(outlet);
-      let d = writeStory(state, f, angles[i], format, outlet, rng);
-      for (let tries = 0; recent.has(d.headline) && tries < 3; tries++) d = writeStory(state, f, angles[i], format, outlet, rng);
+    const file = (g: Fact, angle: AngleDef, format: FormatId, outlet: string) => {
+      let d = writeStory(state, g, angle, format, outlet, rng);
+      for (let tries = 0; recent.has(d.headline) && tries < 3; tries++) d = writeStory(state, g, angle, format, outlet, rng);
       recent.add(d.headline);
       addStory(state, {
-        outlet: d.outlet, by: d.by, kind: d.kind, headline: d.headline, body: d.body,
+        outlet: d.outlet, by: d.by, reporter: d.reporter, kind: d.kind, headline: d.headline, body: d.body,
         teams: f.teams, players: f.players.length ? f.players : undefined, gameId: f.gameId,
         type: d.type, format: d.format, angle: d.angle,
       });
       filed++;
       budget--;
+    };
+    formats.forEach((format, i) => {
+      // A sourced report runs first where the reporter who has it works.
+      const outlet = i === 0 && f.outlet ? f.outlet : pickOutlet(FORMATS[format], used, rng, f);
+      used.add(outlet);
+      file(f, angles[i], format, outlet);
     });
+    // Each club's local media cover their own team's news: the paper's beat writers, its columnist, the sports radio hosts.
+    if (f.value < LOCAL_LINE || f.family === "performance") continue;
+    for (const team of f.teams.slice(0, 2)) {
+      if (team === state.userTeam ? f.value < 50 : budget <= 0) continue;
+      const g = withUs(state, raw, team);
+      const local = localFormat(g, c, team === state.userTeam, rng);
+      if (!local) continue;
+      const [format, outlet] = local;
+      if (used.has(outlet)) continue;
+      used.add(outlet);
+      file(g, pickAngles(g, c, 1, rng)[0], format, outlet);
+    }
   }
   return filed;
+}
+
+/** Below this news value only the national wire and the box score notice; above it the clubs' own local media write. */
+const LOCAL_LINE = 25;
+
+/** The local piece on a club's news: usually the beat writers' notebook, sometimes the paper's columnist or the radio hosts. */
+function localFormat(f: Fact, c: FamilyContent, ours: boolean, rng: Rng): [FormatId, string] | undefined {
+  const team = (f.slots.US as { id: string }).id;
+  const options: [[FormatId, string], number][] = [];
+  if (c.formats.includes("notebook") && !ours) options.push([["notebook", `local:${team}`], 3]);
+  if (c.formats.includes("column")) options.push([["column", `local:${team}`], 1]);
+  if (c.formats.includes("hottake") && f.value >= 45) options.push([["hottake", `radio:${team}`], 1.2]);
+  if (c.formats.includes("recap") && !ours) options.push([["recap", `local:${team}`], 2]);
+  return weighted(rng, options);
 }

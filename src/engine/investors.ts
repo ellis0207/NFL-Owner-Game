@@ -27,7 +27,8 @@ import { cpiFor, inRecession } from "./economy";
 import { execRole } from "./executives";
 import { money, news, send } from "./inbox";
 import { TEAM_BY_ID } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { equityAtPurchase, fundCapitalCall, owner, ownerEquity, ownerMoney } from "./ownership";
 import { rngFor } from "./rng";
 import { standings } from "./standings";
@@ -383,7 +384,7 @@ function closeSale(state: GameState, sale: StakeSale, vet = true): void {
   note(state, `${bid.name} bought ${pctText(p.pct)} of the club for ${money(bid.price)}.`);
   news(state, "ownership", `${TEAM_BY_ID[state.userTeam].name} sell a ${pctText(p.pct)} stake to ${bid.name}, valuing the club near ${billions(bid.price / p.pct)}`);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+    outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
     headline: `${bid.name} buys into the ${TEAM_BY_ID[state.userTeam].name}`,
     body: `League owners approved the sale of a ${pctText(p.pct)} limited-partner stake for about ${money(bid.price)}. ${state.ownerName} keeps control with ${pctText(ownerShare(state))}.`,
   });
@@ -474,7 +475,7 @@ export function resolveInvestorMemo(state: GameState, m: Memo, choice: number): 
       partner.mood = clamp(partner.mood - 10);
       partner.complaints++;
       addStory(state, {
-        outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+        outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
         headline: `Friction in the ${TEAM_BY_ID[state.userTeam].name} ownership group`,
         body: `A limited partner has been trying to sell out, people familiar with the group say, and ${state.ownerName} has refused to help. Minority partners have little leverage under most NFL agreements.`,
       });

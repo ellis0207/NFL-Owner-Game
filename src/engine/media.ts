@@ -4,10 +4,10 @@
 // public knows, plus what leaks: rumors are sometimes true and sometimes not.
 import { FORMAT } from "./format";
 import { notableWeather } from "./gameday";
-import { capSummary, contractYearsLeft, teamPlayerIds } from "./cap";
+import { capSummary, teamPlayerIds } from "./cap";
 import { AWARDS, awardRace, gamesOn, latestPoll, mediaBoard, mediaRank, prospectLine, prospectTotals, rankedName } from "./college";
 import { schoolName } from "./collegeData";
-import { addDays, ageOn, daysBetween, weekday } from "./dates";
+import { addDays, daysBetween, weekday } from "./dates";
 import { DAY_ROUNDS, DRAFT_DAYS, DRAFT_YEAR, draftDayOf, mockSpot } from "./draft";
 import { letter } from "./grades";
 import { GAMES_BY_DATE, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
@@ -21,11 +21,13 @@ import { depthChart } from "./roster";
 import { teamStaff } from "./staff";
 import { seedConference, standings, matchup, type Record_ } from "./standings";
 import { seasonTotals, stat, type StatLine } from "./stats";
-import { direction, outlook, parsePick, trades, tradeWindow } from "./trades";
+import { outlook, parsePick } from "./trades";
 import type { BoxScore, GameState, Position, ScheduledGame, Story } from "./types";
 import { money } from "./inbox";
 import { composeDay, fileFacts } from "./media/compose";
 import { campFact, seatFact, talkFacts } from "./media/desks";
+import { corpsDaily } from "./media/corps";
+import { rumorDesk } from "./media/rumors";
 
 const KEY = RULES.keyDates;
 
@@ -293,138 +295,6 @@ function wireCoverage(state: GameState): void {
       body: `${text.charAt(0).toUpperCase() + text.slice(1)}.${w.extra ? ` ${w.extra}` : ""}`,
       teams: w.college ? undefined : teamsIn(text), college: w.college,
     });
-  }
-}
-
-// ---- Rumors ----
-
-function rumorMill(state: GameState): void {
-  const m = mediaState(state);
-  const date = state.date;
-  const rng = rngFor(state.seed, `media:rumors:${date}`);
-  const ts = trades(state);
-  const window = tradeWindow(state);
-  const preDeadline = date >= addDays(KEY.tradeDeadline, -35) && date < KEY.tradeDeadline;
-  const daysLeft = daysBetween(date, KEY.tradeDeadline);
-  const offseason = date > KEY.superBowl && date < KEY.draftStart;
-  const recent = (key: string, days: number) => m.asked[key] && daysBetween(m.asked[key], date) < days;
-
-  // Trade requests: true, and loud.
-  for (const [id, when] of Object.entries(ts.requests)) {
-    if (when !== date || !PLAYER_BY_ID[id]) continue;
-    const team = state.players[id]?.team;
-    if (!team) continue;
-    story(state, O.sideline, "insider", {
-      kind: "rumor", teams: [team], players: [id],
-      headline: `Sources: ${pname(id)} has asked the ${nick(team)} for a trade`,
-      body: `${ppos(id)} ${pname(id)} has told the ${teamLabel(team)} he wants out, according to people familiar with the conversation. ` +
-        `Teams have already started calling. The ${nick(team)} aren't obligated to move him, but requests like this rarely go away quietly.`,
-    });
-  }
-  if (!window.open && !offseason) return;
-
-  // Our trade block leaks: other teams talk.
-  if (window.open) {
-    for (const id of ts.block) {
-      if (!PLAYER_BY_ID[id] || state.players[id]?.team !== state.userTeam || ts.requests[id] || recent(`block:${id}`, 21)) continue;
-      const p = preDeadline && daysLeft <= 7 ? 0.25 : 0.07;
-      if (rng() > p) continue;
-      m.asked[`block:${id}`] = date;
-      story(state, rng() < 0.5 ? O.capspace : O.sideline, "insider", {
-        kind: "rumor", teams: [state.userTeam], players: [id],
-        headline: `League sources: the ${nick(state.userTeam)} are shopping ${pname(id)}`,
-        body: `The ${teamLabel(state.userTeam)} have let teams know ${ppos(id)} ${pname(id)} is available, according to two executives who spoke on condition of anonymity. ` +
-          `${last(pname(id))}${nflLine(state, id) ? ` has ${nflLine(state, id)} this season and` : ""} would draw interest from contenders.`,
-      });
-    }
-  }
-
-  const busy = (preDeadline ? (daysLeft <= 7 ? 3 : 1) : offseason ? 1 : 0);
-  if (!busy) return;
-  const wp = outlook(state);
-  // Sellers: real candidates on teams headed nowhere.
-  const sellers = TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam && direction(state, t) === "rebuild");
-  for (let i = 0; i < busy; i++) {
-    if (rng() > 0.55 || !sellers.length) continue;
-    const team = pick(rng, sellers);
-    const vets = teamPlayerIds(state, team).filter((id) => PLAYER_BY_ID[id] && (ageOn(PLAYER_BY_ID[id].birthDate, date) ?? 25) >= 27 && contractYearsLeft(id, offseason ? RULES.season + 1 : RULES.season, state) >= 1)
-      .map((id) => [id, marketView(state, id)] as const).filter(([, v]) => v >= 84).sort((a, b) => b[1] - a[1]);
-    if (!vets.length) continue;
-    const [id] = vets[Math.floor(rng() * Math.min(3, vets.length))];
-    if (recent(`seller:${id}`, 30)) continue;
-    m.asked[`seller:${id}`] = date;
-    story(state, rng() < 0.5 ? O.capspace : O.ledger, "insider", {
-      kind: "rumor", teams: [team], players: [id],
-      headline: pick(rng, [`${nick(team)} open to offers for ${pname(id)}`, `Trade market heating up for ${nick(team)} ${ppos(id)} ${pname(id)}`]),
-      body: `With the ${nick(team)} at ${recordOf(standings(state)[team])}, people around the league expect them to listen on veterans, ${pname(id)} among them. ` +
-        `Nothing is close, and the asking price is said to be steep.`,
-    });
-  }
-  // Buyers: contenders with a hole.
-  if (rng() < (preDeadline ? 0.45 : 0.2)) {
-    const buyers = TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam && wp[t] >= 0.58);
-    if (buyers.length) {
-      const team = pick(rng, buyers);
-      const chart = depthChart(state, team);
-      const weakest = (["WR", "CB", "EDGE", "OT", "S", "IDL", "LB", "TE", "RB", "OG"] as Position[])
-        .map((pos) => [pos, chart[pos]?.[0] ? marketView(state, chart[pos][0]) : 60] as const).sort((a, b) => a[1] - b[1])[0];
-      if (weakest && !recent(`buyer:${team}`, 14)) {
-        m.asked[`buyer:${team}`] = date;
-        story(state, O.sideline, "insider", {
-          kind: "rumor", teams: [team],
-          headline: `${nick(team)} hunting for ${weakest[0]} help`,
-          body: `The ${teamLabel(team)} have made calls about ${weakest[0] === "OT" ? "tackles" : weakest[0] === "EDGE" ? "edge rushers" : `${weakest[0]}s`}, per league sources. ` +
-            `At ${recordOf(standings(state)[team])}, they think they're a piece away.`,
-        });
-      }
-    }
-  }
-  // And the ones nobody can confirm.
-  if (rng() < 0.12) {
-    const stars = TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam && wp[t] >= 0.45)
-      .flatMap((t) => teamPlayerIds(state, t).filter((id) => PLAYER_BY_ID[id] && marketView(state, id) >= 92));
-    if (stars.length) {
-      const id = pick(rng, stars);
-      const team = state.players[id].team!;
-      story(state, O.blitz, "insider", {
-        kind: "rumor", teams: [team], players: [id],
-        headline: `Kara Voss: "I'm hearing ${last(pname(id))} could be in play"`,
-        body: `On The Blitz, Kara Voss said she'd heard teams were calling the ${nick(team)} about ${pname(id)}. ` +
-          `A team spokesperson called it "nonsense." Big Lou: "Where there's smoke..."`,
-      });
-    }
-  }
-  // Free agency chatter.
-  const faTalk = date >= addDays(KEY.negotiatingWindowOpens, -10) && date <= addDays(KEY.newLeagueYear, 14);
-  if (faTalk && rng() < 0.7) {
-    const fa = market(state);
-    const top = Object.values(fa).filter((f) => f.status === "open" && PLAYER_BY_ID[f.player] && f.offers.length && !recent(`fa:${f.player}`, 6))
-      .map((f) => [f, marketView(state, f.player)] as const).sort((a, b) => b[1] - a[1]).slice(0, 12);
-    if (top.length) {
-      const [f] = top[Math.floor(rng() * Math.min(6, top.length))];
-      m.asked[`fa:${f.player}`] = date;
-      const teams = [...new Set(f.offers.map((o) => o.team))].slice(0, 3);
-      story(state, O.capspace, "insider", {
-        kind: "rumor", teams, players: [f.player],
-        headline: `${pname(f.player)} market: ${teams.map(nick).join(", ")} in the mix`,
-        body: `${ppos(f.player)} ${pname(f.player)} has real interest, with the ${teams.map(nick).join(", the ")} among the teams involved, according to people familiar with the market. ` +
-          "His camp is in no hurry.",
-      });
-    } else if (date < KEY.negotiatingWindowOpens) {
-      const pending = TEAMS.flatMap((t) => teamPlayerIds(state, t.id)).filter((id) => PLAYER_BY_ID[id] && isPendingFreeAgent(state, id) && !recent(`fa:${id}`, 30))
-        .map((id) => [id, marketView(state, id)] as const).filter(([, v]) => v >= 86).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      if (pending.length) {
-        const [id] = pick(rng, pending);
-        m.asked[`fa:${id}`] = date;
-        const team = state.players[id].team!;
-        story(state, O.capspace, "insider", {
-          kind: "rumor", teams: [team], players: [id],
-          headline: `${pname(id)} expected to test free agency`,
-          body: `Barring a late deal with the ${teamLabel(team)}, ${ppos(id)} ${pname(id)} is expected to hit the market, according to league sources. ` +
-            "He'd be one of the most sought-after players available.",
-        });
-      }
-    }
   }
 }
 
@@ -944,7 +814,8 @@ export function mediaDaily(state: GameState): void {
   // Games, big days, injuries, signings, releases, claims and trades go through the story engine.
   composeDay(state);
   wireCoverage(state);
-  rumorMill(state);
+  corpsDaily(state);
+  rumorDesk(state);
   interviews(state);
   trends(state);
   offseasonTrends(state);

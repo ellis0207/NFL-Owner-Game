@@ -209,6 +209,22 @@ outlet's voice. Bigger news gets more stories from more outlets, and our club's
 beat writers cover all of our news. The media report counts the distinct story
 types a season produces.
 
+The press corps is about 240 made-up people: eight national outlets (a paper
+of record, a football network, a cap site, a talk-radio network, a college and
+draft outlet, a wire service, an analytics site and a sports business paper)
+and local media in every market (a paper with two beat writers and a
+columnist, a sports radio station with two hosts, a TV sports anchor). Each
+club's local media cover their own team's news from that side. Reporters have
+sources inside particular clubs and an accuracy you never see; sourced reports
+(trade requests, players on the block, sellers and buyers, free-agent bidders,
+coaching interviews and favorites, coaches about to be fired, leaks from inside
+a building) start from what is really happening, and reporters sometimes get
+them wrong. Every report is judged later, and each reporter's record of
+confirmed and wrong reports shows on Media > Reporters. A leaky building puts
+more of our business in the papers. Reporters retire, move up from local papers
+to national jobs and change markets each summer, and two press awards are
+handed out each February.
+
 When something happens to the team, a reporter asks the owner for comment: a
 loss, a win streak, an injury, a contract standoff, a trade rumor, a signing or
 release, the deadline, the coach's job, the draft, another team's star. Each

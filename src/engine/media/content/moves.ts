@@ -20,7 +20,7 @@ export const SIGNING: FamilyContent = {
     beat: ["<tag.ext?The {T.nick} locked up {P.name} on a {years}-year, {total} extension, a deal people in the building had been working on for weeks.><!tag.ext?The {T.nick} added {P.pos} {P.name} on a {years}-year, {total} deal.>"],
     grades: ["Grades are in on {P.name}'s {years}-year, {total} deal with the {T.nick}: {grades}. {gradeTake}"],
   },
-  details: ["<P.line?{P.name:last} has {P.line} this season. ><tag.tight?It leaves the {T.nick} with about {space} in cap space. >"],
+  details: ["<P.line?{last:P.name} has {P.line} this season. ><tag.tight?It leaves the {T.nick} with about {space} in cap space. >"],
   angles: [
     { id: "plain", when: always(0.5), head: ["<tag.ext?{T.nick} extend {P.pos} {P.name}: {years} years, {total}><tag.fa?{P.name} agrees to {years}-year, {total} deal with {T.nick}><tag.tag?{P.name} signs his tag with the {T.nick}>", "<tag.fa?{T.nick} land {P.pos} {P.name}><tag.ext?{P.name} gets paid by the {T.nick}><tag.tag?{P.name} plays on the tag for {T.nick}>"], take: ["What the {P.name} deal tells us about the {T.nick}"], para: ["[It's a fair deal for both sides|It fits the market|It's roughly what everyone expected]: {apy} a year for a player with his résumé."] },
     { id: "topOfMarket", when: on("top", 3), head: ["{P.name} resets the {P.pos} market at {apy} a year", "Record territory: {P.name}, {T.nick} agree at {apy} a year"], take: ["{P.name} is worth every penny of {apy}", "Nobody is worth {apy}. Not even {P.name}"], para: ["At {apy} a year, {P.name} is among the highest-paid players at his position, and every agent with a {P.pos} client [just raised his asking price|is circling the number|sent a thank-you note]."] },
@@ -50,7 +50,7 @@ export const RELEASE: FamilyContent = {
     opinion: ["{@open.column} The {T.nick} cutting {P.name} [tells you where the franchise is headed|is the right call, even if it stings|is going to look bad in about a month]."],
     beat: ["The {T.nick} let go of {P.name}, a move that had been [discussed for weeks|a surprise to some in the locker room|expected]."],
   },
-  details: ["<P.line?{P.name:last} had {P.line} this season. ><tag.waived?Any team can put in a claim before he clears waivers.><!tag.waived?He is free to sign anywhere.>"],
+  details: ["<P.line?{last:P.name} had {P.line} this season. ><tag.waived?Any team can put in a claim before he clears waivers.><!tag.waived?He is free to sign anywhere.>"],
   angles: [
     { id: "plain", when: always(0.5), head: ["{T.nick} <tag.waived?waive><!tag.waived?release> {P.pos} {P.name}"], take: ["The {T.nick} were right to move on from {P.name}"], para: ["It's the business side of the game: [roster spots are scarce|the {T.nick} needed the spot|younger players pushed him out]."] },
     { id: "capCasualty", when: on("march", 2.5), head: ["Cap casualty: {T.nick} cut {P.name}", "{T.nick} release {P.name} to clear cap space"], take: ["The {T.nick} cut {P.name} to fix a cap mess they made"], para: ["March is when the cap bill comes due. Cutting {P.name} [clears room for free agency|gets the {T.nick} under the line|was the price of past contracts]."] },
@@ -70,7 +70,7 @@ export const CLAIM: FamilyContent = {
     opinion: ["{@open.column} Claiming {P.name} [was the quietest smart move of the week|costs the {T.nick} nothing but a roster spot]."],
     beat: ["The {T.nick} added {P.name} off waivers, and he's expected to [compete right away|take a practice-squad-to-roster path|add depth]."],
   },
-  details: ["<P.line?{P.name:last} had {P.line} this season.>"],
+  details: ["<P.line?{last:P.name} had {P.line} this season.>"],
   angles: [
     { id: "plain", when: always(1), head: ["{T.nick} claim {P.pos} {P.name} off waivers", "Waiver pickup: {P.name} to the {T.nick}"], take: ["The {T.nick} got {P.name} for nothing"], para: ["Waiver claims go in reverse order of the standings, which [helps teams near the bottom|is how good depth gets built|rewards teams paying attention]."] },
     { id: "star", when: on("star", 2), head: ["{T.nick} land {P.name} on waivers"], take: ["How did {P.name} make it to the {T.nick} on waivers?"], para: ["It's rare for a player like {P.name} to be claimed rather than signed. The {T.nick} [moved fast|got lucky|had a plan]."] },

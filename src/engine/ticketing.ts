@@ -14,7 +14,8 @@
 import { business, businessChief, gateForecast, inflation, post, PRICING_OPENS } from "./business";
 import { leagueYear } from "./contracts";
 import { fanBase, trustHit } from "./fans";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { money, send } from "./inbox";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "./league";
 import { rivalryHeat } from "./records";
@@ -356,7 +357,7 @@ export function launchPSL(state: GameState, price: number): string | null {
   f.sat.subscribers = Math.max(0, f.sat.subscribers - 8);
   const us = state.userTeam;
   addStory(state, {
-    outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "owner", teams: [us],
+    outlet: "blitz", by: byline(state, "blitz", "columnist"), kind: "owner", teams: [us],
     headline: `${TEAM_BY_ID[us].name} will charge ${money(price)} seat licenses`,
     body: `Season-ticket holders will have to buy a personal seat license to keep their seats in ${RULES.season + 1}. "People who sat there for thirty years get a bill for the privilege," one longtime holder said.`,
   });

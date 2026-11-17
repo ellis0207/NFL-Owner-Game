@@ -13,9 +13,7 @@
 // on lost authority, staff file complaints, and details leak to the press.
 import { addDays, daysBetween } from "./dates";
 import { money } from "./inbox";
-import { TEAM_BY_ID } from "./league";
-import { MEDIA_BY_ID } from "./outlets";
-import { addStory } from "./outlets";
+import { tip } from "./outlets";
 import { gaussian, rngFor } from "./rng";
 import { teamStaff } from "./staff";
 import type { CultureIndicator, CultureState, DecisionArea, DecisionMode, ExecRole, GameState } from "./types";
@@ -112,10 +110,7 @@ export function leak(state: GameState, text: string, headline: string): void {
   c.leaks.unshift({ date: state.date, text });
   c.leaks = c.leaks.slice(0, 20);
   c.rel.sources = clamp(c.rel.sources + 6);
-  addStory(state, {
-    outlet: "blitz", by: MEDIA_BY_ID.blitz.columnist, kind: "leak", teams: [state.userTeam],
-    headline: `${TEAM_BY_ID[state.userTeam].name}: ${headline}`, body: text,
-  });
+  tip(state, { kind: "leak", team: state.userTeam, headline, text });
   state.pressure.media = clamp(state.pressure.media - 2);
   note(state, `Leaked: ${headline.toLowerCase()}.`);
 }

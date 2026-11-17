@@ -27,7 +27,7 @@ export const PERFORMANCE: FamilyContent = {
       "[Long before the big day against the {O.nick},|Ask anyone who has coached him and they'll tell you the same thing:] {P.name} [was the hardest worker in the building|did it the hard way|had to wait his turn]. {day}.",
     ],
   },
-  details: ["<P.line?On the season, {P.name:last} has {P.line}. ><tag.post?It came in the playoffs, where every snap is magnified. >"],
+  details: ["<P.line?On the season, {last:P.name} has {P.line}. ><tag.post?It came in the playoffs, where every snap is magnified. >"],
   quote: (f) => ({ bank: Number(f.tags.presence) >= 0.6 ? "pq.loud" : "pq.quiet", who: String((f.slots.P as { name: string }).name), role: `the ${(f.slots.T as { nick: string }).nick} ${(f.slots.P as { pos: string }).pos}` }),
   bank: {
     "kick.report": ["[He'll try to do it again next week.|Next up for the {T.nick} is a chance to build on it.|Expect defensive coordinators to take note.]"],
@@ -124,7 +124,7 @@ export const INJURY: FamilyContent = {
     opinion: ["{@open.column} Losing {P.name}<tag.season? for the season><!tag.season? for {span}> [is a gut punch|could define the {T.nick}' season|exposes a roster built without a plan B]."],
     beat: ["The {T.nick} confirmed {P.name}'s {injury}. <tag.season?His season is over.><!tag.season?The early estimate is {span}.>"],
   },
-  details: ["<P.line?{P.name:last} has {P.line} this season. ><next?{next.name} is next on the depth chart.>"],
+  details: ["<P.line?{last:P.name} has {P.line} this season. ><next?{next.name} is next on the depth chart.>"],
   angles: [
     { id: "plain", when: always(0.5), head: ["{T.nick} {P.pos} {P.name} out <tag.season?for the season><!tag.season?{span}> with {injury}", "Sources: {P.name} out <tag.season?for the year><!tag.season?{span}> with {injury}"], take: ["The {T.nick} can't afford to lose {P.name}"], para: ["[It's a blow|It's the kind of injury every team dreads|It's bad timing] for a {T.nick} team that [needed him|leaned on him|has little depth behind him]."] },
     { id: "seasonOver", when: on("season", 3), head: ["{T.nick}' {P.name} out for the season", "Season over for {P.name}", "{T.nick} lose {P.name} for the year"], take: ["Losing {P.name} could sink the {T.nick}' season"], para: ["There's no timeline to wait on: {P.name} is done for the season. The {T.nick} [now have to rethink everything|have to find answers internally|may have to look outside the building]."] },

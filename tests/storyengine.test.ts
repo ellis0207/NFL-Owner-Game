@@ -1,8 +1,12 @@
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { addDays } from "../src/engine/dates";
 import { contentFor, withUs, writeStory } from "../src/engine/media/compose";
 import { campFact, seatFact, talkFacts } from "../src/engine/media/desks";
 import { TEAMS } from "../src/engine/league";
+import { RUMOR_CONTENT } from "../src/engine/media/content/rumors";
+import { playerSlots, teamSlots } from "../src/engine/media/facts";
+import { corps, localStaff, outletOf } from "../src/engine/media/corps";
 import { collectFacts, emit, type Fact } from "../src/engine/media/facts";
 import { FORMATS } from "../src/engine/media/formats";
 import { render, tidy, type RenderContext } from "../src/engine/media/grammar";
@@ -25,6 +29,15 @@ describe("the writing grammar", () => {
     expect(render("{nope}", slots, c)).toBe("");
     expect(c.missing).toEqual(["nope"]);
     expect(tidy("chris Godwin Jr. caught it. then he scored .")).toBe("Chris Godwin Jr. caught it. Then he scored.");
+    expect(render("{uncap:a} and {uncap:b}", { a: "People say", b: "QB Joe" }, c)).toBe("People say and QB Joe");
+  });
+
+  it("puts modifiers before the slot in every template, so lines that only show late in the season don't break", () => {
+    const dir = "src/engine/media/content";
+    for (const file of readdirSync(dir)) {
+      const text = readFileSync(`${dir}/${file}`, "utf8");
+      expect(text.match(/\{[A-Za-z][\w.]*:(last|cap|lower|an|ord|s|uncap)\}/g), file).toBeNull();
+    }
   });
 });
 
@@ -145,6 +158,37 @@ describe("the story engine", () => {
     expect(written).toBeGreaterThan(80);
   });
 
+  it("writes every kind of sourced report cleanly", async () => {
+    const state = await stateAt("DET", 7, "regularSeasonStart");
+    const rep = corps(state).people.find((p) => p.role === "insider")!;
+    const qb = Object.keys(state.players).find((id) => state.players[id].team === "CHI")!;
+    let written = 0;
+    for (const [kind, c] of Object.entries(RUMOR_CONTENT)) {
+      for (const flags of [{}, { ours: true, star: true, deadline: true, denied: true, hot: true, localReporter: true }]) {
+        const raw: Fact = {
+          id: `t:${kind}:${Object.keys(flags).length}`, type: `rumor.${kind}`, family: "rumor", kind: "rumor", teams: ["CHI", "GB"], players: [qb], value: 60,
+          ours: !!(flags as { ours?: boolean }).ours, tags: { [kind]: true, ...flags },
+          slots: {
+            R: { name: rep.name, outlet: outletOf(rep.outlet).name }, T: teamSlots(state, "CHI"), P: playerSlots(state, qb), X: teamSlots(state, "GB"),
+            list: "the Bears and Packers", C: { name: "Joe Smith" }, pos: "edge rusher", text: "People inside the building say the staff is split", headline: "a split staff",
+          },
+        };
+        const f = withUs(state, raw);
+        for (const angle of c.angles.filter((a) => a.id === "plain" || a.when(f.tags) > 0)) {
+          for (const format of c.formats.filter((x) => x !== "notebook" || f.ours)) {
+            const missing: string[] = [];
+            const d = writeStory(state, f, angle, format, FORMATS[format].outlets[0][0], rngFor(1, `${f.id}:${angle.id}:${format}`), missing);
+            const text = `${d.headline} ${d.body}`;
+            expect(missing, `${d.type}: ${text}`).toEqual([]);
+            expect(text, d.type).not.toMatch(/undefined|NaN|\[object|[{}<>[\]]/);
+            written++;
+          }
+        }
+      }
+    }
+    expect(written).toBeGreaterThan(150);
+  });
+
   it("files the day's coverage with story types, every game gets a story, and other systems can hand over facts", async () => {
     const state = await stateAt("DET", 7, "regularSeasonStart");
     const start = state.date;
@@ -154,7 +198,7 @@ describe("the story engine", () => {
     expect(new Set(typed.map((s) => s.type)).size).toBeGreaterThan(15);
     for (const s of typed) expect(s.type!.split("/")).toHaveLength(3);
     // Our beat writers cover our games.
-    expect(typed.some((s) => s.outlet === "beat" && s.format === "notebook")).toBe(true);
+    expect(typed.some((s) => s.outlet === "local:DET" && s.format === "notebook")).toBe(true);
     emit(state, { type: "test.note", text: "Something happened", teams: ["DET"], value: 50 });
     expect(mediaState(state).queue).toHaveLength(1);
     advanceDay(state);

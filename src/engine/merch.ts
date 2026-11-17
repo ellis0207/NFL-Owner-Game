@@ -20,7 +20,8 @@ import { fanBase, reachLift, trustHit } from "./fans";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, SCHEDULE, TEAM_BY_ID, TEAMS } from "./league";
 import { owners } from "./owners";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { history } from "./seasons";
 import { gaussian, rngFor } from "./rng";
 import { standings, winPct } from "./standings";
@@ -326,7 +327,7 @@ function launchRebrand(state: GameState): void {
     news(state, "business", `The ${TEAM_BY_ID[us].city} ${old} are now the ${TEAM_BY_ID[us].city} ${r.name}`);
   }
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.reporter, kind: "owner", teams: [us],
+    outlet: "ledger", by: byline(state, "ledger", "reporter"), kind: "owner", teams: [us],
     headline: r.kind === "name" ? `Meet the ${TEAM_BY_ID[us].city} ${r.name}` : `${TEAM_BY_ID[us].name} unveil ${r.kind === "logo" ? "a new logo and uniforms" : "new uniforms"}`,
     body: r.kind === "name" ? `The team formerly known as the ${old} played its first season under the new name. Longtime fans are split; the new gear is flying off the shelves.` : "The new look is in the stores today, and early sales are strong.",
   });

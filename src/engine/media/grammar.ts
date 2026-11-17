@@ -50,6 +50,8 @@ function modify(mod: string, raw: Slot, path: string): string {
     case "an": return `${/^[aeiou]/i.test(text) && !/^(one|uni|use|eu)/i.test(text) ? "an" : "a"} ${text}`;
     case "cap": return text.charAt(0).toUpperCase() + text.slice(1);
     case "lower": return text.toLowerCase();
+    // Lowercases a sentence's first letter to run it on, unless it starts an acronym ("QB", "NFL").
+    case "uncap": return /^[A-Z][A-Z]/.test(text) ? text : text.charAt(0).toLowerCase() + text.slice(1);
     case "s": return Number(raw) === 1 ? "" : "s";
     case "last": return surnameOf(text);
     case "ord": {

@@ -19,7 +19,7 @@ export function send(state: GameState, kind: InboxItem["kind"], from: string, ti
  */
 export type NewsTopic =
   | "coaching" | "contracts" | "freeagency" | "trades" | "league" | "labor" | "discipline" | "business" | "stadiums"
-  | "relocation" | "ownership" | "frontoffice" | "honors" | "retirement" | "camp" | "draft" | "college" | "games" | "log";
+  | "relocation" | "ownership" | "frontoffice" | "honors" | "retirement" | "camp" | "draft" | "college" | "games" | "media" | "log";
 
 export function news(state: GameState, topic: NewsTopic, text: string): void {
   state.news.unshift({ date: state.date, text, topic });

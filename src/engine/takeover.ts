@@ -29,7 +29,8 @@ import { TEAM_BY_ID } from "./league";
 import { bindLeases } from "./leases";
 import { bindBrand } from "./merch";
 import { owners } from "./owners";
-import { addStory, MEDIA_BY_ID, mediaState } from "./outlets";
+import { addStory, mediaState } from "./outlets";
+import { byline } from "./media/corps";
 import { owner, ownerEquity } from "./ownership";
 import { rngFor } from "./rng";
 import { ensureScouts } from "./scouts";
@@ -206,7 +207,7 @@ export function closeDeal(state: GameState, deal: ClubDeal): void {
   o.log.unshift({ date: state.date, text: `Bought the ${TEAM_BY_ID[deal.team].name} for ${billions(price)}, with ${Math.round(share * 100)}% of the club yours.` });
   news(state, "ownership", `League owners approve ${state.ownerName}'s purchase of the ${TEAM_BY_ID[deal.team].name} for about ${billions(price)}`);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [deal.team],
+    outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [deal.team],
     headline: `${state.ownerName} takes over the ${TEAM_BY_ID[deal.team].name}`,
     body: `The purchase, at about ${billions(price)}, closed after the owners' vote (${deal.vote?.yes ?? 24} in favor). The club's ${money(s.assumed)} of debt came with it.`,
   });

@@ -21,7 +21,8 @@ import { money, news, send } from "./inbox";
 import { buyOut, investors, ownerShare, pctText } from "./investors";
 import { leagueYear } from "./contracts";
 import { TEAM_BY_ID } from "./league";
-import { addStory, MEDIA_BY_ID } from "./outlets";
+import { addStory } from "./outlets";
+import { byline } from "./media/corps";
 import { equityAtPurchase, owner, ownerEquity, scoreWord } from "./ownership";
 import { owners } from "./owners";
 import { rngFor } from "./rng";
@@ -354,7 +355,7 @@ function death(state: GameState): void {
   s.estate = { date: state.date, tax: liq.tax, paid: 0, short: liq.short, owner: name };
   news(state, "ownership", `${name}, owner of the ${TEAM_BY_ID[state.userTeam].name}, has died at ${ownerAge(state)}`);
   addStory(state, {
-    outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+    outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
     headline: `What comes next for the ${TEAM_BY_ID[state.userTeam].name}`,
     body: `${name}'s estate plan now matters: ${s.successor ? `${s.heirs.find((h) => h.id === s.successor)?.name} was named successor${s.approved ? " and pre-approved by the league" : ", but the league never signed off"}` : "no successor was named"}. Estate taxes could run to ${billions(liq.tax)}.`,
   });
@@ -676,7 +677,7 @@ export function successionDaily(state: GameState): void {
   if (state.date.endsWith("-01") && s.cohesion < 35 && r() < 0.15 && s.heirs.some((h) => h.age >= 21)) {
     s.cohesion = clamp(s.cohesion - 3);
     addStory(state, {
-      outlet: "ledger", by: MEDIA_BY_ID.ledger.insider, kind: "owner", teams: [state.userTeam],
+      outlet: "ledger", by: byline(state, "ledger", "insider"), kind: "owner", teams: [state.userTeam],
       headline: `A family split over the ${TEAM_BY_ID[state.userTeam].name}'s future`,
       body: `Members of ${state.ownerName}'s family disagree over who should run the club next, people close to them say.`,
     });
