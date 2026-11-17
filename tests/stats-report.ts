@@ -37,7 +37,7 @@ for (let s = 0; s < n; s++) {
     return (v.reduce((a, b) => a + b, 0) / v.length).toFixed(1);
   })();
   console.log(`season ${s} (seed ${seed0 + s}, ${((Date.now() - t0) / 1000).toFixed(0)}s)`);
-  for (const key of ["passYds", "rushYds", "recYds", "rec", "tgt", "sacks", "defInt"]) console.log(`  ${key}: ${top(key)}`);
+  for (const key of ["passYds", "passTd", "rushYds", "recYds", "rec", "tgt", "sacks", "defInt"]) console.log(`  ${key}: ${top(key)}`);
   console.log(`  top target share per team ${share("tgt")} (real ~0.24), top rusher's share of sacks ${share("sacks")} (real ~0.25), players with a sack per team ${sackers} (real ~13)`);
   // Shares by position (real 2024-25: targets WR .58 TE .24 RB .17; tackles LB .26 S .22 CB .20 EDGE .16 IDL .12;
   // sacks EDGE .57 IDL .23 LB .12 S .05 CB .03) and tackles per team (real ~600 solo, ~470 assisted, a little more with retirees).

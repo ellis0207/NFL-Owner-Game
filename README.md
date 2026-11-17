@@ -54,7 +54,10 @@ sacks (`tests/stats-report.ts` checks this against the 2023-2025 seasons,
 down to whole leaderboards for 27 stats). A clear lead back is a workhorse
 while two close backs share the load, receivers and tight ends rotate so about
 fifteen players catch passes for a team, and coaches go for it on fourth and
-short about as often as today's do. Open-air games have weather
+short about as often as today's do. Each receiver catches the ball at his own
+depth (the speed threat sees the deep shots and averages 17 or more a catch,
+the slot and the backs work underneath), and coaches lean on an elite
+quarterback inside the twenty, so the best passers throw 40-plus touchdowns. Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
 cold and rain make the ball harder to hold, snow does both, and kicks carry in
 Denver. Domes and retractable roofs play indoors. Teams on a short week, on a
