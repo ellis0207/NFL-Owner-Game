@@ -142,12 +142,13 @@ export function trait(state: GameState, id: string, name: string): number {
   const r = HIDDEN_RATINGS[id];
   if (!r) return 45;
   // A playbook not yet learned and weeks of every snap take a little off (playercare.ts).
-  return (r.traits[name] ?? r.overall) + (state.players[id]?.dev ?? 0) - moraleDrag(state, id) - rustDrag(state, id) - careDrag(state, id);
+  const p = state.players[id];
+  return (r.traits[name] ?? r.overall) + (p?.dev ?? 0) + (p?.tdev?.[name] ?? 0) - moraleDrag(state, id) - rustDrag(state, id) - careDrag(state, id);
 }
 
 /** How well a player's traits match what a scheme asks for at the position, in rating points around zero. */
 export function schemeFit(state: GameState, id: string, team: string): number {
-  // Traits and ability move together with development, so fit depends only on the player and the schemes.
+  // Traits age at their own pace (aging.ts), so development clears this cache whenever it moves them.
   const key = `${team}:${id}`;
   const hit = fitCache.get(key);
   if (hit !== undefined) return hit;
@@ -192,8 +193,11 @@ function computeFit(state: GameState, id: string, team: string): number {
   const wants = OFFENSE[offense].wants[pos] ?? DEFENSE[defense].wants[pos];
   const r = HIDDEN_RATINGS[id];
   if (!wants || !r) return 0;
-  void state; // development moves traits and overall together, so fit uses the base ratings
-  return rawFit(wants, r.traits, r.overall) - baseline(wants, pos);
+  // Fit reads traits as they have aged against overall as it has moved, so a
+  // receiver who lost his speed fits a vertical offense less well than he did.
+  const tdev = state.players[id]?.tdev;
+  const traits = tdev ? Object.fromEntries(Object.entries(r.traits).map(([t, v]) => [t, v + (tdev[t] ?? 0)])) : r.traits;
+  return rawFit(wants, traits, r.overall) - baseline(wants, pos);
 }
 
 /**

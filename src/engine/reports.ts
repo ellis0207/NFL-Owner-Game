@@ -1,6 +1,7 @@
 // Written scouting and coaching reports: how the owner learns what a player
 // is, without ever seeing a rating. Each report comes from a real person on
 // the staff, and is only as accurate as that person's eye for talent.
+import { bodyVsCraft } from "./aging";
 import { ageOn } from "./dates";
 import { HIDDEN_RATINGS, PLAYER_BY_ID } from "./league";
 import { gaussian, rngFor } from "./rng";
@@ -51,6 +52,14 @@ export const TRAIT_WORDS: Record<string, [string, string]> = {
   placement: ["Pins teams deep with directional punts", "Struggles with placement"],
 };
 
+/** What a veteran at each position leans on once the legs go. */
+const CRAFT_WORDS: Partial<Record<string, string>> = {
+  QB: "his reading of defenses", RB: "his vision and patience", FB: "his blocking", WR: "his route running and hands",
+  TE: "his hands and feel for coverage", OT: "his hand use", OG: "his hand use", C: "his hand use and calls",
+  EDGE: "his hand fighting", IDL: "his hand fighting", LB: "his diagnosis", CB: "his eyes and anticipation",
+  S: "his anticipation", K: "his accuracy", P: "his placement",
+};
+
 /** Position-relative grade words from an evaluator's view of ability. */
 function grade(view: number): string {
   if (view >= 94) return "One of the best in the league at the position";
@@ -93,7 +102,14 @@ export function playerReport(state: GameState, id: string): PlayerReport {
   const notes: string[] = [];
   if (age <= 25 && upside >= 6) notes.push("Still developing, and the staff sees a lot of room to grow.");
   else if (age <= 25 && upside >= 3) notes.push("Should keep getting better.");
-  else if (age >= 31) notes.push("Starting to show some age.");
+  else if (age >= 29) {
+    // Age shows in the legs first; the craft can keep getting better (aging.ts).
+    const gap = bodyVsCraft(state, id) + gaussian(rng) * sd * 0.5;
+    const craft = CRAFT_WORDS[p.position] ?? "his technique";
+    if (gap >= 6) notes.push(`Has lost a step or two, but ${craft} is as good as it has ever been.`);
+    else if (gap >= 3) notes.push(`Not quite as quick as he was; ${craft} makes up for some of it.`);
+    else if (age >= 31) notes.push("Starting to show some age.");
+  }
   const durability = r.durability + gaussian(rng) * sd * 1.5;
   if (durability < 58) notes.push("Has had trouble staying on the field.");
   else if (durability > 88 && p.yearsExp >= 3) notes.push("Durable; rarely misses time.");

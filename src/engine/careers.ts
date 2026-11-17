@@ -25,6 +25,8 @@ import { roomBoost } from "./positionCoaches";
 import { staffEffects, teamStaff } from "./staff";
 import { seasonTotals } from "./stats";
 import { offseasonFactor } from "./training";
+import { tiltTraits, yearTilt } from "./aging";
+import { clearFitCache } from "./staff";
 import type { GameState, Position } from "./types";
 
 /** The age where a position usually starts to slip. */
@@ -94,19 +96,23 @@ export function progressPlayers(state: GameState, season: number): void {
     }
     // Growth into the room that's left, slowing in the late twenties.
     const room = Math.max(0, ceiling - now);
+    let growth = 0;
     if (room > 0 && age <= 29) {
       const stage = age <= 24 ? 1 : age <= 26 ? 0.85 : 0.55;
-      change += room * (0.28 + 0.14 * rng()) * stage * coach * field * offseasonFactor(state, id);
+      growth = room * (0.28 + 0.14 * rng()) * stage * coach * field * offseasonFactor(state, id);
+      change += growth;
     }
     // A late bloomer now and then.
     if (age >= 26 && age <= 31 && rng() < 0.02) change += 1.5 + rng() * 2;
     // Decline past the position's age, speeding up each year; some age better than others.
+    let decline = 0;
     if (age > line) {
       const d = age - line;
-      change -= (0.5 + 0.6 * d + 0.1 * d * d) * (0.55 + 0.9 * rng());
+      decline = (0.5 + 0.6 * d + 0.1 * d * d) * (0.55 + 0.9 * rng());
     } else if (age >= line - 1) {
-      change -= rng() * 0.7;
+      decline = rng() * 0.7;
     }
+    change -= decline;
 
     const next = Math.max(25, Math.min(99, now + change));
     // By the late twenties a player is about who he'll be.
@@ -114,7 +120,10 @@ export function progressPlayers(state: GameState, season: number): void {
     ceiling = Math.max(next, Math.min(99, ceiling));
     p.dev = round2(next - r.overall);
     p.pot = round2(ceiling - r.potential);
+    // Which skills carried the year: learning lifts technique, age takes the legs (aging.ts).
+    tiltTraits(state, id, yearTilt(age, line, growth, decline), rng, 0.4);
   }
+  clearFitCache();
 }
 
 // ---- Retirements ----
@@ -220,7 +229,7 @@ export function retirePlayer(state: GameState, id: string, quiet = false): void 
     logMove(state, team, id, "retired", `${data.position} ${data.name} retired`);
   }
   state.contracts[id] = null;
-  state.players[id] = { team: null, status: "retired", dev: p.dev, pot: p.pot, exp: p.exp, ...(team || p.lastTeam ? { lastTeam: team ?? p.lastTeam } : {}) };
+  state.players[id] = { team: null, status: "retired", dev: p.dev, pot: p.pot, tdev: p.tdev, exp: p.exp, ...(team || p.lastTeam ? { lastTeam: team ?? p.lastTeam } : {}) };
   if (state.termPay) delete state.termPay[id];
   if (state.psPlans) delete state.psPlans[id];
   if (team && state.psProtect?.[team]) state.psProtect[team] = state.psProtect[team].filter((x) => x !== id);

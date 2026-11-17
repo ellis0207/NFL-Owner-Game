@@ -44,7 +44,7 @@ function decline(state: GameState, id: string, deal: Deal): void {
   addDeadMoney(state, team, leagueYear(state.date), dead);
   const p = state.players[id];
   state.contracts[id] = null;
-  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, pot: p.pot, exp: p.exp, morale: p.morale, lastTeam: team };
+  state.players[id] = { team: null, status: "fa", injury: p.injury, dev: p.dev, pot: p.pot, tdev: p.tdev, exp: p.exp, morale: p.morale, lastTeam: team };
   invalidateRosters(state);
   logMove(state, team, id, "released", `declined the option on ${PLAYER_BY_ID[id].name}; he is a free agent`);
 }

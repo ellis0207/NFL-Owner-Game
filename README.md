@@ -30,6 +30,14 @@ nothing. Building a garage, leasing a lot or rebuilding seats as clubs (with
 the section closed while the work goes on) changes the drawing and the next
 home game's money together.
 
+Players' skills age at their own pace. Speed, quickness and burst peak in
+the mid twenties and slip first; strength and arm hold a few years longer;
+hands, route running, blocking technique and a quarterback's reads keep
+improving well into the thirties. A 34-year-old receiver can lose two steps
+and still have the surest hands of his career, and his scheme fit changes
+with him. Staff reports say when a veteran has lost a step but kept his craft
+(`aging.ts`).
+
 Hover cards work everywhere: rest the mouse on a player, team, coach,
 executive, game, cap figure or money line to see a card drawn from the live
 game (a budget line lists the payments behind it and how it stands against
