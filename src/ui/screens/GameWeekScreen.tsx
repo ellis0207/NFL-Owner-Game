@@ -16,6 +16,7 @@ import { claimOdds, claimOddsWord, subjectToWaivers } from "../../engine/waivers
 import { useUi } from "../ui";
 import { rivalryHeat, rivalryWord } from "../../engine/records";
 import { tip } from "../tip";
+import { GamePlan } from "./GamePlan";
 
 export function GameWeekScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
@@ -34,6 +35,10 @@ export function GameWeekScreen({ game, changed }: { game: GameState; changed: ()
           {(Object.keys(EMPHASIS) as Emphasis[]).map((e) => <button key={e} aria-pressed={emph === e} onClick={() => { setPrograms(game, { emphasis: e }); changed(); }}>{EMPHASIS[e].label}</button>)}
         </div>
         <span className="muted">{EMPHASIS[emph].what}</span>
+      </div>
+      <div className="stack tm-plan">
+        <h2>Game plan</h2>
+        <GamePlan game={game} />
       </div>
       {g && (
         <div className="split">

@@ -12,10 +12,12 @@ export interface Prefs {
   navClosed: string[];
   /** Light or dark pages, or follow the device. */
   theme: "auto" | "light" | "dark";
+  /** The Roster page as the depth-chart board or the full table. */
+  rosterView: "board" | "table";
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto" };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board" };
 
 export function readPrefs(): Prefs {
   try {
