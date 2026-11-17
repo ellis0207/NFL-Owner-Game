@@ -20,6 +20,7 @@ import { buildSchedule, keyDatesFor, superBowlName } from "./calendar";
 import { capSummary, invalidateRosters } from "./cap";
 import { progressPlayers, retireUnsigned } from "./careers";
 import { newCollege } from "./college";
+import { bindCfb, cfbRollover, closeCfbSeason } from "./cfbworld";
 import { addDays, shortDate, weekday } from "./dates";
 import { FIRST_MOCK } from "./draft";
 import { money, news, send } from "./inbox";
@@ -83,6 +84,7 @@ export function applySeason(state: GameState): void {
   bindBrand(state);
   bindCustomLeague(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
+  bindCfb(state);
   patchPlayers(state);
 }
 
@@ -242,6 +244,8 @@ export function startNewSeason(state: GameState): void {
   const next = old + 1;
   const hist = history(state);
   const record = seasonRecord(state);
+  // The college season goes into each program's history while its schedule is still the one it was played on.
+  closeCfbSeason(state);
   hist.seasons.push(record);
   recordOwnerSeason(state, record);
   archiveStats(state);
@@ -287,6 +291,7 @@ export function startNewSeason(state: GameState): void {
   invalidateRosters(state);
   invalidateMarket(state);
 
+  cfbRollover(state);
   state.college = newCollege(state);
   // What our scouts learned about the underclassmen who went back to school carries over, a little stale.
   for (const id of returned) if (knew[id]) state.college.scouting.know[id] = Math.round(knew[id] * 0.7);

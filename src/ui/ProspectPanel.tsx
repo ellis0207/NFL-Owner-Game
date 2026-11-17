@@ -12,10 +12,14 @@ import { height } from "./format";
 import { canVisit, canWorkOut, inviteVisit, INTERVIEWS, preDraftNotes, privateWorkout, toggleInterview, VISITS, WORKOUTS } from "../engine/visits";
 import { COMBINE_DATE } from "../engine/draft";
 import { useUi } from "./ui";
+import { recruitingProfile } from "../engine/recruiting";
+import { enrollYear } from "../engine/prospects";
 
 export function ProspectPanel({ game, id, onClose, changed }: { game: GameState; id: string; onClose: () => void; changed: () => void }) {
   const ui = useUi();
   const p = draftClass(game.seed).byId[id];
+  const r0 = p ? recruitingProfile(game.seed, id, p.classYear, COLLEGE_SEASON + 1) : null;
+  const recruit = r0 && p ? { ...r0, year: enrollYear(p.classYear, COLLEGE_SEASON + 1) } : null;
   const report = scoutReport(game, id);
   const log = prospectLog(game, id);
   const totals = prospectTotals(game, id);
@@ -61,6 +65,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           <dt>Age</dt><dd>{prospectAge(p, game.date)}</dd>
           <dt>Listed</dt><dd>{height(p.heightIn)}, {p.weightLb} lb</dd>
           <dt>Hometown state</dt><dd>{p.hometown}</dd>
+          {recruit && <><dt>Recruited</dt><dd>{"★".repeat(recruit.stars)} · No. {recruit.rank} in the class of {recruit.year}</dd></>}
           <dt>Media big board</dt><dd>{mediaRank(game, id) <= 300 ? `No. ${mediaRank(game, id)}` : "Not ranked"}</dd>
           <dt>Role</dt><dd>{p.starter ? "Starter" : "Backup"}</dd>
           {hurt && <><dt>Injury</dt><dd className="bad">{hurt}</dd></>}

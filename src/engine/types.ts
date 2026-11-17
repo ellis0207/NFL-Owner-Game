@@ -453,6 +453,60 @@ export interface CollegeState {
   scouting: ScoutingState;
 }
 
+// ---- The living college world (cfbworld.ts, recruiting.ts, cfbcoaches.ts) ----
+
+/** One FBS program across seasons. Strength, prestige and talent are engine only; records, ranks and classes are public. */
+export interface CfbProgram {
+  /** Engine only: the program's long-run pull (brand, money, tradition), on the strength scale of teams.json. */
+  prestige: number;
+  /** Engine only: how good the team is this season, on the same scale (2026 is the data's `strength`). */
+  strength: number;
+  /** Engine only: the roster's talent, a rolling read of the last four recruiting classes. */
+  talent: number;
+  /** Finished seasons: [season, wins, losses, final AP rank (0 unranked), conference title 0/1, playoff 0 out / 1 in / 2 quarterfinal / 3 semifinal / 4 final / 5 champion]. */
+  seasons: number[][];
+  /** The head coach (staff person id) of each finished season. */
+  coaches: Record<number, string>;
+  /** Recruiting class rank by enrollment year (public, from the recruiting services). */
+  classRank: Record<number, number>;
+  /** Engine only: true talent signed by enrollment year (strength scale). */
+  classTalent: Record<number, number>;
+}
+
+/** A recruit's pledge: the school, the day he committed, and whether he has signed. */
+export interface CfbCommit { school: string; date: string; signed?: 1; flipped?: string }
+
+/** One high school class, from its rankings to signing day. `year` is the fall it enrolls. */
+export interface CfbRecruitingClass {
+  year: number;
+  commits: Record<string, CfbCommit>;
+  /** Set on National Signing Day, when the class is final. */
+  done?: boolean;
+}
+
+export interface CfbCoachMove {
+  date: string;
+  team: string;
+  kind: "fired" | "hired" | "retired" | "left";
+  /** Staff person id. */
+  coach: string;
+  text: string;
+}
+
+export interface CfbWorld {
+  programs: Record<string, CfbProgram>;
+  /** The class being recruited now and the last one signed, by enrollment year. */
+  classes: Record<number, CfbRecruitingClass>;
+  /** Where each future NFL prospect signed in this save (recruit id = prospect id), by the fall he enrolled; dropped once his class is drafted. */
+  signed: Record<number, Record<string, string>>;
+  /** Open head coaching jobs: program, the day it opened. */
+  openings: Record<string, string>;
+  /** Coaching changes, newest first. */
+  log: CfbCoachMove[];
+  /** Bumped on every change the draft classes read (signings, transfers, development). */
+  rev: number;
+}
+
 // ---- Saved game ----
 
 /**
@@ -2142,6 +2196,8 @@ export interface GameState {
   day?: { date: string; done: Record<string, string> };
   /** The college football season and our draft scouting. */
   college?: CollegeState;
+  /** The college world that carries across seasons: programs, recruiting, coaching changes (cfbworld.ts). */
+  cfb?: CfbWorld;
   /** The 2027 draft: order, compensatory picks, mock drafts and the selections. */
   draft?: DraftState;
   /** Media coverage, press questions and how the press feels about the owner. */

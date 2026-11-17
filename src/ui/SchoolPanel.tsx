@@ -6,6 +6,8 @@ import { draftClass } from "../engine/prospects";
 import { knowledgeLabel, knowledge, scoutReport, tripCost } from "../engine/scouting";
 import type { GameState } from "../engine/types";
 import { useUi } from "./ui";
+import { headCoach } from "../engine/cfbcoaches";
+import { SchoolProgram } from "./screens/CollegeWorld";
 
 export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string; onClose: () => void }) {
   const ui = useUi();
@@ -13,6 +15,7 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
   const c = game.college!;
   const rec = collegeRecords(game)[id];
   const rank = rankOf(game, id);
+  const hc = headCoach(game, id);
   const games = collegeGames(game).filter((g) => g.away === id || g.home === id).sort((a, b) => a.date.localeCompare(b.date));
   const dc = draftClass(game.seed);
   const prospects = (dc.bySchool[id] ?? []).map((pid) => dc.byId[pid]).sort((a, b) => mediaRank(game, a.id) - mediaRank(game, b.id));
@@ -34,7 +37,7 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
           </div>
         </header>
         <dl className="kv">
-          <dt>Head coach</dt><dd>{t.coach} (since {t.coachSince})</dd>
+          <dt>Head coach</dt><dd>{hc ? `${hc.name} (since ${hc.hiredYear})` : game.cfb ? `Open job${game.cfb.openings[id] ? ` since ${shortDate(game.cfb.openings[id])}` : ""}` : `${t.coach} (since ${t.coachSince})`}</dd>
           <dt>Campus</dt><dd>{t.city}, {t.state} · {t.region}</dd>
           <dt>Offense</dt><dd>{OFFENSE_NAMES[t.offense]}</dd>
           <dt>Defense</dt><dd>{DEFENSE_NAMES[t.defense]}</dd>
@@ -64,6 +67,8 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
             </div>
           )}
         </section>
+
+        <SchoolProgram game={game} id={id} />
 
         <section className="stack tight">
           <h3>Schedule</h3>

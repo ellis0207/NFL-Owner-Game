@@ -489,7 +489,15 @@ export function retire(state: GameState, id: string): { team: string; role: Staf
 export function vacate(state: GameState, id: string, why: "retired" | "hired" | "fired"): { team: string; role: StaffRole } | null {
   const c = state.staff!.people[id];
   const held = c.team && c.role ? { team: c.team, role: c.role } : null;
-  if (c.job?.kind === "college" && c.job.title === "head coach" && why !== "fired") {
+  if (c.job?.kind === "college" && c.job.title === "head coach" && why !== "fired" && state.cfb) {
+    // The school opens a search (cfbcoaches.ts).
+    const team = c.job.team;
+    state.cfb.openings[team] ??= state.date;
+    if (why === "hired") {
+      state.cfb.log.unshift({ date: state.date, team, kind: "left", coach: c.id, text: `${c.name} leaves ${COLLEGE_TEAM[team]?.school ?? team} for the NFL` });
+      if (state.cfb.log.length > 400) state.cfb.log.length = 400;
+    }
+  } else if (c.job?.kind === "college" && c.job.title === "head coach" && why !== "fired") {
     // The school hires a successor.
     const rng = rngFor(state.seed, `college-succ:${c.job.team}:${state.date}`);
     const taken = new Set(Object.values(state.staff!.people).map((p) => p.name));

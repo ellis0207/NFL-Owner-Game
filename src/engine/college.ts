@@ -103,7 +103,12 @@ function prospectsOf(state: GameState) {
 export function newCollege(state: GameState): CollegeState {
   const dc = prospectsOf(state);
   const rating: Record<string, number> = {};
-  for (const t of COLLEGE_TEAMS) rating[t.id] = Math.round((t.strength + gaussian(rngFor(state.seed, seasonKey(`cfb-view:${t.id}`))) * 3) * 10) / 10;
+  // The preseason read leans on the brand: a program on the rise is underrated, a fading one still gets votes.
+  const seen = (id: string, base: number) => {
+    const p = state.cfb?.programs[id];
+    return p ? 0.6 * p.strength + 0.4 * p.prestige : base;
+  };
+  for (const t of COLLEGE_TEAMS) rating[t.id] = Math.round((seen(t.id, t.strength) + gaussian(rngFor(state.seed, seasonKey(`cfb-view:${t.id}`))) * 3) * 10) / 10;
   const hype: Record<string, number> = {};
   for (const p of dc.prospects) {
     const h = dc.hidden[p.id];
@@ -133,7 +138,7 @@ export function ensureCollege(state: GameState): void {
 
 /** True strength of a team this season (engine only). */
 export function teamStrength(state: GameState, team: string): number {
-  const base = COLLEGE_TEAM[team].strength;
+  const base = state.cfb?.programs[team]?.strength ?? COLLEGE_TEAM[team].strength;
   const season = state.college?.season ?? COLLEGE_SEASON;
   return base + gaussian(rngFor(state.seed, season === 2026 ? `cfb-strength:${team}` : `cfb-strength:${season}:${team}`)) * 4;
 }

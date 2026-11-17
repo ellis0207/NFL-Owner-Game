@@ -8,9 +8,13 @@ import { shortDate } from "../../engine/dates";
 import { draftClass } from "../../engine/prospects";
 import type { CollegeConference, CollegeGame, CollegePoll, GameState } from "../../engine/types";
 import { useUi } from "../ui";
+import { Coaching, Programs, Recruiting } from "./CollegeWorld";
 
-type Tab = "scores" | "polls" | "standings" | "awards";
-const TABS: [Tab, string][] = [["scores", "Scores & schedule"], ["polls", "Polls"], ["standings", "Standings"], ["awards", "Award watch"]];
+type Tab = "scores" | "polls" | "standings" | "awards" | "recruiting" | "programs" | "coaching";
+const TABS: [Tab, string][] = [
+  ["scores", "Scores & schedule"], ["polls", "Polls"], ["standings", "Standings"], ["awards", "Award watch"],
+  ["recruiting", "Recruiting"], ["programs", "Programs"], ["coaching", "Coaching changes"],
+];
 
 export function CollegeScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>("scores");
@@ -19,8 +23,9 @@ export function CollegeScreen({ game }: { game: GameState }) {
     <section className="stack">
       <h2>College football</h2>
       <p className="muted">
-        All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : `playing the ${COLLEGE_SEASON} season every Saturday.`} Only the
-        NFL prospects are tracked as players: their stats and game logs are on each prospect's page, and the Scouting page is where you send our scouts.
+        All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : `playing the ${COLLEGE_SEASON} season every Saturday.`} Programs
+        rise and fall with their recruiting classes and their coaches. The NFL prospects are the players we track: their stats and game logs are on
+        each prospect's page, and the Scouting page is where you send our scouts.
       </p>
       <div className="tabs" role="group" aria-label="View">
         {TABS.map(([k, label]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
@@ -29,6 +34,9 @@ export function CollegeScreen({ game }: { game: GameState }) {
       {tab === "polls" && <Polls game={game} />}
       {tab === "standings" && <Standings game={game} />}
       {tab === "awards" && <Awards game={game} />}
+      {tab === "recruiting" && <Recruiting game={game} />}
+      {tab === "programs" && <Programs game={game} />}
+      {tab === "coaching" && <Coaching game={game} />}
     </section>
   );
 }
