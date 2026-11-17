@@ -21,6 +21,7 @@ import { capSummary, invalidateRosters } from "./cap";
 import { progressPlayers, retireUnsigned } from "./careers";
 import { newCollege } from "./college";
 import { bindCfb, cfbRollover, closeCfbSeason } from "./cfbworld";
+import { bindDraftModel } from "./outcomes";
 import { addDays, shortDate, weekday } from "./dates";
 import { FIRST_MOCK } from "./draft";
 import { money, news, send } from "./inbox";
@@ -84,6 +85,7 @@ export function applySeason(state: GameState): void {
   bindBrand(state);
   bindCustomLeague(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
+  bindDraftModel(state);
   bindCfb(state);
   patchPlayers(state);
 }

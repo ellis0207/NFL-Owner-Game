@@ -14,6 +14,7 @@ import type { GameState } from "./types";
 import { liveIds } from "./live";
 import { tiltTraits } from "./aging";
 import { clearFitCache } from "./staff";
+import { topDrag } from "./careers";
 
 const SIDE: Record<string, "off" | "def" | "st"> = {
   QB: "off", RB: "off", FB: "off", WR: "off", TE: "off", OT: "off", OG: "off", C: "off",
@@ -39,7 +40,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     const room = r.potential + (p.pot ?? 0) - (r.overall + dev);
     let change = 0;
     let growth = 0;
-    if (room > 0 && !p.holdout) growth = room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1) * growthFactor(state, id, mentored.has(id));
+    if (room > 0 && !p.holdout) growth = room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1) * growthFactor(state, id, mentored.has(id)) * topDrag(r.overall + dev);
     change += growth;
     const decline = age >= 30 ? 0.025 * (age - 29) : 0;
     change -= decline;

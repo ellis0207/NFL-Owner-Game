@@ -42,6 +42,17 @@ const SIDE: Record<Position, "off" | "def" | "st"> = {
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
 
+/**
+ * How much of a year's growth a player near the top of the league still gets. The last few points
+ * are the hardest: a very good player becoming one of the best few at his position is rare, so
+ * growth tapers from the high 80s and nearly stops at the top. Without it young stars pile up at the
+ * ceiling and the league's best get better every year.
+ */
+export function topDrag(now: number): number {
+  return now <= TOP_DRAG_FROM ? 1 : Math.max(0.06, 1 - (now - TOP_DRAG_FROM) / 10);
+}
+const TOP_DRAG_FROM = 86;
+
 /** A player's true ability now, without the day-to-day of morale (engine only). */
 function current(state: GameState, id: string): number {
   return (HIDDEN_RATINGS[id]?.overall ?? 45) + (state.players[id]?.dev ?? 0);
@@ -85,8 +96,8 @@ export function progressPlayers(state: GameState, season: number): void {
     if (age <= 27) {
       const roll = rng();
       if (roll < 0.04) {
-        ceiling += 3 + rng() * 4;
-        change += 1.5 + rng() * 2;
+        ceiling += (3 + rng() * 4) * topDrag(now);
+        change += (1.5 + rng() * 2) * topDrag(now);
       } else if (roll < 0.08) {
         ceiling = Math.max(now, ceiling - (3 + rng() * 5));
         change -= rng() * 1.5;
@@ -99,11 +110,11 @@ export function progressPlayers(state: GameState, season: number): void {
     let growth = 0;
     if (room > 0 && age <= 29) {
       const stage = age <= 24 ? 1 : age <= 26 ? 0.85 : 0.55;
-      growth = room * (0.28 + 0.14 * rng()) * stage * coach * field * offseasonFactor(state, id);
+      growth = room * (0.28 + 0.14 * rng()) * stage * coach * field * offseasonFactor(state, id) * topDrag(now);
       change += growth;
     }
     // A late bloomer now and then.
-    if (age >= 26 && age <= 31 && rng() < 0.02) change += 1.5 + rng() * 2;
+    if (age >= 26 && age <= 31 && rng() < 0.02) change += (1.5 + rng() * 2) * topDrag(now);
     // Decline past the position's age, speeding up each year; some age better than others.
     let decline = 0;
     if (age > line) {

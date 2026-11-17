@@ -11,6 +11,8 @@ import { COLLEGE_TEAMS } from "./collegeData";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { RULES } from "./league";
 import { gaussian, makeRng, type Rng } from "./rng";
+import { modelApplies, nflOutcome, onModelBind } from "./outcomes";
+export { bindDraftModel } from "./outcomes";
 import type { CollegeTeam, Position } from "./types";
 
 export type ClassYear = "SR" | "RS SR" | "JR" | "RS JR" | "RS SO";
@@ -54,6 +56,12 @@ export interface ProspectHidden {
   forty: number;
   /** Draft value used to order the class (higher is better). */
   value: number;
+  /**
+   * What he turns into in the NFL, which nobody can see on draft day (outcomes.ts). `overall`,
+   * `potential` and `traits` above are the player the tape shows; this is the one who shows up.
+   * Absent for classes drafted under the old model in saves from before it.
+   */
+  nfl?: { overall: number; potential: number; traits: Record<string, number>; prod: number };
 }
 
 export interface DraftClass {
@@ -162,6 +170,13 @@ interface WorldView {
 }
 const worlds = new Map<number, WorldView>();
 
+/** Drops a seed's cached classes (outcomes.ts, when a save binds which classes use the new model). */
+export function clearClasses(seed: number): void {
+  for (const k of [...cache.keys()]) if (k.startsWith(`${seed}:`)) cache.delete(k);
+}
+
+onModelBind(clearClasses);
+
 export function bindWorld(seed: number, view: WorldView | null): void {
   const before = worlds.get(seed);
   if (!view) {
@@ -208,6 +223,15 @@ export function draftClass(seed: number, year = RULES.season + 1): DraftClass {
   applyWorld(dc, worlds.get(seed), year);
   const back = carries.get(`${seed}:${year - 1}`);
   if (back?.length) addReturners(dc, draftClass(seed, year - 1), back, seed, year);
+  for (const p of dc.prospects) {
+    const h = dc.hidden[p.id];
+    // A returner carries last year's outcome and its trace in his production; both are drawn again.
+    if (h.nfl) h.college -= h.nfl.prod;
+    if (modelApplies(seed, year)) {
+      h.nfl = nflOutcome(seed, p, h);
+      h.college += h.nfl.prod;
+    } else delete h.nfl;
+  }
   if (cache.size > 8) cache.clear();
   cache.set(key, dc);
   return dc;

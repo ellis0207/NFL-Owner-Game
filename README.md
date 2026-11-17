@@ -237,6 +237,19 @@ Undrafted free agents sign as soon as the draft ends, and teams trim to 90.
 Rookies sign rookie-scale deals at their slot. The game stops the day after
 the draft. Check a draft with `npx vite-node tests/draft-report.ts [seed]`.
 
+Nobody knows how a pick will turn out, not even a perfect scouting file.
+Scouts, the combine and the media read the player on tape; the player who
+shows up adds how his game carries over to NFL speed and how much he still
+grows. Some top picks bust, some are finished products at 22, and some
+late-rounders keep improving for years. About two in three first-rounders and
+one in twenty seventh-rounders start in their third season, and about half of
+a class's 32 best players come from outside round 1, as in real drafts from
+2012 to 2022. Makeup is the part you can scout: hard workers bust less and
+bloom more, quick learners carry their game over, and a little of it shows in
+college production. Near the top of the league growth tapers, so the best
+players stay rare. Check outcomes with
+`npx vite-node tests/draft-outcomes-report.ts [seasons] [seed]`.
+
 Five made-up media companies cover the league every day: The Gridiron Ledger
 (the paper of record and the weekly power rankings), Sideline Report (breaking
 news, injuries and previews), Cap Space Daily (contracts, grades and free
