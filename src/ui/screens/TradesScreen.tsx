@@ -297,8 +297,9 @@ function Offers({ game, changed }: { game: GameState; changed: () => void }) {
       {open.map((o) => {
         const check = checkTrade(game, o);
         return (
-          <div key={o.id} className="panel stack tight">
-            <strong>{TEAM_BY_ID[o.teams[0]].city} {TEAM_BY_ID[o.teams[0]].name}</strong>
+          <div key={o.id} className="panel stack tight rb-slip">
+            <span className="rb-slip-label">Call from</span>
+            <strong className="rb-slip-from">{TEAM_BY_ID[o.teams[0]].city} {TEAM_BY_ID[o.teams[0]].name}</strong>
             <span>{o.note}</span>
             <span>We get <strong>{describe(game, o.send[0], o.teams[0])}</strong> for <strong>{describe(game, o.send[1], us)}</strong>.</span>
             <span className="muted">
@@ -426,7 +427,7 @@ function LeagueTrades({ game }: { game: GameState }) {
       <label><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Only our trades</label>
       {rows.length === 0 && <p className="muted">No trades yet.</p>}
       {rows.map((t) => (
-        <div key={t.id} className="panel stack tight">
+        <div key={t.id} className={`panel stack tight rb-ticket${t.blockbuster ? " big" : ""}`}>
           <span className="muted">{shortDate(t.date)}{t.blockbuster ? " · Blockbuster" : ""}{t.status === "agreed" ? " · Official at the new league year" : t.status === "voided" ? " · Fell through" : ""}</span>
           <strong>{headline(game, t)}</strong>
           {t.grades && (

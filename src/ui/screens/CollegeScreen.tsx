@@ -20,7 +20,7 @@ export function CollegeScreen({ game }: { game: GameState }) {
   const [tab, setTab] = useState<Tab>("scores");
   const c = game.college!;
   return (
-    <section className="stack">
+    <section className="stack wr-varsity">
       <p className="muted">
         All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : `playing the ${COLLEGE_SEASON} season every Saturday.`} Programs
         rise and fall with their recruiting classes and their coaches. The NFL prospects are the players we track: their stats and game logs are on

@@ -17,8 +17,9 @@ import { money, recentSeasonLine } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
-type Tab = "talks" | "expiring" | "fa" | "extensions" | "league" | "ours" | "market";
-const TABS: [Tab, string][] = [["talks", "Our talks"], ["expiring", "Our free agents"], ["fa", "Free agency"], ["extensions", "Extension candidates"], ["league", "League deals"], ["ours", "Our deals"], ["market", "Market"]];
+// The free agency class lives on the Free agents page (FreeAgencyBoard below).
+type Tab = "talks" | "expiring" | "extensions" | "league" | "ours" | "market";
+const TABS: [Tab, string][] = [["talks", "Our talks"], ["expiring", "Our free agents"], ["extensions", "Extension candidates"], ["league", "League deals"], ["ours", "Our deals"], ["market", "Market"]];
 
 const GROUP_POS: Record<TagGroup, Position> = { QB: "QB", RB: "RB", WR: "WR", TE: "TE", OL: "OT", DE: "EDGE", DT: "IDL", LB: "LB", CB: "CB", S: "S", ST: "K" };
 const GROUP_NAME: Record<TagGroup, string> = { QB: "Quarterback", RB: "Running back", WR: "Wide receiver", TE: "Tight end", OL: "Offensive line", DE: "Defensive end", DT: "Defensive tackle", LB: "Linebacker", CB: "Cornerback", S: "Safety", ST: "Kicker / punter" };
@@ -29,13 +30,13 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
   const ui = useUi();
   const us = game.userTeam;
   const year = leagueYear(game.date);
-  // Our own free agents' decisions only exist after the Super Bowl; the board of upcoming free agents is up all year.
-  const tabs = TABS.filter(([k]) => offseason || k !== "expiring").map(([k, label]): [Tab, string] => [k, k === "fa" && !offseason ? "Upcoming free agents" : label]);
+  // Our own free agents' decisions only exist after the Super Bowl.
+  const tabs = TABS.filter(([k]) => offseason || k !== "expiring");
   const talks = Object.values(game.negotiations).filter((n) => n.team === us)
     .sort((a, b) => (a.status === "open" ? 0 : 1) - (b.status === "open" ? 0 : 1) || b.opened.localeCompare(a.opened));
 
   return (
-    <section className="stack">
+    <section className="stack rb-ledger">
       <div className="tabs" role="group" aria-label="View">
         {tabs.map(([k, label]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
       </div>
@@ -70,7 +71,6 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
 
       {tab === "extensions" && <Extensions game={game} />}
       {tab === "expiring" && offseason && <OurFreeAgents game={game} changed={changed} />}
-      {tab === "fa" && <FreeAgencyBoard game={game} changed={changed} />}
 
       {tab === "league" && (
         <div className="table-wrap">
@@ -389,7 +389,8 @@ function faStatus(game: GameState, id: string): string {
   return "Available";
 }
 
-function FreeAgencyBoard({ game, changed }: { game: GameState; changed: () => void }) {
+/** The league's free agency class: shown first on the Free agents page. */
+export function FreeAgencyBoard({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
   const [note, setNote] = useState<string | null>(null);
   const us = game.userTeam;

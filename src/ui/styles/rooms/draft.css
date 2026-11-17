@@ -10,3 +10,61 @@
   --room-title-weight: 400;
   --room-title-spacing: 0.01em;
 }
+
+/* Index cards pinned to cork: cream cards with a red top rule, a pin on the card's heading. Prospect files are typed. */
+[data-room="draft"] {
+  --wr-card: color-mix(in srgb, var(--panel) 84%, #f3e3c0);
+  --wr-blue: color-mix(in srgb, var(--rule) 60%, #8fb3d9);
+  --wr-red: #c0504d;
+  --wr-pin: #c8322b;
+}
+:root[data-theme="dark"] [data-room="draft"] { --wr-card: color-mix(in srgb, var(--panel) 92%, #7a5a2e); --wr-blue: color-mix(in srgb, var(--rule) 80%, #4b6f96); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) [data-room="draft"] { --wr-card: color-mix(in srgb, var(--panel) 92%, #7a5a2e); --wr-blue: color-mix(in srgb, var(--rule) 80%, #4b6f96); } }
+
+[data-room="draft"] .panel {
+  background: var(--wr-card);
+  border-top: 3px solid var(--wr-red);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 6px 14px -8px rgba(60, 30, 0, 0.35);
+}
+[data-room="draft"] .panel > h3:first-child {
+  position: relative;
+  padding-left: 1.1rem;
+  font-family: var(--font-type);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+[data-room="draft"] .panel > h3:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0.62rem;
+  height: 0.62rem;
+  margin-top: -0.31rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff8a80, var(--wr-pin) 60%, #7a1712);
+  box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.35);
+}
+[data-room="draft"] h2 { font-family: var(--font-type); font-weight: 700; letter-spacing: 0.06em; }
+[data-room="draft"] .tabs button[aria-pressed="true"] { background: var(--room-accent); border-color: var(--room-accent); color: #fff; }
+
+/* Scouting files: a blue rule under the card's heading, as on an index card. */
+.wr-files .panel > h3:first-child { padding-bottom: 0.35rem; border-bottom: 1px solid var(--wr-blue); }
+.wr-files thead th, .wr-warroom thead th { font-family: var(--font-type); letter-spacing: 0.06em; }
+
+/* The war room: the board's column heads in grease pencil on slate. */
+.wr-warroom thead th { background: #2a1d12; color: #f6e7c8; border-bottom: 2px solid var(--room-accent); }
+.wr-warroom tr.highlight td { background: color-mix(in srgb, var(--panel) 80%, #f2b46f); }
+
+/* College: varsity letters and pennant tabs. */
+.wr-varsity h2, .wr-varsity .panel > h3:first-child { font-family: var(--font-varsity); font-weight: 400; letter-spacing: 0.03em; }
+.wr-varsity .panel > h3:first-child { padding-left: 0; }
+.wr-varsity .panel > h3:first-child::before { display: none; }
+.wr-varsity .panel { border-top-color: var(--room-accent); }
+.wr-varsity .tabs button {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 0.6rem) 50%, 100% 100%, 0 100%);
+  padding-right: 1.3rem;
+  border-radius: 3px 0 0 3px;
+}
