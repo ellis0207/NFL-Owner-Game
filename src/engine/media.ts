@@ -31,6 +31,7 @@ import { socialDaily } from "./media/social";
 import { opinionDaily } from "./media/opinion";
 import { ownerDeskDaily } from "./media/ownerdesk";
 import { coverageDaily } from "./media/coverage";
+import { roundupsDaily } from "./media/blend";
 import { campFact, seatFact, talkFacts } from "./media/desks";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
@@ -772,6 +773,8 @@ export function mediaDaily(state: GameState): void {
   preseasonCoverage(state);
   // Games, big days, injuries, signings, releases, claims and trades go through the story engine.
   const facts = composeDay(state);
+  // Roundups gather the day's smaller items into one piece.
+  roundupsDaily(state, facts);
   // The running stories: arcs open from the day's facts and the league's state, move a phase, or end.
   const arcFacts = arcsDaily(state, facts);
   // The calendar's stories: award races, the playoff picture, the deadline, draft stock, anniversaries, milestones, retrospectives, tributes.

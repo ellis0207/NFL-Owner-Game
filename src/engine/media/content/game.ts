@@ -224,5 +224,23 @@ export const GAME: FamilyContent = {
       take: ["How the {W.nick} built a champion", "The {L.nick} were one game short, and it will haunt them"],
       para: ["The {W.nick} are champions of the {season} season. [Confetti fell, coaches cried, and players hugged anyone within reach.|It was the end of a long climb.|For one night, everything they did all year was worth it.] The {L.nick} will spend the offseason [replaying the chances they missed|knowing how close they came]."],
     },
+    {
+      id: "seesaw", when: (t) => (Number(t.changes) >= 4 && !t.tie ? 2 : 0),
+      head: ["{W.nick} outlast {L.nick} in a back-and-forth {score} game", "{changes} lead changes, and the {W.nick} have the last word"],
+      take: ["Nobody could hold a lead, and that says something about both teams", "The {W.nick} won a game that refused to settle down"],
+      para: ["The lead changed hands {changes} times. [Every answer drew an answer.|Neither defense could get a stop when it mattered.|It was the kind of game you couldn't look away from.]"],
+    },
+    {
+      id: "turningPoint", when: (t) => (t.turning && !t.tie ? 1.2 : 0),
+      head: ["One swing decides it: {W.nick} beat {L.nick} {score}", "{W.nick} top {L.nick} after a game-turning moment"],
+      take: ["The moment that decided {W.nick}-{L.nick}", "One play changed everything for the {L.nick}"],
+      para: ["<turning?The game turned with {turning}.><!turning?One sequence turned it.> [Everything after it went the {W.nick}' way.|The {L.nick} never recovered.|You could feel the sideline change.]"],
+    },
+    {
+      id: "costly", when: (t) => (Number(t.hurt) >= 2 ? 1.5 : 0),
+      head: ["{W.nick} beat {L.nick} {score}, but the injury list grows", "A costly afternoon: {W.nick} {score} {L.nick}"],
+      take: ["The score matters less than the injuries in {W.nick}-{L.nick}", "Somebody will pay for this game next week"],
+      para: ["The result wasn't the only story. <hurt?Hurt: {hurt}.> [The trainers were busy all afternoon.|Both sidelines will check the injury report before celebrating anything.]"],
+    },
   ],
 };
