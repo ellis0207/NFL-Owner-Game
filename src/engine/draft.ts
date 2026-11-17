@@ -411,7 +411,9 @@ function register(state: GameState, id: string, team: string, pick: { round: num
   };
   PLAYERS.push(data);
   PLAYER_BY_ID[id] = data;
-  HIDDEN_RATINGS[id] = { overall: h.overall, potential: h.potential, durability: h.durability, traits: { ...h.traits } };
+  // The player who shows up, not the one on tape (outcomes.ts).
+  const t = h.nfl ?? h;
+  HIDDEN_RATINGS[id] = { overall: t.overall, potential: t.potential, durability: h.durability, traits: { ...t.traits } };
   registered.add(id);
 }
 

@@ -2141,6 +2141,8 @@ export interface GameState {
   players: Record<string, PlayerState>;
   /** League-wide numbers that change as the game goes: the cap once each league year's is set. */
   league?: LeagueState;
+  /** The first draft class whose players' NFL outcomes are drawn apart from what scouts can see (outcomes.ts); set on load for older saves. */
+  draftModelFrom?: number;
   /** The season the league is in (2026 when absent): it moves forward the day after each draft. */
   season?: number;
   /** This season's schedule, for seasons after 2026 (2026 is the real one from the data). */
