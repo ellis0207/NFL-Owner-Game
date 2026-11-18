@@ -10,8 +10,10 @@ import { money } from "../format";
 import { CapTools } from "./CapTools";
 import { Help } from "../Help";
 import { tip } from "../tip";
+import { useUi } from "../ui";
 
 export function CapScreen({ game, changed }: { game: GameState; changed: () => void }) {
+  const ui = useUi();
   const team = game.userTeam;
   // After the Super Bowl the owner plans for next season's cap.
   const year = isOffseason(game.date) ? NEXT : leagueYear(game.date);
@@ -67,7 +69,7 @@ export function CapScreen({ game, changed }: { game: GameState; changed: () => v
           <tbody>
             {top.map((id) => (
               <tr key={id}>
-                <td className="name"><span {...tip("player", id)}>{PLAYER_BY_ID[id].name}</span></td>
+                <td className="name"><button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button></td>
                 <td>{PLAYER_BY_ID[id].position}</td>
                 <td className="num">{money(capHit(id, year, game))}</td>
                 <td className="num">{((capHit(id, year, game) / cap.limit) * 100).toFixed(1)}%</td>

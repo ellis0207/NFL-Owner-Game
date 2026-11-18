@@ -924,7 +924,7 @@ function runEvents(state: GameState): void {
   const b = business(state);
   const s = STADIUM_BY_TEAM[state.userTeam];
   for (const ev of b.events) {
-    if (ev.status === "offered" && ev.expires && ev.expires < state.date) ev.status = "expired";
+    if (ev.status === "offered" && ev.expires && ev.expires <= state.date) ev.status = "expired"; // Lapses at the end of its last day.
     if (ev.status !== "booked" || ev.date !== state.date) continue;
     const rng = rngFor(state.seed, `event:${ev.id}`);
     const net = Math.round(ev.low + (ev.high - ev.low) * rng());

@@ -10,6 +10,7 @@ import { draftClass } from "../../engine/prospects";
 import { adjustedProduction, draftBoards, offerUdfa, scoutOps, UDFA_BUDGET } from "../../engine/scoutops";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { EmptyState } from "../kit";
 import { useUi } from "../ui";
 
 type Sort = "value" | "risk" | "fit" | "ev";
@@ -34,7 +35,10 @@ export function DraftBoards({ game, changed }: { game: GameState; changed: () =>
       <div className="tabs" role="group" aria-label="Board">
         {SORTS.map(([k, label]) => <button key={k} aria-pressed={sort === k} onClick={() => setSort(k)}>{label}</button>)}
       </div>
-      <div className="table-wrap">
+      {!rows.length && <EmptyState title="No boards yet">
+        A prospect goes on the boards once our scouts have seen enough of him. Most of the class is covered by the bowl games and the combine; the Scouting page shows who the area scouts are working on now.
+      </EmptyState>}
+      {rows.length > 0 && <div className="table-wrap">
         <table>
           <thead><tr><th>Prospect</th><th>Pos</th><th className="num">Value</th><th>Risk</th><th className="num">Fit</th><th className="num">EV</th><th>Production a game</th><th className="num">UDFA bonus</th></tr></thead>
           <tbody>
@@ -59,7 +63,7 @@ export function DraftBoards({ game, changed }: { game: GameState; changed: () =>
             })}
           </tbody>
         </table>
-      </div>
+      </div>}
       {ops.udfaLog && (
         <p className="muted">Last undrafted race ({ops.udfaLog.year}): signed {ops.udfaLog.won.length}, lost {ops.udfaLog.lost.length}{ops.udfaLog.lost.length ? ` (${ops.udfaLog.lost.slice(0, 5).map(([id, t]) => `${dc.byId[id]?.name ?? id} to ${t}`).join(", ")})` : ""}.</p>
       )}

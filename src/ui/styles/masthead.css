@@ -45,13 +45,14 @@
 .mh[data-room="draft"] .mh-title { font-size: clamp(1.7rem, 3vw, 2.45rem); }
 .mh-hint { color: rgb(245 242 236 / 0.8); font-size: 0.92rem; max-width: 56ch; }
 
+/* On a phone the masthead is a thin strip: the page's content should start on the first screen. */
 @media (max-width: 760px) {
-  .mh { min-height: 7.25rem; border-radius: 10px; }
+  .mh { min-height: 0; border-radius: 10px; }
   .mh::before { background-position: 78% 50%; }
   .mh::after { background: linear-gradient(90deg, var(--room-base) 0%, color-mix(in srgb, var(--room-base) 78%, transparent) 55%, color-mix(in srgb, var(--room-base) 35%, transparent) 100%); }
-  .mh-text { max-width: 100%; padding: 1rem 1rem 1.1rem; }
-  .mh-title { font-size: 1.7rem; }
-  .mh-hint { font-size: 0.82rem; }
+  .mh-text { max-width: 100%; padding: 0.6rem 0.9rem 0.7rem; gap: 0.15rem; }
+  .mh-title { font-size: 1.3rem; }
+  .mh-hint { display: none; }
 }
 
 /* ---- Sidebar: a line icon per room, the room's color on the page you're on ---- */

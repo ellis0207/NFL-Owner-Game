@@ -116,10 +116,21 @@ export function gameLine(pos: Position, l: StatLine): string {
 }
 
 /** The most recent season's line: this season once it's over, otherwise last season's. */
+/**
+ * Which season a roster's stat column shows: last year's through camp and the
+ * preseason, this year's from the opener on (the season so far, then the
+ * finished season through the offseason).
+ */
+export function rosterStatSeason(game: GameState): { season: number; label: string; current: boolean } {
+  if (isOffseason(game.date)) return { season: RULES.season, label: `${RULES.season} season`, current: true };
+  if (game.date > RULES.keyDates.regularSeasonStart) return { season: RULES.season, label: `${RULES.season} so far`, current: true };
+  return { season: RULES.season - 1, label: `${RULES.season - 1} season`, current: false };
+}
+
 export function recentSeasonLine(game: GameState, id: string): string {
   const p = PLAYER_BY_ID[id];
-  if (!isOffseason(game.date)) return lastSeasonLine(p);
+  if (!rosterStatSeason(game).current) return lastSeasonLine(p);
   const line = seasonTotals(game, "REG")[id]?.line;
-  if (!line) return `Did not play in ${RULES.season}`;
+  if (!line) return isOffseason(game.date) ? `Did not play in ${RULES.season}` : "No stats yet this season";
   return statLine(p.position, line as unknown as SeasonStats);
 }

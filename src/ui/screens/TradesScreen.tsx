@@ -10,7 +10,7 @@ import {
   acceptOffer, askPrice, canTradePlayer, checkTrade, counterProblem, declineOffer, describe, gmRead, hasNoTradeClause, headline,
   parsePick, PICK_YEARS, pickLabel, pickOwner, picksOf, projectedSlot, proposeTrade, toggleBlock, trades, tradeWindow, type Answer,
 } from "../../engine/trades";
-import type { GameState, PickCondition, TradeAsset, TradeDeal } from "../../engine/types";
+import type { GameState, PickCondition, TradeAsset, TradeDeal, TradeOffer } from "../../engine/types";
 import { conditionNote, statMark } from "../../engine/conditions";
 import { money } from "../format";
 import { useUi } from "../ui";
@@ -341,7 +341,7 @@ function Offers({ game, changed, counter }: { game: GameState; changed: () => vo
                 <tr key={o.id}>
                   <td>{shortDate(o.date)}</td><td>{o.teams[0]}</td>
                   <td>{describe(game, o.send[0], o.teams[0])} for {describe(game, o.send[1], us)}</td>
-                  <td className="muted">{o.status === "accepted" ? "Accepted" : o.status === "declined" ? "Declined" : o.status === "expired" ? "Expired" : "Withdrawn"}</td>
+                  <td className="muted">{offerOutcome(o)}</td>
                 </tr>
               ))}
             </tbody>
@@ -462,4 +462,13 @@ function LeagueTrades({ game }: { game: GameState }) {
       ))}
     </div>
   );
+}
+
+/** Why an offer is off the table, in a few words. */
+function offerOutcome(o: TradeOffer): string {
+  if (o.status === "accepted") return "Accepted";
+  if (o.status === "declined") return "We passed";
+  if (o.status === "withdrawn") return "They pulled it (a counter or a piece moved)";
+  // Offers still open on deadline day close with the deadline; the rest ran out without an answer.
+  return o.expires >= RULES.keyDates.tradeDeadline && o.date <= RULES.keyDates.tradeDeadline ? "Closed at the trade deadline" : `No answer by ${shortDate(o.expires)}`;
 }

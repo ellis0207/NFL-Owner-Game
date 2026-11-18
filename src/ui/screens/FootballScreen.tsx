@@ -4,7 +4,7 @@ import { capSummary, teamPlayerIds } from "../../engine/cap";
 import { leagueYear } from "../../engine/contracts";
 import { shortDate } from "../../engine/dates";
 import { knownReturn } from "../../engine/medical";
-import { PLAYER_BY_ID, SCHEDULE, teamLabel } from "../../engine/league";
+import { PLAYER_BY_ID, RULES, SCHEDULE, teamLabel } from "../../engine/league";
 import { teamOutlook } from "../../engine/outlook";
 import { hotSeat, qcCoaches } from "../../engine/people";
 import { scoutOps } from "../../engine/scoutops";
@@ -31,7 +31,9 @@ export function FootballScreen({ game }: { game: GameState }) {
   const r = standings(game)[team];
   const ts = teamStaff(team);
   const c = game.culture ? culture(game) : null;
-  const adv = game.scoutOps ? scoutOps(game).advance[0] : undefined;
+  // Only the report on a game still to come: last week's opponent is old news.
+  const adv = game.scoutOps ? scoutOps(game).advance.find((a) => !game.results[a.gameId]) : undefined;
+  const nextReg = games.find((g) => g.type !== "PRE" && !game.results[g.id]);
   const hot = hotSeat(game);
   const link = (id: string) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id]?.name ?? id}</button>;
   return (
@@ -67,7 +69,8 @@ export function FootballScreen({ game }: { game: GameState }) {
           <h3>Next opponents</h3>
           {games.length === 0 && <span className="muted">No games scheduled.</span>}
           {games.map((g) => <span key={g.id}>{shortDate(g.date)}: {g.home === team ? "vs" : "at"} {teamLabel((g.home === team ? g.away : g.home) ?? "")}</span>)}
-          {adv && <><h4>Advance report on {teamLabel(adv.opp)}</h4>{adv.notes.slice(0, 4).map((n, i) => <span key={i} className="muted">{n}</span>)}</>}
+          {adv ? <><h4>Advance report on {teamLabel(adv.opp)}</h4>{adv.notes.slice(0, 4).map((n, i) => <span key={i} className="muted">{n}</span>)}</>
+            : nextReg && game.date >= RULES.keyDates.regularSeasonStart && <span className="muted">The pro scouts file their report on the {teamLabel(nextReg.home === team ? nextReg.away! : nextReg.home!)} on Tuesday.</span>}
         </div>
         <div className="panel stack tight">
           <h3>Roster outlook</h3>

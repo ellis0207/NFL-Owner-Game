@@ -150,7 +150,11 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const now = standings(game)[game.userTeam];
   const rec = last ? { w: last.records[game.userTeam][0], l: last.records[game.userTeam][1], t: last.records[game.userTeam][2] } : now;
   const counts = rosterCount(game, game.userTeam);
-  const unread = game.inbox.filter((i) => !i.read).length;
+  // The inbox badge counts only the past week's unread mail, and stays quiet unless something is flagged
+  // as needing the owner: routine reports pile up and shouldn't read as alarms.
+  const weekAgo = addDays(game.date, -7);
+  const unread = game.inbox.filter((i) => !i.read && i.date >= weekAgo).length;
+  const urgentMail = game.inbox.filter((i) => !i.read && (i.priority ?? 1) >= 2).length;
   const pressAsks = openQuestions(game).length;
   const tradeOffers = game.trades?.offers.filter((o) => o.status === "open").length ?? 0;
   const bookings = game.business?.events.filter((e) => e.status === "offered").length ?? 0;
@@ -163,13 +167,14 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const badges: Partial<Record<Screen, number | string>> = {};
   const queued = decisionQueue(game).length;
   if (queued) badges.Today = queued;
-  if (unread) badges.Inbox = unread;
+  if (urgentMail || unread) badges.Inbox = urgentMail || unread;
+  const quiet: Partial<Record<Screen, boolean>> = { Inbox: !urgentMail };
   if (pressAsks) badges.Media = pressAsks;
   if (tradeOffers) badges.Trades = tradeOffers;
   if (bookings) badges.Business = bookings;
   if (memos) badges["Front office"] = memos;
   if (onTheClock(game)) badges.Draft = "On the clock";
-  const attention = unread + pressAsks + tradeOffers + bookings + memos + (badges.Draft ? 1 : 0);
+  const attention = urgentMail + pressAsks + tradeOffers + bookings + memos + (badges.Draft ? 1 : 0);
   const group = groupOf(screen);
   // A buyer or minority partner can look at every page but act only on their own.
   const locked = !inControl(game) && !FREE_PAGES.includes(screen);
@@ -245,7 +250,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           <nav aria-label="Front office">
             {NAV.map((g) => {
               const shut = closed.includes(g.id) && !(g.pages as readonly Screen[]).includes(screen);
-              const waiting = (g.pages as readonly Screen[]).reduce((n, p) => n + (typeof badges[p] === "number" ? (badges[p] as number) : badges[p] ? 1 : 0), 0);
+              const waiting = (g.pages as readonly Screen[]).reduce((n, p) => n + (quiet[p] ? 0 : typeof badges[p] === "number" ? (badges[p] as number) : badges[p] ? 1 : 0), 0);
               return (
                 <div key={g.id} className="nav-group" data-room={ROOM[g.id]}>
                   <button className="nav-head" aria-expanded={!shut} onClick={() => toggleGroup(g.id)}>
@@ -255,7 +260,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
                   {!shut && (g.pages as readonly Screen[]).map((s) => (
                     <button key={s} className="nav-item" aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>
                       <span>{pageLabel(s)}</span>
-                      {badges[s] !== undefined && <span className="badge">{badges[s]}</span>}
+                      {badges[s] !== undefined && <span className={`badge${quiet[s] ? " quiet" : ""}`}>{badges[s]}</span>}
                     </button>
                   ))}
                 </div>
@@ -301,7 +306,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             <div className="section-pages" role="group" aria-label={group.label}>
               {(group.pages as readonly Screen[]).map((s) => (
                 <button key={s} aria-pressed={screen === s} onClick={() => go(s)}>
-                  {pageLabel(s)}{badges[s] !== undefined && <span className="badge">{badges[s]}</span>}
+                  {pageLabel(s)}{badges[s] !== undefined && <span className={`badge${quiet[s] ? " quiet" : ""}`}>{badges[s]}</span>}
                 </button>
               ))}
             </div>

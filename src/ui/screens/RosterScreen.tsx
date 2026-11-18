@@ -11,7 +11,7 @@ import { gradeShort } from "../../engine/reports";
 import { depthChart, IR_RETURNS, POSITION_ORDER, proposeFinal53 } from "../../engine/roster";
 import { outLabel } from "../../engine/season";
 import type { GameState, PlayerState, Position } from "../../engine/types";
-import { money, POSITION_NAMES, recentSeasonLine } from "../format";
+import { money, POSITION_NAMES, recentSeasonLine, rosterStatSeason } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 import { posOf, starters } from "../../engine/clubhouse";
@@ -120,7 +120,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
           <thead>
             <tr>
               <th className="num">#</th><th>Player</th><th>Depth</th><th>Coach's view</th><th className="num">Age</th><th className="num">Exp</th>
-              <th className="num">{capYear(game)} cap</th><th className="num">Yrs</th><th>{isOffseason(game.date) ? SEASON : SEASON - 1} season</th><th>{beforeCutdown ? "Cutdown" : "Status"}</th>
+              <th className="num">{capYear(game)} cap</th><th className="num">Yrs</th><th>{rosterStatSeason(game).label}</th><th>{beforeCutdown ? "Cutdown" : "Status"}</th>
             </tr>
           </thead>
           <tbody>
