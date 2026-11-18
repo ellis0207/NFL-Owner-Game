@@ -5,9 +5,10 @@ import { PLAYER_BY_ID, RULES, TEAMS } from "../src/engine/league";
 import { releasePlayer, rosterCount, rosterLimit, weakestOnRoster } from "../src/engine/roster";
 import { advanceDay, newGame } from "../src/engine/season";
 import {
-  askPrice, canTradePlayer, checkTrade, completeTrade, lockMatchedSheet, pickId, pickOwner, picksOf, playerValue, proposeTrade, tradeWindow,
+  askPrice, canTradePlayer, checkTrade, completeTrade, counterProblem, cpuAnswer, trades, lockMatchedSheet, pickId, pickOwner, picksOf, playerValue, proposeTrade, tradeWindow,
 } from "../src/engine/trades";
-import type { GameState, TradeDeal } from "../src/engine/types";
+import type { GameState, TradeAsset, TradeDeal } from "../src/engine/types";
+import { stateAt } from "./fixtures";
 
 const K = RULES.keyDates;
 const US = "DET";
@@ -141,5 +142,67 @@ describe("CPU front offices", () => {
     expect(price.verdict).toBe("counter");
     expect(proposeTrade(state, price.counter!).verdict).toBe("accept");
     expect(PLAYER_BY_ID[mid.id] && state.players[mid.id].team).toBe(US);
+  });
+});
+
+describe("counter-offers", () => {
+  const key = (a: TradeAsset) => (a.kind === "player" ? a.id : a.pick);
+  const tradeable = (state: GameState, team: string) => teamPlayerIds(state, team)
+    .filter((id) => canTradePlayer(state, id, team === US ? undefined : US).ok && playerValue(state, "gm", team, id).points > 8);
+
+  it("CPU teams counter a fair share of our offers, always keeping a piece of the original", () => {
+    const state = stateAt(US, 5, "tradeDeadline");
+    const ours = tradeable(state, US);
+    const tally = { accept: 0, counter: 0, reject: 0 };
+    let n = 0;
+    for (const t of TEAMS.filter((x) => x.id !== US)) {
+      for (const id of tradeable(state, t.id).slice(0, 6)) {
+        const deal: TradeDeal = { teams: [US, t.id], send: [[{ kind: "player", id: ours[n++ % ours.length] }], [{ kind: "player", id }]] };
+        if (!checkTrade(state, deal).ok) continue;
+        const a = cpuAnswer(state, deal, 1);
+        tally[a.verdict]++;
+        if (a.counter) {
+          const orig = new Set([...deal.send[0], ...deal.send[1]].map(key));
+          expect([...a.counter.send[0], ...a.counter.send[1]].some((x) => orig.has(key(x)))).toBe(true);
+          expect(checkTrade(state, a.counter).ok).toBe(true);
+        }
+      }
+    }
+    const all = tally.accept + tally.counter + tally.reject;
+    expect(tally.counter / all).toBeGreaterThan(0.15);
+    expect(tally.counter / all).toBeLessThan(0.7);
+  });
+
+  it("we can counter an offer a team made us, keeping one of its pieces", () => {
+    const state = stateAt(US, 5, "tradeDeadline");
+    const partner = "GB";
+    const theirs = tradeable(state, partner);
+    const ours = tradeable(state, US);
+    const offer = {
+      id: "test-offer", date: state.date, expires: state.date, note: "", status: "open" as const,
+      teams: [partner, US] as [string, string],
+      send: [[{ kind: "player" as const, id: theirs[0] }], [{ kind: "player" as const, id: ours[0] }]] as [TradeAsset[], TradeAsset[]],
+    };
+    trades(state).offers.unshift(offer);
+    // A deal with none of their pieces isn't a counter.
+    const other: TradeDeal = { teams: [US, partner], send: [[{ kind: "player", id: ours[1] }], [{ kind: "player", id: theirs[1] }]] };
+    expect(counterProblem(state, offer.id, other)).toMatch(/at least one piece/);
+    expect(proposeTrade(state, other, offer.id).verdict).toBe("reject");
+    // Asking for their player for nothing back but a seventh: a lowball that ends the call.
+    const seventh = picksOf(state, US).find((p) => p.startsWith("2028-7"))!;
+    const low: TradeDeal = { teams: [US, partner], send: [[{ kind: "pick", pick: seventh }], [...offer.send[0]]] };
+    expect(counterProblem(state, offer.id, low)).toBeNull();
+    const r = proposeTrade(state, low, offer.id);
+    if (r.verdict === "accept") expect(offer.status).toBe("accepted");
+    else if (r.verdict === "reject") expect(["open", "withdrawn"]).toContain(offer.status);
+    // Their own terms, sent back as a counter, close the deal and the offer.
+    if (offer.status === "open") {
+      const same: TradeDeal = { teams: [US, partner], send: [offer.send[1], offer.send[0]] };
+      const yes = proposeTrade(state, same, offer.id);
+      if (yes.verdict === "accept") {
+        expect(offer.status).toBe("accepted");
+        expect(state.players[theirs[0]].team).toBe(US);
+      }
+    }
   });
 });

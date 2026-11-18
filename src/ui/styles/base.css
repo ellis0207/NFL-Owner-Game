@@ -124,6 +124,11 @@ button { cursor: pointer; }
 .title-page > .title-card > h1, .title-page .wordmark { color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55); }
 .title-page .wordmark span { color: #f2c14e; }
 .title-page .lede { color: rgba(243, 245, 247, 0.86); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6); }
+/* Buttons inherit the floodlight white of the page, so the ones that sit
+   on their own panel-colored cards (the team picks, Back) set the ink back,
+   and the division names over the picture get the white with a shadow. */
+.title-page .btn:not(.primary), .team-pick { color: var(--ink); }
+.title-page .division h3 { color: rgba(243, 245, 247, 0.92); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); }
 .title-page .panel { color: var(--ink); background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(6px); }
 .wordmark { font-family: var(--font-display); font-weight: 700; font-size: clamp(2.6rem, 8vw, 4.6rem); line-height: 0.92; text-transform: uppercase; letter-spacing: 0.01em; }
 .wordmark span { display: block; color: var(--muted); font-size: 0.42em; letter-spacing: 0.18em; font-weight: 600; margin-top: 0.4rem; }
