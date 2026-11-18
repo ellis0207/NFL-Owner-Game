@@ -4,6 +4,7 @@
 // office. They show only what the owner can see: stats, money, counts and
 // staff reports, never a rating.
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { Voice } from "../engine/types";
 
 type Tone = "good" | "bad" | "warn" | undefined;
 
@@ -114,4 +115,45 @@ export function CountUp({ text, fromZero = false }: { text: string; fromZero?: b
     return () => cancelAnimationFrame(frame);
   }, [text]);
   return <>{shown}</>;
+}
+
+/**
+ * A crossroads laid out: what's at stake, then one column per option with the
+ * people backing it in their own words, and what that choice costs with the
+ * people it goes against. Read by the memo card and the decision queue.
+ */
+export function Crossroads({ voices, options, stakes }: { voices: Voice[]; options: { label: string; effect: string }[]; stakes?: string }) {
+  return (
+    <div className="kit-x">
+      {stakes && <strong className="kit-x-stakes">{stakes}</strong>}
+      <div className="kit-x-grid">
+        {options.map((o, i) => {
+          const backers = voices.filter((v) => v.side === i);
+          const against = voices.filter((v) => v.side !== i);
+          return (
+            <section key={i} className="kit-x-opt">
+              <div className="kit-x-opt-head">
+                <span className="kit-x-kicker">Option {i + 1}</span>
+                <strong>{o.label}</strong>
+                <span className="muted">{o.effect}</span>
+              </div>
+              {backers.length ? backers.map((v) => (
+                <div key={v.who} className={`kit-x-voice ${v.kind}`}>
+                  <span className="kit-x-role">{v.role}</span>
+                  <span className="kit-x-who">{v.who}</span>
+                  <q className="kit-x-quote">{v.says.replace(/^"|"$/g, "")}</q>
+                </div>
+              )) : <span className="muted">Nobody in the building is arguing for this.</span>}
+              {against.length > 0 && (
+                <div className="kit-x-cost">
+                  <span className="kit-x-kicker">What it costs</span>
+                  <ul>{against.map((v) => <li key={v.who}><strong>{v.role}:</strong> {v.ifOverruled}</li>)}</ul>
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

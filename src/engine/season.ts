@@ -25,6 +25,7 @@ import { ensureOffice } from "./delegation";
 import { ensureCulture } from "./culture";
 import { ensureExecs } from "./executives";
 import { officeDaily } from "./memos";
+import { crossroadsDaily } from "./crossroads";
 import { leagueYear } from "./contracts";
 import { DEFAULT_SETUP, setupOwner, type OwnerSetup } from "./ownership";
 import { bindLeases, ensureLeases, leasesDaily } from "./leases";
@@ -645,6 +646,7 @@ export function advanceDay(state: GameState): void {
   causesDaily(state);
   archiveDaily(state);
   officeDaily(state);
+  crossroadsDaily(state);
   peopleDaily(state);
   standingDaily(state);
   gameOpsDaily(state);

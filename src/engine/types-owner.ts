@@ -553,6 +553,49 @@ export interface Memo {
   decided?: string;
   notes: string[];
   payload?: Record<string, unknown>;
+  /** A crossroads (crossroads.ts): the people with a stake, each backing one option, and what is at stake in a line. */
+  voices?: Voice[];
+  stakes?: string;
+}
+
+/** Someone with a stake in a crossroads memo, backing one of its options. */
+export interface Voice {
+  kind: "gm" | "coach" | "exec" | "partners" | "fans" | "player";
+  who: string;
+  role: string;
+  /** The option they back. */
+  side: number;
+  says: string;
+  /** What it costs to go against them. */
+  ifOverruled: string;
+  /** A coach or player id, when the voice is one person on the football side. */
+  ref?: string;
+}
+
+export type CrossKind = "star" | "coach" | "build" | "payout";
+
+/** A crossroads decided: who stood where, and (a season on) how it turned out. */
+export interface CrossOutcome {
+  memo: string;
+  kind: CrossKind;
+  title: string;
+  date: string;
+  choice: number;
+  label: string;
+  /** The season that will judge it. */
+  season: number;
+  sides: { who: string; role: string; kind: Voice["kind"]; side: number }[];
+  before: { wp: number; cash: number };
+  ref?: string;
+  verdict?: string;
+}
+
+export interface CrossroadsState {
+  /** When each kind last came up. */
+  last: Partial<Record<CrossKind, string>>;
+  outcomes: CrossOutcome[];
+  /** A coach kept on a public playoffs-or-else line. */
+  ultimatum?: { coach: string; season: number };
 }
 
 export interface OfficeTask {

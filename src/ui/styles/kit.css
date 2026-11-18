@@ -37,3 +37,20 @@
 /* A ledger table: ruled like an accounting book, totals under a double rule. */
 table.kit-ledger td, table.kit-ledger th { border-bottom-color: color-mix(in srgb, var(--rule) 70%, var(--room-hue, transparent)); }
 table.kit-ledger tr.total td { border-top: 3px double var(--ink); font-weight: 600; }
+
+/* A crossroads: the stakes, then one column per option with its backers and its cost. */
+.kit-x { display: grid; gap: 0.6rem; }
+.kit-x-stakes { display: block; padding: 0.55rem 0.8rem; border-radius: var(--radius); border-left: 4px solid var(--bad); background: color-mix(in srgb, var(--panel) 88%, var(--bad)); font-family: var(--room-font, var(--font-display)); letter-spacing: 0.02em; }
+.kit-x-grid { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.kit-x-opt { display: grid; gap: 0.5rem; align-content: start; padding: 0.7rem 0.8rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); min-width: 0; }
+.kit-x-opt-head { display: grid; gap: 0.15rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--rule); }
+.kit-x-kicker { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.kit-x-voice { display: grid; gap: 0.1rem; padding: 0.4rem 0.55rem; border-radius: var(--radius); background: var(--sunk); border-left: 3px solid var(--room-accent, var(--team)); }
+.kit-x-voice.partners { border-left-color: var(--warn); }
+.kit-x-voice.fans { border-left-color: var(--good); }
+.kit-x-voice.player { border-left-color: var(--team); }
+.kit-x-role { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--room-accent, var(--team)); }
+.kit-x-who { font-size: 0.8rem; color: var(--muted); }
+.kit-x-quote { font-style: italic; overflow-wrap: anywhere; }
+.kit-x-cost ul { margin: 0.2rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; font-size: 0.85rem; }
+.kit-x-cost li strong { color: var(--bad); font-weight: 600; }

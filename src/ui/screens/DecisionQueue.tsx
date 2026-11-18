@@ -3,6 +3,7 @@
 // happens if nothing is done. Most items can be answered right here; each one
 // also links to the exact page where the details are.
 import { CompareToggle } from "../Comparison";
+import { Crossroads } from "../kit";
 import { memoComparison } from "../../engine/compare";
 import { useState } from "react";
 import { answerOffer } from "../../engine/business";
@@ -92,6 +93,7 @@ export function DecisionQueue({ game, changed, go }: { game: GameState; changed:
             {expanded && (
               <div className="queue-body">
                 <div><span className="label">Why it matters</span> {i.why}</div>
+                {i.voices?.length && i.memo ? <Crossroads voices={i.voices} stakes={i.stakes} options={game.office!.memos.find((x) => x.id === i.memo)!.options} /> : null}
                 {i.recommends && <div><span className="label">Recommendation</span> {i.recommends}</div>}
                 <div><span className="label">If you do nothing</span> {i.ifNothing}</div>
                 {i.memo && <CompareToggle get={() => memoComparison(game, i.memo!)} />}

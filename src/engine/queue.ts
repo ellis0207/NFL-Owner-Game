@@ -29,7 +29,7 @@ import { budgetLeft } from "./scouting";
 import { openDecisions } from "./discipline";
 import { ourCases } from "./compliance";
 import { franchise } from "./franchisemarket";
-import type { DecisionArea, GameState, Memo } from "./types";
+import type { DecisionArea, GameState, Memo, Voice } from "./types";
 
 const M = 1_000_000;
 
@@ -63,6 +63,9 @@ export interface QueueItem {
   score: number;
   /** A memo the queue can decide in place. */
   memo?: string;
+  /** A crossroads: who backs what, and what's at stake (crossroads.ts). */
+  voices?: Voice[];
+  stakes?: string;
   /** A trade offer, booking or staff proposal the queue can answer in place. */
   answer?: { kind: "trade" | "booking" | "staff" | "room"; id: string };
   /** Choices the queue offers in place for other calls (an owner decision, a league case). */
@@ -101,14 +104,15 @@ function urgency(state: GameState, expires?: string): number {
 function memoItem(state: GameState, m: Memo): QueueItem {
   const p = memoPriority(state, m);
   const rec = m.options[m.recommend];
-  const major = p.why.includes("Strategic") || Math.abs(m.amount ?? 0) >= 10 * M;
+  const major = !!m.voices?.length || p.why.includes("Strategic") || Math.abs(m.amount ?? 0) >= 10 * M;
   const football = m.area === "signings" || m.area === "trades" || m.area === "coaching" || m.kind === "signing" || m.kind === "trade" || m.kind === "coachReview";
   return {
     id: `memo:${m.id}`, kind: "approval", side: football ? "football" : m.kind === "execReview" ? "owner" : "business",
     title: m.title, why: m.problem, expires: m.deadline,
     recommends: rec ? `${m.from} recommends: ${rec.label}${m.conditions ? ` (${m.conditions})` : ""}` : undefined,
     ifNothing: m.ifLate || "The memo lapses and the staff fall back on the usual practice.",
-    link: { screen: "Front office", tab: "Memos" }, major, score: p.score + (major ? 10 : 0), memo: m.id,
+    voices: m.voices, stakes: m.stakes,
+    link: { screen: "Front office", tab: "Memos" }, major, score: p.score + (major ? 10 : 0) + (m.voices?.length ? 25 : 0), memo: m.id,
   };
 }
 
