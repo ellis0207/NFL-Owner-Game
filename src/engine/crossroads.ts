@@ -14,6 +14,7 @@
 // - coach: a losing season ends (the day after the regular season).
 // - build: one big project the cash can carry, and two departments want it (spring).
 // - payout: the books close with cash to spare and partners who want some (May-June).
+import { hurt } from "./difficulty";
 import { cashBalance, ownerCash } from "./business";
 import { reserveTarget } from "./books";
 import { staff } from "./coaches";
@@ -349,22 +350,22 @@ export function settleVoices(state: GameState, m: Memo, choice: number): void {
       remember(state, name, won ? `Backed on ${m.title.toLowerCase()}` : `Overruled on ${m.title.toLowerCase()}`, won ? 1 : -2.5);
       const role = (["CFO", "CRO", "PRES"] as ExecRole[]).find((r) => execRole(state, r)?.name === name);
       const e = role ? execRole(state, role) : undefined;
-      if (e) e.satisfaction = clamp(e.satisfaction + (won ? 2 : -6));
+      if (e) e.satisfaction = clamp(e.satisfaction + hurt(state, won ? 2 : -6));
     } else if (v.kind === "partners") {
       for (const p of state.investors?.partners ?? []) {
         // Each partner judges by what they want, not by the group's voice.
         const agree = partnerSide(m, partnerWants(state, p)) === choice;
-        p.mood = clamp(p.mood + (agree ? 4 : -9));
+        p.mood = clamp(p.mood + hurt(state, agree ? 4 : -9));
         if (!agree) p.complaints += 1;
       }
     } else if (v.kind === "fans") {
       trustHit(state, won ? 1.5 : -3, won ? 0 : 0.5, won ? undefined : `${m.title}: the owner went the other way.`);
     } else if (v.kind === "player" && v.ref && state.players[v.ref]) {
       const ps = state.players[v.ref];
-      ps.morale = clamp((ps.morale ?? 70) + (won ? 8 : -18));
+      ps.morale = clamp((ps.morale ?? 70) + hurt(state, won ? 8 : -18));
     } else if (v.kind === "player") {
       // The room as a whole: a little for everyone on the roster.
-      for (const ps of Object.values(state.players)) if (ps.team === state.userTeam && ROSTER.has(ps.status)) ps.morale = clamp((ps.morale ?? 70) + (won ? 2 : -4));
+      for (const ps of Object.values(state.players)) if (ps.team === state.userTeam && ROSTER.has(ps.status)) ps.morale = clamp((ps.morale ?? 70) + hurt(state, won ? 2 : -4));
     }
   }
   const losers = (m.voices ?? []).filter((v) => v.side !== choice).map((v) => v.role.toLowerCase());

@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { difficulty } from "./difficulty";
 import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { asksBonuses, attachBonuses, bonusTermsValue, missRisk } from "./bonuses";
@@ -223,6 +224,12 @@ export function openTalks(state: GameState, team: string, id: string, kind: Nego
     neg.marketScale = fa.floor / fa.floor0;
     neg.floor *= neg.marketScale;
     neg.ask = Math.max(neg.floor * 1.03, neg.ask * neg.marketScale);
+  }
+  // Harder levels: agents open higher with the owner's club and come down less.
+  if (team === state.userTeam) {
+    const k = difficulty(state).ask;
+    neg.floor *= k;
+    neg.ask *= k;
   }
   // The agent opens with their number.
   neg.rounds.push({ date: state.date, from: "agent", terms: agentTerms(ah, neg.ask, neg.askYears, neg.askGuarantee), note: openingLine(neg) });

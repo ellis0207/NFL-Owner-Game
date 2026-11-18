@@ -16,6 +16,7 @@
 //   salary on a review score. A bonus sharpens the department a little all
 //   year (`bonusBoost` in executives.ts); at the review it is paid or missed,
 //   and a stretch target missed stings more than an easy one.
+import { hurt } from "./difficulty";
 import { cashBalance, ownerCash, post, valuation } from "./business";
 import { reserveTarget } from "./books";
 import { capSummary } from "./cap";
@@ -143,7 +144,7 @@ function judgePledge(state: GameState, pl: Pledge): string {
   pl.status = kept ? "kept" : "broken";
   for (const p of investors(state).partners) {
     const asked = partnerWants(state, p) === pl.want;
-    p.mood = clamp(p.mood + (kept ? (asked ? 6 : 2) : asked ? -10 : -4));
+    p.mood = clamp(p.mood + hurt(state, kept ? (asked ? 6 : 2) : asked ? -10 : -4));
     if (!kept && asked) p.complaints += 1;
   }
   if (kept) {

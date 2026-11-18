@@ -11,6 +11,7 @@
 // that leaks; sponsors and the community watch how the club behaves. When
 // things sour, people say so: the GM asks for clarity, executives push back
 // on lost authority, staff file complaints, and details leak to the press.
+import { hurt } from "./difficulty";
 import { addDays, daysBetween } from "./dates";
 import { money } from "./inbox";
 import { tip } from "./outlets";
@@ -65,6 +66,7 @@ function pairStart(state: GameState): number {
 export function gmTrust(state: GameState, delta: number, why?: string): void {
   if (!state.culture) return;
   const c = culture(state);
+  delta = hurt(state, delta);
   c.gmTrust = clamp(c.gmTrust + delta);
   if (why && Math.abs(delta) >= 3) note(state, why);
 }

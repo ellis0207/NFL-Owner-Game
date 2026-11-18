@@ -3,6 +3,7 @@ import { VOLATILITY } from "../../engine/economy";
 import type { GameState, Settings } from "../../engine/types";
 import { PlaySettings } from "./PlaySettings";
 import { SettingsLeague } from "./SettingsLeague";
+import { applyDifficulty, DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../../engine/difficulty";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
 
 export const TODAY_PANELS = ["Decision queue", "Open problems", "Staff", "Business", "Media", "Inbox"] as const;
@@ -27,6 +28,12 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
             <dt>Salary cap</dt><dd>{game.settings.capRules === "real" ? "Real NFL rules" : "Off"}</dd>
             <dt>Owner finances</dt><dd>{game.settings.finances === "relaxed" ? "Relaxed: the team's cash is topped up" : "Real: you cover shortfalls"}</dd>
           </dl>
+          <label className="field"><span className="label">Difficulty</span>
+            <select id="difficulty" value={game.settings.difficulty ?? "standard"} onChange={(e) => { applyDifficulty(game.settings, e.target.value as Difficulty); changed(); }}>
+              {DIFFICULTY_KEYS.map((k) => <option key={k} value={k}>{DIFFICULTY[k].label}</option>)}
+            </select>
+            <span className="muted">{DIFFICULTY[game.settings.difficulty ?? "standard"].what} Choosing a level also sets scouting and the economy below; you can still change those on their own.</span>
+          </label>
           <label className="field"><span className="label">Scouting precision</span>
             <select value={game.settings.scouting ?? "real"} onChange={(e) => set({ scouting: e.target.value as Settings["scouting"] })}>
               {Object.entries(SCOUTING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

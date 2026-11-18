@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { difficulty } from "./difficulty";
 import { nextId } from "./ids";
 import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
@@ -698,7 +699,9 @@ export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1, ea
     const to = deal.teams[playersIn(deal.send[0]).includes(id) ? 1 : 0];
     if (!waivesNoTrade(state, id, to)) return { verdict: "reject", text: `${PLAYER_BY_ID[id].name} has a no-trade clause and won't waive it for a move to the ${teamLabel(to)}.` };
   }
-  const { gain, outValue, need, stars } = cpuNeed(state, deal, side, eager);
+  const { gain, outValue, need: base, stars } = cpuNeed(state, deal, side, eager);
+  // Harder levels: GMs dealing with the owner's club want a little more for what they give up.
+  const need = deal.teams.includes(state.userTeam) ? base + Math.abs(outValue) * (difficulty(state).trade - 1) : base;
   const bal = { gain, outValue };
   if (bal.gain >= need) return { verdict: "accept", text: `${name}: "You've got a deal."` };
   // Close enough: see what would get it done from the other side's assets.

@@ -80,6 +80,12 @@ table sharpens a department, and a stretch target missed stings. Today lists the
 open problems no memo asks about, such as cash under the reserve, an unhappy
 partner, a slipping pledge or a sour locker room, and how long each has gone on.
 
+Difficulty (new game or Settings) runs from Rookie owner to Hall of Fame owner.
+The football and the money stay real at every level; harder levels make other
+GMs want more in trades, agents open higher with your club, and setbacks land
+harder with fans, the GM, executives, players and partners. A level also sets
+scouting precision and economic volatility, which can still be changed alone.
+
 Players' skills age at their own pace. Speed, quickness and burst peak in
 the mid twenties and slip first; strength and arm hold a few years longer;
 hands, route running, blocking technique and a quarterback's reads keep
