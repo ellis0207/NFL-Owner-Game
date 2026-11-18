@@ -16,6 +16,9 @@ import { People } from "./FrontOfficePeople";
 import { Culture } from "./FrontOfficeCulture";
 import { tip } from "../tip";
 import { GroupedTabs } from "../Tabs";
+import { BONUS_PCTS, BONUS_TARGETS, setExecBonus } from "../../engine/boardroom";
+import { execScores } from "../../engine/memos";
+import { leagueYear } from "../../engine/contracts";
 
 const TABS = ["Executives", "People", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
@@ -111,6 +114,7 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
         </dl>
         <span className="muted">Nobody's ability is on paper. You see it in their department's results, their reviews and what other clubs think of them. A vacant job is covered by the deputy.</span>
       </div>
+      <BonusTargets game={game} changed={changed} />
       <div className="panel stack tight">
         <h3>Organization chart</h3>
         <OrgChart game={game} />
@@ -166,6 +170,41 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
 
 const MODE_LABEL: { [K in DecisionMode]: string } = { owner: "You decide", approve: "Staff proposes", delegate: "Staff decides" };
 const ALERT_LABEL: { [K in OfficeState["alerts"]["signings"]]: string } = { every: "Tell me each time", weekly: "Weekly summary", exceptions: "Only surprises" };
+
+/** The owner puts part of each executive's pay on their review: more push all year, a payout or a disappointment at the end. */
+function BonusTargets({ game, changed }: { game: GameState; changed: () => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const bonus = game.execs?.bonus ?? {};
+  const now = execScores(game, leagueYear(game.date));
+  const roles = EXEC_KEYS.filter((r) => execRole(game, r)?.contract);
+  return (
+    <div className="panel stack tight">
+      <h3>Bonus targets</h3>
+      <span className="muted">Put part of an executive's salary on their review score. Money on the table sharpens a department; a harder target pushes more, and stings more if it's missed. Paid at the review when the league year closes.</span>
+      {msg && <p className="notice">{msg}</p>}
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Job</th><th>Bonus</th><th>Review target</th><th>On the money</th><th>This year so far</th></tr></thead>
+          <tbody>{roles.map((r) => {
+            const e = execRole(game, r)!;
+            const b = bonus[r] ?? { pct: 0, target: 60 };
+            const sc = now[r]?.score;
+            const set = (pct: number, target: number) => { setMsg(setExecBonus(game, r, pct, target)); changed(); };
+            return (
+              <tr key={r}>
+                <td><strong>{EXEC_ROLES[r].label}</strong><br /><span className="muted">{e.name}</span></td>
+                <td><select aria-label="Bonus" value={b.pct} onChange={(ev) => set(Number(ev.target.value), b.target)}>{BONUS_PCTS.map((x) => <option key={x} value={x}>{x ? `${x * 100}% of salary` : "None"}</option>)}</select></td>
+                <td><select aria-label="Target" value={b.target} disabled={!b.pct} onChange={(ev) => set(b.pct, Number(ev.target.value))}>{BONUS_TARGETS.map((x) => <option key={x} value={x}>{x}{x >= 80 ? " (stretch)" : x <= 50 ? " (easy)" : ""}</option>)}</select></td>
+                <td className="num">{b.pct ? money(e.contract!.salary * b.pct) : ""}</td>
+                <td className={!b.pct || sc === undefined ? "muted" : sc >= b.target ? "good" : "bad"}>{sc === undefined ? "" : b.pct ? `${sc} (${sc >= b.target ? "on track" : "behind"})` : sc}</td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function Rights({ game, changed }: { game: GameState; changed: () => void }) {
   const o = office(game);

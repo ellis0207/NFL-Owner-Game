@@ -172,7 +172,15 @@ export function execBoost(state: GameState, role: ExecRole): number {
     const top = execRole(state, boss);
     if (top) b += (top.hidden.leadership - 50) / 250;
   }
+  b += bonusBoost(state, role);
   return Math.max(-1, Math.min(1, b));
+}
+
+/** A bonus on the table sharpens a department a little: more money and a harder target, more push (boardroom.ts sets them). */
+export function bonusBoost(state: GameState, role: ExecRole): number {
+  const x = state.execs?.bonus?.[role];
+  if (!x || !execRole(state, role)) return 0;
+  return x.pct * (x.target >= 80 ? 0.5 : x.target >= 70 ? 0.4 : x.target >= 60 ? 0.3 : 0.15);
 }
 
 // ---- Pay ----

@@ -46,6 +46,7 @@ import { resolveFranchiseMemo } from "./franchisemarket";
 import { resolveTakeoverMemo } from "./takeover";
 import { resolveSuccessionMemo } from "./succession";
 import { lapseCrossroads, resolveCrossroadsMemo } from "./crossroads";
+import { lapseBoardMemo, resolveBoardMemo, settleExecBonus } from "./boardroom";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -157,6 +158,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
       return resolveIncident(state, p, choice);
     case "general":
       if (p.crossroads) return resolveCrossroadsMemo(state, m, choice);
+      if (p.board) return resolveBoardMemo(state, m, choice);
       if (p.franchise) return resolveFranchiseMemo(state, m, choice);
       if (p.takeover) return resolveTakeoverMemo(state, m, choice);
       if (p.succession) return resolveSuccessionMemo(state, m, choice);
@@ -444,9 +446,10 @@ function yearEnd(state: GameState, prev: number): void {
     const s = scores[role];
     const e = execRole(state, role);
     if (!s || !e) continue;
-    e.reviews.unshift({ year: prev, score: s.score, text: s.text });
+    const paid = settleExecBonus(state, role, s.score);
+    e.reviews.unshift({ year: prev, score: s.score, text: s.text + paid });
     e.reviews = e.reviews.slice(0, 10);
-    lines.push(`${EXEC_ROLES[role].label}, ${e.name}: ${s.score} (${s.text})`);
+    lines.push(`${EXEC_ROLES[role].label}, ${e.name}: ${s.score} (${s.text})${paid}`);
     if (!weakest || s.score < weakest.score) weakest = { role, score: s.score };
   }
   execsNewYear(state);
@@ -746,6 +749,7 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "incident") carryOut(state, m, m.recommend);
   if (m.kind === "general" && m.payload?.investors) lapseInvestorMemo(state, m);
   if (m.kind === "general" && m.payload?.crossroads) lapseCrossroads(state, m);
+  if (m.kind === "general" && m.payload?.board) lapseBoardMemo(state, m);
   if (m.kind === "general" && m.payload?.franchise) carryOut(state, m, 1);
   // Succession memos left unanswered: the heir goes on, a sale comes off the market, a family fight goes to court.
   const sp = m.kind === "general" ? m.payload?.succession : undefined;

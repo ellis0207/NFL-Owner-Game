@@ -55,11 +55,11 @@ export function partnerWants(state: GameState, p: Partner): Wants {
   return p.kind === "fund" ? (r < 0.6 ? "cash" : "value") : p.kind === "celebrity" ? (r < 0.7 ? "winning" : "cash") : r < 0.4 ? "winning" : r < 0.7 ? "value" : "cash";
 }
 
-const WANTS_WORD = { cash: "money back", winning: "winning", value: "what the club is worth" } as const;
+export const WANTS_WORD = { cash: "money back", winning: "winning", value: "what the club is worth" } as const;
 
 // ---- Voices ----
 
-function gmVoice(state: GameState): { who: string; name: string } {
+export function gmVoice(state: GameState): { who: string; name: string } {
   const g = teamStaff(state.userTeam).GM;
   return { who: g ? `${g.name}, general manager` : "The general manager", name: g?.name ?? "" };
 }
@@ -67,12 +67,12 @@ function hcVoice(state: GameState): { who: string; name: string; id?: string } {
   const h = teamStaff(state.userTeam).HC;
   return { who: h ? `${h.name}, head coach` : "The head coach", name: h?.name ?? "", id: h?.id };
 }
-function execVoice(state: GameState, role: ExecRole): { who: string; name: string } {
+export function execVoice(state: GameState, role: ExecRole): { who: string; name: string } {
   return { who: signer(state, role), name: execRole(state, role)?.name ?? "" };
 }
 
 /** The partners speak as one voice for the side most of their stake leans to; the loudest one is named. */
-function partnersVoice(state: GameState, sideFor: (w: Wants) => number, says: (lead: Partner) => string, ifOverruled: string): Voice | null {
+export function partnersVoice(state: GameState, sideFor: (w: Wants) => number, says: (lead: Partner) => string, ifOverruled: string): Voice | null {
   const ps = state.investors?.partners ?? [];
   if (!ps.length) return null;
   const weight: Record<number, number> = {};
@@ -373,6 +373,8 @@ export function settleVoices(state: GameState, m: Memo, choice: number): void {
 
 /** Which option a partner with these wants backs on this memo (the same mapping the voice used). */
 function partnerSide(m: Memo, w: Wants): number {
+  // A board meeting: the partners who asked back the pledge, the rest would rather hear a plan.
+  if (m.payload?.board) return w === m.payload.ask ? 0 : 1;
   const kind = m.payload?.crossroads as CrossKind;
   if (kind === "star") return w === "winning" ? 0 : w === "cash" ? 1 : 2;
   if (kind === "coach") return w === "winning" ? 0 : 1;

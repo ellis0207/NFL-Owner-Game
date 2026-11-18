@@ -26,6 +26,7 @@ import { ROLE_NAME, staff } from "../../engine/coaches";
 import { tip } from "../tip";
 import { DecisionQueue } from "./DecisionQueue";
 import { decisionQueue } from "../../engine/queue";
+import { openProblems } from "../../engine/problems";
 import { longDate } from "../../engine/dates";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
@@ -95,6 +96,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
       <div className="dk-brief">
       <div className="dk-main">
       {!hidden.includes("Decision queue") && <DecisionQueue game={game} changed={changed} go={go} />}
+      {!hidden.includes("Open problems") && <OpenProblems game={game} go={go} />}
       {(isSeasonOver(game) || summer) && (
         <section className="panel stack tight">
           <h2>Coming up</h2>
@@ -293,6 +295,30 @@ function CollegeToday({ game, go }: { game: GameState; go: (s: Screen) => void }
           <div className="scores">{shown.slice(0, 8).map((g) => <CollegeScore key={g.id} game={game} g={g} />)}</div>
         </>
       )}
+    </section>
+  );
+}
+
+const SEVERITY = ["", "Watch", "Serious", "Urgent"];
+
+/** What's wrong around the club and how long it has been wrong. */
+function OpenProblems({ game, go }: { game: GameState; go: (s: Screen, tab?: string) => void }) {
+  const list = openProblems(game);
+  if (!list.length) return null;
+  return (
+    <section className="panel stack tight dk-problems">
+      <h2>Open problems</h2>
+      {list.slice(0, 8).map((p) => {
+        const weeks = Math.floor((Date.parse(game.date) - Date.parse(p.since)) / (7 * 86400000));
+        return (
+          <div key={p.id} className={`dk-problem sev${p.severity}`}>
+            <span className={p.severity >= 3 ? "bad" : p.severity === 2 ? "warn" : "muted"}>{SEVERITY[p.severity]}</span>{" "}
+            <button className="link" onClick={() => go(p.link.screen as Screen, p.link.tab)}><strong>{p.title}</strong></button>
+            <span className="muted">{weeks >= 1 ? ` · for ${weeks} week${weeks === 1 ? "" : "s"}` : " · new"}</span>
+            <div className="muted">{p.detail}</div>
+          </div>
+        );
+      })}
     </section>
   );
 }
