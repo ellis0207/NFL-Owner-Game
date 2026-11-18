@@ -24,10 +24,10 @@ const TYPES: InjuryType[] = [
   { type: "Ankle sprain", days: [3, 14], weight: 13, practice: true },
   { type: "High ankle sprain", days: [18, 56], weight: 5 },
   { type: "Hamstring strain", days: [7, 42], weight: 12, practice: true },
-  { type: "Concussion", days: [5, 16], weight: 8 },
+  { type: "Concussion", days: [5, 16], weight: 9 },
   { type: "Knee sprain (MCL)", days: [14, 49], weight: 6 },
-  { type: "Torn ACL", days: [270, 330], weight: 2.2 },
-  { type: "Torn Achilles", days: [280, 340], weight: 1.1, practice: true },
+  { type: "Torn ACL", days: [270, 330], weight: 2.6 },
+  { type: "Torn Achilles", days: [280, 340], weight: 0.8, practice: true },
   { type: "Shoulder sprain", days: [5, 21], weight: 6 },
   { type: "Groin strain", days: [5, 21], weight: 5, practice: true },
   { type: "Calf strain", days: [7, 35], weight: 4, practice: true },
@@ -109,7 +109,8 @@ export function injure(state: GameState, id: string, team: string, rng: Rng, pra
   if (t.type === "Concussion" && concussionFactor(state, team) < 1 && rng() > concussionFactor(state, team)) t = TYPES.find((x) => x.type === "Neck stinger")!;
   const recovery = staffEffects(team).injuryRecovery;
   const age = ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26;
-  const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.15);
+  // Most injuries land near the short end of their range; the long, complicated cases are the exception.
+  const base = t.days[0] + (t.days[1] - t.days[0]) * Math.pow(rng(), 1.8);
   const days = Math.max(1, Math.round(base * (1.22 - recovery / 300) * (age >= 30 ? 1.1 : 1) * medical(state, team).days));
   const returnDate = addDays(state.date, days);
   const injury: Injury = {

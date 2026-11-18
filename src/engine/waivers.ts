@@ -107,28 +107,31 @@ function claimLimit(): number {
 function cpuWants(state: GameState, team: string, w: WaiverEntry): string | null | false {
   const id = w.player;
   const pos = PLAYER_BY_ID[id].position;
+  const rng = rngFor(state.seed, `claim:${team}:${id}:${state.date}`);
+  const marginRoll = rng();
+  const churnRoll = rng();
+  // Outside the cutdown, a front office rarely churns the bottom of its roster more than once a week.
+  // (Checked first: it's cheap, and most claims stop here.)
+  if (state.date !== KEY.cutdownWaiversExpire) {
+    if (churnRoll > 0.3) return false;
+    const since = addDays(state.date, -7);
+    if ((state.transactions ?? []).some((t) => t.team === team && t.kind === "claimed" && t.date > since)) return false;
+  } else if (churnRoll > 0.5) return false;
   const hit = dealCapHit(claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date));
   if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) return false;
   const view = claimView(state, team, id);
-  const full = rosterCount(state, team).roster >= rosterLimit(state);
-  const drop = weakestOnRoster(state, team, pos);
-  const atPos = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status)).length;
-  const worstAtPos = teamPlayerIds(state, team)
-    .filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status))
-    .reduce((m, x) => Math.min(m, claimView(state, team, x)), Infinity);
-  const rng = rngFor(state.seed, `claim:${team}:${id}:${state.date}`);
+  const atPosIds = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status));
+  const thin = atPosIds.length < 2 && view > 45;
   // Front offices with better scouts trust their own read more; the rest are cautious.
-  const margin = 4.5 + (60 - staffEffects(team).gmEval) / 15 + rng() * 2.5;
-  const upgrade = view - Math.min(worstAtPos, drop ? claimView(state, team, drop) : Infinity);
-  const thin = atPos < 2 && view > 45;
-  if (!(upgrade >= margin || thin)) return false;
-  // Outside the cutdown, a front office rarely churns the bottom of its roster more than once a week.
-  if (state.date !== KEY.cutdownWaiversExpire) {
-    const since = addDays(state.date, -7);
-    if ((state.transactions ?? []).some((t) => t.team === team && t.kind === "claimed" && t.date > since)) return false;
-    if (rng() > 0.3) return false;
-  } else if (rng() > 0.5) return false;
-  return full ? drop ?? false : null;
+  const margin = 4.5 + (60 - staffEffects(team).gmEval) / 15 + marginRoll * 2.5;
+  const worstAtPos = atPosIds.reduce((m, x) => Math.min(m, claimView(state, team, x)), Infinity);
+  if (!thin && view - worstAtPos < margin) {
+    // Not an upgrade on anyone at his position: only the roster's weakest player could make it one.
+    const drop = weakestOnRoster(state, team, pos);
+    if (!drop || view - claimView(state, team, drop) < margin) return false;
+  }
+  const full = rosterCount(state, team).roster >= rosterLimit(state);
+  return full ? weakestOnRoster(state, team, pos) ?? false : null;
 }
 
 // ---- Awarding claims ----

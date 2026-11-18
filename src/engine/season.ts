@@ -792,7 +792,7 @@ function practiceInjuries(state: GameState, playedToday: Set<string>, teams: str
   for (const team of teams) {
     if (!practices(state, team, playedToday)) continue;
     const rng = rngFor(state.seed, `practice:${state.date}:${team}`);
-    if (rng() > (camp ? 0.09 : 0.03)) continue;
+    if (rng() > (camp ? 0.22 : 0.09)) continue;
     const ids = Object.keys(state.players).filter((id) => {
       const p = state.players[id];
       return p.team === team && (p.status === "camp" || p.status === "active") && !p.injury;

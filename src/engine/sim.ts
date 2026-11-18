@@ -1038,7 +1038,7 @@ class GameSim {
 
     // Penalties before or instead of the play.
     if (this.penalty(o, d)) {
-      this.afterPlay(hurry ? 12 : milk ? Math.min(38, LEAGUE_RULES.playClock - 2) : 30 * (LEAGUE_RULES.playClock / 40), true);
+      this.afterPlay(hurry ? 12 : milk ? Math.min(38, LEAGUE_RULES.playClock - 2) : 30 * (1 - (1 - LEAGUE_RULES.playClock / 40) * 0.5), true);
       return;
     }
     if (this.down === 3) o.box.thirdAtt++;
@@ -1076,8 +1076,9 @@ class GameSim {
       return;
     }
     this.advance(o, d, outcome.yards, startDown, before);
-    // The play clock sets how long an offense can take between snaps.
-    const clockScale = LEAGUE_RULES.playClock / 40;
+    // The play clock sets how long an offense can take between snaps. Most snaps come with time to spare,
+    // so a shorter clock trims only part of the time between plays.
+    const clockScale = 1 - (1 - LEAGUE_RULES.playClock / 40) * 0.5;
     const runoff = outcome.clockStops ? 0 : hurry ? 12 : milk ? Math.min(38, LEAGUE_RULES.playClock - 2) : (29 + o.off.tempo) * clockScale;
     this.tick(outcome.playTime);
     this.afterPlay(runoff, outcome.clockStops);
@@ -1568,7 +1569,7 @@ class GameSim {
     const moment = bigMoment(this.q, this.clock, o.score - d.score, this.ot.active, this.game.type === "POST");
     const calm = moment ? poise(this.state, qb, o.plan?.quality ?? 0) : 0;
     const accuracy = (depth === "deep" ? 0.5 * tr(qb, "accuracy") + 0.5 * tr(qb, "arm") : tr(qb, "accuracy")) + calm * 4;
-    const baseComp = { screen: 0.88, short: 0.79, inter: 0.61, deep: 0.39 }[depth];
+    const baseComp = { screen: 0.9, short: 0.81, inter: 0.63, deep: 0.405 }[depth];
     // The field shrinks inside the twenty; the most accurate passers still find the small windows.
     const compressed = this.ydl >= 80 ? 0.11 - clamp((accuracy - 88) * 0.006, 0, 0.04) : 0;
     let pComp = baseComp - compressed - this.cond.comp[depth] + sep * 0.008 + (accuracy - 80) * 0.0045 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
@@ -1966,10 +1967,14 @@ class GameSim {
   // ---- Injuries ----
 
   maybeInjure(o: Team, d: Team, involved: (string | undefined)[], onField: (string | undefined)[]): void {
-    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.029 : 0.03)) return;
-    const pool = this.rng() < 0.6 ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
+    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.073 : 0.075)) return;
+    // About half the time it's someone in on the ball; otherwise anyone in the trenches or on the field.
+    const pool = this.rng() < 0.5 ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
     if (!pool.length) return;
     const id = pool[Math.floor(this.rng() * pool.length)];
+    // Quarterbacks are protected by the rules and mostly throw from a clean pocket: starters miss far fewer
+    // games than the men around them.
+    if (PLAYER_BY_ID[id]?.position === "QB" && this.rng() < 0.45) return;
     const team = this.isOn(o, id) ? o : d;
     if (this.rng() > Math.min(1, 0.75 * injuryRisk(this.state, id, team.id))) return;
     const { injury, days } = injure(this.state, id, team.id, this.rng);
