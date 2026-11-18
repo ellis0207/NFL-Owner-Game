@@ -25,7 +25,7 @@ for (let n = 0; n < seasons; n++) {
   const secs = (Date.now() - t0) / 1000;
   const year = leagueYear(state.date);
   const over = TEAMS.filter((t) => capSummary(state, t.id, year).space < 0).length;
-  const hc = (state.staff?.log ?? []).filter((l) => l.date.startsWith(String(season + 1)) || l.date.startsWith(String(season))).filter((l) => /fire/i.test(l.text) && /head coach/i.test(l.text)).length;
+  const hc = (state.staff?.log ?? []).filter((l) => l.date >= `${season}-03-01` && l.date < `${season + 1}-03-01`).filter((l) => /fire/i.test(l.text) && /head coach/i.test(l.text)).length;
   const trades = (state.trades?.log ?? []).filter((t) => leagueYear(t.date) === season).length;
   const qb = PLAYERS.filter((p) => p.position === "QB").map((p) => dealOf(state, p.id)?.apy ?? 0).sort((a, b) => b - a)[0] / salaryCap(state, year);
   const elite = Object.entries(state.players).filter(([id, p]) => p.team && trueValue(state, id, year) > salaryCap(state, year) * 0.08).length;

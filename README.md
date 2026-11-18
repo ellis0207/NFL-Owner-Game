@@ -89,7 +89,9 @@ Each team has its real 2026 head coach, coordinators, special teams coach and
 GM, running their real-life schemes. How well a player's traits fit those
 schemes changes how that player performs (in the engine, not on screen). Players back from a long injury often start
 slow for a few weeks, and a torn Achilles or ACL can take something away for
-good. Injured reserve follows the league's rules: four games minimum, eight
+good. Injuries come at about the league's rate (close to three per team per
+game, most of them short; a few starters on injured reserve by December).
+Injured reserve follows the league's rules: four games minimum, eight
 return designations a season per team, and a 21-day practice window to
 activate a player or lose him for the year. Players still hurt from before camp
 go on PUP or the non-football injury list, and coming back from those doesn't

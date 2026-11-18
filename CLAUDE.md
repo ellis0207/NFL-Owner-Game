@@ -175,7 +175,11 @@ already over 1,000 lines, put it in a new module instead.
 Calibration targets (what "healthy" looked like when each system shipped):
 
 - Season sim (`calibrate.ts`, `season.test.ts`): NFL-like scoring, home edge
-  and parity; upsets common.
+  and parity; upsets common. Injuries ~2.8 per team-game (`maybeInjure` in
+  sim.ts, practice odds in `practiceInjuries` in season.ts), ~7 per club on IR
+  at season end, starting QBs taking ~90% of their team's attempts; scoring
+  was retuned (`baseComp` in sim.ts) when injuries went up, so retune both
+  together. A voted 35-second play clock adds about 4% more plays.
 - Player stats (`stats-report.ts 3`, about 40 s a season; ranges in
   `tests/statspread.ts`, also judged by `balance-report.ts`, test
   `statspread.test.ts`): how totals split among players: ~25 1,000-yard

@@ -95,12 +95,14 @@ for (const seed of seeds) {
     const year = leagueYear(state.date);
     const cap = salaryCap(state, year);
     for (const v of invariants(state)) { errors.push(`${state.date} ${v.rule}: ${v.detail}`); firstBad ||= state.date; }
-    const hc = (state.staff?.log ?? []).filter((l) => (l.date.startsWith(String(season)) || l.date.startsWith(String(season + 1))) && /fire/i.test(l.text) && /head coach/i.test(l.text)).length;
+    // One season's firings: in-season ones from the fall, then Black Monday in January. A window of two
+    // calendar years would count each January twice, once for each season it touches.
+    const hc = (state.staff?.log ?? []).filter((l) => l.date >= `${season}-03-01` && l.date < `${season + 1}-03-01` && /fire/i.test(l.text) && /head coach/i.test(l.text)).length;
     const trades = (state.trades?.log ?? []).filter((t) => leagueYear(t.date) === season).length;
     const topQb = PLAYERS.filter((p) => p.position === "QB").map((p) => dealOf(state, p.id)?.apy ?? 0).sort((a, b) => b - a)[0] / cap;
     const elite = Object.entries(state.players).filter(([id, p]) => p.team && trueValue(state, id, year) > cap * 0.08).length;
     if (!elite0) elite0 = elite;
-    const relocations = (state.relocation?.moves ?? []).filter((m) => String((m as { date?: string }).date ?? "").startsWith(String(season + 1)) || String((m as { date?: string }).date ?? "").startsWith(String(season))).length;
+    const relocations = (state.relocation?.moves ?? []).filter((m) => { const d = String((m as { date?: string }).date ?? ""); return d >= `${season}-03-01` && d < `${season + 1}-03-01`; }).length;
     const cpuShort = Object.values(state.rivals?.clubs ?? {}).filter((c) => (c as { cash: number }).cash < 0).length;
     const packed = await compress(state);
     const kb = packed.length / 1024;
