@@ -441,6 +441,7 @@ function followUps(state: GameState): void {
     const v = verdict(state, o);
     if (!v) continue;
     o.verdict = v.text;
+    o.right = v.right;
     const right = o.sides.filter((s) => s.side === v.right);
     const proven = right.filter((s) => s.side !== o.choice);
     let body = `A season ago you chose to ${o.label.toLowerCase()} (${shortDate(o.date)}). ${v.text}`;

@@ -8,7 +8,7 @@ export const NAV = [
   { id: "draft", label: "Draft", pages: ["College", "Scouting", "Draft"] },
   { id: "office", label: "Owner's office", pages: ["Owner", "Ownership", "Front office", "Business", "Reports", "Agreements", "Legal"] },
   { id: "league", label: "League", pages: ["Standings", "League", "Owners", "History"] },
-  { id: "game", label: "Game", pages: ["Settings", "Guide", "Save"] },
+  { id: "game", label: "Game", pages: ["Settings", "Guide", "Achievements", "Save"] },
 ] as const;
 
 export type Screen = (typeof NAV)[number]["pages"][number];
@@ -57,6 +57,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   History: "Seasons, records, the Hall of Fame, the club's owners and the rule archive",
   Settings: "Play and display settings, alternate history and league packs",
   Guide: "How the rules and the money work",
+  Achievements: "Milestones earned in this save",
   Save: "Save, load and quit",
 };
 

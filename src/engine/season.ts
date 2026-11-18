@@ -27,6 +27,7 @@ import { ensureExecs } from "./executives";
 import { officeDaily } from "./memos";
 import { crossroadsDaily } from "./crossroads";
 import { boardroomDaily } from "./boardroom";
+import { achievementsDaily } from "./achievements";
 import { problemsDaily } from "./problems";
 import { leagueYear } from "./contracts";
 import { DEFAULT_SETUP, setupOwner, type OwnerSetup } from "./ownership";
@@ -670,6 +671,7 @@ export function advanceDay(state: GameState): void {
   mediaDaily(state);
   reviewDaily(state);
   pressDaily(state);
+  achievementsDaily(state);
 
   state.date = addDays(date, 1);
   // The day after the draft the league moves on to the next season.

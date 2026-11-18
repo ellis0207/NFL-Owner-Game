@@ -14,10 +14,12 @@ export interface Prefs {
   theme: "auto" | "light" | "dark";
   /** The Roster page as the depth-chart board or the full table. */
   rosterView: "board" | "table";
+  /** Pages pinned to the top of the sidebar, in the order they were pinned. */
+  pinned: string[];
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board" };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board", pinned: [] };
 
 export function readPrefs(): Prefs {
   try {
