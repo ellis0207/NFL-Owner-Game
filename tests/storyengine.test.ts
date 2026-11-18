@@ -325,7 +325,9 @@ describe("the story engine", () => {
     expect(mediaState(state).stories.filter((s) => s.type?.startsWith("arc.")).length).toBeGreaterThan(20);
     // The calendar's stories: ladders, the playoff picture, the deadline, retrospectives and more.
     const season = new Set(mediaState(state).stories.filter((s) => s.type?.startsWith("season.")).map((s) => s.type!.split("/")[0]));
-    for (const k of ["playoffs", "retro"]) expect(season.has(`season.${k}`), [...season].join(",")).toBe(true);
+    expect(season.has("season.retro"), [...season].join(",")).toBe(true);
+    // The playoff picture: the race itself, or our club clinching or falling out of it.
+    expect(["playoffs", "clinch", "eliminated"].some((k) => season.has(`season.${k}`)), [...season].join(",")).toBe(true);
     // Stories older than the kept window survive only when they're about our club, so the weekly
     // award ladders show up in the saved stories only when one of ours leads a race; the races themselves always ran.
     expect(season.has("season.award") || Object.keys(narrState(state).ladder).length === 5, [...season].join(",")).toBe(true);

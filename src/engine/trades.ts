@@ -1225,6 +1225,65 @@ function cpuTry(state: GameState, rng: () => number): TradeRecord | null {
   return completeTrade(state, best.deal);
 }
 
+/**
+ * A player-for-player swap: each team sends one where it has depth or a spare
+ * piece and gets one where it is thin, so both come out ahead on what they
+ * see. Teams[0] is the team making the call. A pick may even it out. Null when
+ * no pair works for both front offices.
+ */
+export function swapDeal(state: GameState, a: string, b: string, rng: () => number): TradeDeal | null {
+  const date = officialDate(state);
+  const movable = (team: string, to: string) => teamPlayerIds(state, team).filter((id) => {
+    const ps = state.players[id];
+    if (!["camp", "active"].includes(ps.status) || ps.injury) return false;
+    if (!canTradePlayer(state, id, to).ok || hasNoTradeClause(id, state)) return false;
+    // The owner's players are fair to ask about; CPU teams keep their cornerstones and fresh picks.
+    if (team !== state.userTeam && (justArrived(state, id) || freshDraftee(state, id) || cornerstone(state, team, id))) return false;
+    return true;
+  });
+  // Each side's best candidates: worth more to the other team than to his own.
+  const side = (from: string, to: string) => movable(from, to)
+    .map((id) => {
+      const own = playerValue(state, "gm", from, id, { date }).points;
+      const other = playerValue(state, "gm", to, id, { date }).points;
+      return { id, own, other, pos: PLAYER_BY_ID[id].position };
+    })
+    .filter((x) => x.other >= 15 && x.other > x.own)
+    .sort((x, y) => (y.other - y.own) - (x.other - x.own))
+    .slice(0, 6);
+  const fromA = side(a, b), fromB = side(b, a);
+  let best: { deal: TradeDeal; score: number } | null = null;
+  for (const x of fromA) for (const y of fromB) {
+    if (x.pos === y.pos) continue;
+    // Close in size: a swap, not a star for a backup.
+    if (Math.min(x.other, y.other) < 0.55 * Math.max(x.other, y.other)) continue;
+    const base: TradeDeal = { teams: [a, b], send: [[{ kind: "player", id: x.id }], [{ kind: "player", id: y.id }]] };
+    if (!checkTrade(state, base).ok) continue;
+    const ga = tradeBalance(state, "gm", base, 0), gb = tradeBalance(state, "gm", base, 1);
+    const score = Math.min(ga.gain - margin(a, ga.outValue) * 0.8, gb.gain) + rng() * 4;
+    if (!best || score > best.score) best = { deal: base, score };
+  }
+  if (!best) return null;
+  let deal = best.deal;
+  const ga = tradeBalance(state, "gm", deal, 0), gb = tradeBalance(state, "gm", deal, 1);
+  const needA = margin(a, ga.outValue) * 0.8;
+  const needB = b === state.userTeam ? 0 : margin(b, gb.outValue) * 0.5;
+  if (ga.gain < needA) {
+    // The caller asks for a pick or a spare part on top.
+    if (gb.gain - (needA - ga.gain) < 0) return null;
+    deal = completeDeal(state, deal, 0, needA - ga.gain, gb.gain) ?? deal;
+    if (deal === best.deal) return null;
+  } else if (gb.gain < needB) {
+    // The caller sweetens it, as long as it still comes out ahead.
+    deal = completeDeal(state, deal, 1, needB - gb.gain + 2, ga.gain - needA) ?? deal;
+    if (deal === best.deal) return null;
+  }
+  // Another club's GM wants a little something for his trouble; the owner judges for themselves.
+  if (b !== state.userTeam && tradeBalance(state, "gm", deal, 1).gain < needB) return null;
+  if (!looksSane(state, deal)) return null;
+  return deal;
+}
+
 /** Unhappy starters ask out, and the word gets around. */
 function tradeRequests(state: GameState): void {
   if (!tradeWindow(state).open && !isOffseason(state.date)) return;
@@ -1312,6 +1371,15 @@ function callsToOwner(state: GameState): void {
       if (deal) make(deal, `The ${teamLabel(seller)} are shopping ${PLAYER_BY_ID[pick.id].name} and think we'd be a fit.`);
     }
   }
+  // A swap: one of theirs where we're thin for one of ours where they are.
+  if (rng() < 0.06 * busy) {
+    const team = cpu[Math.floor(rng() * cpu.length)];
+    const deal = swapDeal(state, team, us, rng);
+    if (deal) {
+      const theirs = PLAYER_BY_ID[playersIn(deal.send[0])[0]], ours = PLAYER_BY_ID[playersIn(deal.send[1])[0]];
+      make(deal, `The ${teamLabel(team)} proposed a swap: ${theirs.position} ${theirs.name} for our ${ours.position} ${ours.name}.`);
+    }
+  }
 }
 
 /** Everything trade-related for one day, after the day's other business. */
@@ -1328,6 +1396,13 @@ export function tradesDaily(state: GameState): void {
     // Each try lands about a third of the time.
     const tries = Math.floor(rate * 3) + (rng() < (rate * 3) % 1 ? 1 : 0);
     for (let i = 0; i < tries; i++) cpuTry(state, rng);
+    // Now and then two clubs swap players instead of trading for picks.
+    if (rng() < rate * 0.25) {
+      const cpu = TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam);
+      const a = cpu[Math.floor(rng() * cpu.length)], b = cpu[Math.floor(rng() * cpu.length)];
+      const deal = a !== b ? swapDeal(state, a, b, rng) : null;
+      if (deal && checkTrade(state, deal).ok && playersIn(deal.send[0]).every((id) => waivesNoTrade(state, id, b)) && playersIn(deal.send[1]).every((id) => waivesNoTrade(state, id, a))) completeTrade(state, deal);
+    }
   }
   if (state.date === KEY.tradeDeadline) {
     const week = ts.log.filter((t) => t.status === "done" && daysBetween(t.date, state.date) <= 7).length;

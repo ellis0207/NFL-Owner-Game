@@ -633,7 +633,8 @@ export function manageInjuredReserve(state: GameState, team: string): RosterMove
 }
 
 /** The least valuable healthy player on the 53, preferring the returning player's position. */
-function weakestCuttable(state: GameState, team: string, pos: Position): string | undefined {
+/** `short`: the team is short at pos, so cutting a healthy player there would only undo the signing. */
+function weakestCuttable(state: GameState, team: string, pos: Position, short = false): string | undefined {
   // Suspended players are off the count: cutting one opens no spot.
   const active = teamPlayerIds(state, team).filter((id) => state.players[id].status === "active" && !offTheCount(state, id));
   if (active.length < RULES.rosterLimits.regularSeason) return undefined;
@@ -642,6 +643,7 @@ function weakestCuttable(state: GameState, team: string, pos: Position): string 
   const cuttable = active.filter((id) => {
     const ppos = PLAYER_BY_ID[id].position;
     const keep = state.players[id].keepUntil;
+    if (short && ppos === pos) return false;
     return !isHurt(state, id) && !(keep && keep > state.date) && (ppos === pos || (counts[ppos] ?? 0) > (MIN_ON_53[ppos] ?? 0));
   });
   cuttable.sort((a, b) => keepValue(state, team, a) - keepValue(state, team, b));
@@ -663,7 +665,7 @@ export function fillEmergencies(state: GameState, team: string): RosterMove[] {
   for (const [pos, min] of Object.entries(need) as [Position, number][]) {
     let have = healthy[pos] ?? 0;
     while (have < min) {
-      const cutId = rosterCount(state, team).roster >= RULES.rosterLimits.regularSeason ? weakestCuttable(state, team, pos) : null;
+      const cutId = rosterCount(state, team).roster >= RULES.rosterLimits.regularSeason ? weakestCuttable(state, team, pos, true) : null;
       if (cutId === undefined) break;
       if (cutId) releasePlayer(state, cutId);
       const move = signReplacement(state, team, pos);

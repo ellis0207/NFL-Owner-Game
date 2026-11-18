@@ -5,7 +5,7 @@ import { PLAYER_BY_ID, RULES, TEAMS } from "../src/engine/league";
 import { releasePlayer, rosterCount, rosterLimit, weakestOnRoster } from "../src/engine/roster";
 import { advanceDay, newGame } from "../src/engine/season";
 import {
-  askPrice, canTradePlayer, checkTrade, completeTrade, counterProblem, cpuAnswer, trades, lockMatchedSheet, pickId, pickOwner, picksOf, playerValue, proposeTrade, tradeWindow,
+  askPrice, canTradePlayer, checkTrade, completeTrade, counterProblem, cpuAnswer, trades, lockMatchedSheet, pickId, pickOwner, picksOf, playerValue, proposeTrade, swapDeal, tradeBalance, tradeWindow,
 } from "../src/engine/trades";
 import type { GameState, TradeAsset, TradeDeal } from "../src/engine/types";
 import { stateAt } from "./fixtures";
@@ -204,5 +204,22 @@ describe("counter-offers", () => {
         expect(state.players[theirs[0]].team).toBe(US);
       }
     }
+  });
+});
+
+describe("player swaps", () => {
+  it("CPU teams offer one of their players for one of ours, and both sides gain by their own read", () => {
+    const state = stateAt(US, 5, "tradeDeadline");
+    let found = 0;
+    for (const t of TEAMS.map((x) => x.id).filter((x) => x !== US)) {
+      const deal = swapDeal(state, t, US, () => 0.5);
+      if (!deal) continue;
+      found++;
+      expect(deal.send[0].some((a) => a.kind === "player")).toBe(true);
+      expect(deal.send[1].some((a) => a.kind === "player")).toBe(true);
+      expect(checkTrade(state, deal).ok).toBe(true);
+      expect(tradeBalance(state, "gm", deal, 0).gain).toBeGreaterThan(0);
+    }
+    expect(found).toBeGreaterThan(3);
   });
 });

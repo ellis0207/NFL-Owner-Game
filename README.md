@@ -169,7 +169,10 @@ league year opens. Teams trade players and picks in the next three drafts
 condition: it moves up a round if the player traded plays half the snaps, reaches a stat
 mark or is extended, or if the team makes the playoffs, and a 1st can be top-3, 5 or 10
 protected (next year's 1st goes instead). Conditions settle the day after the Super Bowl,
-at the new league year for extensions, or when the draft order is set for protection. The
+at the new league year for extensions, or when the draft order is set for protection.
+Clubs also swap players: a team thin at one spot calls with a player from a spot where it
+has depth, both sides coming out ahead by their own read, sometimes with a pick to even it
+out. The owner gets these calls too, on the Trades page under Offers. The
 team that acquires a player takes on the rest of his salary and its
 guarantees for the weeks left; his signing bonus stays behind, with later
 years' proration accelerating as dead money (onto next year after June 1).
