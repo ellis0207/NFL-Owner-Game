@@ -49,7 +49,14 @@ arrive. It's the same model the gate uses. Parking pays only for cars in lots
 we own or lease, at our share, so independent lots help fans get in but earn
 nothing. Building a garage, leasing a lot or rebuilding seats as clubs (with
 the section closed while the work goes on) changes the drawing and the next
-home game's money together.
+home game's money together. The land belongs to the building, so a move, a
+new stadium or a historical start reads the right site, and what was added at
+an old home stays there. Only about a third of the nearby lots are for lease,
+with rents rising as they run out; garages and club seats take a 25% deposit
+and monthly payments until they open.
+
+If a step fails, the game puts back the copy taken just before it, so nothing
+is left half done.
 
 Players' skills age at their own pace. Speed, quickness and burst peak in
 the mid twenties and slip first; strength and arm hold a few years longer;

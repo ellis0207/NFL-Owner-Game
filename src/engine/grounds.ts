@@ -11,10 +11,10 @@
 // rough estimates for each real stadium; lot layouts are made up.
 import { cashBalance, inflation, post } from "./business";
 import { constructionFactor } from "./economy";
-import { addDays, shortDate } from "./dates";
+import { addDays, daysBetween, shortDate } from "./dates";
 import { nextId } from "./ids";
 import { RULES } from "./league";
-import { controlOf, MARKETS, STADIUM_BY_TEAM } from "./stadiums";
+import { controlOf, MARKETS, STADIUM_BY_TEAM, STADIUMS } from "./stadiums";
 import { rngFor } from "./rng";
 import type { GameState, GroundsState } from "./types";
 
@@ -76,6 +76,8 @@ export interface GroundsModel {
   upkeep: number;
   /** Construction and leases under way, in words. */
   notes: string[];
+  /** Spaces in the nearby lots still free to lease. */
+  leasable: number;
 }
 
 /** Rough site facts for each stadium: how central it is, the land the club controls, and how many fans arrive without a car. */
@@ -93,8 +95,68 @@ const SITES: Record<string, { site: SiteKind; acres: number; transit: number }> 
   SF: { site: "suburban", acres: 70, transit: 0.3 }, SEA: { site: "downtown", acres: 35, transit: 0.45 },
 };
 
+export interface SiteFacts { site: SiteKind; acres: number; transit: number }
+
+/** The 2026 buildings by name, read before any save renames them: land belongs to the building, not the club that plays in it. */
+const BY_BUILDING: Record<string, SiteFacts> = Object.fromEntries(STADIUMS.map((s) => [s.name, SITES[s.team]]).filter(([, x]) => x));
+
+/** Older homes a historical start can play in (rough estimates, like the table above). */
+const OLD_BUILDINGS: Record<string, SiteFacts> = {
+  "Edward Jones Dome": { site: "downtown", acres: 25, transit: 0.25 },
+  "Qualcomm Stadium": { site: "urban", acres: 166, transit: 0.15 },
+  "Oakland Coliseum": { site: "urban", acres: 120, transit: 0.3 },
+  "Los Angeles Memorial Coliseum": { site: "urban", acres: 60, transit: 0.2 },
+  "Dignity Health Sports Park": { site: "suburban", acres: 85, transit: 0.05 },
+  "StubHub Center": { site: "suburban", acres: 85, transit: 0.05 },
+  "Georgia Dome": { site: "downtown", acres: 40, transit: 0.35 },
+  "Mall of America Field": { site: "downtown", acres: 20, transit: 0.35 },
+  "TCF Bank Stadium": { site: "urban", acres: 25, transit: 0.4 },
+  "Candlestick Park": { site: "urban", acres: 77, transit: 0.1 },
+};
+
+/** A building nobody has measured (a club's stopgap home after a move): an ordinary city stadium. */
+const UNKNOWN_SITE: SiteFacts = { site: "urban", acres: 70, transit: 0.15 };
+
+/**
+ * The land around the building a club plays in today. A stadium the owner
+ * built carries the site picked for it; a known building has its own facts;
+ * a club that hasn't moved keeps its city's 2026 site when its building is
+ * new to us (a CPU club's new stadium goes up near the old one).
+ */
+export function siteOf(state: GameState, team: string): SiteFacts {
+  const s = STADIUM_BY_TEAM[team];
+  const built = state.construction?.opened.find((x) => x.team === team && x.name === s.name);
+  if (built?.land) return built.land;
+  const known = BY_BUILDING[s.name] ?? OLD_BUILDINGS[s.name];
+  if (known) return known;
+  const moved = state.relocation?.moves.some((m) => m.team === team);
+  return (!moved && SITES[team]) || UNKNOWN_SITE;
+}
+
+/** The site facts a new stadium's chosen site gives it (construction.ts): `transit` and `parking` are the site study's 0-1 scores. */
+export function landForSite(state: GameState, team: string, kind: "current" | "downtown" | "suburb" | "rival", transit: number, parking: number): SiteFacts {
+  if (kind === "current") return { ...siteOf(state, team) };
+  const site: SiteKind = kind === "downtown" ? "downtown" : "suburban";
+  const acres = Math.round(kind === "downtown" ? 25 + parking * 40 : 110 + parking * 100);
+  return { site, acres, transit: Math.round(transit * 0.45 * 100) / 100 };
+}
+
+/** Nearby lots the club could lease: about a third of the independent spaces, the rest are tied up in other uses. */
+const LEASABLE = 0.35;
+
 export function grounds(state: GameState): GroundsState {
-  return (state.grounds ??= { garages: [], leases: [], premium: [] });
+  const g = (state.grounds ??= { garages: [], leases: [], premium: [] });
+  // Older saves didn't record the building; what's there now was built at today's.
+  const here = STADIUM_BY_TEAM[state.userTeam]?.name;
+  for (const x of [...g.garages, ...g.leases, ...g.premium]) x.at ??= here;
+  return g;
+}
+
+/** What the owner added at the building the club plays in on a date: garages, lots and club seats at an old home stay behind. */
+function addedHere(state: GameState): GroundsState {
+  const g = grounds(state);
+  const here = STADIUM_BY_TEAM[state.userTeam].name;
+  return { garages: g.garages.filter((x) => x.at === here), leases: g.leases.filter((x) => x.at === here), premium: g.premium.filter((x) => x.at === here) };
 }
 
 /** The stadium's footprint takes about 20 acres; the rest of the club's land is parking or open. */
@@ -103,10 +165,10 @@ const FOOTPRINT = 20;
 /** The stadium and its grounds as they stand on a date (today by default). */
 export function groundsModel(state: GameState, date = state.date, team = state.userTeam): GroundsModel {
   const s = STADIUM_BY_TEAM[team];
-  const site = SITES[team] ?? { site: "urban" as SiteKind, acres: 80, transit: 0.15 };
+  const site = siteOf(state, team);
   const ctrl = controlOf(s);
   const ours = team === state.userTeam;
-  const g = ours ? grounds(state) : { garages: [], leases: [], premium: [] };
+  const g = ours ? addedHere(state) : { garages: [], leases: [], premium: [] };
   const r = rngFor(1, `grounds:${team}`);
   const proj = ours ? (state.business?.projects ?? []) : [];
   const clubsProject = proj.find((p) => p.id === "clubs");
@@ -156,6 +218,7 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
     if (!open) notes.push(`The parking garage project opens ${shortDate(parkingProject.opens)}.`);
   }
   for (const x of g.garages) lots.push({ id: x.id, name: "New garage", kind: "garage", spaces: x.spaces, control: "owned", share: 1, acres: x.acres, walk: 4, opens: x.opens > date ? x.opens : undefined });
+  const leasedSpaces = g.leases.filter((x) => x.through >= RULES.season).reduce((t, x) => t + x.spaces, 0);
   for (const x of g.leases) if (x.through >= RULES.season) lots.push({ id: x.id, name: x.name, kind: "surface", spaces: x.spaces, control: "leased", share: 1, acres: Math.round(x.spaces / PER_ACRE), walk: 15 });
   // Lots nobody at the club runs: city garages downtown, private lots and lawns out by the highway.
   // A stadium that's open today gets its crowd parked, so between them they hold about a sellout's cars.
@@ -164,7 +227,8 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
   const sellout = (s.capacity * 0.95 / PER_CAR) * (driveShare / 0.8);
   const baseClub = lots.filter((l) => !l.id.startsWith("garage") && !l.id.startsWith("lease") && l.id !== "project-garage").reduce((t, l) => t + l.spaces, 0);
   const nearby = Math.max(site.site === "downtown" ? 9000 + r() * 6000 : site.site === "urban" ? 4000 + r() * 3000 : 1500 + r() * 1500, (sellout - baseClub) * (1.02 + r() * 0.05));
-  lots.push({ id: "independent", name: site.site === "downtown" ? "City and private garages nearby" : "Private lots nearby", kind: site.site === "downtown" ? "garage" : "surface", spaces: Math.round(nearby), control: "independent", share: 0, acres: 0, walk: site.site === "downtown" ? 12 : 20 });
+  // The lots we lease are some of those same nearby lots, so they come out of the independent count.
+  lots.push({ id: "independent", name: site.site === "downtown" ? "City and private garages nearby" : "Private lots nearby", kind: site.site === "downtown" ? "garage" : "surface", spaces: Math.max(0, Math.round(nearby - leasedSpaces)), control: "independent", share: 0, acres: 0, walk: site.site === "downtown" ? 12 : 20 });
   // ---- How fans arrive ----
   const transit = transitShare;
   const modes = { transit, walk: walkShare, rideshare: 0.07 + (site.site === "suburban" ? 0 : 0.03), drive: driveShare };
@@ -177,6 +241,7 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
   return {
     team, stadium: s.name, site: site.site, acres: site.acres, freeAcres: Math.round(free * 10) / 10,
     transit, modes, sections, lots, capacity, upkeep: Math.round(garageUpkeep + leaseRent + premiumUpkeep), notes,
+    leasable: Math.max(0, Math.round(nearby * LEASABLE - leasedSpaces)),
   };
 }
 
@@ -211,7 +276,8 @@ export function parkingDay(m: GroundsModel, attendance: number, basePrice: numbe
   const clubLots = open.filter((l) => l.control !== "independent").sort((a, b) => a.walk - b.walk);
   const indep = open.filter((l) => l.control === "independent").reduce((t, l) => t + l.spaces, 0);
   // Pricier club parking pushes drivers elsewhere.
-  let toClub = want * Math.pow(priceMult, -0.6);
+  // A discount draws drivers from the independent lots, but never more cars than came.
+  let toClub = Math.min(want, want * Math.pow(priceMult, -0.6));
   let club = 0, revenue = 0;
   for (const l of clubLots) {
     const n = Math.min(l.spaces, toClub);
@@ -254,6 +320,9 @@ function opensFor(date: string): string {
   return buildSeason(date) || date.slice(5) < "02-01" ? `${y}-08-01` : `${y + 1}-08-01`;
 }
 
+/** Share of a build paid when the contract is signed; the rest is paid monthly until it opens. */
+export const DEPOSIT = 0.25;
+
 export function garageCost(state: GameState, spaces: number): number {
   return Math.round(spaces * 28_000 * constructionFactor(state) * inflation(Number(state.date.slice(0, 4)), 0.04));
 }
@@ -267,24 +336,32 @@ export function buildGarage(state: GameState, spaces: number): string | null {
   const surface = m.lots.find((l) => l.id === "main");
   if (!surface || surface.acres < acres) return `A ${spaces.toLocaleString("en-US")}-space garage needs ${acres} acres of our surface lots; we have ${surface?.acres ?? 0}.`;
   const cost = garageCost(state, spaces);
-  if (cashBalance(state) < cost * 0.25) return "We don't have the cash for the deposit.";
+  const deposit = Math.round(cost * DEPOSIT);
+  if (cashBalance(state) < deposit) return `We don't have the cash for the ${Math.round(DEPOSIT * 100)}% deposit (${(deposit / 1e6).toFixed(1)} million).`;
   const opens = opensFor(state.date);
   const g = grounds(state);
-  g.garages.push({ id: nextId(state, "garage"), spaces, acres, cost, started: state.date, opens });
-  post(state, "projects", -cost, `Parking garage, ${spaces.toLocaleString("en-US")} spaces`);
+  g.garages.push({ id: nextId(state, "garage"), spaces, acres, cost, started: state.date, opens, paid: deposit, at: STADIUM_BY_TEAM[state.userTeam].name });
+  post(state, "projects", -deposit, `Parking garage, ${spaces.toLocaleString("en-US")} spaces: deposit`);
   return null;
 }
 
 /** Lease a nearby lot for the season: the club runs it and keeps the money, for a yearly rent. */
 /** A season's rent for a nearby lot, by its spaces and what parking fetches in the market. */
 export function leaseCost(state: GameState, spaces: number): number {
-  return Math.round(spaces * 95 * (MARKETS[state.userTeam].parking / 40) * inflation(RULES.season, 0.03));
+  // Landlords raise the rent as the free lots run out: up to half again for the last ones.
+  const m = groundsModel(state);
+  const pool = m.leasable + addedHere(state).leases.filter((x) => x.through >= RULES.season).reduce((t, x) => t + x.spaces, 0);
+  const taken = 1 - (m.leasable - spaces / 2) / Math.max(1, pool);
+  return Math.round(spaces * 95 * (MARKETS[state.userTeam].parking / 40) * inflation(RULES.season, 0.03) * (1 + 0.5 * Math.max(0, Math.min(1, taken))));
 }
 
 export function leaseLot(state: GameState, spaces: number): string | null {
+  const m = groundsModel(state);
+  if (spaces > m.leasable) return m.leasable < 100 ? "Every nearby lot that's for lease is already ours." : `Only about ${m.leasable.toLocaleString("en-US")} spaces nearby are free to lease.`;
   const rent = leaseCost(state, spaces);
+  if (cashBalance(state) < rent / 4) return "We don't have the cash for the first quarter's rent.";
   const g = grounds(state);
-  g.leases.push({ id: nextId(state, "lease"), name: `Leased lot (${spaces.toLocaleString("en-US")} spaces)`, spaces, rent, through: RULES.season + 2 });
+  g.leases.push({ id: nextId(state, "lease"), name: `Leased lot (${spaces.toLocaleString("en-US")} spaces)`, spaces, rent, through: RULES.season + 2, at: STADIUM_BY_TEAM[state.userTeam].name });
   return null;
 }
 
@@ -305,21 +382,32 @@ export function convertToPremium(state: GameState, seats: number, phased: boolea
   const lower = m.sections.find((x) => x.id === "lower")!;
   if (seats > lower.seats * 0.3) return "That's more of the lower bowl than a conversion can take at once.";
   const cost = premiumCost(state, seats);
-  if (cashBalance(state) < cost * 0.25) return "We don't have the cash for the deposit.";
+  const deposit = Math.round(cost * DEPOSIT);
+  if (cashBalance(state) < deposit) return `We don't have the cash for the ${Math.round(DEPOSIT * 100)}% deposit (${(deposit / 1e6).toFixed(1)} million).`;
   const now = buildSeason(state.date);
   const started = now || phased ? state.date : `${Number(state.date.slice(0, 4)) + (state.date.slice(5) < "02-01" ? 0 : 1)}-02-01`;
   // A phased job on one section takes about five months with the section shut.
   const opens = now ? `${state.date.slice(0, 4)}-08-01` : phased ? addDays(state.date, 150) : `${started.slice(0, 4)}-08-01`;
   const g = grounds(state);
-  g.premium.push({ id: nextId(state, "clubseats"), seats, cost, started, opens, phased: !now && phased });
-  post(state, "projects", -cost, `Club seat conversion, ${seats.toLocaleString("en-US")} seats`);
+  g.premium.push({ id: nextId(state, "clubseats"), seats, cost, started, opens, phased: !now && phased, paid: deposit, at: s.name });
+  post(state, "projects", -deposit, `Club seat conversion, ${seats.toLocaleString("en-US")} seats: deposit`);
   return null;
 }
 
 /** Monthly: upkeep of what the owner added, and each lease's rent at the start of a quarter. */
 export function groundsDaily(state: GameState): void {
-  const g = state.grounds;
-  if (!g || state.date.slice(8) !== "01") return;
+  if (!state.grounds) return;
+  const g = addedHere(state);
+  // Builds under way: the balance after the deposit is paid in equal monthly parts, the last on opening day.
+  for (const x of [...g.garages, ...g.premium]) {
+    const paid = x.paid ?? x.cost;
+    if (paid >= x.cost || (state.date.slice(8) !== "01" && state.date !== x.opens)) continue;
+    const months = state.date >= x.opens ? 1 : Math.max(1, Math.ceil(daysBetween(state.date, x.opens) / 30.4));
+    const pay = Math.round((x.cost - paid) / months);
+    x.paid = paid + pay;
+    post(state, "projects", -pay, "seats" in x ? `Club seat conversion, ${x.seats.toLocaleString("en-US")} seats: progress payment` : `Parking garage, ${x.spaces.toLocaleString("en-US")} spaces: progress payment`);
+  }
+  if (state.date.slice(8) !== "01") return;
   const live = g.leases.filter((x) => x.through >= RULES.season);
   const upkeep = groundsModel(state).upkeep - live.reduce((t, x) => t + x.rent, 0);
   if (upkeep > 0) post(state, "stadium", -upkeep / 12, "Upkeep: garages and club areas we added");

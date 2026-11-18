@@ -56,6 +56,8 @@ import { ReportsScreen } from "./screens/ReportsScreen";
 import { UiContext, wantTab } from "./ui";
 import { TipLayer } from "./TipLayer";
 import { FailurePanel, PageBoundary, SaveIndicator, type ActionFailure } from "./SaveGuard";
+import { restore } from "../engine/archive";
+import { migrate } from "../save/codec";
 import { holdAutosave } from "../save/local";
 import { decisionQueue } from "../engine/queue";
 import { tip } from "./tip";
@@ -183,9 +185,10 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const running = useRef(false);
 
   /**
-   * Run a simulation step. Whatever happens the controls come back: an error
-   * stops the step where it was, holds autosave so the last good save is kept,
-   * and shows what the owner can do next.
+   * Run a simulation step. Whatever happens the controls come back. The step
+   * either finishes or is undone: if it throws, a copy of the game taken
+   * before it is put back and run through the save loader. Only when no copy could be taken is autosave held, so the
+   * last good save is kept, and the owner picks what happens next.
    */
   function step(fn: (s: GameState) => void) {
     if (running.current) return;
@@ -193,12 +196,30 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
     setBusy(true);
     // Let the button state paint before the simulation runs.
     window.setTimeout(() => {
+      let before: GameState | null = null;
+      try {
+        before = structuredClone(game);
+      } catch {
+        before = null;
+      }
       try {
         fn(game);
       } catch (e) {
         console.error(e);
-        holdAutosave("A simulation step failed; the last good save is kept until you choose what to do.");
-        setFailure({ message: e instanceof Error ? e.message : String(e), date: longDate(game.date) });
+        const date = longDate((before ?? game).date);
+        let undone = false;
+        if (before) {
+          try {
+            // Back into the same object, then through the save loader so every season binding is redone.
+            restore(game, before);
+            migrate(game);
+            undone = true;
+          } catch (e2) {
+            console.error(e2);
+          }
+        }
+        if (!undone) holdAutosave("A simulation step failed; the last good save is kept until you choose what to do.");
+        setFailure({ message: e instanceof Error ? e.message : String(e), date, undone });
       } finally {
         running.current = false;
         changed();
