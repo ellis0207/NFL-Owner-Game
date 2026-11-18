@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
 import { advanceDay, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent, simToNextGame } from "../src/engine/season";
 import { stateAt } from "./fixtures";
+import { clearStaffCaches } from "../src/engine/staff";
 
 const opener = SCHEDULE.find((g) => g.type === "REG" && (g.home === "DET" || g.away === "DET"))!;
 
@@ -24,12 +25,16 @@ describe("today's events", () => {
   });
 
   it("plays out the same whether the owner runs each event or the staff sims the day", () => {
+    // One game at a time: the staff caches live at module level, so two saves played side by side in one
+    // process would read each other's scheme fits (a real session only ever holds one).
+    clearStaffCaches();
     const a = newGame("DET", "Owner", { capRules: "real" }, 11);
+    while (a.date <= opener.date) advanceDay(a);
+    clearStaffCaches();
     const b = newGame("DET", "Owner", { capRules: "real" }, 11);
     let held = 0;
-    while (a.date <= opener.date) {
+    while (b.date <= opener.date) {
       for (const e of pendingEvents(b)) { playEvent(b, e.id); held++; }
-      advanceDay(a);
       advanceDay(b);
     }
     expect(held).toBeGreaterThan(30);
