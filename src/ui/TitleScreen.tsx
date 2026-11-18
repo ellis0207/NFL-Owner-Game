@@ -6,7 +6,7 @@ import { parseSaveFile } from "../save/codec";
 import { connectCloud, SLOTS, type Cloud, type SlotInfo, type Slot } from "../save/cloud";
 import { peekAutosave, readAutosave, type AutosaveInfo } from "../save/local";
 
-export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: GameState) => void }) {
+export function TitleScreen({ onNew, onLoad, onTutorial }: { onNew: () => void; onLoad: (s: GameState) => void; onTutorial: () => void }) {
   const [auto, setAuto] = useState<AutosaveInfo | null>(null);
   const [cloud, setCloud] = useState<Cloud | null>(null);
   const [slots, setSlots] = useState<Partial<Record<Slot, SlotInfo>>>({});
@@ -56,6 +56,7 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
             <h2>Start</h2>
             <div className="btn-row">
               <button className="btn primary" onClick={onNew}>New game</button>
+              <button className="btn" onClick={onTutorial} title="A practice game that walks through every part of the job and shows what each decision moves. It isn't saved.">Tutorial</button>
               {auto && (
                 <button className="btn" disabled={busy} onClick={() => run(async () => (await readAutosave())?.state)}>
                   Continue {auto.team} · {longDate(auto.date)}

@@ -116,6 +116,12 @@ export function checkAchievements(state: GameState): Achievement[] {
   return now;
 }
 
+/** What a real save would have earned by now, without recording anything (the tutorial shows it). */
+export function wouldEarn(state: GameState): Achievement[] {
+  const c = context(state);
+  return ACHIEVEMENTS.filter((x) => { try { return x.check(state, c); } catch { return false; } });
+}
+
 export function achievementsDaily(state: GameState): void {
   if (weekday(state.date) === "Monday" || state.date === addDays(RULES.keyDates.superBowl, 1) || !state.achievements) checkAchievements(state);
 }

@@ -86,6 +86,15 @@ a new stadium, pledges kept to the board, and a title on the hardest level.
 They're earned per save with the date and difficulty (Game > Achievements).
 Any page can be pinned to the top of the sidebar from the pin beside its title.
 
+The tutorial (title screen) is a practice game that walks through the job in
+19 lessons: the calendar, a crossroads call, the roster and cap, contracts,
+trades, ticket prices, budgets, game day, backing the coach, scouting, the
+press, the board, executive bonuses, your own money, parking, practice
+emphasis, the other owners, settings and pins. Each lesson asks for one
+decision and shows what it moved, before, when you finished and now, so the
+effects that take days show up as you play on. It isn't saved and earns no
+achievements.
+
 Difficulty (new game or Settings) runs from Rookie owner to Hall of Fame owner.
 The football and the money stay real at every level; harder levels make other
 GMs want more in trades, agents open higher with your club, and setbacks land
