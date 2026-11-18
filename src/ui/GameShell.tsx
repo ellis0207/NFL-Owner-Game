@@ -37,6 +37,7 @@ import { ClubhouseScreen } from "./screens/ClubhouseScreen";
 import { GameWeekScreen } from "./screens/GameWeekScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
+import { AchievementsScreen } from "./screens/AchievementsScreen";
 import { SearchBox } from "./Search";
 import { CountUp } from "./kit";
 import { applyPrefs, readPrefs, writePrefs } from "./prefs";
@@ -63,7 +64,7 @@ import { decisionQueue } from "../engine/queue";
 import { tip } from "./tip";
 import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
-import { NAV, ROOM, groupOf, pageLabel, roomOf, type Screen } from "./nav";
+import { NAV, ROOM, SCREENS, groupOf, pageLabel, roomOf, type Screen } from "./nav";
 import { Masthead, RoomIcon } from "./Masthead";
 import { DRAFT_YEAR } from "../engine/draft";
 
@@ -111,6 +112,12 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
   const [screen, setScreen] = useState<Screen>("Today");
   const [menuOpen, setMenuOpen] = useState(false);
   const [closed, setClosed] = useState<string[]>(() => readPrefs().navClosed);
+  const [pinned, setPinned] = useState<Screen[]>(() => readPrefs().pinned.filter((p): p is Screen => (SCREENS as readonly string[]).includes(p)));
+  const togglePin = (s: Screen) => {
+    const next = pinned.includes(s) ? pinned.filter((p) => p !== s) : [...pinned, s];
+    setPinned(next);
+    writePrefs({ ...readPrefs(), pinned: next });
+  };
   const toggleGroup = (id: string) => {
     const next = closed.includes(id) ? closed.filter((c) => c !== id) : [...closed, id];
     setClosed(next);
@@ -269,6 +276,17 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         <div className="side-body" id="main-nav">
           <SearchBox game={game} go={go} />
           <nav aria-label="Front office">
+            {pinned.length > 0 && (
+              <div className="nav-group nav-pinned" data-room="desk">
+                <div className="nav-head"><span className="nav-head-label">Pinned</span></div>
+                {pinned.map((s) => (
+                  <button key={s} className="nav-item" aria-current={screen === s ? "page" : undefined} onClick={() => go(s)}>
+                    <span>{pageLabel(s)}</span>
+                    {badges[s] !== undefined && <span className={`badge${quiet[s] ? " quiet" : ""}`}>{badges[s]}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
             {NAV.map((g) => {
               const shut = closed.includes(g.id) && !(g.pages as readonly Screen[]).includes(screen);
               const waiting = (g.pages as readonly Screen[]).reduce((n, p) => n + (quiet[p] ? 0 : typeof badges[p] === "number" ? (badges[p] as number) : badges[p] ? 1 : 0), 0);
@@ -322,7 +340,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
         </header>
         <main className="content">
-          <Masthead key={screen} screen={screen} title={screen === "Draft" ? `The ${DRAFT_YEAR} NFL Draft` : screen === "Schedule" ? `${team.name} ${RULES.season} schedule` : undefined} />
+          <Masthead key={screen} screen={screen} pinned={pinned.includes(screen)} onPin={() => togglePin(screen)} title={screen === "Draft" ? `The ${DRAFT_YEAR} NFL Draft` : screen === "Schedule" ? `${team.name} ${RULES.season} schedule` : undefined} />
           {group.pages.length > 1 && (
             <div className="section-pages" role="group" aria-label={group.label}>
               {(group.pages as readonly Screen[]).map((s) => (
@@ -374,6 +392,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Game week" && <GameWeekScreen game={game} changed={changed} />}
           {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
           {screen === "Guide" && <GuideScreen />}
+          {screen === "Achievements" && <AchievementsScreen game={game} />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
           </div>
           </PageBoundary>

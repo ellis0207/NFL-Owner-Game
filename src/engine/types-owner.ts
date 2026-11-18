@@ -621,6 +621,8 @@ export interface CrossOutcome {
   before: { wp: number; cash: number };
   ref?: string;
   verdict?: string;
+  /** The option the season proved right. */
+  right?: number;
 }
 
 export interface CrossroadsState {
@@ -766,4 +768,10 @@ export interface RecordsState {
   values: Record<number, Record<string, number>>;
   /** Career milestones and records already marked, by player ("passYds:50000", "rec:record"). */
   career?: Record<string, string[]>;
+}
+
+/** A tutorial game (tutorial.ts): the lesson being worked on, and what each lesson measured before and after the player acted. */
+export interface TutorialState {
+  lesson: number;
+  marks: Record<string, { before: Record<string, number>; after?: Record<string, number>; choice?: string; done?: string }>;
 }

@@ -5,18 +5,21 @@
 import type { ReactNode } from "react";
 import { PAGE_ART, PAGE_HINT, PAGE_TITLE, ROOM_PLACE, roomOf, type Screen } from "./nav";
 
-export function Masthead({ screen, title, children }: {
+export function Masthead({ screen, title, children, pinned, onPin }: {
   screen: Screen;
   /** Overrides the page's usual title, such as the draft's year. */
   title?: string;
   /** Under the title: figures or controls that belong in the header. */
   children?: ReactNode;
+  /** Whether the page is pinned to the sidebar, and the switch for it. */
+  pinned?: boolean;
+  onPin?: () => void;
 }) {
   const room = roomOf(screen);
   return (
     <header className="mh" data-room={room} style={{ ["--mh-art" as string]: `url("art/${PAGE_ART[screen] ?? room}.webp")` }}>
       <div className="mh-text">
-        <span className="mh-kicker">{ROOM_PLACE[room]}</span>
+        <span className="mh-kicker">{ROOM_PLACE[room]}{onPin && <button className="mh-pin" aria-pressed={!!pinned} onClick={onPin} title={pinned ? "Unpin this page from the sidebar" : "Pin this page to the top of the sidebar"}>{pinned ? "★ Pinned" : "☆ Pin"}</button>}</span>
         <h1 className="mh-title">{title ?? PAGE_TITLE[screen] ?? screen}</h1>
         <p className="mh-hint">{PAGE_HINT[screen]}</p>
         {children}

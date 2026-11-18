@@ -80,6 +80,12 @@ table sharpens a department, and a stretch target missed stings. Today lists the
 open problems no memo asks about, such as cash under the reserve, an unhappy
 partner, a slipping pledge or a sour locker room, and how long each has gone on.
 
+Achievements mark an ownership worth remembering: playoff runs and titles,
+Pro Bowlers you drafted, a Hall of Famer who played for you, a profitable year,
+a new stadium, pledges kept to the board, and a title on the hardest level.
+They're earned per save with the date and difficulty (Game > Achievements).
+Any page can be pinned to the top of the sidebar from the pin beside its title.
+
 Difficulty (new game or Settings) runs from Rookie owner to Hall of Fame owner.
 The football and the money stay real at every level; harder levels make other
 GMs want more in trades, agents open higher with your club, and setbacks land

@@ -81,3 +81,7 @@
   .mh-text { animation: page-in 320ms ease-out; }
 }
 @keyframes page-in { from { opacity: 0; transform: translateY(4px); } }
+
+/* The pin switch beside the kicker: pins the page to the top of the sidebar. */
+.mh-pin { margin-left: auto; font: inherit; font-size: 0.75rem; letter-spacing: 0.04em; text-transform: none; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 999px; padding: 1px 10px; cursor: pointer; opacity: 0.8; }
+.mh-pin:hover, .mh-pin[aria-pressed="true"] { opacity: 1; }
