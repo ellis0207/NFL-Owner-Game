@@ -10,8 +10,10 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(to + "T12:00:00Z") - Date.parse(from + "T12:00:00Z")) / 86_400_000);
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export function weekday(iso: string): string {
-  return new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  return WEEKDAYS[new Date(iso + "T12:00:00Z").getUTCDay()];
 }
 
 export function longDate(iso: string): string {

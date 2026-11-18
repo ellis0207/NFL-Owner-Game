@@ -23,7 +23,7 @@ parts a task touches. README.md is the player-facing description of features.
 ```
 npm test                    # all tests, dot output (~90 s with warm fixtures, ~3 min cold)
 npx vitest run tests/<file> # one area while iterating
-npm run build               # tsc + dist/index.html + dist/game.html (the claude.ai page, ~6 MB)
+npm run build               # tsc + dist/index.html + dist/game.html (the claude.ai page, ~8 MB)
 npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the repo root)
 ```
 
@@ -67,9 +67,9 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
 
 | Area | Files | Tests / report |
 |---|---|---|
-| League data, dates, rng | `league.ts`, `dates.ts`, `rng.ts`, `types.ts` | |
+| League data, dates, rng | `league.ts`, `dates.ts`, `rng.ts`, `types.ts` (core shapes and `GameState`; re-exports `types-college`, `types-media`, `types-business`, `types-league`, `types-owner`, so import every type from `types.ts`) | |
 | Calendar and the day loop | `calendar.ts` (key dates, schedules for any season), `season.ts` (new game, events, `advanceDay`), `seasons.ts` (rollover, history) | `events.test.ts`, `season.test.ts`, `seasons-report.ts` |
-| Game sim | `sim.ts` (play by play), `playlog.ts` (the feed: `Recorder`, drive chart, kept `KEEP_DAYS` in `state.pbp`; words use their own rng so results don't move; `PlayRow[14]` is timeouts left, absent in older logs; `GameLog.box`/`ids` hold what each row changed in the box score, fed by `credit` from the sim's `add`; injuries (`F.injury`), plays wiped out by a foul (look "Play called back", described from the feed's rng), timeouts and quarterback changes (`rec.alert`, `F.story`) are written by the sim), `gamecast.ts` (`castAt(log, n)`: score, clock, down, ball and last-play result after n rows; `boxAt(log, n)` the running box score; `storylines(log, teams)` lead changes, runs, marks and period ends per row; read by the field view in `ui/GameCast.tsx`; reads the log only), `officials.ts` (wrong rulings, challenges, booth review, disputed calls in `box.calls`; own rng), `gameops.ts` (home-game operations check, league inquiries, prunes play logs; `gameOpsDaily` after `officeDaily`), `analytics.ts` (EP table fitted to the sim's own next-score values: refit if scoring shifts, EPA, WP; `box.adv`/`box.pe`), `strategy.ts` (analytics department, `gamePlan` for every team each game, halftime adjustments, `fourthDownAdvice` for the user only, `updateTrends` at rollover, `analyticsDaily`), `outlook.ts` (attribution, needs), `gameday.ts` (weather, rest and travel), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts` (slow returns, lasting damage), `development.ts`, `careers.ts` (offseason growth, retirement), `aging.ts` (each trait ages on its own: `tiltTraits` moves `PlayerState.tdev`, zero-mean so `ability` is unchanged; physical traits (`PHYSICAL` share) take the age decline, technique and reads the learning; `trait` and scheme fit read `tdev`, so anything that changes it calls `clearFitCache`; `bodyVsCraft` for staff reports; `tests/aging-report.ts`), `simtactics.ts` (tendencies and self-scouting, blitz pickup and slides, `poise`, return and punt plans, `innovate` at rollover), `assess.ts` (position assessments from box scores) | `season.test.ts`, `gameday.test.ts`, `playlog.test.ts`, `analytics.test.ts`, `calibrate.ts` |
+| Game sim | `sim.ts` (play by play: `GameSim` game flow, clock, kicks, scoring, runs, penalties) on top of `simpass.ts` (`SimPass`: passes, targets, sacks, scrambles) on top of `simteam.ts` (`SimTeams`: teams, lineups, plans, ratings per snap, `maybeInjure`, `gameDayActives`; a later layer's methods are declared `abstract` in the earlier one), `playlog.ts` (the feed: `Recorder`, drive chart, kept `KEEP_DAYS` in `state.pbp`; words use their own rng so results don't move; `PlayRow[14]` is timeouts left, absent in older logs; `GameLog.box`/`ids` hold what each row changed in the box score, fed by `credit` from the sim's `add`; injuries (`F.injury`), plays wiped out by a foul (look "Play called back", described from the feed's rng), timeouts and quarterback changes (`rec.alert`, `F.story`) are written by the sim), `gamecast.ts` (`castAt(log, n)`: score, clock, down, ball and last-play result after n rows; `boxAt(log, n)` the running box score; `storylines(log, teams)` lead changes, runs, marks and period ends per row; read by the field view in `ui/GameCast.tsx`; reads the log only), `officials.ts` (wrong rulings, challenges, booth review, disputed calls in `box.calls`; own rng), `gameops.ts` (home-game operations check, league inquiries, prunes play logs; `gameOpsDaily` after `officeDaily`), `analytics.ts` (EP table fitted to the sim's own next-score values: refit if scoring shifts, EPA, WP; `box.adv`/`box.pe`), `strategy.ts` (analytics department, `gamePlan` for every team each game, halftime adjustments, `fourthDownAdvice` for the user only, `updateTrends` at rollover, `analyticsDaily`), `outlook.ts` (attribution, needs), `gameday.ts` (weather, rest and travel), `schemes.ts`, `staff.ts` (scheme fit, staff effects), `stats.ts`, `standings.ts`, `injuries.ts` (slow returns, lasting damage), `development.ts`, `careers.ts` (offseason growth, retirement), `aging.ts` (each trait ages on its own: `tiltTraits` moves `PlayerState.tdev`, zero-mean so `ability` is unchanged; physical traits (`PHYSICAL` share) take the age decline, technique and reads the learning; `trait` and scheme fit read `tdev`, so anything that changes it calls `clearFitCache`; `bodyVsCraft` for staff reports; `tests/aging-report.ts`), `simtactics.ts` (tendencies and self-scouting, blitz pickup and slides, `poise`, return and punt plans, `innovate` at rollover), `assess.ts` (position assessments from box scores) | `season.test.ts`, `gameday.test.ts`, `playlog.test.ts`, `analytics.test.ts`, `calibrate.ts` |
 | Players and medical | `clubhouse.ts` (world-seeded `personality`, chemistry and its small sim edge, leaders, mentors, coach trust nudging `coachView`, roles, marketability and the store lift, personal leave; `posOf` for moved players; `lockerDaily`), `training.ts` (programs and their cost on the medical line, practice load, `growthFactor`/`offseasonFactor`/`riskFactor`, development plans, position changes with `retrainEffect` in `ability`; `trainingDaily`), `medical.ts` (`diagnose` from `injure` on its own rng, `knownReturn` for anything the owner reads, rehab midpoints, concussion clearance, early-return asks, protocol reviews, insurance; `medicalDaily`), `gameweek.ts` (practice reports, practice emphasis feeding `gamePlan` and growth, emergency list, `joinedToday` game-day cutoff read by the sim; `gameWeekDaily`), `playercare.ts` (playbook learning and `careDrag` in `trait`, snap load, `trainingResponse`, `retirementLean`, `ownerStanding`/`franchiseReputation` in FA, doctors feeding `diagnose` and rehab, `comparables`; `careDaily`), `analysts.ts` (named analysts, `analystEdge` in `gamePlan`, data feeds, contract/availability models, cap optimizer, experiments whose `adopted` effect feeds training, fans and morale; `analystsDaily`), `coachroom.ts` (preseason snaps, bubble meeting and `ownerKeeps` in the cutdown, `applyContingency` in `depthChart`; `coachRoomDaily`) | `clubhouse.test.ts`, `gameweek.test.ts`, `football-followups.test.ts` |
 | Cap and contracts | `contracts.ts` (deal model, CBA rules), `cap.ts` (cap hits, dead money, rollover), `incentives.ts` (LTBE/NLTBE, settled after the Super Bowl), `capmoves.ts` (June 1, pay cuts), `capplan.ts` (`lockedSpace` for future-year gates, the league-year deadline), `market.ts` (prices, tags, tenders), `finance.ts` (cash), `bonuses.ts` (per-game and workout bonuses and escalators via `attachBonuses`, owner terms through `OfferTerms.perGame/workout/escalator` priced by `bonusTermsValue`, settled after the Super Bowl and minicamp; the proven performance escalator; the four-year cash floor; `bonusesDaily`), `contractextras.ts` (roster and option bonuses, skill/cap guarantees via `releaseCharges` `reason`, no-trade, `cashVsCap`, `capPlanner`, `compFormula` used by the draft, our RFA offer sheets; `contractExtrasDaily`) | `contracts.test.ts`, `incentives.test.ts`, `capdeadline.test.ts` |
 | Negotiation | `agents.ts`, `negotiation.ts`, `grades.ts`, `redo.ts` (early redo asks; camp hold-ins via `startHoldouts`) | `negotiation.test.ts`, `redo.test.ts` |
@@ -149,8 +149,8 @@ screenshots.
 Twelve engine files run 900 to 1,430 lines. Don't read them whole:
 
 - List what a file exports: `grep -n "^export" src/engine/<file>.ts`.
-- Find a type: `grep -n "interface Foo" -A30 src/engine/types.ts` (types.ts is
-  1,200 lines; never read it whole).
+- Find a type: `grep -n "interface Foo" -A30 src/engine/types*.ts` (the types
+  files run 200 to 1,100 lines; never read one whole).
 - Then read only the line range you need.
 
 Split as you go: when a step adds a sizable new feature to a file that is
@@ -178,7 +178,7 @@ Calibration targets (what "healthy" looked like when each system shipped):
   and parity; upsets common. Injuries ~2.8 per team-game (`maybeInjure` in
   sim.ts, practice odds in `practiceInjuries` in season.ts), ~7 per club on IR
   at season end, starting QBs taking ~90% of their team's attempts; scoring
-  was retuned (`baseComp` in sim.ts) when injuries went up, so retune both
+  was retuned (`baseComp` in simpass.ts) when injuries went up, so retune both
   together. A voted 35-second play clock adds about 4% more plays.
 - Player stats (`stats-report.ts 3`, about 40 s a season; ranges in
   `tests/statspread.ts`, also judged by `balance-report.ts`, test
@@ -186,7 +186,7 @@ Calibration targets (what "healthy" looked like when each system shipped):
   receivers and ~20-25 10-sack players a year, top target ~24% of a team's
   targets, sacks EDGE ~.5 / IDL ~.25 / LB+DB ~.2. Target weights in
   `pickPass` (the first read and the throw's depth together, tilted by the
-  receiver's game; `pickTarget` only for the second read), sack credit in `sack`, rotation in `defenseLineup` (`sim.ts`).
+  receiver's game; `pickTarget` only for the second read), sack credit in `sack`, rotation in `defenseLineup` (`simteam.ts`; `pickPass` and `sack` in `simpass.ts`).
   The report also prints whole leaderboards (ranks 1-64 for 27 stats,
   `tests/realcurves.ts`) next to real 2024 and 2025, and each team's target
   and carry shares by rank (real targets .24 .18 .14 .11 .09; carries .50 .23
@@ -239,6 +239,6 @@ Calibration targets (what "healthy" looked like when each system shipped):
 1. Branch, build, iterate with targeted tests and quick reports.
 2. `npm test` and `npm run build` once, then open the PR, merge it yourself.
 3. Republish `dist/game.html` to the same artifact URL (kept in project
-   memory) with its existing capabilities. Don't print or Read the 6 MB page.
+   memory) with its existing capabilities. Don't print or Read the 8 MB page. The build drops player fields the game never reads (`slimPlayers` in `vite.config.ts`).
 4. Update README.md (Status and Code layout) only for what changed, and the
    project memory for anything a later step needs.
