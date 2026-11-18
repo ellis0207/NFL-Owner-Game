@@ -8,6 +8,7 @@ import { onColor } from "./format";
 import { GameShell } from "./GameShell";
 import { NewGame } from "./NewGame";
 import { TitleScreen } from "./TitleScreen";
+import { newTutorial } from "../engine/tutorial";
 
 type View = "title" | "new" | "game";
 
@@ -105,5 +106,5 @@ export function App({ initial: given }: { initial?: GameState }) {
   if (view === "game" && game) {
     return <>{banner}<GameShell game={game} tick={tick} changed={bump} onLoad={start} onQuit={() => setView("title")} /></>;
   }
-  return <>{banner}<TitleScreen onNew={() => setView("new")} onLoad={start} /></>;
+  return <>{banner}<TitleScreen onNew={() => setView("new")} onLoad={start} onTutorial={() => start(newTutorial())} /></>;
 }

@@ -773,5 +773,8 @@ export interface RecordsState {
 /** A tutorial game (tutorial.ts): the lesson being worked on, and what each lesson measured before and after the player acted. */
 export interface TutorialState {
   lesson: number;
-  marks: Record<string, { before: Record<string, number>; after?: Record<string, number>; choice?: string; done?: string }>;
+  /** The date the practice game started. */
+  start?: string;
+  /** Per lesson: the measures when it opened and when it was finished, the decision it put on the desk, and how it ended. */
+  marks: Record<string, { before: Record<string, number>; after?: Record<string, number>; ref?: string; done?: string }>;
 }

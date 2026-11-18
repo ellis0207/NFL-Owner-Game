@@ -66,6 +66,7 @@ import { inControl, tenure } from "../engine/takeover";
 import { GameOver } from "./screens/OwnershipSuccession";
 import { NAV, ROOM, SCREENS, groupOf, pageLabel, roomOf, type Screen } from "./nav";
 import { Masthead, RoomIcon } from "./Masthead";
+import { TutorialCoach } from "./TutorialCoach";
 import { DRAFT_YEAR } from "../engine/draft";
 
 export type { Screen } from "./nav";
@@ -341,6 +342,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         </header>
         <main className="content">
           <Masthead key={screen} screen={screen} pinned={pinned.includes(screen)} onPin={() => togglePin(screen)} title={screen === "Draft" ? `The ${DRAFT_YEAR} NFL Draft` : screen === "Schedule" ? `${team.name} ${RULES.season} schedule` : undefined} />
+          {game.tutorial && <TutorialCoach game={game} act={step} go={go} onLeave={onQuit} />}
           {group.pages.length > 1 && (
             <div className="section-pages" role="group" aria-label={group.label}>
               {(group.pages as readonly Screen[]).map((s) => (

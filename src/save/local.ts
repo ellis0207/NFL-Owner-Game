@@ -190,11 +190,14 @@ function enqueue(state: GameState, recovery: boolean): Promise<boolean> {
 
 /** Save the game as the browser's autosave. True only once the write has committed. */
 export function writeAutosave(state: GameState): Promise<boolean> {
+  // A tutorial game is practice: it never takes the place of the real save.
+  if (state.tutorial) return Promise.resolve(true);
   return enqueue(state, false);
 }
 
 /** Save a recovery copy now (before switching seasons, after an error). */
 export function writeRecoveryCopy(state: GameState): Promise<boolean> {
+  if (state.tutorial) return Promise.resolve(true);
   return enqueue(state, true);
 }
 

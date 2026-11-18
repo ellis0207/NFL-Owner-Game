@@ -58,3 +58,15 @@ table.kit-ledger tr.total td { border-top: 3px double var(--ink); font-weight: 6
 /* Achievements: a locked one is faded until earned. */
 .kit-ach { padding: 4px 0 4px 10px; border-left: 3px solid var(--rule); opacity: 0.7; }
 .kit-ach.kit-ach-on { border-left-color: var(--good, #2e8b57); opacity: 1; }
+/* The tutorial's coach panel atop each page in a practice game. */
+.kit-tut { border-left: 4px solid var(--room-accent, var(--accent)); margin-bottom: 14px; }
+.kit-tut-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.kit-tut-head strong { font-size: 1.1em; }
+.kit-tut-head .btn-row { margin-left: auto; }
+.kit-tut-kicker { width: 100%; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.75; }
+.kit-tut-list { columns: 2 14em; margin: 6px 0; }
+.kit-tut-list [aria-current="true"] { font-weight: 700; }
+.kit-tut-table { width: 100%; max-width: 760px; }
+.kit-tut-up { color: var(--good, #2e8b57); }
+.kit-tut-down { color: var(--bad, #b33); }
+.kit-tut-same { opacity: 0.5; }
