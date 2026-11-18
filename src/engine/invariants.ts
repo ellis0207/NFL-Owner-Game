@@ -8,6 +8,7 @@ import { capSummary } from "./cap";
 import { cashBalance } from "./business";
 import { leagueYear } from "./contracts";
 import { controller } from "./franchisemarket";
+import { groundsModel, parkingDay } from "./grounds";
 import { RULES, TEAMS } from "./league";
 import { rosterCount } from "./roster";
 import type { GameState } from "./types";
@@ -66,6 +67,21 @@ export function invariants(state: GameState): Violation[] {
   if (!teamIds.has(state.userTeam)) add("user-team", `the owner's club ${state.userTeam} doesn't exist`);
   const owners = TEAMS.map((t) => controller(state, t.id)).filter((o) => o && o !== "Unknown");
   for (const o of dupes(owners)) add("ownership", `${o} controls more than one club`);
+
+  // Partners' stakes: each between 0 and 100%, and together never more than the whole club.
+  const stakes = (state.investors?.partners ?? []).map((p) => p.pct);
+  if (stakes.some((x) => !Number.isFinite(x) || x < 0 || x > 1)) add("ownership-share", `a partner's stake is ${stakes.find((x) => !Number.isFinite(x) || x < 0 || x > 1)}`);
+  const sold = stakes.reduce((t, x) => t + x, 0);
+  if (sold > 1 + 1e-9) add("ownership-share", `partners hold ${Math.round(sold * 1000) / 10}% of the club`);
+
+  // Our grounds: no lot or section below zero, and a full house parks no more cars than drove.
+  const g = groundsModel(state);
+  for (const l of g.lots) if (!(l.spaces >= 0)) add("grounds", `lot ${l.id} has ${l.spaces} spaces`);
+  for (const x of g.sections) if (!(x.seats >= 0)) add("grounds", `section ${x.id} has ${x.seats} seats`);
+  for (const mult of [0.5, 1, 1.8]) {
+    const p = parkingDay(g, g.capacity, 1, mult);
+    if (p.club > p.cars + 1 || p.independent < 0 || p.short < 0 || Math.abs(p.club + p.independent + p.short - p.cars) > 2) add("parking", `at ${mult}x price ${p.cars} drivers became ${p.club} in our lots, ${p.independent} independent, ${p.short} short`);
+  }
 
   // Decision records: ids are unique.
   for (const [name, list] of [["causes", state.causes], ["memos", state.office?.memos], ["tasks", state.office?.tasks], ["trade offers", state.trades?.offers]] as const) {

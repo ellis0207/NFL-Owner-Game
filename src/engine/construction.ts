@@ -39,6 +39,7 @@ import { gaussian, rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium, type Structure } from "./stadiums";
 import { reserved } from "./investors";
 import type { GameState } from "./types";
+import { landForSite, type SiteFacts } from "./grounds";
 
 const M = 1_000_000;
 
@@ -131,6 +132,8 @@ export interface NewStadium {
   /** Our new stadium's draw on demand fades over its first years. */
   ours?: boolean;
   district?: number;
+  /** The land around it (grounds.ts), from the site the owner picked. */
+  land?: SiteFacts;
 }
 
 export interface ConstructionState {
@@ -524,6 +527,8 @@ function openStadium(state: GameState): void {
     rent: Math.round(m.rent * inflation(year, 0.03)), upkeep: Math.round((22 * M + ROOFS[p.roof].run) * (p.capacity / 65_000) * inflation(year, 0.03)),
     ours: true, district: p.district,
   };
+  const site = p.sites.find((x) => x.id === p.site);
+  if (site) n.land = landForSite(state, us, site.kind, site.transit, site.parking);
   replaceStadium(state, n);
   delete c.temporary;
   note(state, `${p.name} opened.`);

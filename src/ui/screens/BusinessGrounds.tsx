@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
-import { buildGarage, convertToPremium, garageCost, groundsModel, leaseCost, leaseLot, parkingDay, premiumCost, seatsOn, type GroundsModel, type Lot, type Section } from "../../engine/grounds";
+import { DEPOSIT, buildGarage, convertToPremium, garageCost, groundsModel, leaseCost, leaseLot, parkingDay, premiumCost, seatsOn, type GroundsModel, type Lot, type Section } from "../../engine/grounds";
 import { MARKETS, STADIUM_BY_TEAM } from "../../engine/stadiums";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
@@ -155,20 +155,21 @@ export function Grounds({ game, changed }: { game: GameState; changed: () => voi
           <select value={garage} onChange={(e) => setGarage(Number(e.target.value))} aria-label="Garage size">
             {[1000, 2000, 3000, 4000].map((x) => <option key={x} value={x}>{n(x)} spaces</option>)}
           </select>
-          <button onClick={() => act(buildGarage(game, garage), `The garage is under way.`)}>Build a garage on our lots ({money(garageCost(game, garage))})</button>
+          <button onClick={() => act(buildGarage(game, garage), `The garage is under way.`)}>Build a garage on our lots ({money(garageCost(game, garage))}, {Math.round(DEPOSIT * 100)}% now)</button>
         </div>
         <div className="btn-row">
           <select value={lease} onChange={(e) => setLease(Number(e.target.value))} aria-label="Lot size">
             {[500, 1000, 2000].map((x) => <option key={x} value={x}>{n(x)} spaces</option>)}
           </select>
           <button onClick={() => act(leaseLot(game, lease), "The lot is ours to run for three seasons.")}>Lease a nearby lot ({money(leaseCost(game, lease))} a year)</button>
+          <span className="muted">{m.leasable >= 100 ? `About ${n(m.leasable)} nearby spaces are free to lease.` : "Every nearby lot for lease is ours."}</span>
         </div>
         <div className="btn-row">
           <select value={seats} onChange={(e) => setSeats(Number(e.target.value))} aria-label="Seats to convert">
             {[500, 1000, 1500, 2500].map((x) => <option key={x} value={x}>{n(x)} seats</option>)}
           </select>
           <label className="btn-row"><input type="checkbox" checked={phased} onChange={(e) => setPhased(e.target.checked)} /> Build now, closing the section (outside February to May)</label>
-          <button disabled={st.structure === "tenant"} onClick={() => act(convertToPremium(game, seats, phased), "The conversion is booked.")}>Convert lower-bowl seats to club seats ({money(premiumCost(game, seats))})</button>
+          <button disabled={st.structure === "tenant"} onClick={() => act(convertToPremium(game, seats, phased), "The conversion is booked.")}>Convert lower-bowl seats to club seats ({money(premiumCost(game, seats))}, {Math.round(DEPOSIT * 100)}% now)</button>
         </div>
       </div>
     </div>

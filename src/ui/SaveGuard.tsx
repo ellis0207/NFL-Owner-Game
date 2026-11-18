@@ -51,6 +51,8 @@ export function SaveIndicator({ game }: { game: GameState }) {
 export interface ActionFailure {
   message: string;
   date: string;
+  /** The step was rolled back: the game is as it was before the click. */
+  undone?: boolean;
 }
 
 /**
@@ -68,7 +70,9 @@ export function FailurePanel({ failure, game, onLoad, onClose }: { failure: Acti
     <div className="notice error stack failure-panel" role="alert">
       <strong>The simulation stopped on {failure.date}.</strong>
       <span>{failure.message}</span>
-      <span className="muted">The game in memory may be partly through that day, so autosave is paused and your last save in this browser is kept as it was.</span>
+      <span className="muted">{failure.undone
+        ? "Nothing from that step was kept: the game is back where it was before it, so you can keep playing or try something else."
+        : "The game in memory may be partly through that day, so autosave is paused and your last save in this browser is kept as it was."}</span>
       <div className="btn-row">
         <button className="btn primary" disabled={busy} onClick={() => run(async () => {
           const r = await readAutosave();

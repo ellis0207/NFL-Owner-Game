@@ -53,7 +53,8 @@ export function atomic<T>(state: GameState, fn: () => T): T {
   }
 }
 
-function restore(state: GameState, before: GameState): void {
+/** Put a copy taken earlier back into the same game object, key by key. */
+export function restore(state: GameState, before: GameState): void {
   for (const k of Object.keys(state)) if (!(k in before)) delete (state as unknown as Record<string, unknown>)[k];
   Object.assign(state, before);
 }

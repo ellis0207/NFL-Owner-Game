@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { gateForecast, pnl } from "../src/engine/business";
 import { leagueYear } from "../src/engine/contracts";
-import { buildGarage, convertToPremium, groundsDaily, groundsModel, leaseLot, parkingDay, seatsOn } from "../src/engine/grounds";
+import { cashBalance } from "../src/engine/business";
+import { addDays } from "../src/engine/dates";
+import { invariants } from "../src/engine/invariants";
+import { DEPOSIT, buildGarage, convertToPremium, garageCost, groundsDaily, groundsModel, leaseLot, parkingDay, seatsOn, siteOf } from "../src/engine/grounds";
 import { SCHEDULE } from "../src/engine/league";
 import { MARKETS, STADIUM_BY_TEAM } from "../src/engine/stadiums";
 import { stateAt } from "./fixtures";
@@ -93,5 +96,58 @@ describe("the stadium and its grounds", () => {
     const m = groundsModel(s);
     expect(seatsOn(m).premium).toBeGreaterThan(seatsOn(m0).premium);
     expect(m.lots.some((l) => l.id === "project-garage" && !l.opens)).toBe(true);
+  }, 300_000);
+
+  it("parking never seats more cars than came, and the nearby lots to lease run out", () => {
+    const s = stateAt("DAL", 3, "regularSeasonStart");
+    const m0 = groundsModel(s);
+    // Lease until the landlords have nothing left; each lot comes out of the independent ones.
+    let leased = 0;
+    while (leaseLot(s, 2000) === null) leased += 2000;
+    expect(leased).toBeGreaterThan(0);
+    expect(leaseLot(s, 2000)).toMatch(/lease/);
+    const m = groundsModel(s);
+    const indep = (x: typeof m) => x.lots.find((l) => l.control === "independent")!.spaces;
+    expect(indep(m)).toBe(indep(m0) - leased);
+    for (const mult of [0.5, 1, 1.8]) {
+      const p = parkingDay(m, m.capacity, 40, mult);
+      expect(p.club).toBeLessThanOrEqual(p.cars);
+      expect(p.independent).toBeGreaterThanOrEqual(0);
+      expect(Math.abs(p.club + p.independent + p.short - p.cars)).toBeLessThanOrEqual(2);
+    }
+    expect(invariants(s).filter((v) => v.rule === "parking" || v.rule === "grounds")).toEqual([]);
+  }, 300_000);
+
+  it("a garage takes a deposit, then monthly payments until it opens", () => {
+    const s = stateAt(TEAM, 3, "regularSeasonStart");
+    const cost = garageCost(s, 2000);
+    const cash0 = cashBalance(s);
+    expect(buildGarage(s, 2000)).toBeNull();
+    expect(Math.round(cash0 - cashBalance(s))).toBe(Math.round(cost * DEPOSIT));
+    const x = s.grounds!.garages[0];
+    while (s.date <= x.opens) {
+      groundsDaily(s);
+      s.date = addDays(s.date, 1);
+    }
+    expect(x.paid).toBe(x.cost);
+  }, 300_000);
+
+  it("the land belongs to the building: a move or a new home leaves the old grounds behind", () => {
+    const s = stateAt(TEAM, 3, "regularSeasonStart");
+    expect(siteOf(s, TEAM).site).toBe("downtown");
+    expect(buildGarage(s, 1000)).toBeNull();
+    expect(leaseLot(s, 500)).toBeNull();
+    const st = STADIUM_BY_TEAM[TEAM];
+    const name = st.name;
+    try {
+      // The club plays somewhere else (a stopgap home, here a known old building).
+      st.name = "Candlestick Park";
+      expect(siteOf(s, TEAM)).toMatchObject({ site: "urban", acres: 77 });
+      const m = groundsModel(s);
+      expect(m.lots.some((l) => l.id.startsWith("garage") || l.control === "leased")).toBe(false);
+    } finally {
+      st.name = name;
+    }
+    expect(groundsModel(s).lots.some((l) => l.control === "leased")).toBe(true);
   }, 300_000);
 });

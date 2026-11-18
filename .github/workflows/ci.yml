@@ -25,3 +25,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # Open every page from a saved game in a real browser (desktop, light):
+      # fails on a page error, a broken panel or a page wider than the screen.
+      - run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - run: npx vite-node tests/ui-tour.ts ui-tour --quick
