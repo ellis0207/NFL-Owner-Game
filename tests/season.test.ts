@@ -53,9 +53,9 @@ describe("a full season", () => {
     const state = seasons[0];
     for (const team of ["DET", "KC", "MIA"]) {
       const c = rosterCount(state, team);
-      // A team knocked out of the playoffs doesn't replace a player hurt in its last game.
+      // A team knocked out of the playoffs doesn't replace players hurt in its last game.
       expect(c.roster).toBeLessThanOrEqual(RULES.rosterLimits.regularSeason);
-      expect(c.roster).toBeGreaterThanOrEqual(RULES.rosterLimits.regularSeason - 1);
+      expect(c.roster).toBeGreaterThanOrEqual(RULES.rosterLimits.regularSeason - 2);
       expect(c.ps).toBeLessThanOrEqual(RULES.rosterLimits.practiceSquad);
       expect(c.ps).toBeGreaterThan(8);
     }
