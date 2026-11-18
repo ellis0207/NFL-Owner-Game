@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
-import type { GameState } from "../../engine/types";
+import type { GameState, InboxItem, InboxKind } from "../../engine/types";
 import { messagePriority } from "../../engine/desk";
 import { useUi } from "../ui";
 
 export function InboxScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
   const [urgent, setUrgent] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
+  // A season brings a couple of hundred letters: filters by sender kind, or unread only.
+  const matches = (m: InboxItem) => filter === "all" ? true : filter === "unread" ? !m.read : m.kind === filter;
+  const filtered = game.inbox.filter(matches);
   // Urgent first puts unread messages that need a decision soon at the top.
   // "Most urgent first" ranks by kind, urgency, age and whether it's been read (desk.ts).
-  const list = urgent ? game.inbox.slice().sort((a, b) => messagePriority(game, b).score - messagePriority(game, a).score) : game.inbox;
+  const list = urgent ? filtered.slice().sort((a, b) => messagePriority(game, b).score - messagePriority(game, a).score) : filtered;
+  const kinds = KINDS.filter(([k]) => game.inbox.some((m) => m.kind === k));
   const [open, setOpen] = useState<string | null>(game.inbox[0]?.id ?? null);
   function toggle(id: string) {
     const item = game.inbox.find((i) => i.id === id)!;
@@ -17,7 +22,7 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
     setOpen(open === id ? null : id);
   }
   function markAll() {
-    game.inbox.forEach((i) => (i.read = true));
+    filtered.forEach((i) => (i.read = true));
     changed();
   }
   const shown = game.inbox.find((m) => m.id === open);
@@ -27,9 +32,18 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
         <span className="muted">{game.inbox.filter((m) => !m.read).length} unread of {game.inbox.length}</span>
         <div className="btn-row">
           <button className="btn small" aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>{urgent ? "Newest first" : "Urgent first"}</button>
-          <button className="btn small" onClick={markAll}>Mark all read</button>
+          <button className="btn small" onClick={markAll}>{filter === "all" ? "Mark all read" : "Mark these read"}</button>
         </div>
       </div>
+      {game.inbox.length > 0 && (
+        <div className="tabs" role="group" aria-label="Show">
+          {([["all", "All"], ["unread", "Unread"], ...kinds] as [Filter, string][]).map(([k, label]) => {
+            const n = k === "all" ? game.inbox.length : k === "unread" ? game.inbox.filter((m) => !m.read).length : game.inbox.filter((m) => m.kind === k).length;
+            return <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label} <span className="num" style={{ opacity: 0.7 }}>{n}</span></button>;
+          })}
+        </div>
+      )}
+      {game.inbox.length > 0 && !filtered.length && <p className="muted">Nothing here.</p>}
       {game.inbox.length === 0 && <p className="muted">No messages yet.</p>}
       {game.inbox.length > 0 && (
         // A mail tray: the list on the left, the open letter on the right. On a phone the letter opens under its line.
@@ -71,6 +85,9 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
     );
   }
 }
+
+type Filter = "all" | "unread" | InboxKind;
+const KINDS: [InboxKind, string][] = [["staff", "Staff"], ["game", "Games"], ["transaction", "Moves"], ["business", "Business"], ["league", "League"], ["media", "Media"], ["system", "System"]];
 
 /** A sender's initials for the envelope: "Head coach Dan Quinn" gives "DQ", "League office" gives "LO". */
 function initials(from: string): string {

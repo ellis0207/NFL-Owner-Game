@@ -173,3 +173,8 @@
   }
   .tm-offense .tm-slot { grid-area: auto; }
 }
+/* On a phone two cards sit side by side: let a long name wrap rather than cut it off. */
+@media (max-width: 760px) {
+  .tm-name { white-space: normal; overflow-wrap: anywhere; }
+  .tm-jersey { min-width: 1.2rem; }
+}

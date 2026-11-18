@@ -860,12 +860,41 @@ function briefing(state: GameState): void {
     (state.date < KEY.tradeDeadline ? `Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : "The trade deadline has passed."));
 }
 
+/** The GM's Monday digest in season: where we stand, last week, who's hurt, what's next. */
 function weeklyReport(state: GameState): void {
-  const cap = capSummary(state, state.userTeam);
-  const rec = standings(state)[state.userTeam];
-  send(state, "staff", `${teamStaff(state.userTeam).GM?.name ?? "General Manager"}, general manager`, "Weekly front office report",
-    `Record: ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}. Points for ${rec.pf}, against ${rec.pa}. ` +
-    `Cap space: ${money(cap.space)}. Trade deadline: ${shortDate(KEY.tradeDeadline)}.`);
+  const us = state.userTeam;
+  const cap = capSummary(state, us);
+  const table = standings(state);
+  const rec = table[us];
+  const me = TEAM_BY_ID[us];
+  const division = Object.keys(table).filter((t) => TEAM_BY_ID[t].conference === me.conference && TEAM_BY_ID[t].division === me.division)
+    .sort((a, b) => (table[b].w + table[b].t / 2) - (table[a].w + table[a].t / 2) || (table[b].pf - table[b].pa) - (table[a].pf - table[a].pa));
+  const place = division.indexOf(us) + 1;
+  const ord = ["first", "second", "third", "fourth"][place - 1] ?? `${place}th`;
+  const lines: string[] = [`Record: ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}, ${ord} in the ${me.conference} ${me.division}. Points for ${rec.pf}, against ${rec.pa}.`];
+  const last = [...SCHEDULE].reverse().find((g) => g.date < state.date && state.results[g.id] && (state.results[g.id].home === us || state.results[g.id].away === us));
+  if (last) {
+    const r = state.results[last.id];
+    const ours = r.home === us ? r.homeScore : r.awayScore;
+    const theirs = r.home === us ? r.awayScore : r.homeScore;
+    lines.push(`Last game: ${ours > theirs ? "won" : ours < theirs ? "lost" : "tied"} ${Math.max(ours, theirs)}-${Math.min(ours, theirs)} ${r.home === us ? "against" : "at"} the ${teamLabel(r.home === us ? r.away : r.home)}.`);
+  }
+  const hurt = Object.entries(state.players)
+    .filter(([, p]) => p.team === us && (p.status === "active" || p.status === "ir") && p.injury && p.injury.returnDate > state.date)
+    .sort(([, a], [, b]) => a.injury!.returnDate.localeCompare(b.injury!.returnDate));
+  if (hurt.length) {
+    const named = hurt.slice(0, 4).map(([id, p]) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name} (${p.injury!.type.toLowerCase()}, ${outLabel(state.date, knownReturn(state, p.injury!), p.injury!.seasonEnding)})`);
+    lines.push(`Injuries: ${named.join("; ")}${hurt.length > 4 ? `; and ${hurt.length - 4} more on the Roster page` : ""}.`);
+  } else lines.push("Nobody is hurt.");
+  const next = SCHEDULE.find((g) => g.date >= state.date && !state.results[g.id] && (g.home === us || g.away === us));
+  const m = next && matchup(state, next);
+  if (m) {
+    const opp = m.home === us ? m.away : m.home;
+    const o = table[opp];
+    lines.push(`Next: ${m.home === us ? "the" : "at the"} ${teamLabel(opp)} (${o.w}-${o.l}${o.t ? `-${o.t}` : ""}) on ${weekday(next!.date)}, ${shortDate(next!.date)}.`);
+  }
+  lines.push(`Cap space: ${money(cap.space)}.${state.date < KEY.tradeDeadline ? ` Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : ""}`);
+  send(state, "staff", `${teamStaff(us).GM?.name ?? "General Manager"}, general manager`, "Weekly front office report", lines.join("\n"));
 }
 
 /** Offseason and summer days worth stopping on. */

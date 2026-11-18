@@ -141,10 +141,14 @@ export function gradeShort(state: GameState, id: string): string {
   const ours = state.players[id].team === us;
   const fx = staffEffects(us);
   const view = perceivedAbility(state, id, ours ? `coach:${us}` : `pro:${us}`, ours ? fx.coachEval : fx.proScouting);
+  // Finer steps than the full report's grade, so a room of backups doesn't read as one word.
   if (view >= 94) return "Elite";
   if (view >= 89) return "High-end starter";
+  if (view >= 86) return "Solid starter";
   if (view >= 83) return "Starter";
+  if (view >= 80) return "Low-end starter";
   if (view >= 77) return "Fringe starter";
+  if (view >= 74) return "Top backup";
   if (view >= 70) return "Rotation";
   if (view >= 62) return "Backup";
   return "Bubble";
