@@ -679,6 +679,8 @@ export interface Settings {
   economy?: "calm" | "normal" | "volatile";
   /** A historical start: false follows the real timeline after the start; true leaves it to the save (engine/eras.ts). */
   altHistory?: boolean;
+  /** How hard the world pushes back: what agents and other GMs ask of us and how fast patience runs out (engine/difficulty.ts). */
+  difficulty?: "rookie" | "standard" | "veteran" | "legend";
 }
 
 export type AgentStyle = "hardball" | "leaker" | "relationship" | "deadline" | "guarantees" | "creative" | "steady";

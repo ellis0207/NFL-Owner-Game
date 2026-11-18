@@ -18,6 +18,7 @@
 //
 // The partners, funds and bidders are made up. The controlling owners listed
 // for the other clubs are the real ones, approximately, as of 2026.
+import { difficulty } from "./difficulty";
 import { billions, business, cashBalance, pnl, post, valuation } from "./business";
 import { leagueYear } from "./contracts";
 import { addDays, daysBetween } from "./dates";
@@ -641,7 +642,8 @@ function monthly(state: GameState): void {
   const winPct = games ? (row.w + row.t / 2) / games : 0.5;
   for (const p of s.partners) {
     const growth = valuation(state, state.userTeam) / Math.max(1, p.entryValue) - 1;
-    const pull = 60 + Math.max(-12, Math.min(12, growth * 30)) + (winPct - 0.5) * 16 + (inRecession(state) ? -4 : 0);
+    // Harder levels: partners settle at a lower mood for the same results.
+    const pull = 60 + Math.max(-12, Math.min(12, growth * 30)) + (winPct - 0.5) * 16 + (inRecession(state) ? -4 : 0) - (difficulty(state).pressure - 1) * 16;
     p.mood = clamp(p.mood + (pull - p.mood) * 0.08 + (r() - 0.5) * 3);
   }
   const open = openMemos(state).filter((m) => m.payload?.investors);

@@ -10,6 +10,7 @@ import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../engine/stadiums";
 import type { GameState, Settings } from "../engine/types";
 import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYLES, WEALTH, DEFAULT_CUSTOM, type CustomStart, type OwnerSetup, type Scenario } from "../engine/ownership";
 import { switchEra } from "./App";
+import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../engine/difficulty";
 import { money, onColor } from "./format";
 
 /** The seasons a game can start in: the 2026 default and every season from 2011. */
@@ -38,6 +39,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const [finances, setFinances] = useState<NonNullable<Settings["finances"]>>("real");
   const [profile, setProfile] = useState<OwnerSetup>(DEFAULT_SETUP);
   const [scouting, setScouting] = useState<NonNullable<Settings["scouting"]>>("real");
+  const [level, setLevel] = useState<Difficulty>("standard");
   const [ironman, setIronman] = useState(false);
   const [altHistory, setAltHistory] = useState(false);
   const [league, setLeague] = useState<{ name: string; pack?: ReturnType<typeof checkPack>["pack"]; note: string } | null>(null);
@@ -213,6 +215,12 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="finances" type="checkbox" checked={finances === "real"} onChange={(e) => setFinances(e.target.checked ? "real" : "relaxed")} />
               <span><strong>Real owner finances</strong><br /><span className="muted">The team can run short of cash, and you cover it from your own pocket. Turn off to have the team's cash topped up automatically.</span></span>
             </label>
+            <label className="field"><span className="label">Difficulty</span>
+              <select id="difficulty" value={level} onChange={(e) => { const l = e.target.value as Difficulty; setLevel(l); setScouting(DIFFICULTY[l].scouting ?? "real"); }}>
+                {DIFFICULTY_KEYS.map((k) => <option key={k} value={k}>{DIFFICULTY[k].label}</option>)}
+              </select>
+              <span className="muted">{DIFFICULTY[level].what}</span>
+            </label>
             <label className="field"><span className="label">Scouting precision</span>
               <select value={scouting} onChange={(e) => setScouting(e.target.value as typeof scouting)}>
                 <option value="sharp">Sharper reads (easier)</option>
@@ -224,7 +232,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="ironman" type="checkbox" checked={ironman} onChange={(e) => setIronman(e.target.checked)} />
               <span><strong>Ironman</strong><br /><span className="muted">One continuing save: no loading an earlier save to undo a decision.</span></span>
             </label>
-            <button className="btn primary" onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
+            <button className="btn primary" onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, difficulty: level, economy: DIFFICULTY[level].economy, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
               Take over the {selected.name}
             </button>
           </div>

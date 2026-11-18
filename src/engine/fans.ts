@@ -9,6 +9,7 @@
 // a little each season with winning and losing. Post-game surveys read the
 // building. The league-wide economy and each market's other entertainment
 // move ticket demand, price sensitivity and sponsors.
+import { hurt } from "./difficulty";
 import { demandFactor } from "./economy";
 import { adopted } from "./analysts";
 import { business } from "./business";
@@ -148,6 +149,7 @@ export function reachLift(state: GameState): number {
 
 export function trustHit(state: GameState, delta: number, scar = 0, why?: string): void {
   const f = fanBase(state);
+  delta = hurt(state, delta);
   f.trust = Math.max(0, Math.min(100, f.trust + delta));
   f.scar = Math.min(40, f.scar + scar);
   if (why) {
