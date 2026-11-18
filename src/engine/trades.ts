@@ -665,8 +665,28 @@ export interface Answer {
   counter?: TradeDeal;
 }
 
+/**
+ * What a CPU team needs out of a deal (side is the CPU team): the value it
+ * gains, the cushion it wants on top, and any cornerstone players asked for.
+ * `eager` takes some cushion off when the team made the call itself.
+ */
+function cpuNeed(state: GameState, deal: TradeDeal, side: 0 | 1, eager = false): { gain: number; outValue: number; need: number; stars: string[] } {
+  const team = deal.teams[side];
+  const bal = tradeBalance(state, "gm", deal, side);
+  let need = margin(team, bal.outValue);
+  // Owners talk: an ally's front office gives us a little more room, a rival's less.
+  const rel = deal.teams[1 - side] === state.userTeam ? state.owners?.relations[team] : undefined;
+  if (rel?.ally) need -= 0.04 * bal.outValue;
+  else if (rel?.rival) need += 0.08 * bal.outValue;
+  // A team that called us wanted something here: it will meet us part of the way.
+  if (eager) need -= 0.06 * Math.max(0, bal.outValue);
+  const stars = playersIn(deal.send[side]).filter((id) => cornerstone(state, team, id));
+  if (stars.length) need = Math.max(need, 0.35 * bal.outValue);
+  return { gain: bal.gain, outValue: bal.outValue, need, stars };
+}
+
 /** How a CPU team answers a proposal (side 1 is the CPU team). */
-export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1): Answer {
+export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1, eager = false): Answer {
   const team = deal.teams[side];
   const name = teamStaff(team).GM?.name ?? `The ${teamLabel(team)} GM`;
   const legal = checkTrade(state, deal);
@@ -678,14 +698,8 @@ export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1): A
     const to = deal.teams[playersIn(deal.send[0]).includes(id) ? 1 : 0];
     if (!waivesNoTrade(state, id, to)) return { verdict: "reject", text: `${PLAYER_BY_ID[id].name} has a no-trade clause and won't waive it for a move to the ${teamLabel(to)}.` };
   }
-  const bal = tradeBalance(state, "gm", deal, side);
-  let need = margin(team, bal.outValue);
-  // Owners talk: an ally's front office gives us a little more room, a rival's less.
-  const rel = deal.teams[1 - side] === state.userTeam ? state.owners?.relations[team] : undefined;
-  if (rel?.ally) need -= 0.04 * bal.outValue;
-  else if (rel?.rival) need += 0.08 * bal.outValue;
-  const stars = playersIn(deal.send[side]).filter((id) => cornerstone(state, team, id));
-  if (stars.length) need = Math.max(need, 0.35 * bal.outValue);
+  const { gain, outValue, need, stars } = cpuNeed(state, deal, side, eager);
+  const bal = { gain, outValue };
   if (bal.gain >= need) return { verdict: "accept", text: `${name}: "You've got a deal."` };
   // Close enough: see what would get it done from the other side's assets.
   const counter = completeDeal(state, deal, side, need - bal.gain);
@@ -697,8 +711,65 @@ export function cpuAnswer(state: GameState, deal: TradeDeal, side: 0 | 1 = 1): A
       counter,
     };
   }
+  // Or keep the shape of the deal and give less: drop a piece from our side,
+  // or offer a lesser player or pick in its place. A GM does this most of the
+  // time when the gap is modest, and only now and then for a lowball.
+  const far = bal.gain < -0.4 * Math.max(20, bal.outValue);
+  const keen = rngFor(state.seed, `trade-counter:${team}:${state.date}:${dealKey(deal)}`)() < (far ? 0.3 : 0.85);
+  const trimmed = keen ? trimDeal(state, deal, side, eager) : null;
+  if (trimmed) {
+    const dropped = deal.send[side].filter((a) => !trimmed.send[side].some((b) => sameAsset(a, b)));
+    const added = trimmed.send[side].filter((a) => !deal.send[side].some((b) => sameAsset(a, b)));
+    const lead = stars.length ? `${PLAYER_BY_ID[stars[0]].name} isn't available.` : far ? "That's light." : "We can't go that high.";
+    return {
+      verdict: "counter",
+      text: `${name}: "${lead} ${added.length ? `We'd send ${describe(state, added, team)} instead of ${describe(state, dropped, team)}` : `Leave ${describe(state, dropped, team)} out of it`} and we'll do it."`,
+      counter: trimmed,
+    };
+  }
   if (stars.length) return { verdict: "reject", text: `${name}: "${PLAYER_BY_ID[stars[0]].name} isn't available."` };
   return { verdict: "reject", text: `${name}: "That doesn't work for us. ${bal.gain < -0.4 * Math.max(20, bal.outValue) ? "We're not close." : "We're not there."}"` };
+}
+
+function dealKey(deal: TradeDeal): string {
+  const key = (a: TradeAsset) => (a.kind === "player" ? a.id : a.pick);
+  return deal.send.map((side) => side.map(key).sort().join(",")).join("|");
+}
+
+/**
+ * The CPU team's own counter (side is the CPU team): the same deal with one of
+ * its pieces taken off, or swapped for a lesser player or pick it would rather
+ * move. The other side's offer is left as it was, so the counter keeps the
+ * original deal's shape. Returns the version that gives the owner the most
+ * the CPU team can live with, or null.
+ */
+function trimDeal(state: GameState, deal: TradeDeal, side: 0 | 1, eager: boolean): TradeDeal | null {
+  const receiver = deal.teams[1 - side];
+  const date = officialDate(state);
+  const worth = (a: TradeAsset) => (a.kind === "pick" ? pickValue(state, receiver, a.pick) : playerValue(state, "gm", receiver, a.id, { date }).points);
+  const original = [...deal.send[0], ...deal.send[1]];
+  let best: { deal: TradeDeal; value: number } | null = null;
+  const consider = (next: TradeDeal) => {
+    if (!next.send[side].length) return;
+    if (!original.some((a) => next.send[0].concat(next.send[1]).some((b) => sameAsset(a, b)))) return;
+    const n = cpuNeed(state, next, side, eager);
+    if (n.gain < n.need || n.stars.length) return;
+    const value = next.send[side].reduce((t, a) => t + worth(a), 0);
+    if (value > (best?.value ?? 0) && checkTrade(state, next).ok) best = { deal: next, value };
+  };
+  for (const drop of deal.send[side]) {
+    const rest = deal.send[side].filter((a) => !sameAsset(a, drop));
+    const base: TradeDeal = { teams: deal.teams, send: side === 1 ? [deal.send[0], rest] : [rest, deal.send[1]] };
+    if (rest.length) consider(base);
+    // A swap is only worth offering if the stand-in is a real piece, not a throw-in.
+    const floor = 0.35 * worth(drop);
+    for (const c of candidates(state, base, side)) {
+      if (c.rv < floor || sameAsset(c.a, drop)) continue;
+      const with1 = [...rest, c.a];
+      consider({ teams: deal.teams, send: side === 1 ? [deal.send[0], with1] : [with1, deal.send[1]] });
+    }
+  }
+  return (best as { deal: TradeDeal } | null)?.deal ?? null;
 }
 
 function sameAsset(a: TradeAsset, b: TradeAsset): boolean {
@@ -966,21 +1037,49 @@ function processAgreed(state: GameState): void {
 
 // ---- The owner's moves ----
 
-/** The owner puts a trade to a CPU team. teams[0] must be the owner's team. */
-export function proposeTrade(state: GameState, deal: TradeDeal): Answer & { record?: TradeRecord } {
+/**
+ * A counter to an offer a CPU team made us must keep at least one piece of it:
+ * a different trade altogether is a new proposal, not a counter.
+ */
+export function counterProblem(state: GameState, offerId: string, deal: TradeDeal): string | null {
+  const o = trades(state).offers.find((x) => x.id === offerId);
+  if (!o || o.status !== "open") return "That offer is no longer on the table.";
+  if (deal.teams[1] !== o.teams[0]) return `A counter goes back to the ${teamLabel(o.teams[0])}.`;
+  const theirs = [...o.send[0], ...o.send[1]];
+  if (!deal.send[0].concat(deal.send[1]).some((a) => theirs.some((b) => sameAsset(a, b)))) return "A counter has to keep at least one piece of their offer.";
+  return null;
+}
+
+/**
+ * The owner puts a trade to a CPU team. teams[0] must be the owner's team.
+ * With `offerId`, it is our counter to that team's offer: the team called us,
+ * so it gives a little ground, and a deal closes its offer.
+ */
+export function proposeTrade(state: GameState, deal: TradeDeal, offerId?: string): Answer & { record?: TradeRecord } {
   if (lockedOut(state)) return { verdict: "reject", text: LOCKOUT_REASON };
   const team = deal.teams[1];
+  const offer = offerId ? trades(state).offers.find((x) => x.id === offerId) : undefined;
+  if (offerId) {
+    const problem = counterProblem(state, offerId, deal);
+    if (problem) return { verdict: "reject", text: problem };
+  }
   const t = (trades(state).talks[team] ??= { strikes: 0 });
-  if (t.coolingUntil && t.coolingUntil > state.date) {
+  if (!offer && t.coolingUntil && t.coolingUntil > state.date) {
     return { verdict: "reject", text: `The ${teamLabel(team)} aren't taking our calls until ${shortDate(t.coolingUntil)}. Too many lowballs.` };
   }
-  const answer = cpuAnswer(state, deal, 1);
+  const answer = cpuAnswer(state, deal, 1, !!offer);
   if (answer.verdict === "accept") {
     t.strikes = Math.max(0, t.strikes - 1);
+    if (offer) offer.status = "accepted";
     return { ...answer, record: completeTrade(state, deal) };
   }
   const bal = tradeBalance(state, "gm", deal, 1);
-  if (answer.verdict === "reject" && bal.gain < -0.4 * Math.max(20, bal.outValue)) {
+  // A lowball counter to their own offer ends the call: they take it off the table.
+  if (offer && answer.verdict === "reject" && bal.gain < -0.4 * Math.max(20, bal.outValue)) {
+    offer.status = "withdrawn";
+    return { ...answer, text: `${answer.text} They've pulled their offer.` };
+  }
+  if (!offer && answer.verdict === "reject" && bal.gain < -0.4 * Math.max(20, bal.outValue)) {
     t.strikes++;
     if (t.strikes >= 3) {
       t.coolingUntil = addDays(state.date, 7);

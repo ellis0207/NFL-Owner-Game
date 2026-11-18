@@ -7,7 +7,7 @@ import { BASE_SEASON, PLAYER_BY_ID, RULES, TEAMS, TEAM_BY_ID } from "../../engin
 import { gradeShort } from "../../engine/reports";
 import { POSITION_ORDER } from "../../engine/roster";
 import {
-  acceptOffer, askPrice, canTradePlayer, checkTrade, declineOffer, describe, gmRead, hasNoTradeClause, headline,
+  acceptOffer, askPrice, canTradePlayer, checkTrade, counterProblem, declineOffer, describe, gmRead, hasNoTradeClause, headline,
   parsePick, PICK_YEARS, pickLabel, pickOwner, picksOf, projectedSlot, proposeTrade, toggleBlock, trades, tradeWindow, type Answer,
 } from "../../engine/trades";
 import type { GameState, PickCondition, TradeAsset, TradeDeal } from "../../engine/types";
@@ -28,6 +28,8 @@ export function TradesScreen({ game, changed, start }: { game: GameState; change
   const [tab, setTab] = useState<Tab>(() => initialTab<Tab>("Trades", ["make", "offers", "block", "picks", "league"], "make"));
   const w = tradeWindow(game);
   const offers = trades(game).offers.filter((o) => o.status === "open").length;
+  // An offer we're countering opens in the trade builder with its pieces loaded.
+  const [counterOf, setCounterOf] = useState<string | null>(null);
   return (
     <section className="stack">
       <div className={`notice${w.open ? "" : " error"}`}>{w.text}</div>
@@ -36,8 +38,8 @@ export function TradesScreen({ game, changed, start }: { game: GameState; change
           <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}{k === "offers" && offers ? ` (${offers})` : ""}</button>
         ))}
       </div>
-      {tab === "make" && <Builder game={game} changed={changed} start={start} />}
-      {tab === "offers" && <Offers game={game} changed={changed} />}
+      {tab === "make" && <Builder key={counterOf ?? "new"} game={game} changed={changed} start={counterOf ? null : start} counterOf={counterOf} endCounter={() => setCounterOf(null)} />}
+      {tab === "offers" && <Offers game={game} changed={changed} counter={(id) => { setCounterOf(id); setTab("make"); }} />}
       {tab === "block" && <Block game={game} changed={changed} />}
       {tab === "picks" && <Picks game={game} />}
       {tab === "league" && <LeagueTrades game={game} />}
@@ -54,17 +56,22 @@ function sortRoster(game: GameState, team: string): string[] {
       || (dealOf(game, b)?.apy ?? 0) - (dealOf(game, a)?.apy ?? 0));
 }
 
-function Builder({ game, changed, start }: { game: GameState; changed: () => void; start?: TradeStart | null }) {
+function Builder({ game, changed, start, counterOf, endCounter }: {
+  game: GameState; changed: () => void; start?: TradeStart | null; counterOf?: string | null; endCounter?: () => void;
+}) {
   const us = game.userTeam;
+  const offer = counterOf ? trades(game).offers.find((o) => o.id === counterOf) : undefined;
   const startTeam = start ? game.players[start.player]?.team : null;
-  const [partner, setPartner] = useState<string>(startTeam && startTeam !== us ? startTeam : TEAMS.find((t) => t.id !== us)!.id);
-  const [give, setGive] = useState<TradeAsset[]>(start && startTeam === us ? [{ kind: "player", id: start.player }] : []);
-  const [get, setGet] = useState<TradeAsset[]>(start && startTeam && startTeam !== us ? [{ kind: "player", id: start.player }] : []);
+  const [partner, setPartner] = useState<string>(offer ? offer.teams[0] : startTeam && startTeam !== us ? startTeam : TEAMS.find((t) => t.id !== us)!.id);
+  const [give, setGive] = useState<TradeAsset[]>(offer ? [...offer.send[1]] : start && startTeam === us ? [{ kind: "player", id: start.player }] : []);
+  const [get, setGet] = useState<TradeAsset[]>(offer ? [...offer.send[0]] : start && startTeam && startTeam !== us ? [{ kind: "player", id: start.player }] : []);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const deal: TradeDeal = { teams: [us, partner], send: [give, get] };
   const ready = give.length > 0 && get.length > 0;
   const check = checkTrade(game, deal);
   const year = check.cap[0].year;
+  const countering = offer?.status === "open" ? offer.id : undefined;
+  const counterIssue = countering ? counterProblem(game, countering, deal) : null;
 
   function toggle(list: TradeAsset[], set: (l: TradeAsset[]) => void, a: TradeAsset) {
     set(list.some((x) => key(x) === key(a)) ? list.filter((x) => key(x) !== key(a)) : [...list, a]);
@@ -97,7 +104,7 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
   }
 
   function propose() {
-    const r = proposeTrade(game, deal);
+    const r = proposeTrade(game, deal, countering);
     setAnswer(r);
     if (r.verdict === "accept") {
       setGive([]);
@@ -108,7 +115,8 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
 
   function takeCounter() {
     if (!answer?.counter) return;
-    const r = proposeTrade(game, answer.counter);
+    const via = countering && !counterProblem(game, countering, answer.counter) ? countering : undefined;
+    const r = proposeTrade(game, answer.counter, via);
     setAnswer(r);
     if (r.verdict === "accept") {
       setGive([]);
@@ -122,10 +130,18 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
 
   return (
     <div className="stack">
+      {offer && (
+        <div className="notice">
+          {offer.status === "open"
+            ? <>Countering the {TEAM_BY_ID[offer.teams[0]].city} {TEAM_BY_ID[offer.teams[0]].name} offer. Change the pieces on either side, but keep at least one from their offer. They called us, so they'll give a little ground; a lowball can end the talks.</>
+            : <>The {TEAM_BY_ID[offer.teams[0]].name} offer is off the table now.</>}
+          {" "}<button className="btn small" onClick={endCounter}>{offer.status === "open" ? "Stop countering" : "New trade"}</button>
+        </div>
+      )}
       <div className="btn-row">
         <label className="field">
           <span className="label">Trade partner</span>
-          <select value={partner} onChange={(e) => { setPartner(e.target.value); setGet([]); setAnswer(null); }}>
+          <select value={partner} disabled={!!countering} onChange={(e) => { setPartner(e.target.value); setGet([]); setAnswer(null); }}>
             {TEAMS.filter((t) => t.id !== us).sort((a, b) => a.city.localeCompare(b.city)).map((t) => <option key={t.id} value={t.id}>{t.city} {t.name}</option>)}
           </select>
         </label>
@@ -173,6 +189,7 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
             )}
             {ready && <p><span className="label">GM's read</span><br />{gmRead(game, deal)}</p>}
             {ready && !check.ok && <div className="notice error">{check.problems.join(" ")}</div>}
+            {ready && check.ok && counterIssue && <div className="notice error">{counterIssue}</div>}
           </>
         )}
         {answer && (
@@ -191,7 +208,7 @@ function Builder({ game, changed, start }: { game: GameState; changed: () => voi
           </div>
         )}
         <div className="btn-row">
-          <button className="btn primary" disabled={!ready || !check.ok} onClick={propose}>Propose trade</button>
+          <button className="btn primary" disabled={!ready || !check.ok || !!counterIssue} onClick={propose}>{countering ? "Send counter" : "Propose trade"}</button>
           <button className="btn" disabled={!get.length} onClick={() => setAnswer(askPrice(game, partner, get))}>What would it take?</button>
           <button className="btn" disabled={!give.length && !get.length} onClick={() => { setGive([]); setGet([]); setAnswer(null); }}>Clear</button>
         </div>
@@ -283,7 +300,7 @@ function capOf(game: GameState, id: string, year: number): number {
   return dealCapHit(dealOf(game, id), year);
 }
 
-function Offers({ game, changed }: { game: GameState; changed: () => void }) {
+function Offers({ game, changed, counter }: { game: GameState; changed: () => void; counter: (id: string) => void }) {
   const us = game.userTeam;
   const [msg, setMsg] = useState<string | null>(null);
   const all = trades(game).offers;
@@ -309,6 +326,7 @@ function Offers({ game, changed }: { game: GameState; changed: () => void }) {
             {!check.ok && <span className="bad">{check.problems.join(" ")}</span>}
             <div className="btn-row">
               <button className="btn primary" disabled={!check.ok} onClick={() => { setMsg(acceptOffer(game, o.id).text); changed(); }}>Accept</button>
+              <button className="btn" disabled={!tradeWindow(game).open} onClick={() => counter(o.id)}>Counter</button>
               <button className="btn" onClick={() => { declineOffer(game, o.id); setMsg("We passed."); changed(); }}>Decline</button>
             </div>
           </div>
