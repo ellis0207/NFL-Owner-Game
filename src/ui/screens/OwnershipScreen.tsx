@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { billions, valuation } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
+import { wantsWord } from "../../engine/crossroads";
 import { marketRate } from "../../engine/debt";
 import {
   board, BOARD_MAJORITY, bridgeLoan, checkSale, contingency, CONTROL, covenants, investors, MATTERS, moodWord, openSale, ownerCapitalCall, ownerShare,
@@ -273,6 +274,7 @@ function Investors({ game, say }: { game: GameState; say: Say }) {
                 <dt>Paid back</dt><dd>{money(p.distributions)}</dd>
                 <dt>Stake worth</dt><dd>{big(r.value)} ({r.multiple.toFixed(2)} times their money)</dd>
                 <dt>How they feel</dt><dd className={p.mood < 42 ? "bad" : p.mood >= 58 ? "good" : ""}>{moodWord(p.mood)}</dd>
+                <dt>Wants</dt><dd>{wantsWord(game, p)}</dd>
                 <dt>Complaints</dt><dd>{p.complaints}</dd>
                 {p.putFrom && <><dt>Put right</dt><dd>From {shortDate(p.putFrom)} {p.putFrom.slice(0, 4)}</dd></>}
               </dl>

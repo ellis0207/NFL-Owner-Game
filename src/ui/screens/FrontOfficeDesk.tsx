@@ -1,4 +1,5 @@
 import { CompareToggle } from "../Comparison";
+import { Crossroads } from "../kit";
 import { memoComparison } from "../../engine/compare";
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
@@ -45,6 +46,7 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
       <span className="muted">From {m.from}, {shortDate(m.date)}</span>
       {msg && <p className="notice">{msg}</p>}
       <span style={{ whiteSpace: "pre-line" }}>{m.problem}</span>
+      {m.voices?.length ? <Crossroads voices={m.voices} options={m.options} stakes={m.stakes} /> : null}
       <span><strong>Proposal:</strong> {m.proposal}{m.amount ? ` (${money(m.amount)})` : ""}</span>
       {m.cap && <span className="muted">Cap: {m.cap}</span>}
       {m.cash && <span className="muted">Cash: {m.cash.map((c) => `${money(c.amount)} ${c.when}`).join("; ")}</span>}

@@ -45,6 +45,7 @@ import { resolveWealthMemo } from "./wealth";
 import { resolveFranchiseMemo } from "./franchisemarket";
 import { resolveTakeoverMemo } from "./takeover";
 import { resolveSuccessionMemo } from "./succession";
+import { lapseCrossroads, resolveCrossroadsMemo } from "./crossroads";
 import type { Dept, ExecRole, GameState, LedgerCat, Memo, OfferTerms, OfficeTask, TradeDeal } from "./types";
 
 const M = 1_000_000;
@@ -84,6 +85,8 @@ export function decideMemo(state: GameState, id: string, choice: number, why = "
   m.decided = state.date;
   if (m.amount || m.kind === "general" || forecast) cause(state, m.area ?? m.kind, `${m.title}: ${m.options[choice].label}.`, m.options[choice].effect ? [m.options[choice].effect] : [], undefined, forecast ?? undefined);
   noteDecision(state, m.area ? AREAS[m.area].label.toLowerCase() : m.kind, `${m.title}: ${m.options[choice].label}`, m.amount, m.from, "owner", why || undefined);
+  // A crossroads settles with each of its voices itself (crossroads.ts).
+  if (m.voices?.length) return null;
   // Executives notice whether their recommendations are taken.
   const role = roleOf(state, m);
   const e = role ? execRole(state, role) : undefined;
@@ -153,6 +156,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
     case "incident":
       return resolveIncident(state, p, choice);
     case "general":
+      if (p.crossroads) return resolveCrossroadsMemo(state, m, choice);
       if (p.franchise) return resolveFranchiseMemo(state, m, choice);
       if (p.takeover) return resolveTakeoverMemo(state, m, choice);
       if (p.succession) return resolveSuccessionMemo(state, m, choice);
@@ -702,7 +706,8 @@ export function officeDaily(state: GameState): void {
   weeklyDigest(state);
   // A president of football operations keeps the head coach and the owner on the same page.
   if (weekday(state.date) === "Tuesday" && state.media && execRole(state, "FOPS")) state.media.coach = clamp(state.media.coach + 0.3 + 0.4 * execBoost(state, "FOPS"));
-  if (state.date === addDays(RULES.keyDates.regularSeasonEnd, 2)) coachReview(state);
+  // A crossroads on the coach (crossroads.ts) already asks the question; the review would only repeat it.
+  if (state.date === addDays(RULES.keyDates.regularSeasonEnd, 2) && !openMemos(state).some((m) => m.payload?.crossroads === "coach")) coachReview(state);
   if (state.date.endsWith("-01")) {
     officeMood(state);
     workplaceMonthly(state);
@@ -740,6 +745,7 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "complaint") carryOut(state, m, 2);
   if (m.kind === "incident") carryOut(state, m, m.recommend);
   if (m.kind === "general" && m.payload?.investors) lapseInvestorMemo(state, m);
+  if (m.kind === "general" && m.payload?.crossroads) lapseCrossroads(state, m);
   if (m.kind === "general" && m.payload?.franchise) carryOut(state, m, 1);
   // Succession memos left unanswered: the heir goes on, a sale comes off the market, a family fight goes to court.
   const sp = m.kind === "general" ? m.payload?.succession : undefined;

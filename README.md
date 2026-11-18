@@ -58,6 +58,17 @@ and monthly payments until they open.
 If a step fails, the game puts back the copy taken just before it, so nothing
 is left half done.
 
+A few times a year a decision splits the building. A star's contract, the coach
+after a losing season, the stadium against the training facility, a payout the
+partners want: each comes as one memo where the GM, the coach, the money
+people, the partners, the fans and sometimes the player argue for different
+options in their own words, and every option shows what it costs and with whom.
+Whoever loses the argument remembers it: the GM's trust, an executive's
+satisfaction, the partners' mood, the fans' trust and a star's morale move with
+the choice. A season later a letter says how it turned out, and the side you
+overruled says so if it was right. Partners each care most about money back,
+winning, or what the club is worth (Ownership page).
+
 Players' skills age at their own pace. Speed, quickness and burst peak in
 the mid twenties and slip first; strength and arm hold a few years longer;
 hands, route running, blocking technique and a quarterback's reads keep

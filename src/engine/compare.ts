@@ -414,7 +414,7 @@ export function memoComparison(state: GameState, memoId: string): Comparison | n
       const offers = (state.debt?.offers ?? []).filter((o) => o.refinances === pl.loan);
       return offers.length ? financingComparison(state, offers) : null;
     }
-    if (m.kind === "coachReview") return dismissalComparison(state, "HC");
+    if (m.kind === "coachReview" || m.payload?.crossroads === "coach") return dismissalComparison(state, "HC");
   } catch {
     // A comparison is advice; if a system can't answer, the memo stands on its own.
     return null;
