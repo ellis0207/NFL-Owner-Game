@@ -11,7 +11,7 @@
 import { agentFor, changeMorale, changeTrust, morale, priorities } from "./agents";
 import { addDeadMoney, capHit, capSummary, releaseCost } from "./cap";
 import { dealOf, dealYear, isPostJune1, leagueYear, minimumSalary } from "./contracts";
-import { ageOn } from "./dates";
+import { ageOn, weekday } from "./dates";
 import { money, news, send } from "./inbox";
 import { PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { invalidateMarket, marketPrice } from "./market";
@@ -222,7 +222,11 @@ export function capMovesDaily(state: GameState): void {
   june1Daily(state);
   capDeadlineDaily(state);
   // Outside the offseason, where the front offices do their cap work, a CPU team over the cap gets back under it.
-  if (state.settings.capRules === "real" && !isOffseason(state.date)) {
+  // Front offices do this cap work once a week (Tuesday, the league's transaction day) and on the cutdown
+  // and the opener, not every day: a team that can't get under today won't find new room tomorrow.
+  const K = RULES.keyDates;
+  const sweep = weekday(state.date) === "Tuesday" || state.date === K.rosterCutdown || state.date === K.regularSeasonStart;
+  if (state.settings.capRules === "real" && !isOffseason(state.date) && sweep) {
     // In season only a real overage forces cuts, and never below a full 53.
     const inSeason = state.date >= RULES.keyDates.regularSeasonStart;
     for (const t of TEAMS) {
