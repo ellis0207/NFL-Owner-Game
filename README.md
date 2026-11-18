@@ -69,6 +69,17 @@ the choice. A season later a letter says how it turned out, and the side you
 overruled says so if it was right. Partners each care most about money back,
 winning, or what the club is worth (Ownership page).
 
+With partners, the board meets every quarter. Each partner has a goal for the
+year that follows from what they care about, and the ones furthest behind set
+the agenda: they ask for a promise (a payout, a winning record, spending to the
+cap, no new debt) that is checked at the next meeting. Pledge it, present your
+own plan, or remind them who runs the club; a broken pledge costs more than no
+pledge, and the record follows you into every meeting. Executives can have part
+of their pay put on their review score (Front office > Executives): money on the
+table sharpens a department, and a stretch target missed stings. Today lists the
+open problems no memo asks about, such as cash under the reserve, an unhappy
+partner, a slipping pledge or a sour locker room, and how long each has gone on.
+
 Players' skills age at their own pace. Speed, quickness and burst peak in
 the mid twenties and slip first; strength and arm hold a few years longer;
 hands, route running, blocking technique and a quarterback's reads keep

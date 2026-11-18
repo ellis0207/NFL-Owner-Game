@@ -16,7 +16,7 @@ import type { BusinessState, CommunityState, DepartmentsState, DraftArchive, Fac
 import type { CfbWorld, CollegeState } from "./types-college";
 import type { ComplianceState, CrisisState, HostingState, LeagueMoneyState, LeagueOfficeState, LegalState, OwnersState, ProgramState, RedoAsk } from "./types-league";
 import type { FanState, MediaState, TeamFinance } from "./types-media";
-import type { BooksState, CauseEntry, CrossroadsState, CultureState, DebtState, ExecState, FranchiseMarketState, HonorsState, InvestorsState, OfficeState, OwnerState, RecordsState, RivalsState, SuccessionState, TenureState, WealthState, YearRecord } from "./types-owner";
+import type { BooksState, CauseEntry, CrossroadsState, BoardroomState, CultureState, DebtState, ExecState, FranchiseMarketState, HonorsState, InvestorsState, OfficeState, OwnerState, RecordsState, RivalsState, SuccessionState, TenureState, WealthState, YearRecord } from "./types-owner";
 export type * from "./types-college";
 export type * from "./types-media";
 export type * from "./types-business";
@@ -1235,4 +1235,8 @@ export interface GameState {
   sandbox?: boolean;
   /** The big calls where the club's people disagree (crossroads.ts). */
   crossroads?: CrossroadsState;
+  /** Quarterly board meetings, pledges to the partners and their goals (boardroom.ts). */
+  boardroom?: BoardroomState;
+  /** When each open problem was first seen (problems.ts). */
+  problems?: { seen: Record<string, string> };
 }

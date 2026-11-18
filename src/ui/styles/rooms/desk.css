@@ -126,3 +126,8 @@
 [data-room="desk"] .mp-head:hover, [data-room="desk"] .mp-card button.link:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 [data-room="desk"] .queue-title { text-decoration: none; }
 [data-room="desk"] .queue-title:hover { text-decoration: underline; }
+
+/* Open problems on Today: a rule on the left in the problem's urgency. */
+.dk-problem { border-left: 3px solid var(--rule); padding: 2px 0 2px 10px; }
+.dk-problem.sev2 { border-left-color: var(--warn, #c98a1a); }
+.dk-problem.sev3 { border-left-color: var(--bad, #c0392b); }

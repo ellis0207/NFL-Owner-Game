@@ -512,6 +512,15 @@ export interface ExecState {
   /** Departures and their cost: fees and severance. */
   departures: { date: string; role: ExecRole; why: "fired" | "left" | "retired"; cost: number }[];
   reorgs: number;
+  /** Bonus targets the owner set for the year: a share of salary paid if the review reaches the target (boardroom.ts). */
+  bonus?: Partial<Record<ExecRole, ExecBonus>>;
+}
+
+export interface ExecBonus {
+  /** Share of salary on offer, 0 to 0.5. */
+  pct: number;
+  /** The review score that earns it. */
+  target: number;
 }
 
 export type DecisionArea = "signings" | "trades" | "coaching" | "pricing" | "events" | "sponsors" | "financing";
@@ -570,6 +579,30 @@ export interface Voice {
   ifOverruled: string;
   /** A coach or player id, when the voice is one person on the football side. */
   ref?: string;
+}
+
+export type PledgeKind = "payout" | "winning" | "payroll" | "value";
+
+/** A promise the owner made to the board, checked at the next meeting (boardroom.ts). */
+export interface Pledge {
+  kind: PledgeKind;
+  made: string;
+  due: string;
+  target: number;
+  text: string;
+  want: "cash" | "winning" | "value";
+  status: "open" | "kept" | "broken";
+  /** What was measured when it was made: partners' distributions or the club's value. */
+  base: number;
+}
+
+export interface BoardroomState {
+  meetings: { date: string; period: string; ask: string; lines: string[]; choice?: string }[];
+  pledges: Pledge[];
+  /** Each partner's distributions and the club's value at the start of the league year, for their goals. */
+  marks: Record<string, { year: number; dist: number; value: number }>;
+  kept: number;
+  broken: number;
 }
 
 export type CrossKind = "star" | "coach" | "build" | "payout";

@@ -51,7 +51,7 @@ export function inControl(state: GameState): boolean {
 /** Club slices that belong to the club the player runs, rebuilt for a new club. */
 const CLUB_SLICES = [
   "business", "fans", "merch", "teamMedia", "venue", "facilities", "community", "departments", "program", "crisis", "legal", "review", "books", "debt",
-  "investors", "execs", "office", "culture", "analytics", "gameWeek", "scouts", "gameOps", "standing", "people", "treasury", "shocks", "politics", "grounds",
+  "investors", "execs", "office", "culture", "analytics", "gameWeek", "scouts", "gameOps", "standing", "people", "treasury", "shocks", "politics", "grounds", "crossroads", "boardroom", "problems",
 ] as const;
 
 /**

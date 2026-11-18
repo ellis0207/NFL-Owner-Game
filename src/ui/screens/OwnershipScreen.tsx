@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { billions, valuation } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
 import { wantsWord } from "../../engine/crossroads";
+import { boardroom, nextMeeting, openPledge, partnerGoal, payPledge, pledgeOnTrack } from "../../engine/boardroom";
 import { marketRate } from "../../engine/debt";
 import {
   board, BOARD_MAJORITY, bridgeLoan, checkSale, contingency, CONTROL, covenants, investors, MATTERS, moodWord, openSale, ownerCapitalCall, ownerShare,
@@ -199,6 +200,7 @@ function Board({ game, say }: { game: GameState; say: Say }) {
           <span>{!s.partners.length ? "With no partners, your vote carries them." : share >= BOARD_MAJORITY ? `You hold ${pctText(share)}, enough to carry them alone; partners still notice how they're asked.` : `You hold ${pctText(share)}. These need two-thirds of the shares, so you need partners' votes.`}</span>
         </div>
       </div>
+      {s.partners.length > 0 && <BoardMeetings game={game} say={say} />}
       <div className="split">
         <div className="panel stack tight">
           <h3>Covenants</h3>
@@ -245,6 +247,30 @@ function Board({ game, say }: { game: GameState; say: Say }) {
   );
 }
 
+/** The quarterly meetings: the promise on the table, the record of keeping them, and what each meeting asked. */
+function BoardMeetings({ game, say }: { game: GameState; say: Say }) {
+  const b = boardroom(game);
+  const pl = openPledge(game);
+  const ok = pl ? pledgeOnTrack(game, pl) : false;
+  return (
+    <div className="split">
+      <div className="panel stack tight">
+        <h3>Your pledge to the board</h3>
+        {pl ? <>
+          <span><strong>"{pl.text}."</strong></span>
+          <span className={ok ? "good" : "bad"}>{ok ? "As things stand, it would be kept." : "As things stand, it would be broken."} Checked {shortDate(pl.due)} {pl.due.slice(0, 4)}.</span>
+          {pl.kind === "payout" && !ok && <div className="btn-row"><button className="btn small" onClick={() => say(payPledge(game), "Paid. Every partner got their share.")}>Pay it now</button></div>}
+        </> : <span className="muted">No promise open. The next meeting is {shortDate(nextMeeting(game.date))}.</span>}
+        <span className="muted">Kept: {b.kept}. Broken: {b.broken}. Partners who asked for a pledge take a broken one hardest, and a record of broken ones makes every plan you present sound thinner.</span>
+      </div>
+      <div className="panel stack tight">
+        <h3>Meetings</h3>
+        {b.meetings.length ? <ul>{b.meetings.slice(0, 6).map((m, i) => <li key={i}>{m.period}: the board asked, "{m.ask}." <span className="muted">{m.choice ? `You chose: ${m.choice.toLowerCase()}.` : "Waiting on your answer."}</span></li>)}</ul> : <span className="muted">The board meets on the 20th of January, April, July and October.</span>}
+      </div>
+    </div>
+  );
+}
+
 function Investors({ game, say }: { game: GameState; say: Say }) {
   const s = investors(game);
   return (
@@ -275,6 +301,7 @@ function Investors({ game, say }: { game: GameState; say: Say }) {
                 <dt>Stake worth</dt><dd>{big(r.value)} ({r.multiple.toFixed(2)} times their money)</dd>
                 <dt>How they feel</dt><dd className={p.mood < 42 ? "bad" : p.mood >= 58 ? "good" : ""}>{moodWord(p.mood)}</dd>
                 <dt>Wants</dt><dd>{wantsWord(game, p)}</dd>
+                {(() => { const g = partnerGoal(game, p); return <><dt>This year's goal</dt><dd className={g.met ? "good" : "bad"}>{g.text}. {g.status}, {g.met ? "on track" : "behind"}.</dd></>; })()}
                 <dt>Complaints</dt><dd>{p.complaints}</dd>
                 {p.putFrom && <><dt>Put right</dt><dd>From {shortDate(p.putFrom)} {p.putFrom.slice(0, 4)}</dd></>}
               </dl>
