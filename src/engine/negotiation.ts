@@ -4,6 +4,7 @@
 // the player won't go below, a hidden ask that comes down as talks go, and a
 // limited supply of patience. Every round moves the player's morale and the
 // agent's trust in the front office.
+import { pastDeadline } from "./clock";
 import { difficulty } from "./difficulty";
 import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
@@ -53,7 +54,7 @@ export function extensionEligibility(state: GameState, id: string): Eligibility 
   if ((deal.kind === "franchise" || deal.kind === "transition") && state.date > `${tagYear}-07-15` && state.date <= RULES.keyDates.regularSeasonEnd) {
     return { ok: false, reason: "Tagged players can't sign a long-term deal after July 15 until the season ends." };
   }
-  if (isPendingFreeAgent(state, id) && state.date >= RULES.keyDates.newLeagueYear) return { ok: false, reason: "The contract has expired." };
+  if (isPendingFreeAgent(state, id) && pastDeadline(state, RULES.keyDates.newLeagueYear)) return { ok: false, reason: "The contract has expired." };
   const left = dealYearsLeft(deal, year);
   // A player who has asked to redo his deal can be extended with more years left (see redo.ts).
   if (left > 2 && !openAsk(state, id)) return { ok: false, reason: `Under contract through ${lastYear(deal)}. Too early to extend.` };
@@ -556,7 +557,7 @@ function agree(state: GameState, neg: Negotiation, t: OfferTerms): void {
       const s = state.signings.find((x) => x.player === id && x.team === neg.team)!;
       send(state, "transaction", neg.handler === "gm" ? gmName(state) : `${agentFor(id).name}, agent`, `${p.name} agrees to terms`,
         `Done: ${t.years} years, ${money(s.total)} total, ${money(s.guaranteed)} guaranteed. ` +
-        (inWindow(state.date) ? `The deal is signed when the league year opens on ${RULES.keyDates.newLeagueYear}. ` : t.signingBonus ? `${money(t.signingBonus)} signing bonus paid now. ` : "He's on the roster. ") +
+        (inWindow(state) ? `The deal is signed when the league year opens on ${RULES.keyDates.newLeagueYear}. ` : t.signingBonus ? `${money(t.signingBonus)} signing bonus paid now. ` : "He's on the roster. ") +
         `Early grades: ${s.grades.map((g) => `${g.outlet}: ${g.grade}`).join(" · ")}.`);
     }
     return;

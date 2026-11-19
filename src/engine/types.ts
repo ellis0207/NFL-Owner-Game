@@ -306,6 +306,15 @@ export interface TeamData {
 export type GameType = "PRE" | "REG" | "POST";
 export type PlayoffRound = "WC" | "DIV" | "CONF" | "SB";
 
+/** A game that has kicked off and isn't over: the result is known to the engine, shown as far as the clock has run. */
+export interface LiveGame {
+  result: GameResult;
+  box: BoxScore;
+  /** Kickoff and the final whistle, in minutes of the game's day. */
+  kick: number;
+  end: number;
+}
+
 export interface ScheduledGame {
   id: string;
   type: GameType;
@@ -1133,6 +1142,10 @@ export interface GameState {
   cutPlan?: string[];
   /** Today's events the owner has already handled, by agenda id, with what came of each. */
   day?: { date: string; done: Record<string, string> };
+  /** Minutes past midnight Eastern on `date` (clock.ts); absent in older saves, which stand at midnight. */
+  clock?: number;
+  /** Games under way, by game id: already played out, shown as far as the clock has run (clock.ts). */
+  live?: Record<string, LiveGame>;
   /** The college football season and our draft scouting. */
   college?: CollegeState;
   /** The college world that carries across seasons: programs, recruiting, coaching changes (cfbworld.ts). */

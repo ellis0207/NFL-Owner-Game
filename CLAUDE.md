@@ -35,8 +35,17 @@ npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the r
   functions take `state` and change it in place. The UI wraps every action in
   `step(fn)` in `ui/GameShell.tsx`, which runs it and calls `changed()` to
   re-render and autosave.
-- **The day loop** is `advanceDay` in `season.ts`: the owner's pending events,
-  games, then the daily hooks in this order: `offseasonDaily`,
+- **The clock** runs by the minute inside a day (`state.clock`, `clock.ts`):
+  `advanceTo(state, minute)`/`advanceHours` in `season.ts` run today's moments
+  in order (`nextMoment`): kickoffs at `timeET` (`kickoffGame` in `gametime.ts`
+  plays the whole game at once into `state.live`, shown as far as the clock has
+  run by `liveRows`; `finishGame` books it at the whistle), and on a
+  `DEADLINE_KEYS` day `passDeadline` at 4 PM runs the front office's day
+  (`frontOfficeDay`: cutdown through `campDaily`) and sets `DEADLINE_MARK`, read
+  by `pastDeadline` (trade window, `canTag`, `inWindow`, expired deals).
+  Reaching midnight ends the day.
+- **The day loop** is `endDay` (via `advanceDay`, the rest of today) in `season.ts`: the owner's pending events,
+  then the daily hooks in this order: `offseasonDaily`,
   `carouselDaily`, `positionCoachesDaily`, `formerPlayersDaily`, `contractsDaily`, `contractExtrasDaily`, `incentivesDaily`, `capMovesDaily`, `faDaily`,
   `tradesDaily`, `springDaily`, `campDaily`, `coachRoomDaily`, `ownersDaily`, `leagueOfficeDaily`, `laborDaily`, `leagueMoneyDaily`, `complianceDaily`, `crisisDaily`, `legalDaily`, `hostingDaily`, `disciplineDaily`, `draftDaily`, `visitsDaily`, `proDayDaily`, `collegeDaily`, `cfbDaily`,
   `scoutingDaily`, `scoutOpsDaily`, weekly upkeep and playoffs, `economyDaily`, `businessDaily`, `shocksDaily`, `commerceDaily`, `fansDaily`, `sponsorsDaily`, `merchDaily`, `teamMediaDaily`, `facilitiesDaily`, `communityDaily`, `departmentsDaily`,

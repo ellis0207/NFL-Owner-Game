@@ -4,8 +4,9 @@ import { capSummary } from "../engine/cap";
 import { addDays, longDate } from "../engine/dates";
 import { RULES, SCHEDULE, TEAM_BY_ID } from "../engine/league";
 import { rosterCount } from "../engine/roster";
-import { advanceDay, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, type SimKind } from "../engine/season";
+import { advanceHours, draftWaiting, isGameOver, isSeasonOver, isSummer, pendingEvents, playEvent, type SimKind } from "../engine/season";
 import { runSim, warmSimWorker } from "../sim/runner";
+import { clockLabel, nowMinute } from "../engine/clock";
 import { SimOverlay } from "./SimOverlay";
 import { draftDayOf, onTheClock } from "../engine/draft";
 import { DraftScreen } from "./screens/DraftScreen";
@@ -316,7 +317,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
         {game.sandbox && <div className="sandbox-banner" role="note">Sandbox game: unlimited money and no cap; results here are kept apart from realism games.</div>}
         <header className="scoreboard">
           <div className="clock">
-            <span className="day">{longDate(game.date).replace(/, \d{4}$/, "")}</span>
+            <span className="day">{longDate(game.date).replace(/, \d{4}$/, "")} · {clockLabel(nowMinute(game))}</span>
             <span className="phase">{phaseLabel(game)}</span>
           </div>
           <div className="figures">
@@ -331,15 +332,22 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </div>
           <SaveIndicator game={game} />
           <div className="btn-row">
-            <button className="btn primary" disabled={busy || over} onClick={() => step(advanceDay)}
-              title={left ? "Your staff handles whatever is left today, then the clock moves to tomorrow." : undefined}>
-              {left ? `Sim rest of day (${left})` : "Next day"}
+            <span className="label sim-label">Sim</span>
+            {([1, 4, 8] as const).map((h) => (
+              <button key={h} className="btn" disabled={busy || over} onClick={() => step((s) => advanceHours(s, h))}
+                title={`Moves the clock ${h} hour${h === 1 ? "" : "s"}: games kick off and play out in order${h >= 4 ? ", and at midnight the day's business runs" : ""}.`}>
+                {h} hour{h === 1 ? "" : "s"}
+              </button>
+            ))}
+            <button className="btn primary" disabled={busy || over} onClick={() => step((s) => advanceHours(s, 24))}
+              title={left ? `Your staff handles whatever is left today (${left}) at midnight; the clock stops at this time tomorrow.` : "To this time tomorrow."}>
+              1 day
             </button>
+            <button className="btn" disabled={busy || over || waiting} onClick={() => longStep("week")} title="Seven days, to this time next week, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">1 week</button>
             {offseason
               ? <button className="btn" disabled={busy || over || waiting} onClick={() => longStep("nextEvent")}
-                title={waiting ? "The draft is on: run it from the draft room, or use Sim rest of day to let the GM finish today's rounds." : undefined}>Advance to next event</button>
-              : <button className="btn" disabled={busy || over} onClick={() => longStep("nextGame")}>Sim to game day</button>}
-            <button className="btn" disabled={busy || over || waiting} onClick={() => longStep("week")} title="Seven days, stopping for the draft or (if you turned pauses on in Settings) anything urgent.">Sim a week</button>
+                title={waiting ? "The draft is on: run it from the draft room, or sim past midnight to let the GM finish today's rounds." : "No games until camp: moves to the next key date on the calendar."}>Next game</button>
+              : <button className="btn" disabled={busy || over} onClick={() => longStep("nextGame")} title="To our next kickoff, so you can watch it live.">Next game</button>}
           </div>
         </header>
         <main className="content">

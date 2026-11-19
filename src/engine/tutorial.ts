@@ -106,8 +106,8 @@ const decided = (s: GameState, _b: Record<string, number>, ref?: string) => !!re
 export const LESSONS: Lesson[] = [
   {
     id: "calendar", title: "The calendar", page: "Today",
-    how: "The game runs a day at a time. Each morning Today lists what needs you: decisions, deadlines and problems. What you leave alone, your staff handles in their own way, and the clock moves on.",
-    task: "Press the first button at the top of the page: Next day, or Sim rest of day when something is still waiting today (your staff handles it).",
+    how: "The clock runs by the hour. Each day Today lists what needs you: decisions, deadlines and problems. What you leave alone, your staff handles in their own way, and the clock moves on.",
+    task: "Press 1 day at the top of the page. Anything still waiting today is handled by your staff at midnight.",
     watch: "The date moves and Today refills. Anything you ignored was decided by your staff; the Inbox says how.",
     metrics: ["day", "cash"], done: moved("day"),
   },
@@ -157,7 +157,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "gameday", title: "Game day", page: "Schedule",
     how: "Every game is simulated play by play from the players, the coaches' plans, weather, rest and travel. You can follow your own game drive by drive on the field view, or let it run.",
-    task: "Use Sim to game day, then Next day to play it. Watch it from the Schedule if you like.",
+    task: "Use Next game to run the clock to kickoff and watch it live, then sim a few hours (or 1 day) to see it through.",
     watch: "Wins, gate money, coverage and fans' trust all move with the result.",
     metrics: ["wins", "cash", "press", "fans"], done: (s, b) => daysBetween(startDate(s), s.date) - b.day >= 5 || METRICS.wins.read(s) !== b.wins,
   },

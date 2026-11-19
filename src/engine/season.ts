@@ -5,7 +5,7 @@ import { constructionDaily } from "./construction";
 import { politicsDaily } from "./politics";
 import { relocationDaily } from "./relocation";
 import { clearPathway, globalDaily } from "./global";
-import { cancelGame, laborDaily, lockedOut } from "./labor";
+import { laborDaily, lockedOut } from "./labor";
 import { leagueMoneyDaily } from "./leaguemoney";
 import { complianceDaily } from "./compliance";
 import { crisisDaily } from "./crisis";
@@ -35,17 +35,18 @@ import { bindLeases, ensureLeases, leasesDaily } from "./leases";
 import { ensurePositionCoaches, positionCoachesDaily } from "./positionCoaches";
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
-import { BASE_SEASON, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
+import { BASE_SEASON, GAME_BY_ID, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
 import { superBowlName } from "./calendar";
 import { applySeason, recordCredits, scheduleReleaseDate, scheduleReleased, startNewSeason } from "./seasons";
 import { weeklyDevelopment } from "./development";
 import { healInjuries, injure, injuryRisk } from "./injuries";
-import { applyCutdown, depthChart, fillEmergencies, fillPracticeSquad, formPracticeSquads, gameDayElevations, manageInjuredReserve, practiceSquad, proposeFinal53, protectPracticeSquads, rosterCount, trimPlan, type RosterMove } from "./roster";
+import { applyCutdown, fillEmergencies, fillPracticeSquad, formPracticeSquads, manageInjuredReserve, practiceSquad, proposeFinal53, protectPracticeSquads, rosterCount, trimPlan, type RosterMove } from "./roster";
 import { processWaivers } from "./waivers";
 import { applyTerminationPay } from "./roster";
 import { rngFor } from "./rng";
-import { simulateGame } from "./sim";
-import { gameDayOps, gameOpsDaily } from "./gameops";
+import { gameOpsDaily } from "./gameops";
+import { DAY, DEADLINE, DEADLINE_MARK, minuteOf, nowMinute } from "./clock";
+import { finishGame, gameTypeLabel, kickoffGame, outLabel, playGame } from "./gametime";
 import { analyticsDaily, ensureAnalytics } from "./strategy";
 import { ensureClubhouse, lockerDaily } from "./clubhouse";
 import { knownReturn, medicalDaily } from "./medical";
@@ -72,9 +73,9 @@ import { sponsorsDaily } from "./sponsors";
 import { projectsDaily } from "./projects";
 import { groundsDaily } from "./grounds";
 import { reviewDaily } from "./review";
-import type { BoxScore, GameResult, GameState, Position, ScheduledGame, Settings } from "./types";
+import type { GameState, ScheduledGame, Settings } from "./types";
 import { payWeek } from "./finance";
-import { business, businessDaily, businessGame } from "./business";
+import { business, businessDaily } from "./business";
 import { carouselDaily } from "./carousel";
 import { formerPlayersDaily } from "./formerplayers";
 import { capMovesDaily } from "./capmoves";
@@ -111,6 +112,8 @@ import { standingDaily } from "./standing";
 import { advanceToEndOfDay, clearDraftees, dayDone, dayLabel, draftDaily, draftDayOf, DRAFT_DAYS, DRAFT_OVER, FIRST_MOCK } from "./draft";
 
 const KEY = RULES.keyDates;
+
+export { gameTypeLabel, outLabel } from "./gametime";
 export let SEASON_OVER_DATE = "";
 
 
@@ -397,12 +400,6 @@ function offseasonItem(date: string): AgendaItem {
   return item("Offseason work", "Free agency continues while the scouts finish the draft board.");
 }
 
-export function gameTypeLabel(g: ScheduledGame): string {
-  if (g.type === "PRE") return g.week === 0 ? "Hall of Fame Game" : `Preseason Week ${g.week}`;
-  if (g.type === "REG") return `Week ${g.week}`;
-  return { WC: "Wild Card", DIV: "Divisional Round", CONF: `${g.conference} Championship`, SB: g.label ?? superBowlName(Number(g.id.slice(0, 4))) }[g.round!];
-}
-
 // ---- Advancing ----
 
 /** League dates still to come, soonest first. */
@@ -440,32 +437,6 @@ export function startDay(state: GameState): void {
   if (date === KEY.regularSeasonStart) applyTerminationPay(state);
 }
 
-/** Simulates one scheduled game, with game-day practice squad elevations and the reports that follow. */
-function playGame(state: GameState, g: ScheduledGame): GameResult | undefined {
-  if (state.results[g.id]) return state.results[g.id];
-  const m = matchup(state, g);
-  if (!m) return undefined;
-  // No games are played during a lockout.
-  if (lockedOut(state)) { cancelGame(state, g); return undefined; }
-  if (g.type !== "PRE") {
-    for (const team of [m.away, m.home]) {
-      const up = gameDayElevations(state, team);
-      if (team === state.userTeam && up.length) {
-        send(state, "staff", `${teamStaff(team).HC?.name ?? "Head Coach"}, head coach`, "Practice squad elevations",
-          `We're thin, so I elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for today's game.`);
-      }
-    }
-  }
-  const { result, box, log } = simulateGame(state, g, m.away, m.home);
-  state.results[g.id] = result;
-  state.box[g.id] = box;
-  (state.pbp ??= {})[g.id] = log;
-  gameDayOps(state, g, result);
-  businessGame(state, g, result);
-  reportGame(state, g, result, box);
-  return result;
-}
-
 /** Today's events the owner still has to play out. */
 export function pendingEvents(state: GameState): AgendaItem[] {
   if (isGameOver(state)) return [];
@@ -498,12 +469,13 @@ export function playEvent(state: GameState, id: string, byOwner = true): string 
   const us = state.userTeam;
   if (item.action === "game") {
     const g = SCHEDULE.find((x) => x.id === item.gameId)!;
-    const r = playGame(state, g);
-    if (r) {
-      const ours = r.home === us ? r.homeScore : r.awayScore;
-      const theirs = r.home === us ? r.awayScore : r.homeScore;
-      outcome = `${ours > theirs ? "W" : ours < theirs ? "L" : "T"} ${ours}-${theirs}${r.overtime ? " (OT)" : ""}`;
+    // The owner moves the clock to kickoff and watches it live; at the day's end anything left is played whole.
+    if (byOwner) {
+      advanceTo(state, Math.max(nowMinute(state), minuteOf(g.timeET)));
+      if (id in done) return done[id];
     }
+    const r = playGame(state, g);
+    outcome = r ? gameOutcome(state, r) : "";
   } else if (item.action === "practice" && id.startsWith("practice:")) {
     outcome = springPracticeOutcome(state);
   } else if (item.action === "practice") {
@@ -525,23 +497,44 @@ export function playEvent(state: GameState, id: string, byOwner = true): string 
   return outcome;
 }
 
-/** Plays out the current day and moves the clock to the next morning. Events the owner skipped are simmed. */
-export function advanceDay(state: GameState): void {
-  if (isGameOver(state)) return;
-  const date = state.date;
-  startDay(state);
-  for (const a of pendingEvents(state)) playEvent(state, a.id, false);
+/** "W 24-17", "L 10-13 (OT)": how our game came out. */
+function gameOutcome(state: GameState, r: { away: string; home: string; awayScore: number; homeScore: number; overtime?: boolean }): string {
+  const us = state.userTeam;
+  const ours = r.home === us ? r.homeScore : r.awayScore;
+  const theirs = r.home === us ? r.awayScore : r.homeScore;
+  return `${ours > theirs ? "W" : ours < theirs ? "L" : "T"} ${ours}-${theirs}${r.overtime ? " (OT)" : ""}`;
+}
 
-  for (const g of GAMES_BY_DATE[date] ?? []) playGame(state, g);
-  const playedToday = new Set<string>();
-  for (const g of GAMES_BY_DATE[date] ?? []) {
-    const r = state.results[g.id];
-    if (r) playedToday.add(r.away).add(r.home);
+/** The league deadlines that fall at 4 PM Eastern rather than when the day ends. */
+export const DEADLINE_KEYS = ["rosterCutdown", "tradeDeadline", "franchiseTagDeadline", "newLeagueYear"] as const;
+
+/** Whether today has a 4 PM deadline. */
+export function deadlineToday(date: string): boolean {
+  return DEADLINE_KEYS.some((k) => KEY[k] === date);
+}
+
+/**
+ * 4 PM on a deadline day: the front office's business for the day happens
+ * now instead of at midnight. The trade deadline's last deals and the tags
+ * filed on the final day come before the mark; the new league year opens at
+ * the mark, and the free agent market's first hours follow it.
+ */
+function passDeadline(state: GameState): void {
+  const done = state.day!.done;
+  if (DEADLINE_MARK in done) return;
+  if (state.date === KEY.newLeagueYear) {
+    done[DEADLINE_MARK] = "";
+    frontOfficeDay(state);
+  } else {
+    frontOfficeDay(state);
+    done[DEADLINE_MARK] = "";
   }
+}
 
+/** The football business of a day: the cutdown, roster upkeep, contracts, the market, trades, spring work and camp. */
+function frontOfficeDay(state: GameState): void {
+  const date = state.date;
   const offseason = isOffseason(date);
-  // Our practice, if there was one, was an event of its own.
-  if (!offseason) practiceInjuries(state, playedToday, Object.keys(TEAM_BY_ID).filter((t) => t !== state.userTeam));
   if (date === KEY.rosterCutdown) runCutdown(state);
   if (!offseason) rosterUpkeep(state);
   offseasonDaily(state);
@@ -560,6 +553,102 @@ export function advanceDay(state: GameState): void {
     springDaily(state);
     campDaily(state);
   }
+}
+
+/** A game's kickoff, marked so it is tried once a day (a lockout cancels it instead). */
+function startGame(state: GameState, g: ScheduledGame): void {
+  const done = state.day!.done;
+  if (`@${g.id}` in done) return;
+  done[`@${g.id}`] = "";
+  if (!kickoffGame(state, g)) return;
+  const m = matchup(state, g);
+  if (m && (m.away === state.userTeam || m.home === state.userTeam)) done.game = "Under way.";
+}
+
+/** The final whistle; our own game's line goes on today's schedule. */
+function final(state: GameState, g: ScheduledGame): void {
+  const r = finishGame(state, g);
+  if (r && (r.away === state.userTeam || r.home === state.userTeam) && state.day?.date === state.date) state.day.done.game = gameOutcome(state, r);
+}
+
+/** The next thing on today's clock at or before `target`: a final whistle, the 4 PM deadline or a kickoff. */
+function nextMoment(state: GameState, target: number): { at: number; run: () => void } | null {
+  let best: { at: number; rank: number; run: () => void } | null = null;
+  const consider = (at: number, rank: number, run: () => void) => {
+    if (at <= target && (!best || at < best.at || (at === best.at && rank < best.rank))) best = { at, rank, run };
+  };
+  const date = state.date;
+  for (const [id, g] of Object.entries(state.live ?? {})) {
+    const sg = GAME_BY_ID[id];
+    if (sg) consider(sg.date < date ? 0 : g.end, 0, () => final(state, sg));
+  }
+  if (deadlineToday(date) && !(DEADLINE_MARK in state.day!.done)) consider(DEADLINE, 1, () => passDeadline(state));
+  for (const g of GAMES_BY_DATE[date] ?? []) {
+    if (state.results[g.id] || state.live?.[g.id] || `@${g.id}` in state.day!.done) continue;
+    consider(minuteOf(g.timeET), 2, () => startGame(state, g));
+  }
+  return best;
+}
+
+/**
+ * Runs today's clock forward to `target` minutes past midnight: games kick off
+ * and go final in order and the 4 PM deadline passes. Reaching midnight ends
+ * the day: every daily system runs and the date turns over.
+ */
+export function advanceTo(state: GameState, target: number): void {
+  if (isGameOver(state)) return;
+  target = Math.min(DAY, target);
+  startDay(state);
+  for (let guard = 0; guard < 200; guard++) {
+    const next = nextMoment(state, target);
+    if (!next) break;
+    state.clock = Math.max(nowMinute(state), next.at);
+    next.run();
+  }
+  state.clock = Math.max(nowMinute(state), target);
+  if (state.clock >= DAY) endDay(state);
+}
+
+/** Moves the clock forward by hours, through as many midnights as it takes. */
+export function advanceHours(state: GameState, hours: number): void {
+  let left = Math.round(hours * 60);
+  while (left > 0 && !isGameOver(state)) {
+    const step = Math.min(DAY - nowMinute(state), left);
+    advanceTo(state, nowMinute(state) + step);
+    left -= step;
+  }
+}
+
+/** Plays out the rest of the current day; the clock moves to midnight and the next day begins. Events the owner skipped are simmed. */
+export function advanceDay(state: GameState): void {
+  if (isGameOver(state)) return;
+  advanceTo(state, DAY);
+}
+
+/** Midnight: whatever is left of the day is played out, then every daily system runs and the date turns over. */
+function endDay(state: GameState): void {
+  const date = state.date;
+  startDay(state);
+  // Saves from before the clock ran by the hour can still have a game to finish or one to play.
+  for (const id of Object.keys(state.live ?? {})) if (GAME_BY_ID[id]) final(state, GAME_BY_ID[id]);
+  for (const g of GAMES_BY_DATE[date] ?? []) {
+    if (state.results[g.id]) continue;
+    startGame(state, g);
+    if (state.live?.[g.id]) final(state, g);
+  }
+  for (const a of pendingEvents(state)) playEvent(state, a.id, false);
+
+  const playedToday = new Set<string>();
+  for (const g of GAMES_BY_DATE[date] ?? []) {
+    const r = state.results[g.id];
+    if (r) playedToday.add(r.away).add(r.home);
+  }
+
+  const offseason = isOffseason(date);
+  // Our practice, if there was one, was an event of its own.
+  if (!offseason) practiceInjuries(state, playedToday, Object.keys(TEAM_BY_ID).filter((t) => t !== state.userTeam));
+  // On a deadline day the front office's business happened at 4 PM.
+  if (!(DEADLINE_MARK in state.day!.done)) frontOfficeDay(state);
   coachRoomDaily(state);
   ownersDaily(state);
   leagueOfficeDaily(state);
@@ -674,6 +763,7 @@ export function advanceDay(state: GameState): void {
   achievementsDaily(state);
 
   state.date = addDays(date, 1);
+  state.clock = 0;
   // The day after the draft the league moves on to the next season.
   if (state.date === DRAFT_OVER) startNewSeason(state);
   if (state.date === veteranReportDate(state.userTeam) && (state.season ?? BASE_SEASON) > BASE_SEASON) openCamp(state);
@@ -711,76 +801,6 @@ function runCutdown(state: GameState): void {
   news(state, "games", "All 32 teams trimmed their rosters to 53.");
 }
 
-function reportGame(state: GameState, g: ScheduledGame, r: GameResult, box: BoxScore): void {
-  const winnerHome = r.homeScore > r.awayScore;
-  const tie = r.homeScore === r.awayScore;
-  const line = tie
-    ? `${r.away} and ${r.home} tie ${r.awayScore}-${r.homeScore}`
-    : `${winnerHome ? r.home : r.away} ${Math.max(r.homeScore, r.awayScore)}, ${winnerHome ? r.away : r.home} ${Math.min(r.homeScore, r.awayScore)}${r.overtime ? " (OT)" : ""}`;
-  news(state, "games", `${gameTypeLabel(g)}: ${line}`);
-  // League injury news for starters.
-  for (const inj of box.injuries) {
-    if (inj.team === state.userTeam) continue;
-    const pos = PLAYER_BY_ID[inj.player].position;
-    const chart = depthChart(state, inj.team, addDays(state.date, -1));
-    if (chart[pos].slice(0, STARTERS[pos] ?? 1).includes(inj.player) && state.players[inj.player].injury?.date === state.date) {
-      const out = state.players[inj.player].injury!;
-      if (daysBetween(state.date, out.returnDate) >= 7) {
-        news(state, "games", `${TEAM_BY_ID[inj.team].name} ${pos} ${PLAYER_BY_ID[inj.player].name}: ${out.type.toLowerCase()}, ${outLabel(state.date, knownReturn(state, out), out.seasonEnding)}`);
-      }
-    }
-  }
-  const us = state.userTeam;
-  if (r.away !== us && r.home !== us) return;
-  const side = r.home === us ? "home" : "away";
-  const ours = r.home === us ? r.homeScore : r.awayScore;
-  const theirs = r.home === us ? r.awayScore : r.homeScore;
-  const opp = r.home === us ? r.away : r.home;
-  const verdict = ours > theirs ? "We won" : ours < theirs ? "We lost" : "We tied";
-  const rec = standings(state)[us];
-  const record = g.type === "REG" ? ` We're ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}.` : "";
-  const tone = g.type === "PRE"
-    ? "Most of the starters sat, so the tape is mostly about the depth chart."
-    : ours > theirs ? "Good week of work showed up on game day." : "We'll get it fixed on the practice field.";
-  const hurt = box.injuries.filter((i) => i.team === us).map((i) => {
-    const inj = state.players[i.player].injury;
-    return `${PLAYER_BY_ID[i.player].name} (${i.type.toLowerCase()}${inj && inj.date === state.date ? `, ${outLabel(state.date, knownReturn(state, inj), inj.seasonEnding)}` : ", returned"})`;
-  });
-  const hc = teamStaff(us).HC?.name ?? "Head Coach";
-  send(state, "game", `${hc}, head coach`, `${verdict} ${ours}-${theirs} against ${TEAM_BY_ID[opp].name}${r.overtime ? " in overtime" : ""}`,
-    `${gameTypeLabel(g)}. ${tone}${record}\n\n${standouts(box, side)}` +
-    (hurt.length ? `\n\nInjuries: ${hurt.join("; ")}.` : ""),
-    g.id);
-}
-
-const STARTERS: Partial<Record<Position, number>> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1 };
-
-/** "out about 3 weeks", "out for the season" */
-export function outLabel(from: string, returnDate: string, seasonEnding: boolean): string {
-  if (seasonEnding) return "out for the season";
-  const days = daysBetween(from, returnDate);
-  if (days <= 3) return "day to day";
-  const weeks = Math.round(days / 7);
-  return weeks <= 1 ? "out about a week" : `out about ${weeks} weeks`;
-}
-
-/** A coach's quick summary of who stood out for one team. */
-function standouts(box: BoxScore, side: "away" | "home"): string {
-  const lines = Object.entries(box.players[side]);
-  const best = (key: Parameters<typeof stat>[1]) => lines.reduce<[string, number[]] | null>((a, b) => (stat(b[1], key) > (a ? stat(a[1], key) : 0) ? b : a), null);
-  const out: string[] = [];
-  const qb = best("att");
-  if (qb) out.push(`${PLAYER_BY_ID[qb[0]].name} went ${stat(qb[1], "cmp")} of ${stat(qb[1], "att")} for ${stat(qb[1], "passYds")} yards, ${stat(qb[1], "passTd")} TD and ${stat(qb[1], "int")} INT.`);
-  const rb = best("rushYds");
-  if (rb && stat(rb[1], "rushYds") >= 40) out.push(`${PLAYER_BY_ID[rb[0]].name} ran for ${stat(rb[1], "rushYds")} yards on ${stat(rb[1], "car")} carries.`);
-  const wr = best("recYds");
-  if (wr && stat(wr[1], "recYds") >= 40) out.push(`${PLAYER_BY_ID[wr[0]].name} caught ${stat(wr[1], "rec")} for ${stat(wr[1], "recYds")} yards.`);
-  const sacker = best("sacks");
-  if (sacker && stat(sacker[1], "sacks") >= 1) out.push(`${PLAYER_BY_ID[sacker[0]].name} had ${stat(sacker[1], "sacks")} sack${stat(sacker[1], "sacks") === 1 ? "" : "s"}.`);
-  const picker = best("defInt");
-  if (picker && stat(picker[1], "defInt") >= 1) out.push(`${PLAYER_BY_ID[picker[0]].name} picked one off.`);
-  return out.join(" ");
-}
 
 /** Days a team practices: not game day or the day after, with a day off every so often in camp. */
 function practices(state: GameState, team: string, playedToday: Set<string>): boolean {
@@ -912,7 +932,7 @@ function offseasonStops(state: GameState): string[] {
     KEY.otasStart, KEY.minicampStart, KEY.franchiseTagExtensionDeadline, veteranReportDate(state.userTeam)];
 }
 
-/** A draft day the owner hasn't finished: the clock waits for the owner (or "Sim rest of day"). */
+/** A draft day the owner hasn't finished: the clock waits for the owner (or a sim past midnight, when the GM finishes the day). */
 export function draftWaiting(state: GameState): boolean {
   return !!draftDayOf(state.date) && !dayDone(state) && !isGameOver(state);
 }
@@ -942,16 +962,21 @@ export function* simDays(state: GameState, kind: SimKind): Generator<string, voi
     return;
   }
   if (kind === "nextGame") {
-    // To the morning of our next game, stopping there so the owner plays it from Today; early on the cutdown day or anything urgent.
+    // To our next kickoff; early on the cutdown day (the 53 is due at 4 PM) or anything urgent.
     const start = state.date;
     if (isSeasonOver(state) || isSummer(state)) {
       yield* simDays(state, "nextEvent");
       return;
     }
     const seen = state.inbox.length;
-    const gameToday = () => pendingEvents(state).some((a) => a.action === "game");
     for (let i = 0; i < 60 && !isSeasonOver(state); i++) {
-      if (gameToday()) return;
+      // Our game today: the clock runs to kickoff and stops, so the owner can watch it live.
+      const mine = pendingEvents(state).find((a) => a.action === "game");
+      if (mine) {
+        advanceTo(state, Math.max(nowMinute(state), minuteOf(GAME_BY_ID[mine.gameId!].timeET)));
+        yield state.date;
+        return;
+      }
       if (state.date !== start && state.date === KEY.rosterCutdown) return;
       advanceDay(state);
       yield state.date;
@@ -959,11 +984,11 @@ export function* simDays(state: GameState, kind: SimKind): Generator<string, voi
     }
     return;
   }
-  // A week: seven days, or less if the draft is waiting on us or something urgent arrives.
+  // A week: seven days to the same hour, or less if the draft is waiting on us or something urgent arrives.
   const seen = state.inbox.length;
   for (let i = 0; i < 7 && !isGameOver(state); i++) {
     if (draftWaiting(state)) return;
-    advanceDay(state);
+    advanceHours(state, 24);
     yield state.date;
     if (shouldPause(state, seen)) return;
   }
@@ -979,8 +1004,8 @@ export function advanceToNextEvent(state: GameState): void {
 }
 
 /**
- * Advances to the morning of the user's next game and stops there, so the owner
- * plays it from the Today page. Stops early on the cutdown day or anything urgent.
+ * Advances to the kickoff of the user's next game and stops there, so the owner
+ * can watch it live. Stops early on the cutdown day or anything urgent.
  */
 export function simToNextGame(state: GameState): void {
   drain(simDays(state, "nextGame"));

@@ -10,6 +10,8 @@ import { DriveChart, GameDay, KeyPlays, PlayByPlay, WinChart } from "./GameFeed"
 import { FollowGame } from "./GameCast";
 import { perPlay } from "../engine/analytics";
 import { clockText } from "../engine/playlog";
+import { liveGame, liveRows } from "../engine/clock";
+import { castAt } from "../engine/gamecast";
 import { tip } from "./tip";
 
 type Side = "away" | "home";
@@ -96,11 +98,14 @@ type View = "box" | "plays" | "drives" | "gameday";
 
 export function BoxScore({ game, id, onClose, follow, changed }: { game: GameState; id: string; onClose: () => void; follow?: boolean; changed: () => void }) {
   const log = game.pbp?.[id];
-  const [following, setFollowing] = useState(!!follow && !!log);
+  // A game under way opens on the field, as far as the clock has run; its box score and full feed wait for the final.
+  const live = liveGame(game, id);
+  const liveAt = liveRows(game, id);
+  const [following, setFollowing] = useState((!!follow || !!live) && !!log);
   const [view, setView] = useState<View>("box");
   const sched = GAME_BY_ID[id];
-  const r = game.results[id];
-  const box = game.box[id];
+  const r = game.results[id] ?? live?.result;
+  const box = game.results[id] ? game.box[id] : undefined;
   const [side, setSide] = useState<Side>(r?.home === game.userTeam ? "home" : "away");
 
   useEffect(() => {
@@ -120,8 +125,10 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
           <span className="label">{sched.label ?? gameTypeLabel(sched)} · {longDate(sched.date)} · {kickoff(sched.timeET)}</span>
           <button className="btn small" onClick={onClose}>Close</button>
         </div>
-        {following && log && r && <FollowGame r={r} log={log} box={box} onDone={() => setFollowing(false)} />}
-        {!following && <>
+        {following && log && r && live && <FollowGame r={r} log={log} limit={liveAt} start={follow ? 0 : liveAt} onDone={onClose} />}
+        {following && log && r && !live && <FollowGame r={r} log={log} box={box} onDone={() => setFollowing(false)} />}
+        {!following && live && log && <p className="muted">Live: {(() => { const c = castAt(log, liveAt ?? 0); return `${r.away} ${c.away}, ${r.home} ${c.home}`; })()}.</p>}
+        {!following && !live && <>
         <header className="box-head">
           <div className={r.awayScore > r.homeScore ? "win" : ""}><span className="label">{teams.away.city}</span><strong>{teams.away.name}</strong><span className="pts">{r.awayScore}</span></div>
           <span className="muted">{r.overtime ? "Final/OT" : "Final"}</span>
