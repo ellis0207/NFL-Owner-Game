@@ -428,6 +428,11 @@ export function debtDaily(state: GameState): void {
   const d = debt(state);
   const chief = businessChief(state);
   d.offers = d.offers.filter((o) => o.expires >= state.date);
+  // Lenders' memories fade: a year of clean quarters slowly mends a bad mark (and a good name slowly needs renewing).
+  if (state.date.endsWith("-01")) {
+    const recent = (d.tests ?? []).some((t) => !t.ok && daysBetween(t.date, state.date) < 365);
+    if (!recent) d.trust = Math.round((d.trust + (55 - d.trust) * 0.04) * 10) / 10;
+  }
   for (const l of openLoans(state)) {
     const due = l.accelerated && l.accelerated < l.maturity ? l.accelerated : l.maturity;
     if (state.date >= due) {

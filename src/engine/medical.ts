@@ -19,7 +19,7 @@
 // football injury, the policy pays back most of his salary for the weeks after.
 import { recoveryEdge } from "./facilities";
 import { FORMAT } from "./format";
-import { diagnosisFactor } from "./playercare";
+import { diagnosisFactor, rehabFactor } from "./playercare";
 import { post } from "./business";
 import { clubhouse, clubNote } from "./clubhouse";
 import { dealOf } from "./contracts";
@@ -100,6 +100,11 @@ function injuriesDaily(state: GameState): void {
     if (inj.mid === state.date) {
       const rng = rngFor(state.seed, `rehab:${id}:${inj.date}`);
       const lvl = medicalLevel(state, ps.team ?? "");
+      // Our rehab director and trainers, the equipment the owner bought and any cuts to the medical staff set the pace of the second half.
+      if (mine) {
+        const pace = Math.round(daysBetween(state.date, inj.returnDate) * (rehabFactor(state) - 1));
+        if (pace) inj.returnDate = addDays(inj.returnDate, pace);
+      }
       const left = daysBetween(state.date, inj.returnDate);
       const roll = rng();
       let text = "";

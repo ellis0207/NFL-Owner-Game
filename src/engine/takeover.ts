@@ -32,6 +32,7 @@ import { owners } from "./owners";
 import { addStory, mediaState } from "./outlets";
 import { byline } from "./media/corps";
 import { owner, ownerEquity } from "./ownership";
+import { newClubDoctors } from "./playercare";
 import { rngFor } from "./rng";
 import { ensureScouts } from "./scouts";
 import { ensureAnalytics } from "./strategy";
@@ -52,6 +53,8 @@ export function inControl(state: GameState): boolean {
 const CLUB_SLICES = [
   "business", "fans", "merch", "teamMedia", "venue", "facilities", "community", "departments", "program", "crisis", "legal", "review", "books", "debt",
   "investors", "execs", "office", "culture", "analytics", "gameWeek", "scouts", "gameOps", "standing", "people", "treasury", "shocks", "politics", "grounds", "crossroads", "boardroom", "problems",
+  // The coach's room plans, the scouting operation and the analysts belong to the club, not the owner.
+  "coachRoom", "scoutOps", "analysts",
 ] as const;
 
 /**
@@ -94,6 +97,8 @@ export function switchClub(state: GameState, team: string): void {
   if (state.trades) state.trades.block = [];
   state.negotiations = {};
   delete state.cutPlan;
+  // The new club's doctors and trainers, not the old club's.
+  if (state.care) newClubDoctors(state, t.clubs.length + 1);
   // The other owners: the old club has a new owner, and the new club is ours.
   const o = owners(state);
   o.relations[old] = { rapport: 0, tradition: 0.5, influence: 0.3 };

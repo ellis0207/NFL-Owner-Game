@@ -9,7 +9,7 @@ import { decideDispute, distributionForecast, distributionStatus, leagueHealth, 
 import { LEAGUE_RULES } from "../../engine/rules";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
-import { Evidence, Range } from "../Help";
+import { Estimate, estimatesShown, Evidence, Range } from "../Help";
 
 export function LeagueMoney({ game, changed }: { game: GameState; changed: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function LeagueMoney({ game, changed }: { game: GameState; changed: () =>
             <dt>Licensing</dt><dd>{money(p.licensing)}</dd>
             <dt>Other league business</dt><dd>{money(p.other)}</dd>
             <dt>League office costs, off the top</dt><dd>-{money(p.costs)}</dd>
-            <dt>Our share</dt><dd><strong>{money(p.net)}</strong> <Evidence kind="estimate" /></dd>
+            <dt>Our share</dt><dd><Estimate><strong>{money(p.net)}</strong> <Evidence kind="estimate" /></Estimate></dd>
           </dl>
           <span className="muted">Earned over the league year; paid monthly as a preliminary estimate with {Math.round(WITHHELD * 100)}% held back. Paid so far: {money(st.paid)} (held back {money(st.withheld)}). The league's audit settles the rest around {shortDate(st.dueAfterAudit)}.</span>
           {lm.dispute && lm.dispute.contested === undefined && (
@@ -65,7 +65,7 @@ export function LeagueMoney({ game, changed }: { game: GameState; changed: () =>
           <label className="row">Gate pooled <select value={plan.gate} onChange={(e) => setPlan({ ...plan, gate: Number(e.target.value) })}>{[0.34, 0.4].map((g) => <option key={g} value={g}>{Math.round(g * 100)}%</option>)}</select></label>
           <label className="row">Premium pooled <select value={plan.premium} onChange={(e) => setPlan({ ...plan, premium: Number(e.target.value) })}>{[0, 0.15].map((g) => <option key={g} value={g}>{Math.round(g * 100)}%</option>)}</select></label>
         </div>
-        {ours && <span>For us: {ours.transfer >= 0 ? "we'd gain" : "we'd pay"} about {money(Math.abs(ours.transfer))} a year, worth about {money(Math.abs(ours.value))} in franchise value. <Evidence kind="estimate" /></span>}
+        {ours && estimatesShown() && <span>For us: {ours.transfer >= 0 ? "we'd gain" : "we'd pay"} about {money(Math.abs(ours.transfer))} a year, worth about {money(Math.abs(ours.value))} in franchise value. <Evidence kind="estimate" /></span>}
         <span className="muted">Biggest winners: {impact.slice(0, 4).map((r) => `${teamLabel(r.team)} ${money(r.transfer)}`).join(", ")}. Biggest payers: {impact.slice(-4).reverse().map((r) => `${teamLabel(r.team)} ${money(-r.transfer)}`).join(", ")}. Money that moves to small markets is money they can spend competing.</span>
       </div>
     </div>

@@ -10,9 +10,10 @@
 import { business, cashBalance, deferredRevenue, inflation, post } from "./business";
 import { reserveTarget } from "./books";
 import { culture, fairness } from "./culture";
-import { addDays, shortDate } from "./dates";
+import { addDays, daysBetween, shortDate } from "./dates";
 import { creditLimit, debt, drawn, marketRate } from "./debt";
-import { execBoost, signer } from "./executives";
+import { execBoost, execRole, signer } from "./executives";
+import { noteDecision } from "./delegation";
 import { money, send } from "./inbox";
 import { leagueYear } from "./contracts";
 import { RULES } from "./league";
@@ -71,6 +72,8 @@ export interface TreasuryState {
   /** Engine only: how vendors feel about us, 0-100. */
   vendors: number;
   findings: AuditFinding[];
+  /** The day the last auditors' letter arrived. */
+  letter?: string;
   /** The league year last audited for findings. */
   audited: number;
   consultants: Partial<Record<Consultant, string>>;
@@ -187,6 +190,7 @@ function audit(state: GameState, year: number): void {
     if (rng() < odds && !found.some((x) => x.text === f.text)) found.push({ year, text: f.text, severity: f.severity, cost: f.cost });
   }
   t.findings = [...found, ...t.findings].slice(0, 30);
+  t.letter = state.date;
   if (!found.length) {
     note(state, `The ${year} audit found no control problems`);
     return;
@@ -201,8 +205,32 @@ function audit(state: GameState, year: number): void {
   send(state, "business", signer(state, "CFO"), `Audit findings for ${year}`,
     `The auditors' letter lists ${found.length} finding${found.length > 1 ? "s" : ""}: ${found.map((f) => `${f.text.toLowerCase()} (${f.severity}${f.repeat ? ", repeated" : ""})`).join("; ")}. ` +
     (material.length ? "The material weakness means restating the year; our lenders have been told. " : "") +
-    "Each can be fixed on the Business page under Treasury; unfixed findings come back worse next year.");
+    `Each can be fixed on the Business page under Treasury; unfixed findings come back worse next year. If they're still open in ${FIX_WINDOW} days I'll fix the serious ones out of the finance budget.`);
   note(state, `${found.length} audit finding${found.length > 1 ? "s" : ""} for ${year}`);
+}
+
+/** The days the owner has to fix a finding before the finance chief fixes the serious ones. */
+export const FIX_WINDOW = 60;
+
+/** Open findings, newest first, with where each sits in the list (for remediate). */
+export function openFindings(state: GameState): { f: AuditFinding; index: number }[] {
+  return (state.treasury?.findings ?? []).map((f, index) => ({ f, index })).filter((x) => !x.f.fixed);
+}
+
+/**
+ * A finance chief doesn't let a serious control problem sit for a year: if
+ * the owner hasn't dealt with a significant or material finding within two
+ * months of the letter, the CFO pays to fix it. Minor ones wait for the owner
+ * (and come back worse if nobody does). Without a CFO nothing gets fixed.
+ */
+function chiefFixes(state: GameState): void {
+  const t = treasury(state);
+  if (!execRole(state, "CFO") || !t.letter || daysBetween(t.letter, state.date) < FIX_WINDOW) return;
+  for (const { f, index } of openFindings(state)) {
+    if (f.severity === "minor") continue;
+    remediate(state, index);
+    noteDecision(state, "financing", `Fixed an audit finding: ${f.text.toLowerCase()}`, f.cost, signer(state, "CFO"), "delegated");
+  }
 }
 
 /** Pay to fix a finding before the next audit. */
@@ -353,4 +381,5 @@ export function treasuryDaily(state: GameState): void {
     t.audited = year - 1;
     audit(state, year - 1);
   }
+  chiefFixes(state);
 }

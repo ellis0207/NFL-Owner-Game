@@ -11,6 +11,7 @@ import type { GameState, Reporter, Story } from "../../engine/types";
 import { tip } from "../tip";
 import { useUi } from "../ui";
 import { AccessSelect } from "./MediaDesk";
+import { privateShown } from "../Help";
 
 export const KIND_LABEL: Record<Story["kind"], string> = {
   recap: "Game", injury: "Injury", signing: "Signing", release: "Release", trade: "Trade", rumor: "Rumor", leak: "Leak",
@@ -236,13 +237,14 @@ export function ReporterList({ game, openReporter, changed }: { game: GameState;
       </div>
       <p className="muted">Reports are judged when the trade, signing, hire or firing happens, or when it plainly doesn't. Favored reporters get the first questions and the first calls (up to three); a banned one loses the credential, and the rest of the press notices.</p>
       <div className="table-wrap"><table>
-        <thead><tr><th>Reporter</th><th>Outlet</th><th>Record</th><th>Access</th></tr></thead>
+        <thead><tr><th>Reporter</th><th>Outlet</th><th>Record</th>{privateShown() && <th title="Sandbox with everything shown">Really right / sources here</th>}<th>Access</th></tr></thead>
         <tbody>
           {people.slice(0, 80).map((p) => (
             <tr key={p.id}>
               <td><ReporterName id={p.id} name={p.name} onOpen={openReporter} /> <span className="muted small">{ROLE[p.role]}</span></td>
               <td>{outletOf(p.outlet).name}</td>
               <td className="small">{recordLine(p)}</td>
+              {privateShown() && <td className="small">{Math.round(p.accuracy * 100)}% / {Math.round(p.sources[us] ?? 0)}</td>}
               <td><AccessSelect game={game} id={p.id} changed={changed} /></td>
             </tr>
           ))}

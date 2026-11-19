@@ -1,3 +1,4 @@
+import { setInfoLevel } from "./Help";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capSummary } from "../engine/cap";
 import { addDays, longDate } from "../engine/dates";
@@ -110,6 +111,7 @@ interface Props {
 }
 
 export function GameShell({ game, changed, onLoad, onQuit }: Props) {
+  setInfoLevel(game.settings.info);
   const [screen, setScreen] = useState<Screen>("Today");
   const [menuOpen, setMenuOpen] = useState(false);
   const [closed, setClosed] = useState<string[]>(() => readPrefs().navClosed);

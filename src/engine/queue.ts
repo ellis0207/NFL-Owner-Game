@@ -12,8 +12,9 @@
 import { capSummary } from "./cap";
 import { openSearches, proposals as staffProposals } from "./carousel";
 import { ROLE_NAME, staff } from "./coaches";
-import { daysBetween, shortDate } from "./dates";
+import { addDays, daysBetween, shortDate } from "./dates";
 import { office, setMode } from "./delegation";
+import { FIX_WINDOW, openFindings } from "./treasury";
 import { memoPriority, messagePriority } from "./desk";
 import { money } from "./inbox";
 import { PLAYER_BY_ID, RULES, teamLabel } from "./league";
@@ -306,6 +307,19 @@ function problemItems(state: GameState): QueueItem[] {
     ifNothing: "Suppliers tighten terms, lenders take notice and, if it lasts, the league steps in.",
     link: { screen: "Business", tab: "Financing" }, major: true, score: 55,
   });
+  const findings = openFindings(state);
+  if (findings.length) {
+    const serious = findings.filter((x) => x.f.severity !== "minor");
+    const letter = state.treasury?.letter;
+    out.push({
+      id: "problem:audit", kind: "problem", side: "business", title: `${findings.length} open audit finding${findings.length > 1 ? "s" : ""}`,
+      why: `${findings.slice(0, 3).map((x) => `${x.f.text} (${x.f.severity})`).join("; ")}. Unfixed findings come back a step worse, and a material weakness means restating the books: lenders and the league office notice.`,
+      expires: letter && serious.length ? addDays(letter, FIX_WINDOW) : undefined,
+      recommends: "The CFO recommends fixing them; each fix has a one-time cost.",
+      ifNothing: serious.length ? "The finance chief fixes the serious ones after two months; minor ones wait for you." : "They come back worse at the next audit.",
+      link: { screen: "Business", tab: "Treasury" }, major: serious.some((x) => x.f.severity === "material"), score: 12 + serious.length * 6,
+    });
+  }
   const counts = rosterCount(state, us);
   const inSeason = state.date > RULES.keyDates.rosterCutdown && state.date <= RULES.keyDates.superBowl;
   if (inSeason && counts.roster < 53) out.push({

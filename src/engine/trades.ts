@@ -28,7 +28,6 @@ import { cause } from "./causes";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
 import { FORMAT } from "./format";
 import { tradePhysicals } from "./compliance";
-import { changeRapport } from "./owners";
 import { lockedSpace } from "./capplan";
 import { redoStandoff } from "./redo";
 import { conditionalValue, conditionProblem, conditionsDaily, describeCondition, maybeAddCondition, openCondition, recordConditions } from "./conditions";
@@ -43,6 +42,7 @@ import { HIDDEN_RATINGS, onSeasonChange, PLAYER_BY_ID, RULES, TEAMS, teamLabel }
 import { ageFactor, marketView, productionBump, shareFor } from "./market";
 import { STARTERS } from "./negotiation";
 import { isOffseason, NEXT, off, OFFSEASON_START } from "./offseason";
+import { rememberUs } from "./rivals";
 import { gaussian, rngFor } from "./rng";
 import { depthChart, logMove, releasePlayer, rosterLimit, rosterStatusNow, signReplacement, weakestOnRoster } from "./roster";
 import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside } from "./staff";
@@ -981,7 +981,8 @@ export function headline(state: GameState, deal: TradeDeal): string {
 export function completeTrade(state: GameState, deal: TradeDeal): TradeRecord {
   const ts = trades(state);
   const partner = deal.teams[0] === state.userTeam ? deal.teams[1] : deal.teams[1] === state.userTeam ? deal.teams[0] : null;
-  if (partner) changeRapport(state, partner, 3);
+  // The partner's owner warms to us, and the club remembers the deal (Owners > Clubs).
+  if (partner) rememberUs(state, partner, `Made a trade with the ${teamLabel(state.userTeam)}.`, 3);
   if (partner) cause(state, "trades", `Traded with the ${teamLabel(partner)}.`, [`Our rapport with the ${teamLabel(partner)} owner rose.`], { kind: "trade", id: `trade-${state.date}-${trades(state).log.length}` });
   const official = tradeWindow(state).official;
   const id = `trade-${state.date}-${ts.log.length}`;

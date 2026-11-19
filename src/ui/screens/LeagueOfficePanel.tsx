@@ -12,7 +12,7 @@ import {
 import { currentMeeting, proposable } from "../../engine/owners";
 import { ISSUES, RULE_BY_ID, type Issue } from "../../engine/rules";
 import type { Committee, GameState, RuleProposal } from "../../engine/types";
-import { Evidence } from "../Help";
+import { estimatesShown, Evidence } from "../Help";
 
 export function LeagueOffice({ game, say }: { game: GameState; say: (t: string | null) => void }) {
   const lo = leagueOffice(game);
@@ -99,7 +99,7 @@ export function ProposalExtras({ game, p, say }: { game: GameState; p: RulePropo
           <button className="btn small" onClick={() => say(argueCommittee(game, p, "against"))}>Argue against it in committee</button>
         </>}
       </div>
-      {shown && p.briefing && <span className="muted">{p.briefing} <Evidence kind="estimate" /></span>}
+      {shown && p.briefing && estimatesShown() && <span className="muted">{p.briefing} <Evidence kind="estimate" /></span>}
     </>
   );
 }
