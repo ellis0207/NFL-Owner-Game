@@ -1,7 +1,7 @@
 import { longDate } from "../engine/dates";
 import type { SimKind } from "../engine/season";
 
-const LABEL: Record<SimKind, string> = { week: "Simulating a week", nextGame: "Simulating to game day", nextEvent: "Advancing to the next event" };
+const LABEL: Record<SimKind, string> = { week: "Simulating a week", nextGame: "Simulating to kickoff", nextEvent: "Advancing to the next event" };
 const SPAN: Record<SimKind, number> = { week: 7, nextGame: 7, nextEvent: 7 };
 
 /** Covers the page while a multi-day sim runs: the day being played, how far along, and Stop. */

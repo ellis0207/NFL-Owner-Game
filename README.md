@@ -12,8 +12,12 @@ decides how accurate those reports are.
 ## Status
 
 Playable: pick a team, run camp and the cut to 53, play the full 2026
-season day by day through Super Bowl LXI, then run the 2027 offseason and the
-2027 draft. Saves autosave in the browser,
+season hour by hour through Super Bowl LXI, then run the 2027 offseason and the
+2027 draft. The clock moves 1, 4 or 8 hours, a day, a week or to your next
+kickoff: games start at their real Eastern times and can be followed live
+(scores, the field and the running box score as far as the clock has run),
+and the 4 PM deadlines (cutdown, trades, tags, the new league year) close at
+4 PM. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
 
 The pages are grouped in the sidebar by part of the job (Desk, Team, Roster
@@ -761,7 +765,7 @@ analysts and a full week make better plans), coordinators adjust at
 halftime, and the league's play calling drifts toward what worked last
 season. The Outlook tab explains the record (point margin, close games,
 turnovers, schedule, injuries) and lists starters aging out or near the end
-of their deals. "Sim to game day" stops the morning of your game.
+of their deals. "Next game" stops at your kickoff.
 
 Players are people. Each has a lasting character the staff describes in
 words: how fast he learns, how he prepares, whether the room follows him.

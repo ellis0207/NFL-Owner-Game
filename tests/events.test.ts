@@ -1,27 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
-import { advanceDay, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent, simToNextGame } from "../src/engine/season";
+import { GAME_BY_ID, GAMES_BY_DATE, RULES, SCHEDULE } from "../src/engine/league";
+import { liveRows, minuteOf } from "../src/engine/clock";
+import { tradeWindow } from "../src/engine/trades";
+import { advanceDay, advanceHours, advanceTo, agenda, calendarItems, eventOutcome, newGame, pendingEvents, playEvent, simToNextGame } from "../src/engine/season";
 import { stateAt } from "./fixtures";
 import { clearStaffCaches } from "../src/engine/staff";
 
 const opener = SCHEDULE.find((g) => g.type === "REG" && (g.home === "DET" || g.away === "DET"))!;
 
 describe("today's events", () => {
-  it("waits for the owner to sim our game, and the rest of the league plays when the day ends", () => {
+  it("kicks our game off at its time, shows it live, and books it at the final whistle", () => {
     const state = stateAt("DET", 7, opener.date);
     const pending = pendingEvents(state);
     expect(pending.map((a) => a.id)).toContain("game");
     expect(state.results[opener.id]).toBeUndefined();
 
-    expect(playEvent(state, "game")).toMatch(/^[WLT] \d+-\d+/);
-    expect(state.results[opener.id]).toBeDefined();
-    expect(eventOutcome(state, "game")).toBeDefined();
+    // Going to kickoff runs the clock to the scheduled time: the game is under way, nothing is booked yet.
+    expect(playEvent(state, "game")).toBe("Under way.");
+    expect(state.clock).toBe(minuteOf(opener.timeET));
+    expect(state.live?.[opener.id]).toBeDefined();
+    expect(liveRows(state, opener.id)).toBe(0);
+    expect(state.results[opener.id]).toBeUndefined();
     expect(pendingEvents(state)).toHaveLength(0);
-    const others = GAMES_BY_DATE[opener.date].filter((g) => g.id !== opener.id);
-    expect(others.every((g) => !state.results[g.id])).toBe(true);
+
+    // An hour in, part of it has been played.
+    advanceHours(state, 1);
+    const rows = liveRows(state, opener.id)!;
+    expect(rows).toBeGreaterThan(20);
+    expect(rows).toBeLessThan(state.pbp![opener.id].plays.length);
+
+    // Games that kick off later haven't started.
+    const later = GAMES_BY_DATE[opener.date].filter((g) => minuteOf(g.timeET) > state.clock!);
+    expect(later.every((g) => !state.live?.[g.id] && !state.results[g.id])).toBe(true);
+
+    advanceHours(state, 3);
+    expect(state.results[opener.id]).toBeDefined();
+    expect(eventOutcome(state, "game")).toMatch(/^[WLT] \d+-\d+/);
 
     advanceDay(state);
-    expect(others.every((g) => state.results[g.id])).toBe(true);
+    expect(GAMES_BY_DATE[opener.date].every((g) => state.results[g.id])).toBe(true);
+    expect(state.live).toBeUndefined();
   });
 
   it("plays out the same whether the owner runs each event or the staff sims the day", () => {
@@ -54,22 +72,30 @@ describe("today's events", () => {
   });
 });
 
-describe("sim to game day", () => {
-  it("stops the morning of our game, before it's played", () => {
+describe("next game", () => {
+  it("stops at our kickoff, with the game under way", () => {
     const s = newGame("DET", "Owner", { capRules: "real" }, 5);
     simToNextGame(s);
-    const game = pendingEvents(s).find((a) => a.action === "game");
-    expect(game).toBeDefined();
-    expect(s.results[game!.gameId!]).toBeUndefined();
-    // Pressing it again on game day stays put until the game is played.
+    const g = GAME_BY_ID[Object.keys(s.live ?? {}).find((id) => id.includes("DET"))!];
+    expect(g).toBeDefined();
+    expect(s.clock).toBe(minuteOf(g.timeET));
+    expect(s.results[g.id]).toBeUndefined();
+    // Pressing it again moves on to the next one.
     const day = s.date;
     simToNextGame(s);
-    expect(s.date).toBe(day);
-    playEvent(s, game!.id);
-    simToNextGame(s);
     expect(s.date > day).toBe(true);
-    expect(pendingEvents(s).some((a) => a.action === "game")).toBe(true);
+    expect(s.results[g.id]).toBeDefined();
   }, 120_000);
+});
+
+describe("deadlines at 4 PM", () => {
+  it("the trade window shuts at 4 PM on deadline day", () => {
+    const s = stateAt("DET", 7, RULES.keyDates.tradeDeadline);
+    advanceTo(s, 15 * 60 + 59);
+    expect(tradeWindow(s).open).toBe(true);
+    advanceTo(s, 16 * 60);
+    expect(tradeWindow(s).open).toBe(false);
+  });
 });
 
 describe("calendar", () => {

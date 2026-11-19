@@ -2,6 +2,7 @@
 // ends, the cap for next year is set, teams use their tags and tenders and
 // clear cap room, and the new league year turns expiring contracts into free
 // agents. Free agency itself is in freeagency.ts.
+import { pastDeadline } from "./clock";
 import { capMediaBump, leagueHealth } from "./leaguemoney";
 import { FORMAT } from "./format";
 import { cpuPayCut, june1Left, june1Preview, releaseJune1 } from "./capmoves";
@@ -97,7 +98,7 @@ export function tagCost(state: GameState, id: string, kind: TagKind, exclusive =
 
 export function canTag(state: GameState, team: string, id: string): { ok: boolean; reason?: string } {
   if (state.date < KEY.franchiseTagWindowOpens) return { ok: false, reason: `Tags can be used from ${shortDate(KEY.franchiseTagWindowOpens)}.` };
-  if (state.date > KEY.franchiseTagDeadline) return { ok: false, reason: "The tag deadline has passed." };
+  if (pastDeadline(state, KEY.franchiseTagDeadline)) return { ok: false, reason: "The tag deadline (4 PM ET) has passed." };
   if (state.players[id]?.team !== team || !isPendingFreeAgent(state, id)) return { ok: false, reason: "Only our players with expiring deals can be tagged." };
   if (faClass(id) === "ERFA") return { ok: false, reason: "Exclusive-rights players get a tender, not a tag." };
   if (off(state).tags[team]) return { ok: false, reason: "We've already used our tag this year." };

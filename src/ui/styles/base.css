@@ -209,7 +209,7 @@ details.panel[open] > summary { margin-bottom: 0.25rem; }
 .figure { display: grid; padding: 0 1.1rem; border-left: 1px solid var(--rule); }
 .figure:first-child { border-left: 0; padding-left: 0.25rem; }
 .figure strong { font-family: var(--font-mono); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-.scoreboard .btn-row { margin-left: auto; }
+.scoreboard .btn-row { margin-left: auto; align-items: center; }
 .content {
   padding-block: 1.25rem 3rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: grid; gap: 1.25rem; align-content: start; min-width: 0; max-width: 1280px; width: 100%;
@@ -332,8 +332,9 @@ td.name { font-weight: 600; white-space: nowrap; }
   .clock .day { font-size: 1.35rem; }
   .figure { padding: 0 0.75rem; }
   .figure strong { font-size: 0.95rem; }
-  .scoreboard .btn-row { margin-left: 0; width: 100%; flex-wrap: nowrap; }
-  .scoreboard .btn-row .btn { flex: 1 1 0; justify-content: center; padding: 0.45rem 0.4rem; font-size: 0.82rem; text-align: center; }
+  .scoreboard .btn-row { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .scoreboard .btn-row .sim-label { display: none; }
+  .scoreboard .btn-row .btn { flex: 1 1 30%; justify-content: center; padding: 0.45rem 0.4rem; font-size: 0.82rem; text-align: center; }
   /* Dark club colors (navy, black) need an edge to read on dark pages. */
 :root[data-theme="dark"] .btn.primary { border-color: var(--team-2); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { border-color: var(--team-2); } }

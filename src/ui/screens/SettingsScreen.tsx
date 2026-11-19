@@ -70,7 +70,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
             <input type="checkbox" checked={prefs.animate} onChange={(e) => save({ ...prefs, animate: e.target.checked })} />
             <span><strong>Animated players on the field view</strong><br /><span className="muted">Both teams line up before each snap and running plays are acted out; other plays still show the ball and arrow for now. It stays off when your device asks for reduced motion.</span></span>
           </label>
-          <span className="muted">"Sim a week" in the header advances seven days, stopping early for the draft or (with pauses on) anything urgent. How much lands on your desk at all is set under Front office, Decision rights.</span>
+          <span className="muted">"1 week" in the header advances seven days, stopping early for the draft or (with pauses on) anything urgent. How much lands on your desk at all is set under Front office, Decision rights.</span>
         </div>
         <SettingsLeague game={game} changed={changed} />
       </div>

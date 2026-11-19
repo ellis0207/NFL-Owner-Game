@@ -22,6 +22,7 @@
 // pay for now; rebuilders want picks and youth. Draft picks are valued on a
 // draft value chart at the slot the team is projected to pick, a year out
 // worth less than this year's.
+import { pastDeadline } from "./clock";
 import { difficulty } from "./difficulty";
 import { nextId } from "./ids";
 import { cause } from "./causes";
@@ -452,13 +453,16 @@ export interface Window {
 const windowCache = new Map<string, Window>();
 
 export function tradeWindow(state: GameState): Window {
-  let w = windowCache.get(state.date);
-  if (!w) windowCache.set(state.date, (w = windowOn(state.date)));
+  // On deadline day the window shuts at 4 PM.
+  const shut = state.date === KEY.tradeDeadline && pastDeadline(state, KEY.tradeDeadline);
+  const key = shut ? `${state.date}!` : state.date;
+  let w = windowCache.get(key);
+  if (!w) windowCache.set(key, (w = windowOn(state.date, shut)));
   return w;
 }
 
-function windowOn(d: string): Window {
-  if (d <= KEY.tradeDeadline) return { open: true, official: true, text: `Trades are open until the deadline, 4 PM ET on ${shortDate(KEY.tradeDeadline)}.` };
+function windowOn(d: string, shut = false): Window {
+  if (d <= KEY.tradeDeadline && !shut) return { open: true, official: true, text: `Trades are open until the deadline, 4 PM ET on ${shortDate(KEY.tradeDeadline)}.` };
   if (d < OFFSEASON_START) return { open: false, official: false, text: `The trade deadline passed on ${shortDate(KEY.tradeDeadline)}. Trading reopens after the Super Bowl.` };
   if (d < KEY.newLeagueYear) return { open: true, official: false, text: `Trades agreed now become official when the new league year opens on ${shortDate(KEY.newLeagueYear)}. Players whose contracts expire can't be included.` };
   return { open: true, official: true, text: "The new league year is open: trades are processed the day they're agreed." };

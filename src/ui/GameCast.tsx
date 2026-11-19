@@ -224,10 +224,17 @@ export function RunningBoxScore({ r, box, final, period, injuries }: { r: GameRe
  * graphic and the field on the left, the plays so far on the right. The result
  * is already decided; this only holds back what you haven't reached yet.
  */
-export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void }) {
+/**
+ * One game a play at a time. A live game passes `limit`, the rows played by
+ * now on the clock: the view can't run past it, and the rest arrives as the
+ * clock moves on.
+ */
+export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void; limit?: number; start?: number }) {
   const total = log.plays.length;
+  const live = limit !== undefined && limit < total;
+  const avail = live ? limit : total;
   const ids = [r.away, r.home];
-  const [at, setAt] = useState(0);
+  const [at, setAt] = useState(Math.min(start ?? 0, avail));
   const [auto, setAuto] = useState(false);
   // Animated players: the art loads once, and `moving` is the play (by its count) being acted out.
   const [assets, setAssets] = useState<AnimAssets | null>(null);
@@ -261,7 +268,8 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
   // Until the play is over, everything on screen stays as it was before the snap.
   const seen = play ? at - 1 : at;
   const cast = castAt(log, seen);
-  const done = at >= total;
+  const done = at >= avail;
+  const over = at >= total;
   const stories = useMemo(() => storylines(log, [r.away, r.home]), [log, r.away, r.home]);
   // At the end the finished box score takes over, so the totals match it to the yard.
   const running = useMemo(() => (seen >= total && box && log.box ? box : boxAt(log, seen)), [log, seen, total, box]);
@@ -297,11 +305,11 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
   // One play on: act it out if it can be; a second press while it is moving skips to its result.
   const step = () => {
     if (play) { setTrying(null); setMoving(null); return; }
-    const next = Math.min(total, at + 1);
+    const next = Math.min(avail, at + 1);
     setAt(next);
     setMoving(assets ? next : null);
   };
-  const jump = (n: number) => { setTrying(null); setMoving(null); setAt(n); };
+  const jump = (n: number) => { setTrying(null); setMoving(null); setAt(Math.min(avail, n)); };
   const stepNow = useRef(step);
   stepNow.current = step;
 
@@ -360,15 +368,16 @@ export function FollowGame({ r, log, box, onDone }: { r: GameResult; log: GameLo
           {(!done || play) && <button className="btn primary" onClick={step}>{play ? "Skip to the result" : "Next play"}</button>}
           {!done && <button className="btn" onClick={() => jump(nextDriveStop(log, at))}>Next drive</button>}
           {!done && <button className="btn" onClick={() => jump(nextQuarterStop(log, at))}>Next quarter</button>}
-          {!done && <button className="btn" onClick={() => jump(total)}>To the end</button>}
+          {!done && <button className="btn" onClick={() => jump(avail)}>{live ? "To now" : "To the end"}</button>}
           {!done && <button className="btn" aria-pressed={auto} onClick={() => setAuto(!auto)}>{auto ? "Pause" : "Auto"}</button>}
           {at > 0 && <button className="btn" onClick={() => { setAuto(false); jump(at - 1); }}>Back a play</button>}
           {assets && <button className="btn" onClick={() => setSpeed(speed === 1 ? 2 : speed === 2 ? 4 : 1)} aria-label={`Animation speed ${speed}x; press to change`}>Speed {speed}x</button>}
-          {done && !play && <button className="btn primary" onClick={onDone}>Box score</button>}
+          {over && !play && <button className="btn primary" onClick={onDone}>Box score</button>}
         </div>
-        <span className="muted small">Play {seen} of {total}. The right and left arrow keys step forward and back.</span>
+        {done && live && !play && <p className="muted small">You're caught up: this game is live. Move the clock on to see more of it.</p>}
+        <span className="muted small">{live ? `Play ${seen}, live.` : `Play ${seen} of ${total}.`} The right and left arrow keys step forward and back.</span>
       </div>
-      <RunningBoxScore r={r} box={running} final={done} period={Math.min(cast.q, 5)} injuries={hurt} />
+      <RunningBoxScore r={r} box={running} final={over} period={Math.min(cast.q, 5)} injuries={hurt} />
       <div className="cast-feed stack tight">
         <h3>Plays so far</h3>
         {shown.length === 0 && <p className="muted">Nothing yet.</p>}

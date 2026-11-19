@@ -13,6 +13,7 @@
 // to the other bidders. Top players go in the first days; the rest see their
 // prices fall the longer they wait. CPU teams bid within their own cap room
 // and needs; the owner bids through contract talks.
+import { pastDeadline } from "./clock";
 import { coachCase } from "./outlook";
 import { cashLean, styleLean } from "./rivals";
 import { LOCKOUT_REASON, lockedOut } from "./labor";
@@ -56,9 +57,9 @@ export function isMarketOpen(date: string): boolean {
   return date >= KEY.negotiatingWindowOpens;
 }
 
-/** Before the league year opens, agreements wait to be signed. */
-export function inWindow(date: string): boolean {
-  return date >= KEY.negotiatingWindowOpens && date < KEY.newLeagueYear;
+/** Before the league year opens (4 PM ET on its first day), agreements wait to be signed. */
+export function inWindow(state: GameState): boolean {
+  return state.date >= KEY.negotiatingWindowOpens && !pastDeadline(state, KEY.newLeagueYear);
 }
 
 /**
@@ -208,7 +209,7 @@ export function utility(state: GameState, fa: FreeAgent, team: string, t: OfferT
 export function canVisit(state: GameState, team: string, id: string): { ok: boolean; reason?: string } {
   const fa = market(state)[id];
   if (!fa || fa.status !== "open") return { ok: false, reason: "Not an available free agent." };
-  if (!isMarketOpen(state.date) || state.date < KEY.newLeagueYear) return { ok: false, reason: "Visits start when the new league year opens." };
+  if (!isMarketOpen(state.date) || !pastDeadline(state, KEY.newLeagueYear)) return { ok: false, reason: "Visits start when the new league year opens at 4 PM ET." };
   if (fa.visits?.some((v) => v.team === team)) return { ok: false, reason: fa.visits.some((v) => v.team === team && v.done) ? "He's already visited." : "His visit is already set." };
   const pending = Object.values(market(state)).filter((f) => f.visits?.some((v) => v.team === team && !v.done)).length;
   if (pending >= 3) return { ok: false, reason: "We have three visits lined up already." };
@@ -369,13 +370,13 @@ export function signFreeAgent(state: GameState, id: string, team: string, t: Off
   });
   fa.offers = [];
   delete fa.lastLook;
-  const verb = inWindow(state.date) ? "agrees to terms with" : reSigned ? "re-signs with" : "signs with";
+  const verb = inWindow(state) ? "agrees to terms with" : reSigned ? "re-signs with" : "signs with";
   if (deal.apy >= 4_000_000 || team === state.userTeam) {
     news(state, "log", `${p.position} ${p.name} ${verb} the ${teamLabel(team)}: ${t.years} year${t.years === 1 ? "" : "s"}, ${money(deal.total)}, ${money(deal.guaranteedAtSigning)} guaranteed`);
   }
   changeMorale(state, id, 6);
   changeTrust(state, agentFor(id).id, team, 4);
-  if (inWindow(state.date)) {
+  if (inWindow(state)) {
     fa.status = "agreed";
     fa.agreed = { team, terms: { ...t }, date: state.date };
   } else install(state, id, team, deal, t.incentives);

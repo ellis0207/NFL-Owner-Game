@@ -3,7 +3,7 @@ import { GAMES_BY_DATE, RULES, SCHEDULE, teamLabel } from "../../engine/league";
 import { injuryStatus } from "../../engine/injuries";
 import { PLAYER_BY_ID } from "../../engine/league";
 import { teamPlayerIds } from "../../engine/cap";
-import { agenda, eventOutcome, isGameOver, isSeasonOver, isSummer, upcomingKeyDates, veteranReportDate, type AgendaItem } from "../../engine/season";
+import { agenda, DEADLINE_KEYS, eventOutcome, isGameOver, isSeasonOver, isSummer, upcomingKeyDates, veteranReportDate, type AgendaItem } from "../../engine/season";
 import { superBowlName } from "../../engine/calendar";
 import { publicPulse } from "../../engine/negotiation";
 import { useUi } from "../ui";
@@ -31,7 +31,7 @@ import { longDate } from "../../engine/dates";
 
 const KIND_LABEL = { game: "Game day", practice: "Practice", meeting: "Meeting", off: "Off", league: "League", travel: "Travel", draft: "Draft" };
 const ACTION_LABEL: Record<NonNullable<AgendaItem["action"]>, string> = {
-  game: "Simulate game", practice: "Run practice", meeting: "Hold meeting", review: "Review the 53", draft: "Go to the draft room",
+  game: "Go to kickoff", practice: "Run practice", meeting: "Hold meeting", review: "Review the 53", draft: "Go to the draft room",
 };
 
 interface Props {
@@ -121,7 +121,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
                 <div>
                   <strong>{a.title}</strong>{a.detail && <div className="muted">{a.detail}</div>}
                   {done && <div className="outcome">{outcome}</div>}
-                  {!a.action && a.kind === "league" && <div className="muted">Happens when the day ends.</div>}
+                  {!a.action && a.kind === "league" && <div className="muted">{(DEADLINE_KEYS as readonly string[]).includes(a.id.slice(7)) ? "Takes effect at 4 PM ET." : "Happens when the day ends."}</div>}
                 </div>
                 {a.action && !done && (
                   <button className={`btn small${a.action === "game" || a.action === "draft" ? " primary" : ""}`} disabled={busy || isGameOver(game)}
@@ -129,8 +129,11 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
                     {ACTION_LABEL[a.action]}
                   </button>
                 )}
-                {done && a.gameId && game.box[a.gameId] && (
+                {done && a.gameId && game.box[a.gameId] && game.results[a.gameId] && (
                   <button className="btn small" onClick={() => ui.openBox(a.gameId!)}>Box score</button>
+                )}
+                {done && a.gameId && game.live?.[a.gameId] && (
+                  <button className="btn small primary" onClick={() => ui.openBox(a.gameId!, true)}>Watch live</button>
                 )}
               </div>
             );
