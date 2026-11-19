@@ -218,6 +218,18 @@ Calibration targets (what "healthy" looked like when each system shipped):
   on the state object must not outlive the game day). CI
   (`.github/workflows/ci.yml`) typechecks, tests and builds every pull request;
   `long-run.yml` runs seeds, a historical start and a recession weekly.
+- Connectivity (`connect-report.ts [seasons] [seed] [team] [idle]`, about 1.2 min
+  a season; `SAVE=<file.gz>` keeps the final state): plays with an owner who
+  decides every memo as recommended and answers the press (or, with `idle`,
+  does nothing) and prints, per season, money by ledger line, fans, the
+  building's trust, the audiences, the desk and the state's slices by size.
+  A row marked `=` never moved (a system nobody feeds); a slice that grows
+  every season is listed. Healthy: audiences hold in a band (press and lenders
+  forgive slowly, `pressMemory` in standing.ts, the monthly drift in
+  `debtDaily`), no ledger line drops to zero for a year (`refillCategory` in
+  commerce.ts after a sponsor default), audit findings get fixed (the queue's
+  `problem:audit`, `chiefFixes` in treasury.ts). `connectivity.test.ts` holds
+  one test per link this check found missing.
 - Old saves: `saves.test.ts` loads gzipped saves made by earlier versions
   (`tests/saves/`). Add one when a step changes the save shape.
 - Decades (`decades-report.ts 50 7`, about 1.5 min a season): season time levels

@@ -261,6 +261,15 @@ function leagueMonthly(state: GameState): void {
   s.league = Math.round((s.league + (target - s.league) * 0.15) * 10) / 10;
 }
 
+// ---- The press forgets ----
+
+/** Outlets hold a grudge (or a soft spot) for a while, not forever: each month a little of it fades toward neutral. */
+function pressMemory(state: GameState): void {
+  const rel = state.media?.rel;
+  if (!rel) return;
+  for (const k of Object.keys(rel)) rel[k] = Math.round(rel[k] * 0.95 * 10) / 10;
+}
+
 // ---- Trends ----
 
 function snapshot(state: GameState): void {
@@ -290,6 +299,7 @@ export function standingDaily(state: GameState): void {
   if (state.date.endsWith("-01")) {
     interference(state);
     leagueMonthly(state);
+    pressMemory(state);
     snapshot(state);
   }
   officialsMonthly(state);

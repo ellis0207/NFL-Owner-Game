@@ -36,7 +36,10 @@ const M = 1_000_000;
 function context(state: GameState): Ctx {
   const us = state.userTeam;
   const from = state.era?.start ?? BASE_SEASON;
-  const seasons = history(state).seasons.filter((s) => s.season >= from && s.records[us]).map((s) => ({
+  // Only seasons this owner ran the club: a club bought later doesn't bring its old titles along.
+  const stints = (state.tenure?.clubs ?? []).filter((c) => c.team === us);
+  const owned = (season: number) => !state.tenure || stints.some((c) => c.from <= `${season + 1}-02-15` && (!c.to || c.to >= `${season}-09-01`));
+  const seasons = history(state).seasons.filter((s) => s.season >= from && s.records[us] && owned(s.season)).map((s) => ({
     season: s.season, w: s.records[us][0], l: s.records[us][1], place: s.place[us] ?? 4, went: s.playoffs?.[us],
   }));
   const ours = new Set<string>();
@@ -44,6 +47,15 @@ function context(state: GameState): Ctx {
   for (const [id, p] of Object.entries(state.players)) if (p.team === us) ours.add(id);
   return { us, seasons, ours };
 }
+
+/** Whether a player was ours in a season: the season's stat line, or this season's roster. */
+function oursIn(s: GameState, c: Ctx, id: string, year: number): boolean {
+  if (year === RULES.season && s.players[id]?.team === c.us) return true;
+  return (history(s).stats[id] ?? []).some((r) => r.season === year && r.team === c.us) && c.seasons.some((x) => x.season === year);
+}
+
+/** A season this owner ran the club (this season counts once it's under way). */
+const ownedYear = (c: Ctx, year: number) => year === RULES.season || c.seasons.some((x) => x.season === year);
 
 const went = (c: Ctx, ...stages: string[]) => c.seasons.some((s) => s.went && stages.includes(s.went));
 
@@ -61,10 +73,10 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "dynasty", group: "Football", title: "Dynasty", what: "Win three Super Bowls.", check: (_, c) => c.seasons.filter((x) => x.went === "CHAMP").length >= 3 },
   { id: "ten-playoffs", group: "Football", title: "Perennial contender", what: "Make the playoffs five times.", check: (_, c) => c.seasons.filter((x) => !!x.went).length >= 5 },
   // ---- Players ----
-  { id: "pro-bowl", group: "Players", title: "Pro Bowler", what: "Have a player picked for the Pro Bowl while he plays for you.", check: (s, c) => Object.values(s.honors?.proBowl ?? {}).some((ids) => ids.some((id) => s.players[id]?.team === c.us)) },
-  { id: "all-pro", group: "Players", title: "First-team All-Pro", what: "Have a first-team All-Pro on the roster.", check: (s, c) => Object.values(s.honors?.allPro ?? {}).some((a) => a.first.some((id) => s.players[id]?.team === c.us)) },
-  { id: "mvp", group: "Players", title: "Most valuable", what: "Have the league MVP.", check: (s, c) => Object.values(s.honors?.awards ?? {}).some((list) => list.some((a) => a.award === "MVP" && a.team === c.us)) },
-  { id: "coy", group: "Players", title: "Coach of the Year", what: "Your head coach wins Coach of the Year.", check: (s, c) => Object.values(s.honors?.awards ?? {}).some((list) => list.some((a) => a.award === "COY" && a.team === c.us)) },
+  { id: "pro-bowl", group: "Players", title: "Pro Bowler", what: "Have a player picked for the Pro Bowl while he plays for you.", check: (s, c) => Object.entries(s.honors?.proBowl ?? {}).some(([y, ids]) => ids.some((id) => oursIn(s, c, id, Number(y)))) },
+  { id: "all-pro", group: "Players", title: "First-team All-Pro", what: "Have a first-team All-Pro on the roster.", check: (s, c) => Object.entries(s.honors?.allPro ?? {}).some(([y, a]) => a.first.some((id) => oursIn(s, c, id, Number(y)))) },
+  { id: "mvp", group: "Players", title: "Most valuable", what: "Have the league MVP.", check: (s, c) => Object.entries(s.honors?.awards ?? {}).some(([y, list]) => list.some((a) => a.award === "MVP" && a.team === c.us) && ownedYear(c, Number(y))) },
+  { id: "coy", group: "Players", title: "Coach of the Year", what: "Your head coach wins Coach of the Year.", check: (s, c) => Object.entries(s.honors?.awards ?? {}).some(([y, list]) => list.some((a) => a.award === "COY" && a.team === c.us) && ownedYear(c, Number(y))) },
   { id: "draft-hit", group: "Players", title: "Scouting pays off", what: "A player your club drafted makes the Pro Bowl.", check: (s, c) => {
     const drafted = new Set(history(s).drafts.flatMap((d) => d.picks.filter((p) => p[1] === c.us).map((p) => p[0])));
     return Object.values(s.honors?.proBowl ?? {}).some((ids) => ids.some((id) => drafted.has(id)));

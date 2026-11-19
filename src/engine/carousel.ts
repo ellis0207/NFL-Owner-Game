@@ -10,9 +10,8 @@
 // coordinator job can, while the coach is under contract.
 import { pressTone } from "./media/climate";
 import { cause } from "./causes";
-import { hiringFactor, patienceShift } from "./rivals";
+import { hiringFactor, patienceShift, rememberUs } from "./rivals";
 import { FORMAT } from "./format";
-import { changeRapport } from "./owners";
 import {
   canHold, COACH_ROLES, CONCERN_TAGS, coachAge, install, knownFor, newHireFromWithin, quality, recordTeamSeason, reputation, retire, retiresNow,
   ROLE_NAME, salaryFor, staff, vacate,
@@ -401,7 +400,7 @@ function finalize(state: GameState, search: StaffSearch): void {
   }
   install(state, id, search.team, search.role, terms.years, terms.salary);
   // Hiring another club's coach away is legal, and that club's owner remembers it.
-  if (from && search.team === state.userTeam && from.team !== state.userTeam) changeRapport(state, from.team, -6);
+  if (from && search.team === state.userTeam && from.team !== state.userTeam) rememberUs(state, from.team, `The ${teamLabel(state.userTeam)} hired our ${ROLE_NAME[from.role].toLowerCase()} away.`, -6);
   s.searches = s.searches.filter((x) => x !== search);
   if (from) openSearch(state, from.team, from.role, "promoted", id);
   const text = `The ${teamLabel(search.team)} hire ${c.name} as ${ROLE_NAME[search.role]}${fromLabel ? ` (from ${fromLabel})` : ""}`;

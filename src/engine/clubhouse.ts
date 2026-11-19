@@ -30,6 +30,8 @@ import type { GameState, Position } from "./types";
 import type { DevPlan, Programs } from "./training";
 import type { Policy } from "./medical";
 import { liveIds } from "./live";
+import { proBowls } from "./honors";
+import { playerPress } from "./media/climate";
 
 /** The world seed: a player's character does not depend on the save. */
 const WORLD = 20260728;
@@ -311,7 +313,10 @@ export function marketability(state: GameState, id: string): number {
   const fame = Math.min(1, apy / (0.12 * RULES.salaryCap));
   const vet = Math.min(1, experience(state, id) / 8);
   const conduct = state.players[id]?.suspended ? -0.2 : 0;
-  return Math.max(0, Math.min(1, 0.3 * posWeight + 0.35 * fame + 0.15 * vet + 0.2 * personality(id).presence + conduct));
+  // Pro Bowls make a name, and the press can make or sour one: weeks of raves sell jerseys, a run of bad stories cools them.
+  const honored = Math.min(0.15, proBowls(state, id) * 0.04);
+  const press = Math.max(-0.1, Math.min(0.1, playerPress(state, id) / 250));
+  return Math.max(0, Math.min(1, 0.3 * posWeight + 0.35 * fame + 0.15 * vet + 0.2 * personality(id).presence + conduct + honored + press));
 }
 
 export function marketWord(v: number): string {

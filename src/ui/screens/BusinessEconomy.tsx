@@ -10,7 +10,7 @@ import { openLoans } from "../../engine/debt";
 import { COVERS, type Cover, DISTRESS_OPTIONS, distressOption, premium, riskScore, setFlood, setPolicy, settleClaim, shocks } from "../../engine/shocks";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
-import { Evidence } from "../Help";
+import { estimatesShown, Evidence } from "../Help";
 
 export function EconomyRisk({ game, changed }: { game: GameState; changed: () => void }) {
   const [said, setSaid] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export function EconomyRisk({ game, changed }: { game: GameState; changed: () =>
         <section className="panel stack tight">
           <h3>The economy</h3>
           <dl className="kv">{outlook(game).map((o) => <Fragment key={o.label}><dt>{o.label}</dt><dd>{o.value}</dd></Fragment>)}</dl>
-          <span className="muted">Our market: ticket and store demand {pct(demandFactor(game, game.userTeam))}, corporate budgets for sponsors and suites {pct(corporateFactor(game, game.userTeam))} against normal. <Evidence kind="estimate" /></span>
+          {estimatesShown() && <span className="muted">Our market: ticket and store demand {pct(demandFactor(game, game.userTeam))}, corporate budgets for sponsors and suites {pct(corporateFactor(game, game.userTeam))} against normal. <Evidence kind="estimate" /></span>}
           {e.recessions.length > 0 && <span className="muted">Recessions: {e.recessions.map((r) => `${r.start}${r.end ? ` to ${r.end}` : " (now)"}`).join(", ")}.</span>}
           {e.log.slice(0, 4).map((l, i) => <span key={i} className="muted">{shortDate(l.date)}: {l.text}</span>)}
           <h4>Past years in 2026 dollars</h4>
@@ -64,7 +64,7 @@ export function EconomyRisk({ game, changed }: { game: GameState; changed: () =>
       <div className="split">
         <section className="panel stack tight">
           <h3>Insurance</h3>
-          <span className="muted">Insurers rate our risk at {riskScore(game).toFixed(2)} (1 is typical): the stadium's condition, security, compliance staffing, financial controls and recent claims. <Evidence kind="estimate" /></span>
+          {estimatesShown() && <span className="muted">Insurers rate our risk at {riskScore(game).toFixed(2)} (1 is typical): the stadium's condition, security, compliance staffing, financial controls and recent claims. <Evidence kind="estimate" /></span>}
           {(Object.keys(COVERS) as Cover[]).map((k) => {
             const p = s.policies[k];
             return (

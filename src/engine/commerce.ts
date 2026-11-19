@@ -211,6 +211,39 @@ function makeOffers(state: GameState, year: number): void {
   if (ret.up) (l.retention ??= []).unshift(ret);
 }
 
+/**
+ * A partner walked away mid-deal (a default, or the owner dropped them over a
+ * scandal). Inside the renewal window the category goes straight onto the
+ * table for next year; outside it the sales staff finds a stand-in for the
+ * rest of this league year at a discount, so the category isn't dark for months.
+ */
+export function refillCategory(state: GameState, cat: string): void {
+  if (cat === "naming") return;
+  const l = localDeals(state);
+  const year = leagueYear(state.date);
+  const rng = rngFor(state.seed, `refill:${cat}:${state.date}`);
+  const gone = new Set(l.deals.filter((d) => d.cat === cat && d.ended).map((d) => d.partner));
+  const list = partners(state, cat).filter((p) => !gone.has(p));
+  if (!list.length) return;
+  if (l.window && !dealFor(state, cat, l.window.year + 1)) {
+    const next = l.window.year + 1;
+    const base = par(state, cat, next) * sponsorHeat(state);
+    if (l.offers.some((o) => o.cat === cat)) return;
+    for (let i = 0; i < 2 && list.length; i++) {
+      const partner = list.splice(Math.floor(rng() * list.length), 1)[0];
+      const exclusive = !rightsConflict(state, cat, true) && rng() < 0.4;
+      l.offers.push({ id: `${next}:${cat}:${partner}`, cat, partner, incumbent: false, exclusive, years: 2 + Math.floor(rng() * 4), value: Math.round(base * (exclusive ? 1.2 : 1) * (0.95 + gaussian(rng) * 0.06) / 1000) * 1000 });
+    }
+    return;
+  }
+  if (dealFor(state, cat, year)) return;
+  // A partner signed in a hurry pays less; the deal runs out with the league year and comes up in February like any other.
+  const partner = list[Math.floor(rng() * list.length)];
+  l.deals.push({ cat, partner, start: year, years: 1, value: Math.round(par(state, cat, year) * 0.65 / 1000) * 1000, exclusive: false, ...dealTerms(cat, rng) });
+  send(state, "business", businessChief(state), `${LOCAL_CATS[cat].label}: a stand-in partner`,
+    `${partner} takes the ${LOCAL_CATS[cat].label.toLowerCase()} spot for the rest of the league year at a discount. The category comes up with the others in February.`);
+}
+
 /** The owner takes an offer: it starts with the new league year. */
 export function signLocalOffer(state: GameState, id: string): string | null {
   const l = localDeals(state);

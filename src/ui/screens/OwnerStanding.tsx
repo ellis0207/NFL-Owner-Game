@@ -12,7 +12,7 @@ import { CALENDAR_KINDS, ownerCalendar, schedule, type CalendarItem } from "../.
 import { constituents, credibility, credWord, meetOfficial, reputationTrend, setStance, standingState, STANCES, type Stance } from "../../engine/standing";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
-import { Evidence, Help } from "../Help";
+import { estimatesShown, Evidence, Help } from "../Help";
 
 export function OwnerStanding({ game, changed }: { game: GameState; changed: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
@@ -94,7 +94,7 @@ function TimeView({ game }: { game: GameState }) {
       <strong>{y}</strong>
       {past && <><Evidence kind="confirmed" /><dl className="kv"><dt>Revenue</dt><dd>{money(past.revenue)}</dd><dt>Operating income <Help k="operatingIncome" /></dt><dd>{money(past.operating)}</dd><dt>Net income</dt><dd>{money(past.net)}</dd><dt>Cash at year end</dt><dd>{money(past.cashEnd)}</dd><dt>Debt at year end</dt><dd>{money(past.debtEnd)}</dd></dl></>}
       {!past && y === year && <><Evidence kind="confirmed" /><span className="muted">So far this league year (cash basis):</span><dl className="kv"><dt>Money in</dt><dd>{money(rev)}</dd><dt>Money out</dt><dd>{money(cost)}</dd></dl></>}
-      {!past && y > year && ahead && <><Evidence kind="estimate" /><dl className="kv">
+      {!past && y > year && ahead && estimatesShown() && <><Evidence kind="estimate" /><dl className="kv">
         <dt>Revenue</dt><dd>{money(ahead.revenue)} <span className="muted">({money(ahead.revenue * (1 - spread))} to {money(ahead.revenue * (1 + spread))})</span></dd>
         <dt>Operating income</dt><dd>{money(ahead.operating)} <span className="muted">({money(ahead.operating - Math.abs(ahead.revenue) * spread)} to {money(ahead.operating + Math.abs(ahead.revenue) * spread)})</span></dd>
         <dt>Cash at year end</dt><dd>{money(ahead.cash)} <span className="muted">({money(ahead.low)} to {money(ahead.high)})</span></dd>

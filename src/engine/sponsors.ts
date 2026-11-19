@@ -7,7 +7,7 @@
 // from the real stadium names.
 import { pressTone } from "./media/climate";
 import { business, businessChief, post } from "./business";
-import { dealFor, dealValue, LOCAL_CATS, localDeals, sponsorHeat } from "./commerce";
+import { dealFor, dealValue, LOCAL_CATS, localDeals, refillCategory, sponsorHeat } from "./commerce";
 import { leagueYear } from "./contracts";
 import { addDays } from "./dates";
 import { execBoost } from "./executives";
@@ -169,8 +169,9 @@ function monthlyRisk(state: GameState): void {
       post(state, "sponsorship", -lost, `${d.partner}: fees billed and never paid`);
       send(state, "business", businessChief(state), `${d.partner} has stopped paying`,
         `${d.partner} missed its payments and its lawyers say it can't pay the rest of the deal. We wrote off ${money(lost)} we had billed. ` +
-        `The ${LOCAL_CATS[d.cat]?.label.toLowerCase() ?? "naming rights"} category is open; we'll shop it when the renewal window opens in February.`);
+        `The ${LOCAL_CATS[d.cat]?.label.toLowerCase() ?? "naming rights"} category is open; we're lining up a replacement.`);
       news(state, "business", `${d.partner} defaults on its ${TEAM_BY_ID[state.userTeam].name} sponsorship`);
+      refillCategory(state, d.cat);
       continue;
     }
     if (!d.scandal && rng() < (TOUCHY.has(d.cat) ? 0.04 : 0.015) / 12) {
@@ -191,6 +192,7 @@ export function dropPartner(state: GameState, cat: string): string | null {
   d.years = Math.max(0, year - d.start);
   delete d.scandal;
   trustHit(state, 1, 0, `Ended the partnership with ${d.partner}`);
+  refillCategory(state, cat);
   news(state, "business", `${TEAM_BY_ID[state.userTeam].name} end their partnership with ${d.partner}`);
   return null;
 }

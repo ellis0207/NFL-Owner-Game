@@ -7,6 +7,7 @@ import { creditLimit } from "../../engine/debt";
 import type { GameState, LedgerCat } from "../../engine/types";
 import { money } from "../format";
 import { tip } from "../tip";
+import { estimatesShown } from "../Help";
 
 /** The statements: accrual income statement, balance sheet, cash flow, ratios, with any line opening its ledger entries. */
 export function Books({ game }: { game: GameState }) {
@@ -217,7 +218,8 @@ export function Plan({ game, changed }: { game: GameState; changed: () => void }
             {[5, 10, 20].map((n) => <button key={n} aria-pressed={span === n} onClick={() => setSpan(n)}>{n} years</button>)}
           </div>
         </div>
-        <div className="table-wrap">
+        {!estimatesShown() && <span className="muted">Forecasts are hidden: Settings, Play, Information you see is set to confirmed facts only.</span>}
+        {estimatesShown() && <div className="table-wrap">
           <table>
             <thead><tr><th>League year</th><th className="num">Revenue</th><th className="num">Revenue range</th><th className="num">Players</th><th className="num">Other costs</th><th className="num">Operating</th><th className="num">Construction</th><th className="num">Interest</th><th className="num">Principal</th><th className="num">Cash at year end</th><th className="num">Range</th></tr></thead>
             <tbody>
@@ -233,7 +235,7 @@ export function Plan({ game, changed }: { game: GameState; changed: () => void }
               ))}
             </tbody>
           </table>
-        </div>
+        </div>}
         <span className="muted">
           National money grows with the cap; local prices about 4% a year; local deals that run out are assumed renewed. Players are paid about what the cap allows.
           The range widens each year for ticket demand, renewals, construction overruns and floating rates.

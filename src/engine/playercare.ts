@@ -55,6 +55,13 @@ export function care(state: GameState): CareState {
   return (state.care ??= { playbook: {}, load: {}, doctors: (["physician", "orthopedist", "trainer", "rehab"] as const).map((r) => doctor(state, r)), seen: {} });
 }
 
+/** A club the owner takes over comes with its own medical staff; the playbook and snap records are league-wide and stay. */
+export function newClubDoctors(state: GameState, n: number): void {
+  const c = care(state);
+  c.doctors = (["physician", "orthopedist", "trainer", "rehab"] as const).map((r) => doctor(state, r, n));
+  c.seen = {};
+}
+
 // ---- Playbook ----
 
 /** How much of a playbook each position has to carry. */

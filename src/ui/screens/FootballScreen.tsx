@@ -13,7 +13,7 @@ import { teamStaff } from "../../engine/staff";
 import { culture, cooperationWord, gmTrustWord } from "../../engine/culture";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
-import { Evidence, Help } from "../Help";
+import { Estimate, Evidence, Help } from "../Help";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
@@ -54,7 +54,7 @@ export function FootballScreen({ game }: { game: GameState }) {
           <dl className="kv">
             <dt>{year} space <Help k="capSpace" /></dt><dd className={cap.space < 0 ? "bad" : "good"}>{money(cap.space)}</dd>
             <dt>{year} dead money <Help k="deadMoney" /></dt><dd>{money(cap.dead)}</dd>
-            <dt>{year + 1} space</dt><dd>{money(next.space)} <Evidence kind="estimate" /></dd>
+            <dt>{year + 1} space</dt><dd><Estimate>{money(next.space)} <Evidence kind="estimate" /></Estimate></dd>
           </dl>
           <h3>Health</h3>
           <span>{hurt.length} hurt, {ir.length} on injured reserve.</span>

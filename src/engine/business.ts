@@ -765,7 +765,8 @@ function dateFree(state: GameState, team: string, date: string, events: StadiumE
   // Playoff weekends stay open, as every lease requires.
   if (date >= KEY.wildCardWeekend && date <= addDays(KEY.conferenceChampionships, 1)) return false;
   const s = STADIUM_BY_TEAM[team];
-  if (s.blackout?.some((x) => date >= x.from && date <= x.to) || hostBlackout(state, team, date)) return false;
+  // Blackouts (a rodeo, a tenant's season) come back each year in the same weeks.
+  if (s.blackout?.some((x) => date >= cfbDate(x.from) && date <= cfbDate(x.to)) || hostBlackout(state, team, date)) return false;
   return !events.some((e) => (e.status === "booked" || e.status === "offered") && Math.abs(daysBetween(e.date, date)) <= 1);
 }
 

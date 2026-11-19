@@ -140,8 +140,10 @@ export abstract class SimPass extends SimTeams {
     o.box.passAtt++;
     const r = this.rng();
     if (r < pInt) {
+      // Usually the man in coverage; otherwise a ball hawk reads it: safeties roam over the top, linebackers rarely get there, and good hands catch more of them.
       const backs = [...def.cb, ...def.s, ...def.lb];
-      const picker = this.rng() < 0.68 && cover ? cover : backs[Math.floor(this.rng() * backs.length)] ?? cover;
+      const hawk = (id: string) => (def.s.includes(id) ? 1.5 : def.lb.includes(id) ? 0.35 : 1) * Math.pow(Math.max(40, tr(id, def.s.includes(id) ? "range" : def.lb.includes(id) ? "coverage" : "zone")) / 80, 6);
+      const picker = this.rng() < 0.7 && cover ? cover : pickWeighted(backs, hawk, this.rng()) ?? cover;
       this.add(o, qb, "int");
       this.add(d, picker, "defInt");
       this.add(d, picker, "pd");
@@ -519,4 +521,12 @@ export abstract class SimPass extends SimTeams {
     if (this.rng() < 0.45) this.tackle(d, [...def.lb, ...def.s, ...def.edge], yards);
     return { yards, ended: false, playTime: 6, clockStops: this.clockStopsOnOutOfBounds(this.rng() < 0.4), involved: [qb] };
   }
+}
+
+/** One of a list, chosen in proportion to a weight (the sim's own roll passed in). */
+function pickWeighted(ids: string[], weight: (id: string) => number, roll: number): string | undefined {
+  const w = ids.map(weight);
+  let left = roll * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ids.length; i++) if ((left -= w[i]) <= 0) return ids[i];
+  return ids.at(-1);
 }

@@ -2,7 +2,7 @@
 // figure explains the rule or calculation behind it; a label says whether a
 // figure is confirmed, the staff's estimate, or someone's opinion. Ranges
 // show how uncertain an estimate is.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { money } from "./format";
 
 export const HELP: Record<string, string> = {
@@ -37,6 +37,24 @@ export function Help({ k, text }: { k?: string; text?: string }) {
   );
 }
 
+// The "Information you see" setting (Settings > Play): GameShell sets it each render.
+let INFO: "real" | "limited" | "full" = "real";
+export function setInfoLevel(v: "real" | "limited" | "full" | undefined): void {
+  INFO = v ?? "real";
+}
+/** Whether staff estimates (models, projections, ranges) are shown; "Confirmed facts only" hides them. */
+export function estimatesShown(): boolean {
+  return INFO !== "limited";
+}
+/** Private information (reporters' real accuracy, what players tell the staff): a sandbox game set to show everything. */
+export function privateShown(): boolean {
+  return INFO === "full";
+}
+/** An estimate, or a note that it's hidden when the owner chose confirmed facts only. */
+export function Estimate({ children }: { children: ReactNode }) {
+  return INFO === "limited" ? <span className="muted" title="Settings > Play: Information you see">Estimate hidden</span> : <>{children}</>;
+}
+
 export function Evidence({ kind }: { kind: "confirmed" | "estimate" | "opinion" }) {
   const label = kind === "confirmed" ? "Confirmed" : kind === "estimate" ? "Estimate" : "Opinion";
   return <span className={`tag evidence-${kind}`} title={HELP.evidence}>{label}</span>;
@@ -44,5 +62,6 @@ export function Evidence({ kind }: { kind: "confirmed" | "estimate" | "opinion" 
 
 /** An estimate with its likely range. */
 export function Range({ mid, low, high, fmt = money }: { mid: number; low: number; high: number; fmt?: (x: number) => string }) {
+  if (INFO === "limited") return <Estimate>{null}</Estimate>;
   return <span title={`Likely between ${fmt(low)} and ${fmt(high)}`}>{fmt(mid)} <span className="muted">({fmt(low)} to {fmt(high)})</span></span>;
 }

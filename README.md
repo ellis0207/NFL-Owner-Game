@@ -83,8 +83,22 @@ partner, a slipping pledge or a sour locker room, and how long each has gone on.
 Achievements mark an ownership worth remembering: playoff runs and titles,
 Pro Bowlers you drafted, a Hall of Famer who played for you, a profitable year,
 a new stadium, pledges kept to the board, and a title on the hardest level.
-They're earned per save with the date and difficulty (Game > Achievements).
+They're earned per save with the date and difficulty (Game > Achievements),
+and only for seasons you ran the club: a club bought later doesn't bring its
+old titles along.
 Any page can be pinned to the top of the sidebar from the pin beside its title.
+
+The systems feed each other (checked season over season by
+`tests/connect-report.ts`): the rehab director and trainers set the pace of a
+long rehab; good press and Pro Bowls sell a player's jersey; clubs remember the
+trades you made with them and the coaches you hired away; a club you buy comes
+with its own coach's room, scouts, analysts and doctors; a sponsor that
+defaults is replaced by a stand-in partner instead of leaving the category
+empty until February; audit findings show on Today, and the finance chief fixes
+the serious ones you leave for two months; the press and lenders forgive old
+marks slowly. Settings > Play > Information you see now hides every staff
+forecast and range when set to confirmed facts only, and in a sandbox set to
+everything shows reporters' real accuracy and sources.
 
 The tutorial (title screen) is a practice game that walks through the job in
 19 lessons: the calendar, a crossroads call, the roster and cap, contracts,
