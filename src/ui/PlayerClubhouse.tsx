@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { moodPull, moodWord, REASON_TEXT, worstReason } from "../engine/lockerroom";
 import { clubhouse, expectsToStart, marketability, marketWord, mentorOf, posOf, trustOf, trustWord } from "../engine/clubhouse";
 import { ageOn } from "../engine/dates";
 import { PLAYER_BY_ID } from "../engine/league";
@@ -28,6 +29,7 @@ export function PlayerClubhouse({ game, id, changed }: { game: GameState; id: st
       <h3>Clubhouse</h3>
       <dl className="kv">
         {mine && <><dt>Coaches</dt><dd>{trustWord(trustOf(game, id))}</dd></>}
+        {mine && ps.team && <><dt>Mood</dt><dd>{moodLine(game, id, ps.team, ps.morale ?? 70)}</dd></>}
         <dt>Profile</dt><dd>{marketWord(marketability(game, id))}</dd>
         {mine && words.length > 0 && <><dt>Staff notes</dt><dd>{words.join("; ")}</dd></>}
         {mentor && <><dt>Mentor</dt><dd><button className="link" {...tip("player", mentor)} onClick={() => ui.openPlayer(mentor)}>{PLAYER_BY_ID[mentor].name}</button></dd></>}
@@ -59,4 +61,11 @@ export function PlayerClubhouse({ game, id, changed }: { game: GameState; id: st
       {reply && <span className="notice">{reply}</span>}
     </section>
   );
+}
+
+/** How the staff describes a player's mood, with what weighs on him when he isn't content. */
+function moodLine(game: GameState, id: string, team: string, m: number): string {
+  const word = moodWord(m);
+  if (m >= 65) return word;
+  return `${word}: weighed down by ${REASON_TEXT[worstReason(moodPull(game, id, team))]}`;
 }

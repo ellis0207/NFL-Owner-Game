@@ -40,6 +40,7 @@ import { acceptOffer, declineOffer, tradeBalance, trades } from "./trades";
 import { consulting, invested } from "./treasury";
 import { agendaOrder, mandateScore, micromanagement, remember } from "./people";
 import { resolveStandingMemo } from "./standing";
+import { resolveLockerMemo } from "./lockerroom";
 import { lapseInvestorMemo, resolveInvestorMemo } from "./investors";
 import { resolveWealthMemo } from "./wealth";
 import { resolveFranchiseMemo } from "./franchisemarket";
@@ -158,6 +159,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
       return resolveIncident(state, p, choice);
     case "general":
       if (p.crossroads) return resolveCrossroadsMemo(state, m, choice);
+      if (p.locker) return resolveLockerMemo(state, m, choice);
       if (p.board) return resolveBoardMemo(state, m, choice);
       if (p.franchise) return resolveFranchiseMemo(state, m, choice);
       if (p.takeover) return resolveTakeoverMemo(state, m, choice);

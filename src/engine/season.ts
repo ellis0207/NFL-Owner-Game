@@ -49,6 +49,7 @@ import { DAY, DEADLINE, DEADLINE_MARK, minuteOf, nowMinute } from "./clock";
 import { finishGame, gameTypeLabel, kickoffGame, outLabel, playGame } from "./gametime";
 import { analyticsDaily, ensureAnalytics } from "./strategy";
 import { ensureClubhouse, lockerDaily } from "./clubhouse";
+import { lockerRoomDaily } from "./lockerroom";
 import { knownReturn, medicalDaily } from "./medical";
 import { gameWeekDaily } from "./gameweek";
 import { honorsDaily } from "./honors";
@@ -747,6 +748,7 @@ function endDay(state: GameState): void {
   analyticsDaily(state);
   analystsDaily(state);
   lockerDaily(state);
+  lockerRoomDaily(state);
   trainingDaily(state);
   medicalDaily(state);
   careDaily(state);

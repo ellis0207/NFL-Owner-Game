@@ -1,4 +1,4 @@
-// How much coaching moves results: plays seasons with every club, and at each
+// How much coaching and the locker room move results: plays seasons with every club, and at each
 // trade deadline records the roster's talent (a starter for each slot) and the
 // staff's engine numbers; at the Super Bowl it records wins. Then it fits wins
 // on talent and prints how much of the rest each coaching number explains, the
@@ -20,10 +20,11 @@ const { standings } = await import("../src/engine/standings");
 const { teamPlayerIds } = await import("../src/engine/cap");
 const { ageOn } = await import("../src/engine/dates");
 const { roomBoost } = await import("../src/engine/positionCoaches");
+const { starters } = await import("../src/engine/clubhouse");
 
 const state = reportStart("DET", seed);
 const SLOTS: Record<string, number> = { QB: 1, RB: 1, WR: 3, TE: 1, OT: 2, OG: 2, C: 1, EDGE: 2, IDL: 2, LB: 2, CB: 3, S: 2, K: 1, P: 1 };
-type Row = { wins: number; talent: number; qb: number; command: number; offCalling: number; defCalling: number; specialTeams: number; gameManagement: number; leadership: number };
+type Row = { wins: number; talent: number; qb: number; morale: number; chem: number; command: number; offCalling: number; defCalling: number; specialTeams: number; gameManagement: number; leadership: number };
 const rows: Row[] = [];
 const young: { growth: number; room: number; coach: number }[] = [];
 const was: Record<string, { now: number; room: number; coach: number }> = {};
@@ -48,7 +49,9 @@ for (let i = 0; i < 400 * seasons && rows.length < 32 * seasons; i++) {
         if (pos === "QB") qb = best[0];
       }
       const fx = staffEffects(t);
-      snap[t] = { talent: sum / n, qb, command: fx.command, offCalling: fx.offCalling, defCalling: fx.defCalling, specialTeams: fx.specialTeams, gameManagement: fx.gameManagement, leadership: fx.leadership };
+      const st = starters(state, t);
+      const morale = st.reduce((a, id) => a + (state.players[id]?.morale ?? 70), 0) / Math.max(1, st.length);
+      snap[t] = { talent: sum / n, qb, morale, chem: state.clubhouse?.chem[t] ?? 60, command: fx.command, offCalling: fx.offCalling, defCalling: fx.defCalling, specialTeams: fx.specialTeams, gameManagement: fx.gameManagement, leadership: fx.leadership };
     }
     for (const [id, p] of Object.entries(state.players)) {
       const pl = PLAYER_BY_ID[id];
@@ -104,7 +107,7 @@ const resid = wins.map((w, i) => w - (beta[0] + beta[1] * talent[i] + beta[2] * 
 const r2 = 1 - mean(resid.map((x) => x * x)) / mean(wins.map((w) => (w - mean(wins)) ** 2));
 console.log(`\n${rows.length} team-seasons, seed ${seed}. Talent and quarterback explain ${(r2 * 100).toFixed(0)}% of wins.`);
 console.log("number            r with wins   r with the rest");
-for (const k of ["talent", "qb", "command", "offCalling", "defCalling", "specialTeams", "gameManagement", "leadership"] as const) {
+for (const k of ["talent", "qb", "morale", "chem", "command", "offCalling", "defCalling", "specialTeams", "gameManagement", "leadership"] as const) {
   const x = rows.map((r) => r[k]);
   console.log(`${k.padEnd(18)}${corr(x, wins).toFixed(2).padStart(10)}${corr(x, resid).toFixed(2).padStart(16)}`);
 }
@@ -114,3 +117,11 @@ const top = byCommand.slice(0, q), bottom = byCommand.slice(-q);
 const gap = mean(top.map((r) => resid[rows.indexOf(r)])) - mean(bottom.map((r) => resid[rows.indexOf(r)]));
 console.log(`Head coaches, top quarter vs bottom quarter, wins beyond the roster: ${gap.toFixed(2)} (target 1-1.5)`);
 console.log(`Young players (26 and under): ${young.length}, share of their room grown a year ${mean(young.map((y) => y.growth)).toFixed(2)}, r with the teaching staff ${corr(young.map((y) => y.growth), young.map((y) => y.coach)).toFixed(2)} (target about .2)`);
+const quarterGap = (k: "chem" | "morale") => {
+  const order = rows.map((r, i) => ({ v: r[k], e: resid[i] })).sort((a, b) => b.v - a.v);
+  return mean(order.slice(0, q).map((x) => x.e)) - mean(order.slice(-q).map((x) => x.e));
+};
+const sd = (a: number[]) => Math.sqrt(mean(a.map((x) => (x - mean(a)) ** 2)));
+console.log(`Win percentage spread: ${sd(wins.map((w) => w / 17)).toFixed(3)} (NFL about .18 to .20). Mood and chemistry below include reverse cause: winning teams are happier.`);
+console.log(`Locker room: starters' mood at the deadline averages ${mean(rows.map((r) => r.morale)).toFixed(1)}, spread between clubs ${sd(rows.map((r) => r.morale)).toFixed(1)}; chemistry spread ${sd(rows.map((r) => r.chem)).toFixed(1)}`);
+console.log(`Top vs bottom quarter, wins beyond the roster: chemistry ${quarterGap("chem").toFixed(2)}, mood ${quarterGap("morale").toFixed(2)} (target about 1 for chemistry)`);

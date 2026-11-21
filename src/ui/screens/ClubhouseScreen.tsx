@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { teamPlayerIds } from "../../engine/cap";
+import { unhappyStarters } from "../../engine/lockerroom";
 import { chemistryWord, clubhouse, leaders, marketability, marketWord, mentors, personality, posOf, trustOf, trustWord } from "../../engine/clubhouse";
 import { shortDate } from "../../engine/dates";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID } from "../../engine/league";
@@ -54,7 +55,8 @@ function LockerTab({ game }: { game: GameState }) {
           <h3>Chemistry</h3>
           <strong>{chemistryWord(chem)}</strong>
           <span className="muted">{rank <= 8 ? "One of the closest rooms in the league" : rank <= 24 ? "About average for the league" : "One of the least settled rooms in the league"}, by the staff's read.</span>
-          <span className="muted">It comes from continuity among the starters, veterans the room follows, how happy and present people are, and the head coach. It matters a little on the field, never as much as talent.</span>
+          <span className="muted">It comes from continuity among the starters, veterans the room follows, how happy and present people are, and the head coach. It matters on the field: a close-knit room against a divided one is worth about a win a season, never as much as talent. Two or three unhappy starters split a room fast.</span>
+          {unhappyStarters(game, us).length > 0 && <span>Unhappy starters: {unhappyStarters(game, us).map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>)}</span>}
         </div>
         <div className="panel stack tight">
           <h3>Leaders</h3>

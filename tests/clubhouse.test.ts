@@ -26,13 +26,13 @@ describe("the locker room", () => {
     expect(ids.some((id) => personality(id).learning > 0.75)).toBe(true);
   });
 
-  it("builds chemistry, coach trust and mentors over a season, with a small on-field edge", () => {
+  it("builds chemistry, coach trust and mentors over a season, with an on-field edge of about a win at the extremes", () => {
     const s = stateAt(TEAM, 3);
     const c = clubhouse(s);
     const chem = Object.values(c.chem);
     expect(chem.length).toBe(Object.keys(TEAM_BY_ID).length);
     expect(Math.max(...chem) - Math.min(...chem)).toBeGreaterThan(5);
-    for (const t of Object.keys(TEAM_BY_ID)) expect(Math.abs(chemistryEdge(s, t))).toBeLessThanOrEqual(0.4);
+    for (const t of Object.keys(TEAM_BY_ID)) expect(Math.abs(chemistryEdge(s, t))).toBeLessThanOrEqual(1.2);
     expect(chemistryWord(c.chem[TEAM])).toMatch(/\w/);
     const trusts = ours(s).map((id) => trustOf(s, id));
     expect(Math.max(...trusts)).toBeGreaterThan(55);
