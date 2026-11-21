@@ -137,9 +137,11 @@ export function localIncome(state: GameState, year = leagueYear(state.date)): { 
     else sponsors += v;
   }
   const mood = 0.9 + state.pressure.fans / 500;
-  sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.94, 1, 1.03, 1.05][b.budget.marketing] * mood * corporateFactor(state, state.userTeam);
+  sponsors += sponsorship(state.userTeam) * inflation(year, 0.05) * SMALL_PARTNERS * [0.9, 1, 1.05, 1.08][b.budget.marketing] * mood * corporateFactor(state, state.userTeam);
   // The revenue chief's sales staff works the small partners harder (or not).
   sponsors *= 1 + 0.04 * execBoost(state, "CRO");
+  // New inventory in the building (boards, Wi-Fi, event rooms) sells to current partners right away; the rest comes at renewal.
+  sponsors *= 1 + projectEffects(state).sponsor * 0.5;
   // Partners who've lost confidence in the club spend less with it.
   sponsors *= 1 + ((state.culture?.rel.sponsors ?? 60) - 60) / 1000;
   // Exclusive partners keep their rivals out, and with them some smaller deals.

@@ -25,6 +25,7 @@ import { ensureOffice } from "./delegation";
 import { ensureCulture } from "./culture";
 import { ensureExecs } from "./executives";
 import { officeDaily } from "./memos";
+import { ownerCallsDaily } from "./ownercalls";
 import { crossroadsDaily } from "./crossroads";
 import { boardroomDaily } from "./boardroom";
 import { achievementsDaily } from "./achievements";
@@ -739,6 +740,7 @@ function endDay(state: GameState): void {
   causesDaily(state);
   archiveDaily(state);
   officeDaily(state);
+  ownerCallsDaily(state);
   crossroadsDaily(state);
   boardroomDaily(state);
   problemsDaily(state);

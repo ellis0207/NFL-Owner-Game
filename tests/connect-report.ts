@@ -5,12 +5,14 @@
 // state's slices by size. It flags what never moves (a system nobody feeds),
 // what keeps growing (a list nothing trims), and numbers that aren't numbers.
 //
-// Run: npx vite-node tests/connect-report.ts [seasons] [seed] [team] [idle]
+// Run: npx vite-node tests/connect-report.ts [seasons] [seed] [team] [idle|careless]
 //   idle: the owner never decides anything (memos lapse, delegated calls run).
+//   careless: the owner decides every memo against the advice (the last option the staff didn't recommend).
 const seasons = Number(process.argv[2] ?? 3);
 const seed = Number(process.argv[3] ?? 7);
 const team = String(process.argv[4] ?? "DET");
 const idle = process.argv[5] === "idle";
+const careless = process.argv[5] === "careless";
 
 const { advanceDay, isGameOver } = await import("../src/engine/season");
 const { reportStart } = await import("./fixtures");
@@ -94,9 +96,13 @@ let decided = 0, refused = 0;
 const start = RULES.season;
 while (!isGameOver(state) && RULES.season < start + seasons) {
   advanceDay(state);
-  if (!idle && new Date(state.date + "T12:00:00Z").getUTCDay() === 1) {
+  // Memos are read every day: a home game's price call is on the desk for only four days.
+  if (!idle) {
     for (const m of openMemos(state)) {
-      const err = decideMemo(state, m.id, m.recommend ?? 0, "probe");
+      if (m.status !== "open") continue;
+      const rec = m.recommend ?? 0;
+      const pick = careless ? (rec === m.options.length - 1 ? 0 : m.options.length - 1) : rec;
+      const err = decideMemo(state, m.id, pick, "probe");
       if (err) refused++; else decided++;
     }
   }

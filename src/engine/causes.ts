@@ -80,7 +80,8 @@ function checkForecast(state: GameState, c: CauseEntry, season: number, done: { 
   effect(state, c.id, text);
 }
 
-function revenueNow(state: GameState): number {
+/** Tickets, premium seating, concessions and sponsors over the last 365 days. */
+export function revenueNow(state: GameState): number {
   const from = addDays(state.date, -365);
   let t = 0;
   for (const e of state.business?.ledger ?? []) if (e.date > from && (e.cat === "tickets" || e.cat === "premium" || e.cat === "concessions" || e.cat === "sponsorship")) t += e.amount;

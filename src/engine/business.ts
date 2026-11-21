@@ -37,7 +37,7 @@ import { standings, winPct } from "./standings";
 import { teamStaff } from "./staff";
 import { BUDGETED_TOP_STAFF, payroll } from "./coaches";
 import { localIncome } from "./commerce";
-import { projectEffects } from "./projects";
+import { projectEffects, projectsRevenue } from "./projects";
 import { roadTrip } from "./departments";
 import { upkeepLines } from "./facilities";
 import { creditLimit, distributionsBlocked, marketRate, noteCapitalCall, serviceDebt } from "./debt";
@@ -109,8 +109,8 @@ const COLD = new Set(["BUF", "NE", "NYJ", "NYG", "CLE", "PIT", "CIN", "BAL", "CH
 export const BUDGET_LEVELS = ["Lean", "League average", "Above average", "Top of the league"] as const;
 
 export const DEPTS: Record<Dept, { label: string; what: string; cost: number[]; perGame?: boolean }> = {
-  marketing: { label: "Marketing and ticket sales", what: "Advertising, the ticket sales staff and the team's brand. Fills seats and keeps sponsors happy.", cost: [8 * M, 14 * M, 22 * M, 32 * M] },
-  gameday: { label: "Game-day experience", what: "Staffing, entertainment, cleanliness and service at home games. Fans notice.", cost: [0.8 * M, 1.3 * M, 1.9 * M, 2.6 * M], perGame: true },
+  marketing: { label: "Marketing and ticket sales", what: "Advertising, the ticket sales staff and the team's brand. Fills seats and keeps sponsors happy.", cost: [9 * M, 14 * M, 18.5 * M, 24 * M] },
+  gameday: { label: "Game-day experience", what: "Staffing, entertainment, cleanliness and service at home games. Fans notice.", cost: [1 * M, 1.3 * M, 1.65 * M, 2 * M], perGame: true },
   community: { label: "Community relations", what: "The foundation, youth football, hospital visits and the team's name in town.", cost: [2 * M, 5 * M, 9 * M, 14 * M] },
   medical: { label: "Medical and training", what: "Trainers, physical therapists, sports science and recovery equipment.", cost: [6 * M, 10 * M, 15 * M, 21 * M] },
   facilities: { label: "Training facility", what: "The practice facility, weight room, meeting rooms and players' lounge. Coaches and players live there.", cost: [10 * M, 17 * M, 26 * M, 36 * M] },
@@ -363,7 +363,9 @@ export function revenueEstimate(state: GameState, team: string): number {
 export function valuation(state: GameState, team: string): number {
   const s = STADIUM_BY_TEAM[team];
   const mult = multipleShift(state, state.debt ? marketRate(state) : 0.0375) + 8.0 + { owned: 1.1, coowned: 0.9, publicTeam: 0.35, publicAuthority: 0, tenant: -0.3 }[s.structure] + (MARKETS[team].pull >= 1.15 ? 0.6 : 0) + (MARKETS[team].target >= 850 * M ? 0.5 : 0);
-  return Math.round(revenueEstimate(state, team) * mult / (50 * M)) * 50 * M;
+  // Our own building projects add the revenue they bring (projects.ts); other clubs' renovations are in their market numbers.
+  const extra = team === state.userTeam ? projectsRevenue(state) : 0;
+  return Math.round((revenueEstimate(state, team) + extra) * mult / (50 * M)) * 50 * M;
 }
 
 /** Rough yearly operating income at league-average budgets (for the league table). */
@@ -465,15 +467,19 @@ function gateModel(team: string, g: ScheduledGame, x: GateInputs, holders = defa
   const attendance = Math.round(paid - noShows + sale.comps + premiumSeatCount * use);
   const regHome = SCHEDULE.filter((x2) => x2.type === "REG" && x2.home === team && !x2.neutral).length;
   const preHome = SCHEDULE.filter((x2) => x2.type === "PRE" && x2.home === team && !x2.neutral).length;
-  const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) + sale.singleRevenue + sale.groupRevenue;
+  // A better building and a sharper sales staff let the club charge more for the same season ticket:
+  // that is where a sold-out stadium's extra demand turns into money.
+  const power = (x.demand ?? 1) * (1 + (x.marketing - 1) * 0.5);
+  const tickets = holders * mk.ticket * x.ticketIdx * (pre ? 0.6 : 1) * power + sale.singleRevenue + sale.groupRevenue;
   // Suite and club money is spread over the home schedule; preseason games count half.
   const perGame = (mk.premium * x.premiumIdx * (x.premiumMult ?? 1) * (x.premiumBook ?? 1) * (x.grounds?.premiumScale ?? 1) / Math.max(1, regHome + 0.5 * preHome)) * (pre ? 0.5 : 1);
   const hospitality = x.hospitality && !pre ? hospitalityRevenue(perGame, premiumUse(x.win, tier, pre, false, x.premiumSat)) : 0;
   const premium = perGame + hospitality;
   const concessions = attendance * CONCESSIONS[x.concessions].perCap * (x.perCap ?? 1) * CONCESSION_COMMISSION * s.gameDayShare;
   // Our own lots are modelled one by one (grounds.ts): we're paid only for the cars they hold, at our share.
-  const parking = x.grounds ? x.grounds.parking(attendance, x.parking).revenue : (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare;
-  const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1) * (x.starMult ?? 1);
+  // Spending per fan (better stands, a garage, team stores at the busy gates) reaches parking and the stores too.
+  const parking = (x.grounds ? x.grounds.parking(attendance, x.parking).revenue : (attendance / 2.9) * mk.parking * x.parking * Math.pow(x.parking, -0.4) * s.gameDayShare) * (x.perCap ?? 1);
+  const merch = attendance * 11 * 0.45 * (x.merchMult ?? 1) * (x.starMult ?? 1) * (x.perCap ?? 1);
   return {
     sold, attendance, holders, singleSeats: sale.singleSeats, singleSold: sale.singleSold, singlePrice: sale.singlePrice, heat: sale.heat,
     tickets: Math.round(tickets), premium: Math.round(premium), concessions: Math.round(concessions), parking: Math.round(parking), merch: Math.round(merch),
@@ -493,8 +499,8 @@ function inputs(state: GameState, team: string, rng?: Rng, g?: ScheduledGame): G
   return {
     mood: ours ? 0.8 + state.pressure.fans / 250 : 1,
     win,
-    marketing: ours && b ? [0.95, 1, 1.04, 1.07][b.budget.marketing] * [0.98, 1, 1.01, 1.02][b.budget.gameday] * (1 + 0.02 * execBoost(state, "MKT")) : 1,
-    price: ours && b ? b.prices.single : 1,
+    marketing: ours && b ? [0.88, 1, 1.05, 1.08][b.budget.marketing] * [0.92, 1, 1.03, 1.05][b.budget.gameday] * (1 + 0.02 * execBoost(state, "MKT")) : 1,
+    price: ours && b ? singlePriceFor(state, g) : 1,
     concessions: ours && b ? (controlOf(STADIUM_BY_TEAM[team]).concessions ? b.prices.concessions : "standard") : team === "ATL" ? "value" : "standard",
     parking: ours && b && controlOf(STADIUM_BY_TEAM[team]).parking ? b.prices.parking : 1,
     noise: rng ? 0.96 + rng() * 0.08 : 1,
@@ -519,6 +525,13 @@ function hostGate(state: GameState, team: string): Partial<GateInputs> {
 }
 
 /** What the business staff expects at a home game, for the Business page; `price` tries another single-game price. */
+/** Our single-game price multiplier for a game: the owner's call for that game if there is one, else the standing price. */
+export function singlePriceFor(state: GameState, g?: ScheduledGame): number {
+  const b = business(state);
+  const call = b.tix?.game;
+  return g && call?.id === g.id ? call.mult : b.prices.single;
+}
+
 export function gateForecast(state: GameState, g: ScheduledGame, price?: number): { sold: number; capacity: number; heat: number; singlePrice: number; tickets: number; tier: GameTier; attendance: number; premium: number; parking: number } {
   const team = state.userTeam;
   const x = inputs(state, team, undefined, g);
@@ -628,17 +641,31 @@ function homeGate(state: GameState, g: ScheduledGame, gr: GateResult): void {
     attendance: gr.attendance, noShows: gr.noShows, comps: sl.comps, resale: sl.resale, groups: sl.groups, promo: sl.promo, tier: gr.tier,
     dynamic: sl.dynamic, premiumUse: gr.premiumUse, zones: sl.zones,
   });
+  const single = singlePriceFor(state, g);
   afterHomeGame(state, g, sl);
+  // A game the owner priced on its own: the forecast against the gate, on the call's memo and the price log.
+  const call = b.tix?.game;
+  if (call?.id === g.id) {
+    const t = b.tix!;
+    (t.calls ??= []).unshift({ game: g.id, date: g.date, mult: call.mult, forecast: Math.round(call.forecast), actual: Math.round(gr.tickets) });
+    t.calls.length = Math.min(t.calls.length, 24);
+    const diff = gr.tickets / Math.max(1, call.forecast) - 1;
+    const line = `${what}: ${money(gr.tickets)} in tickets against a forecast of ${money(call.forecast)} (${diff >= 0 ? "+" : ""}${Math.round(diff * 100)}%), ${gr.sold.toLocaleString("en-US")} sold.`;
+    b.priceLog.unshift({ date: state.date, text: line });
+    const memo = call.memo && state.office?.memos.find((m) => m.id === call.memo);
+    if (memo) memo.notes.push(`After the game: ${line}`);
+    t.game = undefined;
+  }
   const vg = venueGame(state, g, {
     attendance: gr.attendance, sold: gr.sold, comps: sl.comps, noShows: gr.noShows, revenue, gateShare: gr.tickets * gateShare(),
     concessions: gr.concessions, parking: gr.parking, merch: mg.net, merchShort: mg.short,
   });
   if (g.type === "PRE") return;
-  survey(state, g, gr.attendance, b.prices.single * (sl.dynamic || 1), rngFor(state.seed, `survey:${g.id}`), vg.adj);
+  survey(state, g, gr.attendance, single * (sl.dynamic || 1), rngFor(state.seed, `survey:${g.id}`), vg.adj);
   // How the crowd feels about the prices and the building.
   const ctrl = controlOf(s);
   fans(state, [-0.6, 0, 0.4, 0.7][b.budget.gameday] + (ctrl.concessions ? CONCESSIONS[b.prices.concessions].fans : 0) -
-    Math.max(0, b.prices.single - 1.2) * 4 - (ctrl.parking ? Math.max(0, b.prices.parking - 1.3) * 3 : 0));
+    Math.max(0, single - 1.2) * 4 - (ctrl.parking ? Math.max(0, b.prices.parking - 1.3) * 3 : 0));
   const full = gr.sold >= s.capacity * 0.985;
   if (full) {
     b.sellouts++;

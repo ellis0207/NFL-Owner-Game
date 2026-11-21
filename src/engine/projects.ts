@@ -6,7 +6,8 @@
 // NFL renovations, scaled for later years. New stadiums are construction.ts.
 import { newStadiumLift } from "./construction";
 import { constructionFactor } from "./economy";
-import { business, businessChief, cashBalance, inflation, post } from "./business";
+import { business, businessChief, cashBalance, inflation, pnl, post } from "./business";
+import { leagueYear } from "./contracts";
 import { creditLimit } from "./debt";
 import { shortDate } from "./dates";
 import { money, news, send } from "./inbox";
@@ -47,16 +48,16 @@ export interface ProjectDef {
 }
 
 export const PROJECTS: ProjectDef[] = [
-  { id: "boards", title: "New video boards and ribbon displays", what: "Bigger, sharper screens in both end zones and ribbon boards around the bowl. Fans like the show and sponsors pay for the space.", cost: 45 * M, build: 1, stadium: true, effect: { demand: 0.015, sponsor: 0.03 } },
-  { id: "wifi", title: "Stadium-wide Wi-Fi and 5G network", what: "Fans can post, stream and order from their seats. A selling point for the wireless and tech sponsors.", cost: 18 * M, build: 1, stadium: true, effect: { demand: 0.005, sponsor: 0.02 } },
-  { id: "concourse", title: "Wider concourses and 40 new concession stands", what: "Shorter lines and more choices, so fans spend more and miss less of the game.", cost: 80 * M, build: 1, stadium: true, effect: { demand: 0.01, perCap: 0.08 } },
-  { id: "seats", title: "New wider seats with cup holders throughout the bowl", what: "Every general seat replaced. A more comfortable afternoon helps sell tickets.", cost: 50 * M, build: 1, stadium: true, effect: { demand: 0.02 } },
-  { id: "clubs", title: "New field-level clubs and upgraded suites", what: "Converts lower sideline sections into club seating and refits the suites. Premium seating is where the building's money is.", cost: 140 * M, build: 2, stadium: true, effect: { premium: 0.1 } },
+  { id: "boards", title: "New video boards and ribbon displays", what: "Bigger, sharper screens in both end zones and ribbon boards around the bowl. Fans like the show and sponsors pay for the space.", cost: 45 * M, build: 1, stadium: true, effect: { demand: 0.03, sponsor: 0.04 } },
+  { id: "wifi", title: "Stadium-wide Wi-Fi and 5G network", what: "Fans can post, stream and order from their seats. A selling point for the wireless and tech sponsors.", cost: 18 * M, build: 1, stadium: true, effect: { demand: 0.01, sponsor: 0.025 } },
+  { id: "concourse", title: "Wider concourses and 40 new concession stands", what: "Shorter lines and more choices, so fans spend more and miss less of the game.", cost: 65 * M, build: 1, stadium: true, effect: { demand: 0.04, perCap: 0.2 } },
+  { id: "seats", title: "New wider seats with cup holders throughout the bowl", what: "Every general seat replaced. A more comfortable afternoon helps sell tickets.", cost: 50 * M, build: 1, stadium: true, effect: { demand: 0.06 } },
+  { id: "clubs", title: "New field-level clubs and upgraded suites", what: "Converts lower sideline sections into club seating and refits the suites. Premium seating is where the building's money is.", cost: 140 * M, build: 2, stadium: true, effect: { premium: 0.22 } },
   { id: "facility", title: "Training facility expansion: indoor field, weight room and meeting rooms", what: "A building the coaches want to work in every day. Counts like a bigger facility budget, for good.", cost: 110 * M, build: 2, stadium: false, effect: { facilities: 1 } },
-  { id: "decks", title: "Party decks and standing-room areas in the upper ends", what: "Takes out some end-zone seats for social spaces younger fans and groups pay more for.", cost: 35 * M, build: 1, stadium: true, effect: { demand: 0.012, perCap: 0.01 } },
-  { id: "footprint", title: "Move and add concession stands where the crowds are", what: "Puts food and team stores at the busiest gates and sections. Faster lines, more sales.", cost: 25 * M, build: 1, stadium: true, effect: { perCap: 0.05 } },
-  { id: "parking", title: "Parking garage, rideshare plaza and a pedestrian bridge", what: "Gets fans in and out faster, and the garage sells premium spots.", cost: 60 * M, build: 2, stadium: true, effect: { demand: 0.008, perCap: 0.02 } },
-  { id: "flex", title: "Flexible event spaces in the clubs and the concourse", what: "Rooms that host weddings, meetings and parties on the other 355 days, and better hospitality on game days.", cost: 30 * M, build: 1, stadium: true, effect: { premium: 0.025, sponsor: 0.01 } },
+  { id: "decks", title: "Party decks and standing-room areas in the upper ends", what: "Takes out some end-zone seats for social spaces younger fans and groups pay more for.", cost: 30 * M, build: 1, stadium: true, effect: { demand: 0.035, perCap: 0.03 } },
+  { id: "footprint", title: "Move and add concession stands where the crowds are", what: "Puts food and team stores at the busiest gates and sections. Faster lines, more sales.", cost: 20 * M, build: 1, stadium: true, effect: { perCap: 0.18 } },
+  { id: "parking", title: "Parking garage, rideshare plaza and a pedestrian bridge", what: "Gets fans in and out faster, and the garage sells premium spots.", cost: 45 * M, build: 2, stadium: true, effect: { demand: 0.03, perCap: 0.1 } },
+  { id: "flex", title: "Flexible event spaces in the clubs and the concourse", what: "Rooms that host weddings, meetings and parties on the other 355 days, and better hospitality on game days.", cost: 30 * M, build: 1, stadium: true, effect: { premium: 0.025, sponsor: 0.02 } },
   { id: "recovery", title: "Sports science and recovery center", what: "Hydrotherapy, cryotherapy, imaging and a bigger training room in the team facility. Counts like a bigger medical budget, for good.", cost: 45 * M, build: 1, stadium: false, effect: { medical: 1 } },
 ];
 export const PROJECT_BY_ID: Record<string, ProjectDef> = Object.fromEntries(PROJECTS.map((p) => [p.id, p]));
@@ -85,6 +86,36 @@ export function projectEffects(state: GameState): { gate: { demand: number; prem
   out.gate.perCap += n.perCap;
   out.sponsor += n.sponsor;
   return out;
+}
+
+/** A project's yearly gain at last year's numbers (this year's in a club's first season). */
+export function projectYearly(state: GameState, id: string): number {
+  let p = pnl(state, leagueYear(state.date) - 1);
+  if (!p.revenue.some((r) => r.cat === "tickets" && r.amount)) p = pnl(state, leagueYear(state.date));
+  const line = (cat: string) => p.revenue.find((r) => r.cat === cat)?.amount ?? 0;
+  const e = PROJECT_BY_ID[id].effect;
+  // Ticket demand lets the club charge more for the same seats, worth about its size times the ticket line;
+  // spending per fan reaches the stands, the garage and the stores at the gates (about a third of merchandise).
+  return (e.demand ?? 0) * line("tickets") + (e.premium ?? 0) * line("premium") + (e.perCap ?? 0) * (line("concessions") + line("parking") + line("merch") * 0.35)
+    + (e.sponsor ?? 0) * line("sponsorship") + ((e.facilities ?? 0) + (e.medical ?? 0)) * 3 * M;
+}
+
+const valueCache = new WeakMap<GameState, { key: string; value: number }>();
+
+/**
+ * What our projects add to the club's yearly revenue in a buyer's eyes: opened
+ * ones in full, ones under way at half (suites and sponsor inventory are sold
+ * before the doors open). Read by the franchise valuation.
+ */
+export function projectsRevenue(state: GameState): number {
+  const list = state.business?.projects ?? [];
+  if (!list.length) return 0;
+  const key = `${state.date}:${list.map((p) => `${p.id}${p.opened ? 1 : 0}`).join(",")}`;
+  const hit = valueCache.get(state);
+  if (hit?.key === key) return hit.value;
+  const value = list.reduce((t, p) => t + projectYearly(state, p.id) * (p.opened ? 1 : 0.5), 0);
+  valueCache.set(state, { key, value });
+  return value;
 }
 
 /** Construction season: projects start between February 1 and May 31. */

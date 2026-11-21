@@ -364,4 +364,8 @@ export interface TicketingState {
   renewals: { season: number; long: number; mid: number; recent: number; premium: number; waitlist: number; added: number }[];
   /** Spending on finding new ticket buyers this season and how many came in. */
   acquisition: { season: number; spend: number; added: number }[];
+  /** This week's home game priced on its own by the owner's call (ownercalls.ts), with the staff's forecast for it. */
+  game?: { id: string; mult: number; forecast: number; memo?: string };
+  /** Home-game price calls against what the gate actually brought in, newest first. */
+  calls?: { game: string; date: string; mult: number; forecast: number; actual: number }[];
 }

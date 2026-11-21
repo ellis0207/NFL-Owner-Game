@@ -13,13 +13,13 @@
 // choices. Surfaces are the 2025 ones (approximate); training complexes are
 // approximated where public data is thin. Roof changes and new buildings are
 // a construction question for later.
-import { business, businessChief, inflation, pnl, post } from "./business";
+import { business, businessChief, inflation, post } from "./business";
 import { leagueYear } from "./contracts";
 import { addDays } from "./dates";
 import { execBoost, execRole } from "./executives";
 import { money, send } from "./inbox";
 import { RULES } from "./league";
-import { PROJECT_BY_ID, projectEffects, projects } from "./projects";
+import { PROJECT_BY_ID, projectEffects, projects, projectYearly } from "./projects";
 import { gaussian, rngFor } from "./rng";
 import { servicesScore } from "./community";
 import { STADIUM_BY_TEAM, type Stadium } from "./stadiums";
@@ -259,16 +259,8 @@ export function stadiumValue(state: GameState): number | null {
 
 /** A project's yearly gain at last year's numbers, and the years to pay it back. */
 export function projectPayback(state: GameState, id: string): { yearly: number; years: number | null } {
-  const def = PROJECT_BY_ID[id];
-  // Last year's numbers, or this year's in a club's first season.
-  let p = pnl(state, leagueYear(state.date) - 1);
-  if (!p.revenue.some((r) => r.cat === "tickets" && r.amount)) p = pnl(state, leagueYear(state.date));
-  const line = (cat: string) => p.revenue.find((r) => r.cat === cat)?.amount ?? 0;
-  const e = def.effect;
-  // Ticket demand turns into price and fewer empty seats, worth roughly its size times the ticket line.
-  const yearly = (e.demand ?? 0) * 2 * line("tickets") + (e.premium ?? 0) * line("premium") + (e.perCap ?? 0) * (line("concessions") + line("merch") + line("parking"))
-    + (e.sponsor ?? 0) * line("sponsorship") + ((e.facilities ?? 0) + (e.medical ?? 0)) * 3 * M;
-  return { yearly, years: yearly > 0 ? Math.round((def.cost / yearly) * 10) / 10 : null };
+  const yearly = projectYearly(state, id);
+  return { yearly, years: yearly > 0 ? Math.round((PROJECT_BY_ID[id].cost / yearly) * 10) / 10 : null };
 }
 
 /** Opened projects: what they cost and what they've brought in since, on the same estimate. */
