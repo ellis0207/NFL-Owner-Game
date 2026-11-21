@@ -160,7 +160,7 @@ export const ANSWER: Record<string, Answers> = {
 };
 
 /** What a tone of answer does to the room, in the coverage's eyes. */
-export const TONE_LABEL: Record<OwnerTone, string> = { candid: "Candid", confident: "Confident", deflect: "Deflect", defiant: "Defiant" };
+export const TONE_LABEL: Record<OwnerTone, string> = { candid: "Candid", confident: "Confident", deflect: "Deflect", defiant: "Defiant", gracious: "Gracious", playful: "Playful" };
 
 /** The owner's own posts on the Huddle, by the choice made. Slots: T, X (another club), score. */
 export const OWNER_POST: Record<string, { label: string; text: string[] }> = {
@@ -207,7 +207,7 @@ function kind(formats: FormatId[], lede: FamilyContent["lede"], details: string[
 }
 
 export const OWNER_CONTENT: Record<string, FamilyContent> = {
-  // O, T, quote, occasion, n, topics; candid, confident, deflect, defiant, skipped.
+  // O, T, quote, occasion, n, topics; candid, confident, deflect, defiant, gracious, playful, skipped.
   presser: kind(["report", "column", "notebook", "hottake"], {
     news: ["<tag.skipped?The {T.nick} owner did not take questions {occasion}; a spokesperson read a short statement.><!tag.skipped?{O.name} took {n} questions {occasion}.>"],
     beat: ["<tag.skipped?No questions from the owner {occasion}.><!tag.skipped?{O.name} stood at the podium for {n} questions {occasion}.>"],
@@ -220,6 +220,8 @@ export const OWNER_CONTENT: Record<string, FamilyContent> = {
     ["candid", 2, { head: ["{O.name} gets candid about the {T.nick}"], take: ["Credit {O.name} for honesty"], para: ["[It was unusually frank|Straight talk from the top|Owners don't usually talk like this]. <quote?\"{quote}\">"] }],
     ["confident", 2, { head: ["{O.name} makes a promise"], take: ["{O.name} just raised the stakes"], para: ["[Bold words|That's a promise people will remember|Now the team has to back it up]. <quote?\"{quote}\">"] }],
     ["defiant", 2, { head: ["{O.name} takes on the critics"], take: ["{O.name} picked a fight. Smart?"], para: ["[It got combative|The room got tense|Nobody left that room with a friend]. <quote?\"{quote}\">"] }],
+    ["gracious", 2, { head: ["{O.name} hands out the credit", "{O.name} thanks the people around the {T.nick}"], take: ["{O.name} said thank you. It works"], para: ["[Every answer seemed to end with somebody else's name|The owner kept steering the credit elsewhere|It was a gracious hour, if not a revealing one]. <quote?\"{quote}\">"] }],
+    ["playful", 2, { head: ["{O.name} keeps the room laughing", "{O.name} jokes through the questions"], take: ["{O.name} played it for laughs. Did it land?"], para: ["[The room laughed more than once|There were jokes, and a few of them were good|It was the loosest press conference of the year]. <quote?\"{quote}\">"] }],
     ["deflect", 2, { head: ["{O.name} says plenty, reveals little"], take: ["{n} questions, no answers"], para: ["[A lot of words without much said|Every answer was a version of \"we'll see\"|Careful to a fault]."] }],
     ["skipped", 4, { head: ["{T.nick} owner skips questions", "No answers from {O.name}"], take: ["{O.name} won't face the music"], para: ["[That says something on its own|Silence is an answer too|Fans deserved better]."] }],
   ]),

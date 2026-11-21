@@ -33,6 +33,7 @@ import { ownerDeskDaily } from "./media/ownerdesk";
 import { coverageDaily } from "./media/coverage";
 import { roundupsDaily } from "./media/blend";
 import { campFact, seatFact, talkFacts } from "./media/desks";
+import { qaFacts } from "./media/questions";
 import { corpsDaily } from "./media/corps";
 import { rumorDesk } from "./media/rumors";
 
@@ -309,6 +310,8 @@ function wireCoverage(state: GameState): void {
 function interviews(state: GameState): void {
   const date = state.date;
   const inSeason = date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd;
+  // Other clubs' players, coaches and owners answer reporters' questions all year.
+  fileFacts(state, qaFacts(state, rngFor(state.seed, `media:qa:${date}`)), 2);
   if (!inSeason || weekday(date) !== "Wednesday") return;
   fileFacts(state, talkFacts(state, rngFor(state.seed, `media:talk:${date}`)), 3);
 }

@@ -186,6 +186,14 @@ export interface Echo {
   amount?: number;
 }
 
+/** The question desk's memory: when each bank line and topic was last used, and fingerprints of recent wordings. */
+export interface QuestionMemory {
+  used: Record<string, string>;
+  seen: number[];
+  /** The same for questions to other clubs' people; absent in saves from before it was split. */
+  cseen?: number[];
+}
+
 export interface MediaState {
   stories: Story[];
   questions: PressQuestion[];
@@ -215,6 +223,8 @@ export interface MediaState {
   tips?: PressTip[];
   /** The storylines running around the league. */
   arcs?: ArcState;
+  /** What the question desk asked and when (media/questions.ts); absent in older saves. */
+  qmem?: QuestionMemory;
   /** The season narratives desk (media/narratives.ts). */
   narr?: NarrState;
   social?: SocialState;

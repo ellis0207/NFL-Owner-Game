@@ -15,6 +15,7 @@ import { CLAIM, RELEASE, SIGNING, TRADE } from "./content/moves";
 import { INJURY, PERFORMANCE } from "./content/players";
 import { WIRE_CONTENT } from "./content/wire";
 import { CAMP, SEAT, TALK } from "./content/talk";
+import { QA } from "./content/interviews";
 import { RUMOR_CONTENT } from "./content/rumors";
 import { ARC_CONTENT } from "./content/arcs";
 import { SEASON_CONTENT } from "./content/season";
@@ -29,7 +30,7 @@ import { choose, render, type Bank, type RenderContext, type Slots, type Tone } 
 import { standings } from "../standings";
 
 export const FAMILIES: Partial<Record<Family, FamilyContent>> = {
-  game: GAME, performance: PERFORMANCE, talk: TALK, camp: CAMP, seat: SEAT, injury: INJURY, signing: SIGNING, release: RELEASE, claim: CLAIM, trade: TRADE,
+  game: GAME, performance: PERFORMANCE, talk: TALK, qa: QA, camp: CAMP, seat: SEAT, injury: INJURY, signing: SIGNING, release: RELEASE, claim: CLAIM, trade: TRADE,
 };
 
 /** The words for a fact: its family's, or for the league wire, its topic's. */

@@ -421,7 +421,17 @@ The owner deals with the press directly in the Press room. The club calls a
 press conference of three to six questions for the season opener, the end of
 the season, a coaching change, a big signing, and when a storyline about the
 club heats up; the questions come from what's actually going on, and each can
-be answered candidly, confidently, with a deflection or defiantly. The owner
+be answered candidly, confidently, with a deflection, defiantly, graciously
+(handing the credit to others) or playfully. On quiet days reporters also ask
+about the team, the owner's own life (game days, family, the city, critics,
+legacy) and the rest of the league (the latest trade or firing, the MVP race,
+the champion, labor, rules, betting, expansion), and every daily question takes
+a gracious and a playful answer besides its own. A bank of several hundred
+templated questions, filled with names, records and stats, remembers what it
+asked: a line asked lately waits its turn and an exact wording is not used
+again, so a long save rarely hears a question twice. Other clubs' players,
+head coaches and owners get asked about their seasons, their lives off the
+field and the league too, and answer in their own voice. The owner
 can also sit down with a reporter on or off the record (off the record
 sometimes ends up in print), hand one reporter an exclusive, confirm, deny or
 ignore a report about the club (a denial that proves false costs the owner's
@@ -1136,7 +1146,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   `market.ts` (prices, tags, tenders), `agents.ts`, `negotiation.ts`, `grades.ts`, `finance.ts` and `incentives.ts` (incentives, settled after the Super Bowl) `capplan.ts` (locked-in future cap money, the league-year compliance deadline) `redo.ts` (early redo asks, hold-ins and holdouts) and `conditions.ts` (conditional picks).
   The offseason calendar, tags, tenders, options and cap work are in `offseason.ts`; the free
   agent market is `freeagency.ts`; trades and draft pick ownership are `trades.ts`; the draft, mocks and the combine are `draft.ts`.
-  The outlets are `outlets.ts`, daily coverage is `media.ts`, the story engine (facts, angles, formats, the writing grammar and the desks) is `media/`, and press questions and their hidden effects are `press.ts`.
+  The outlets are `outlets.ts`, daily coverage is `media.ts`, the story engine (facts, angles, formats, the writing grammar and the desks) is `media/`, press questions and their hidden effects are `press.ts`, and the question bank with its memory is `media/questions.ts` (words in `media/content/questions.ts` and `interviews.ts`).
   The business side is `business.ts`, with every stadium's ownership and lease in `stadiums.ts`.
   The spring program (OTAs, minicamp, offseason injuries) is `spring.ts`, camp battles and the coaches'
   practice reads are `camp.ts`, and suspensions, fines and the owner's discipline calls are `discipline.ts`.

@@ -12,7 +12,8 @@ import { gradePoints } from "../../engine/grades";
 import { TEAMS } from "../../engine/league";
 import { answerQuestion, openQuestions } from "../../engine/press";
 import { draftClass } from "../../engine/prospects";
-import type { Arc, GameState, PressQuestion, Story, Storyline } from "../../engine/types";
+import type { Arc, GameState, OwnerTone, PressQuestion, Story, Storyline } from "../../engine/types";
+import { TONE_LABEL } from "../../engine/media/content/ownerdesk";
 import { money } from "../format";
 import { useUi } from "../ui";
 import { tip } from "../tip";
@@ -142,7 +143,7 @@ function QuestionCard({ game, q, changed }: { game: GameState; q: PressQuestion;
       <div className="answers">
         {q.options.map((opt, i) => (
           <button key={opt.key} className="btn answer" onClick={() => { answerQuestion(game, q.id, i); changed(); }}>
-            {opt.key === "noComment" ? <span className="muted">{opt.text}</span> : opt.text}
+            {opt.key === "noComment" ? <span className="muted">{opt.text}</span> : opt.key.startsWith("tone:") ? <><span className="muted small">{TONE_LABEL[opt.key.slice(5) as OwnerTone]}</span> {opt.text}</> : opt.text}
           </button>
         ))}
       </div>
