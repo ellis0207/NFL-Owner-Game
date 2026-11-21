@@ -3,7 +3,7 @@ import { corps, outletOf, recordLine } from "../engine/media/corps";
 import { relLabel } from "../engine/outlets";
 import { budgetVsActual } from "../engine/books";
 import { capHit, capSummary, contractYearsLeft, rollover, teamPlayerIds } from "../engine/cap";
-import { coachAge, jobLabel, knownFor, ROLE_NAME } from "../engine/coaches";
+import { coachAge, jobLabel, knownFor, overPicks, ROLE_NAME } from "../engine/coaches";
 import { dealOf, leagueYear, salaryCap } from "../engine/contracts";
 import { ageOn, shortDate } from "../engine/dates";
 import { billions, BUDGET_LEVELS, business, cashBalance, CATEGORY, deptCost, DEPTS, pnl, valuation } from "../engine/business";
@@ -172,6 +172,7 @@ function coachCard(game: GameState, id: string): TipCard | null {
   const head = c.record.filter((r) => r.role === "HC");
   const hw = head.reduce((s, r) => s + r.w, 0), hl = head.reduce((s, r) => s + r.l, 0), ht = head.reduce((s, r) => s + r.t, 0);
   const lastSeason = c.record.at(-1);
+  const headPicks = overPicks(c, "HC");
   const tags = knownFor(game, c);
   const mentor = c.mentor && game.staff?.people[c.mentor];
   return {
@@ -185,6 +186,7 @@ function coachCard(game: GameState, id: string): TipCard | null {
           c.background && ["Background", c.background],
           c.contract && ["Contract", `${money(c.contract.salary)} a year through ${c.contract.through}`],
           head.length > 0 && ["As head coach", `${hw}-${hl}${ht ? `-${ht}` : ""} in ${head.length} season${head.length === 1 ? "" : "s"}, ${head.filter((r) => r.playoffs >= 0).length} playoff trip${head.filter((r) => r.playoffs >= 0).length === 1 ? "" : "s"}`],
+          headPicks.seasons > 0 && ["Against kickoff picks", headPicks.wins === 0 ? `Right on what the league expected over ${headPicks.seasons} season${headPicks.seasons === 1 ? "" : "s"}` : `${Math.abs(headPicks.wins)} win${Math.abs(headPicks.wins) === 1 ? "" : "s"} ${headPicks.wins > 0 ? "above" : "below"} what the league expected over ${headPicks.seasons} season${headPicks.seasons === 1 ? "" : "s"}`],
           lastSeason && [`${lastSeason.season}`, `${teamName(lastSeason.team)} ${lastSeason.role}: ${lastSeason.w}-${lastSeason.l}${lastSeason.t ? `-${lastSeason.t}` : ""}${lastSeason.rank ? `, unit ranked ${lastSeason.rank}` : ""}`],
           mentor && ["Coaching tree", <TipCoach game={game} id={mentor.id} />],
         ]} />

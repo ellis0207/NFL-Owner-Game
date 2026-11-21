@@ -419,12 +419,20 @@ export function recordTeamSeason(state: GameState, team: string): void {
     if (c.team !== team || !c.role) continue;
     if (c.record.some((x) => x.season === RULES.season && x.team === team)) continue;
     const row: CoachSeason = { season: RULES.season, team, role: c.role, w: r.w, l: r.l, t: r.t, playoffs: inPlayoffs ? wins[team] ?? 0 : -1 };
+    // What the team was picked to win at kickoff, so a record can be read against the roster the coach had.
+    if (s.expect[team] !== undefined) row.exp = Math.round(s.expect[team] * (r.w + r.l + r.t) * 2) / 2;
     if (c.role === "OC") row.rank = rank("pf");
     if (c.role === "DC") row.rank = rank("pa");
     if (c.role === "HC" && c.callsPlays.length) row.rank = rank(c.callsPlays[0] === "offense" ? "pf" : "pa");
     c.record.push(row);
     if (c.record.length > 12) c.record.splice(0, c.record.length - 12);
   }
+}
+
+/** Wins above (or below) what the league picked at kickoff, over the seasons with a pick, in one role or every role. */
+export function overPicks(c: Coach, role?: StaffRole): { seasons: number; wins: number } {
+  const rows = c.record.filter((r) => r.exp !== undefined && (!role || r.role === role));
+  return { seasons: rows.length, wins: Math.round(rows.reduce((t, r) => t + r.w + r.t / 2 - r.exp!, 0) * 2) / 2 };
 }
 
 function playoffWins(state: GameState): Record<string, number> {

@@ -45,7 +45,8 @@ function seasonText(r: CoachSeason): string {
   const rec = `${r.w}-${r.l}${r.t ? `-${r.t}` : ""}`;
   const post = r.playoffs < 0 ? "" : r.playoffs === 0 ? ", lost in the playoffs" : r.playoffs >= 4 ? ", won the Super Bowl" : `, ${r.playoffs} playoff win${r.playoffs > 1 ? "s" : ""}`;
   const unit = r.rank ? ` · ${r.role === "DC" ? "defense" : r.role === "OC" ? "offense" : "unit"} ${r.rank}${["th", "st", "nd", "rd"][(r.rank % 100 - 20) % 10] ?? ["th", "st", "nd", "rd"][r.rank] ?? "th"} in points${r.role === "DC" ? " allowed" : ""}` : "";
-  return `${r.season} ${TEAM_BY_ID[r.team]?.name ?? r.team} ${r.role}: ${rec}${post}${unit}`;
+  const picked = r.exp !== undefined ? ` (picked for ${r.exp})` : "";
+  return `${r.season} ${TEAM_BY_ID[r.team]?.name ?? r.team} ${r.role}: ${rec}${picked}${post}${unit}`;
 }
 
 function Record({ c }: { c: Coach }) {

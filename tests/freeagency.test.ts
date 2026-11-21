@@ -101,20 +101,28 @@ describe("the free agent pool", () => {
     const state = stateAt(TEAM, 5, IN_SEASON);
     const team = TEAM;
     const cut = teamPlayerIds(state, team).find((id) => state.players[id].status === "active" && PLAYER_BY_ID[id].yearsExp <= 1)!;
-    const id = Object.values(market(state)).filter((f) => f.status === "open" && state.players[f.player].status === "fa" && !onWaivers(state, f.player))
-      .sort((a, b) => a.floor - b.floor)[0].player;
-    expect(talksFor(state, team, id).ok).toBe(true);
-    const neg = openTalks(state, team, id, "free-agent", "owner");
-    const price = Math.max(neg.ask, freeAgentPrice(state, id)) * 1.5;
-    const terms = { years: 1, total: Math.round(price), signingBonus: 0, guaranteed: 0, injuryGuaranteed: 0, voidYears: 0, shape: "flat" as const };
+    const pool = Object.values(market(state)).filter((f) => f.status === "open" && state.players[f.player].status === "fa" && !onWaivers(state, f.player))
+      .sort((a, b) => a.floor - b.floor).map((f) => f.player);
+    const offer = (id: string) => {
+      const neg = openTalks(state, team, id, "free-agent", "owner");
+      const price = Math.max(neg.ask, freeAgentPrice(state, id)) * 1.5;
+      return sendOffer(state, id, { years: 1, total: Math.round(price), signingBonus: 0, guaranteed: 0, injuryGuaranteed: 0, voidYears: 0, shape: "flat" as const });
+    };
+    expect(talksFor(state, team, pool[0]).ok).toBe(true);
     // The 53 is full: no room until someone goes.
-    expect(sendOffer(state, id, terms).ok).toBe(false);
+    expect(offer(pool[0]).ok).toBe(false);
     releasePlayer(state, cut);
-    expect(sendOffer(state, id, terms).ok).toBe(true);
     // Keep a spare spot: a player back from injured reserve can take the open one before the agent answers.
     releasePlayer(state, teamPlayerIds(state, team).find((x) => x !== cut && state.players[x].status === "active" && PLAYER_BY_ID[x].yearsExp <= 1)!);
-    for (let i = 0; i < 6 && state.players[id].team !== team; i++) advanceDay(state);
-    expect(state.players[id].team).toBe(team);
+    // Another club with an injury can sign the player first; then we go to the next name.
+    let id = "";
+    for (const cand of pool.slice(0, 4)) {
+      if (state.players[cand].status !== "fa" || !talksFor(state, team, cand).ok) continue;
+      expect(offer(cand).ok).toBe(true);
+      for (let i = 0; i < 6 && !state.players[cand].team; i++) advanceDay(state);
+      if (state.players[cand].team === team) { id = cand; break; }
+    }
+    expect(id).toBeTruthy();
     expect(state.players[id].status).toBe("active");
     const y = dealOf(state, id)!.years[0];
     expect(y.year).toBe(leagueYear(state.date));

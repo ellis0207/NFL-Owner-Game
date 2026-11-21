@@ -139,6 +139,8 @@ export interface CoachSeason {
   rank?: number;
   /** Playoff games won; -1 when the team missed the playoffs. */
   playoffs: number;
+  /** Wins the league expected from the team at kickoff (absent in older saves). */
+  exp?: number;
 }
 
 /**

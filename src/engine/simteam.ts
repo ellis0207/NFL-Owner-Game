@@ -200,7 +200,8 @@ export abstract class SimTeams {
       const them = first[opp.side];
       const us = first[side];
       if (them.pn + them.rn < 15) continue;
-      const sense = 0.35 + (t.fx.defCalling - 60) * 0.012;
+      // The head coach's feel for the game makes the staff quicker to see what has to change.
+      const sense = 0.35 + (t.fx.defCalling - 60) * 0.012 + (t.fx.gameManagement - 72) * 0.008;
       const gap = perPlay(them.re, them.rn) - perPlay(them.pe, them.pn);
       if (Math.abs(gap) > 0.2 && this.advice() < sense) {
         const stopRun = gap > 0;
@@ -213,7 +214,7 @@ export abstract class SimTeams {
         }
       }
       const mine = perPlay(us.pe, us.pn) - perPlay(us.re, us.rn);
-      if (us.pn + us.rn >= 15 && Math.abs(mine) > 0.25 && this.advice() < 0.3 + (t.fx.offCalling - 60) * 0.012) {
+      if (us.pn + us.rn >= 15 && Math.abs(mine) > 0.25 && this.advice() < 0.3 + (t.fx.offCalling - 60) * 0.012 + (t.fx.gameManagement - 72) * 0.008) {
         t.passLean += mine > 0 ? 0.04 : -0.04;
         const text = `Halftime: the ${t.id} offense leans ${mine > 0 ? "on the pass" : "on the run"}, which worked in the first half.`;
         this.rec.note(this, text);
@@ -428,7 +429,7 @@ export abstract class SimTeams {
 
   /** Shared per-snap offense-minus-defense edge from coaching, form and home field. */
   baseEdge(o: Team, d: Team): number {
-    const calling = (o.fx.offCalling - 75) * 0.14 - (d.fx.defCalling - 75) * 0.14;
+    const calling = (o.fx.offCalling - 75) * 0.14 - (d.fx.defCalling - 75) * 0.14 + o.fx.command - d.fx.command;
     // Game script: a defense protecting a lead plays soft, and the trailing offense takes what it gives.
     const lead = o.score - d.score;
     const script = this.q >= 3 || (this.q === 2 && this.clock < 300) ? -clamp(lead, -21, 21) * 0.16 : 0;

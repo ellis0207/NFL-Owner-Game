@@ -85,9 +85,13 @@ describe("the coaching carousel", () => {
     expect(hc.contract!.through).toBeGreaterThan(RULES.season);
     // The new head coach brings proposals; approving one makes the hire.
     for (let i = 0; i < 10 && !proposals(state).length; i++) advanceDay(state);
-    const p = proposals(state)[0];
+    let p = proposals(state)[0];
+    // A name can be hired away before we answer; the head coach then brings another.
+    for (let tries = 0; p && !decideProposal(state, p.id, "approve").ok && tries < 3; tries++) {
+      for (let i = 0; i < 10 && !proposals(state).length; i++) advanceDay(state);
+      p = proposals(state)[0];
+    }
     if (p) {
-      expect(decideProposal(state, p.id, "approve").ok).toBe(true);
       for (let i = 0; i < 4 && holder(state, TEAM, p.role)?.id !== p.candidate; i++) advanceDay(state);
       expect(holder(state, TEAM, p.role)?.id).toBe(p.candidate);
     }
