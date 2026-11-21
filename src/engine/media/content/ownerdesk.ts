@@ -47,7 +47,7 @@ export const ASK: Record<string, string[]> = {
   division: ["How big are the next few weeks in the division race?"],
   lastRide: ["Is this {P.name}'s last season?"],
   feud: ["Are your coach and general manager on the same page?"],
-  question: ["{title} Where do things stand?"],
+  question: ["{title}"],
   promise: ["Are you keeping your promise: {title}?"],
   plain: ["What's your read on the {label} story?"],
 };

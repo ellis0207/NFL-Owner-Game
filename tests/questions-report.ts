@@ -17,7 +17,8 @@ const t0 = Date.now();
 const state = reportStart("NYG", seed);
 const first = state.season ?? 2026;
 const owner: { season: number; text: string; how: string }[] = [];
-const cpu: { season: number; text: string }[] = [];
+const cpu: { season: number; text: string; who: string }[] = [];
+const seenQa = new Set<string>();
 const seenQ = new Set<string>();
 const seenP = new Set<string>();
 const seenS = new Set<string>();
@@ -33,7 +34,9 @@ while ((state.season ?? 2026) < first + seasons && !isGameOver(state)) {
     if (seenS.has(s.id)) continue;
     seenS.add(s.id);
     const hit = s.type?.startsWith("qa.") ? /Asked "([^"]+)"|"([^"]+)" was the question/.exec(s.body) : null;
-    if (hit) cpu.push({ season, text: hit[1] ?? hit[2] });
+    // Several outlets can write up the same exchange: count each question once per day and club.
+    const once = hit ? `${s.date}|${s.teams?.join()}|${hit[1] ?? hit[2]}` : "";
+    if (hit && !seenQa.has(once)) { seenQa.add(once); cpu.push({ season, text: hit[1] ?? hit[2], who: s.players?.[0] ?? s.teams?.[0] ?? "" }); }
   }
   for (const q of openQuestions(state)) answerQuestion(state, q.id, i++ % q.options.length);
   for (const p of openPressers(state)) holdPresser(state, p.id, p.questions.map((q, j) => (i + j) % q.options.length));
@@ -59,6 +62,8 @@ for (const [label, xs] of [["Owner", owner], ["Other clubs", cpu]] as const) {
   console.log(`  exact repeats ${ex.n} (${pct(ex.n, xs.length)}), same shape ${sh.n} (${pct(sh.n, xs.length)})`);
   for (const [t, n] of sh.top) console.log(`    ${n}x ${t}`);
 }
+const perSpeaker = repeats(cpu.map((x) => ({ text: `${x.who}: ${x.text}` })), (t) => t.toLowerCase());
+console.log(`  the same person asked the same thing: ${perSpeaker.n} (${pct(perSpeaker.n, cpu.length)})`);
 console.log(`\nOwner answers per question: ${(options / Math.max(1, asked)).toFixed(1)}`);
 console.log("\nSample owner questions:");
 for (const q of owner.filter((_, k) => k % Math.max(1, Math.floor(owner.length / 12)) === 0).slice(0, 12)) console.log(`  [${q.how}] ${q.text}`);

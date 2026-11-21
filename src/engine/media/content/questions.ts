@@ -661,10 +661,9 @@ export const OWNER_Q: Record<string, string[]> = {
     "[Can the coach and the GM work together|Does this front office work] long term?",
   ],
   question: [
-    "{title} [What's the latest|What's your view]?",
-    "[Everybody's asking:|The big question:] {title} [What's your answer|Where are you]?",
-    "{title} [Has anything changed|Do you have an update]?",
-    "[Let's get to it.|One more on the big story.] {title}",
+    "[Everybody's asking:|The big question this week:|Let's start with the obvious one:] {title}",
+    "[One more on the big story.|Back to the story everyone's following.|Fans keep asking me this, so I'll ask you.] {title}",
+    "[I have to ask:|The question of the week:] {title}",
   ],
   promise: [
     "[You said|You made a promise]: {title}. [Are you still on track|Will you keep it]?",
