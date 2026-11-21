@@ -335,7 +335,10 @@ Nobody knows how a pick will turn out, not even a perfect scouting file.
 Scouts, the combine and the media read the player on tape; the player who
 shows up adds how his game carries over to NFL speed and how much he still
 grows. Some top picks bust, some are finished products at 22, and some
-late-rounders keep improving for years. About two in three first-rounders and
+late-rounders keep improving for years. Year one is a step up for everyone:
+rookies give back a few points to NFL speed at first and grow into it, so
+about 15 a year play at a Pro Bowl level as rookies, as in real classes, and
+the league's talent holds steady over decades. About two in three first-rounders and
 one in twenty seventh-rounders start in their third season, and about half of
 a class's 32 best players come from outside round 1, as in real drafts from
 2012 to 2022. Makeup is the part you can scout: hard workers bust less and

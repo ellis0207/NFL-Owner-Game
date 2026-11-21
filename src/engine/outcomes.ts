@@ -38,6 +38,9 @@ export const GROWTH_SD = 8.5;
 export const BLOOM_ODDS = 0.1;
 export const BLOOM_GAIN: [number, number] = [5, 12];
 
+/** The most a prospect gives up to NFL speed in his first year, in rating points. */
+export const ENTRY_MAX = 4;
+
 /** Rating points of carry-over per sd of how fast he learns, and of growth per sd of work ethic. */
 export const MAKEUP_CARRY = 1;
 export const MAKEUP_GROWTH = 1.2;
@@ -90,8 +93,12 @@ export function nflOutcome(seed: number, p: Prospect, h: ProspectHidden): NonNul
   carry -= BUST_ODDS * (BUST_LOSS[0] + BUST_LOSS[1]) / 2 - GEM_ODDS * (GEM_GAIN[0] + GEM_GAIN[1]) / 2;
   let growth = gaussian(rng) * GROWTH_SD + MAKEUP_GROWTH * work - 1.8;
   if (rng() < BLOOM_ODDS * clamp(1 + 0.4 * work, 0.4, 2)) growth += BLOOM_GAIN[0] + rng() * (BLOOM_GAIN[1] - BLOOM_GAIN[0]);
-  const overall = Math.round(clamp(h.overall + carry, 35, 94));
-  const potential = Math.round(clamp(h.potential + carry + growth, overall, 97));
+  // Year one in the league is a step up for everyone: the better the tape, the more there is to lose to NFL
+  // speed at first (about 4 points for a first-rounder). Most of it comes back as the room to grow, so the
+  // classes arrive like real ones (about 15 rookies a year playing at a Pro Bowl level) and the league's talent holds.
+  const entry = clamp((h.overall - 65) * 0.18, 0, ENTRY_MAX);
+  const overall = Math.round(clamp(h.overall + carry - entry, 35, 94));
+  const potential = Math.round(clamp(h.potential + carry + growth - entry * 0.7, overall, 97));
   // The carry-over is about the game, not the stopwatch: speed and strength are what the combine measured.
   const keys = Object.keys(h.traits);
   const weight = (k: string) => 1 - (PHYSICAL[k] ?? 0.5);
