@@ -155,7 +155,7 @@ little flat, and teams off a bye are a little fresher. The box score shows the
 conditions.
 Each team has its real 2026 head coach, coordinators, special teams coach and
 GM, running their real-life schemes. How well a player's traits fit those
-schemes changes how that player performs (in the engine, not on screen). Players back from a long injury often start
+schemes changes how that player performs (in the engine, not on screen). The head coach matters on his own: a sharp, respected one prepares better game plans, adjusts faster at halftime and gets more out of every snap, worth a win or more a season over a weak one, and staffs that teach well grow young players noticeably faster. Every coach's record shows what the league picked his team to win at kickoff, so a 9-8 season with a roster picked for 6 reads differently from one picked for 11. Players back from a long injury often start
 slow for a few weeks, and a torn Achilles or ACL can take something away for
 good. Injuries come at about the league's rate (close to three per team per
 game, most of them short; a few starters on injured reserve by December).

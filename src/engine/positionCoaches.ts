@@ -141,9 +141,9 @@ export function teaching(state: GameState, team: string, room: CoachRoom): numbe
   return out[room]!;
 }
 
-/** The position coach's share of development: about a third of the head coach's pull, added to the staff rating. */
+/** The position coach's share of development, added to the staff rating: the coach in the room every day matters about half as much as the coordinator. */
 export function roomBoost(state: GameState, team: string, pos: Position): number {
-  return 0.12 * (teaching(state, team, ROOM_OF[pos]) - 60);
+  return 0.2 * (teaching(state, team, ROOM_OF[pos]) - 62);
 }
 
 // ---- Hiring ----

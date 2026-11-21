@@ -66,6 +66,8 @@ export interface StaffEffects {
   defCalling: number;
   gameManagement: number;
   leadership: number;
+  /** The head coach's own edge on every snap, in rating points: the week's preparation, sideline calls and how the team answers him. */
+  command: number;
   specialTeams: number;
   /** Development, by side of the ball. */
   devOffense: number;
@@ -94,6 +96,9 @@ export function staffEffects(team: string): StaffEffects {
     defCalling: attr(playCaller(team, "defense"), "playCalling") - installDrag(team, "defense"),
     gameManagement: attr(s.HC, "gameManagement"),
     leadership: attr(s.HC, "leadership"),
+    // A sharp, respected head coach is worth a win or more a season over a weak one: teams are
+    // better prepared, waste fewer snaps and keep playing when they fall behind (centered on a typical head coach).
+    command: (attr(s.HC, "gameManagement") - 72) * 0.05 + (attr(s.HC, "leadership") - 80) * 0.04,
     specialTeams: attr(s.STC, "specialTeams"),
     devOffense: 0.35 * hcDev + 0.65 * attr(s.OC ?? s.HC, "development"),
     devDefense: 0.35 * hcDev + 0.65 * attr(s.DC ?? s.HC, "development"),

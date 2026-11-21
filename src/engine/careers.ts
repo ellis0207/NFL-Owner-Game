@@ -88,7 +88,8 @@ export function progressPlayers(state: GameState, season: number): void {
     const fx = p.team ? staffEffects(p.team) : null;
     const side = SIDE[data.position];
     const coachRating = fx ? (side === "off" ? fx.devOffense : side === "def" ? fx.devDefense : fx.devSpecial) + roomBoost(state, p.team!, data.position) : 50;
-    const coach = 0.85 + (coachRating - 60) / 100;
+    // Staffs that teach well grow young players noticeably faster: about a fifth more from a good staff than an average one.
+    const coach = Math.max(0.5, 1.04 + (coachRating - 74) / 25);
     const field = 0.85 + 0.35 * (played[id] ?? 0);
 
     let change = gaussian(rng) * 1.1;

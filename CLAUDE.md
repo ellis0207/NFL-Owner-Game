@@ -207,6 +207,7 @@ Calibration targets (what "healthy" looked like when each system shipped):
 - Seasons loop (`seasons-report.ts 4 7`, about 1 min a season): top-30
   talent steady year to year; ~32 comp picks a year; 85+ players drift slowly
   (446 to ~420 over four seasons); every team near or under the cap by year 4.
+- Coaching (`coaching-report.ts 3 7`, about 4 min): wins against roster talent and each staff number. Head coaches' `command` (staff.ts, a per-snap edge in `baseEdge`) puts the top and bottom quarters 1 to 1.5 wins apart beyond the roster; talent stays the biggest single factor; the teaching staff's link to young players' growth (share of their room) is printed beside it. `CoachSeason.exp` is the kickoff pick from `staff.expect`.
 - Carousel (`carousel-report.ts 3 11`): 2 to 10 HC changes a year, no search
   left open, ~880 people tracked (with position coaches).
 - Trades (`trade-report.ts`): ~30 to 50 a year with a deadline rush.

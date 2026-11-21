@@ -40,7 +40,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     const room = r.potential + (p.pot ?? 0) - (r.overall + dev);
     let change = 0;
     let growth = 0;
-    if (room > 0 && !p.holdout) growth = room * 0.011 * (0.55 + (coach - 60) / 45) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1) * growthFactor(state, id, mentored.has(id)) * topDrag(r.overall + dev);
+    if (room > 0 && !p.holdout) growth = room * 0.011 * Math.max(0.25, 0.9 + (coach - 74) / 18) * (played.has(id) ? 1.35 : p.status === "ir" ? 0.4 : 1) * growthFactor(state, id, mentored.has(id)) * topDrag(r.overall + dev);
     change += growth;
     const decline = age >= 30 ? 0.025 * (age - 29) : 0;
     change -= decline;

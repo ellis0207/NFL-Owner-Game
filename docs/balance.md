@@ -52,6 +52,8 @@ that day). Any club over is a hard error.
 The ranges live in `RANGES` at the top of `tests/balance-report.ts`; change
 both together.
 
+Coaching is checked by its own report, `tests/coaching-report.ts [seasons] [seed]`: the top quarter of head coaches should win 1 to 1.5 games a season more than the bottom quarter beyond what their rosters explain, and the roster's talent should stay the biggest single factor.
+
 ## Running the checks
 
 ```
