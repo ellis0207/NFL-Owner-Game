@@ -258,8 +258,11 @@ function seasonEnd(state: GameState): void {
   const res = sb && state.results[sb.id];
   const champ = !!res && ((res.home === us && res.homeScore > res.awayScore) || (res.away === us && res.awayScore > res.homeScore));
   const before = f.core;
-  f.core = Math.max(10, Math.min(95, f.core + (wp - 0.5) * 6 + (playoffs ? 1.5 : 0) + (champ ? 4 : 0) - (f.core - 50) * 0.02));
-  const rate = (wp - 0.5) * 0.15 + (playoffs ? 0.04 : 0) + (champ ? 0.1 : 0) + (merchLift(state) - 1) * 0.5;
+  // Marketing and the club's work in town build the fan base a little every year, whatever the record; a lean budget lets it wear.
+  const bud = state.business?.budget;
+  const reachOut = bud ? (bud.marketing - 1) * 0.8 + (bud.community - 1) * 0.6 : 0;
+  f.core = Math.max(10, Math.min(95, f.core + (wp - 0.5) * 6 + (playoffs ? 1.5 : 0) + (champ ? 4 : 0) + reachOut - (f.core - 50) * 0.02));
+  const rate = (wp - 0.5) * 0.15 + (playoffs ? 0.04 : 0) + (champ ? 0.1 : 0) + (merchLift(state) - 1) * 0.5 + (bud ? (bud.marketing - 1) * 0.02 : 0);
   f.reach.national = Math.round(f.reach.national * (1 + rate) + (f.national0 - f.reach.national) * 0.05);
   f.reach.intl = Math.round(f.reach.intl * (1 + rate * 1.3 + (SCHEDULE.some((g) => g.neutral && (g.home === us || g.away === us) && !(g.city ?? "").match(/, [A-Z]{2}$/)) ? 0.08 : 0)));
   const year = leagueYear(state.date);
