@@ -59,6 +59,8 @@ export interface ClubhouseState {
   /** Our players' weeks in a row out of the role they expect, and who has spoken up this season. */
   roleWeeks: Record<string, number>;
   roleSpoke: string[];
+  /** Players who spoke up about their mood, by the season they did (lockerroom.ts); absent in older saves. */
+  upset?: Record<string, number>;
   /** Our training and medical programs (training.ts). */
   programs: Programs;
   /** Individual development plans for our players (training.ts). */
@@ -185,8 +187,10 @@ function targetChemistry(state: GameState, team: string): number {
   const mood = roster.reduce((s, id) => s + (state.players[id].morale ?? 70), 0) / Math.max(1, roster.length);
   const holdouts = roster.filter((id) => state.players[id].holdout).length;
   const hc = staffEffects(team).leadership;
+  // Two or three unhappy starters split a room faster than a quiet roster average shows.
+  const split = now.filter((id) => (state.players[id]?.morale ?? 70) < 45).length;
   return Math.max(15, Math.min(95,
-    30 + 30 * continuity + Math.min(4, lead.length) * 3.5 + (mood - 65) * 0.6 + (hc - 70) * 0.25 - holdouts * 5));
+    30 + 30 * continuity + Math.min(4, lead.length) * 3.5 + (mood - 65) * 0.6 + (hc - 70) * 0.25 - holdouts * 5 - split * 4));
 }
 
 /** A word for the room's chemistry. */
@@ -194,11 +198,11 @@ export function chemistryWord(v: number): string {
   return v >= 75 ? "Close-knit" : v >= 62 ? "Together" : v >= 48 ? "Ordinary" : v >= 35 ? "Fraying" : "Divided";
 }
 
-/** The snap-by-snap edge chemistry gives a team in the sim: small by design. */
+/** The snap-by-snap edge chemistry gives a team in the sim: a close-knit room against a divided one is worth about a win a season. */
 export function chemistryEdge(state: GameState, team: string): number {
   const v = state.clubhouse?.chem[team];
   if (v === undefined) return 0;
-  return Math.max(-0.4, Math.min(0.4, (v - 60) / 40 * 0.35));
+  return Math.max(-1.2, Math.min(1.2, (v - 60) * 0.04));
 }
 
 // ---- Coach trust ----

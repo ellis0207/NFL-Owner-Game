@@ -117,10 +117,11 @@ export function staffEffects(team: string): StaffEffects {
 
 // ---- Player ability as the engine sees it ----
 
-/** An unhappy player plays below their level. */
+/** An unhappy player plays below their level; one who is fired up plays a little above it. */
 function moraleDrag(state: GameState, id: string): number {
   const m = state.players[id]?.morale;
-  return m === undefined || m >= 50 ? 0 : (50 - m) * 0.06;
+  if (m === undefined) return 0;
+  return m < 60 ? (60 - m) * 0.08 : m > 78 ? -(m - 78) * 0.04 : 0;
 }
 
 /** Back from an injury, a player can take a few weeks to look like himself; the drag fades to nothing. */
