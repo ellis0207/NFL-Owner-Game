@@ -54,6 +54,8 @@ both together.
 
 Coaching is checked by its own report, `tests/coaching-report.ts [seasons] [seed]`: the top quarter of head coaches should win 1 to 1.5 games a season more than the bottom quarter beyond what their rosters explain, and the roster's talent should stay the biggest single factor.
 
+Parity and persistence are checked with `tests/parity-report.ts [seasons] [seed]` (about 1.2 min a season): win percentage spread .17 to .20; wins correlate .25 to .45 from one season to the next (NFL 2002-2024 about .33; one pair of seasons swings widely, so read the mean); about 70% of a club's starters are back with it the next season; club talent spread (starters by slot) settles near 1.6-1.9 after the first two seasons; players at 85+ hold near 430-480 (they climbed past 540 in seven seasons before rookies paid the first-year step, `ENTRY_MAX` in `outcomes.ts`). The weakest starters still rise slowly (p10 72 to 76 over eight seasons).
+
 Owner decisions are checked with `tests/connect-report.ts [seasons] [seed] [team] [idle|careless]`: an owner who takes the staff's advice (home-game prices, the spring budget review, crossroads) should finish ahead of an idle one in club value, revenue or fans, and one who decides against the advice should finish behind on fans, the building's trust or the field. Department returns at the review (`deptReturns` in `ownercalls.ts`): a league-average marketing or game-day budget should be close to the best level for a mid-market club, cutting it saving about what it gives up.
 
 ## Running the checks
