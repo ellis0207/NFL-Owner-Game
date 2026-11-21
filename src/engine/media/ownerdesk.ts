@@ -23,16 +23,17 @@ import { teamStaff } from "../staff";
 import { standings } from "../standings";
 import type { GameState, OwnerDesk, OwnerTone, Presser, PresserQuestion, Reporter, Rumor } from "../types";
 import { ARC_LABEL, ARCS, openArcs } from "./arcs";
-import { ANSWER, ASK, EXCLUSIVE, OPED, OWNER_POST, OWNER_REPLY } from "./content/ownerdesk";
+import { ASK, EXCLUSIVE, OPED, OWNER_POST, OWNER_REPLY } from "./content/ownerdesk";
 import { corps, isLocal, outletOf, working } from "./corps";
 import { fileFacts } from "./compose";
 import { absorb } from "./coverage";
 import { playerSlots, teamSlots, type Fact } from "./facts";
 import { render, type Slots } from "./grammar";
 import { fanAccounts, social } from "./social";
+import { ALL_TONES, fillerTopics, ownerAnswers, ownerQuestion, ownerSlots } from "./questions";
 
 const K = () => RULES.keyDates;
-const TONES: OwnerTone[] = ["candid", "confident", "deflect", "defiant"];
+const TONES: OwnerTone[] = ALL_TONES;
 /** Days the owner has before a called press conference goes ahead without answers. */
 const PRESSER_DAYS = 2;
 const COOLDOWN = { interview: 10, exclusive: 21, oped: 45 };
@@ -118,7 +119,7 @@ function played(state: GameState): number {
 }
 
 /** What reporters want to ask about right now: the occasion first, then the club's storylines, then the season. */
-function topicsFor(state: GameState, occasion: string, extra: Partial<Topic> = {}): Topic[] {
+function topicsFor(state: GameState, occasion: string, rng: Rng, extra: Partial<Topic> = {}): Topic[] {
   const us = state.userTeam;
   const out: Topic[] = [];
   const add = (t: Topic) => {
@@ -138,13 +139,15 @@ function topicsFor(state: GameState, occasion: string, extra: Partial<Topic> = {
   }
   if (played(state) >= 2) add({ topic: "record", value: 14 });
   if (played(state) >= 6 && (standings(state)[us]?.l ?? 0) > (standings(state)[us]?.w ?? 0)) add({ topic: "coachFuture", value: 18 });
-  // The questions every owner gets when nothing bigger is going on.
-  for (const t of ["money", "fans", "culture"]) add({ topic: t, value: 10 });
+  // When nothing bigger is going on: the team, the owner's own life and the rest of the league, whatever was asked least lately.
+  for (const t of fillerTopics(state, rng, 4)) add({ topic: t.topic, value: 10, player: t.player });
+  if (rng() < 0.3) add({ topic: pick(rng, ["money", "fans", "culture"]), value: 9 });
   return out;
 }
 
 function questionSlots(state: GameState, t: Topic): Slots {
   return {
+    ...ownerSlots(state),
     T: teamSlots(state, state.userTeam, standings(state)),
     P: t.player ? playerSlots(state, t.player) : undefined,
     C: { name: teamStaff(state.userTeam).HC?.name ?? "the head coach" },
@@ -154,10 +157,8 @@ function questionSlots(state: GameState, t: Topic): Slots {
 
 function makeQuestion(state: GameState, t: Topic, by: string, rng: Rng): PresserQuestion {
   const slots = questionSlots(state, t);
-  const say = (tpl: string) => render(tpl, slots, { rng, banks: {}, tone: "straight" });
-  const fallback = t.player ? ANSWER.player : ANSWER.general;
-  const options = TONES.map((tone) => ({ tone, text: say(pick(rng, ANSWER[t.topic]?.[tone] ?? fallback[tone] ?? ANSWER.general[tone]!)) }));
-  return { by, topic: t.topic, text: say(pick(rng, ASK[t.topic])), value: t.value, player: t.player, arc: t.arc, options };
+  const text = ownerQuestion(state, rng, t.topic, slots);
+  return { by, topic: t.topic, text, value: t.value, player: t.player, arc: t.arc, options: ownerAnswers(state, rng, t.topic, slots, TONES) };
 }
 
 /** Who gets a question in: favored reporters first, banned ones not at all, the better-disposed more often. */
@@ -194,7 +195,7 @@ function callPresser(state: GameState, occasion: string, extra: Partial<Topic> =
   const rng = rngFor(state.seed, `presser:${state.date}:${occasion}`);
   const o = OCCASION[occasion];
   const n = o.n[0] + Math.floor(rng() * (o.n[1] - o.n[0] + 1));
-  const topics = topicsFor(state, occasion, extra).slice(0, n);
+  const topics = topicsFor(state, occasion, rng, extra).slice(0, n);
   if (topics.length < 3) return undefined;
   const who = rep ? topics.map(() => rep) : askers(state, topics.length, rng);
   if (!who.length) return undefined;
@@ -247,6 +248,24 @@ function answerEffect(state: GameState, q: PresserQuestion, tone: OwnerTone, sca
       repRel(r, -1.5);
       pressP(state, -0.6 * s);
       break;
+    case "gracious":
+      // Credit to others: the coach and the room like it; it promises nothing.
+      coachFaith(state, 2 * s);
+      teamMorale(state, 0.4 * s);
+      pressP(state, 0.6 * s);
+      repRel(r, 1);
+      if (q.player) changeMorale(state, q.player, 1.5 * s);
+      break;
+    case "playful": {
+      // A joke wins the room's reporters; fans take it well when the team wins and badly when it doesn't.
+      const rec = standings(state)[state.userTeam];
+      const losing = !!rec && rec.w + rec.l >= 3 && rec.l > rec.w;
+      repRel(r, 2.5);
+      pressP(state, 0.8 * s);
+      fansP(state, (losing ? -0.9 : 0.5) * s * w);
+      if (losing && coachy) coachFaith(state, -1.5 * s);
+      break;
+    }
     case "defiant":
       teamMorale(state, 0.8 * s);
       fansP(state, 0.6 * s);
@@ -257,7 +276,7 @@ function answerEffect(state: GameState, q: PresserQuestion, tone: OwnerTone, sca
   }
 }
 
-const QUOTE_ORDER: OwnerTone[] = ["defiant", "confident", "candid", "deflect"];
+const QUOTE_ORDER: OwnerTone[] = ["defiant", "playful", "confident", "candid", "gracious", "deflect"];
 
 /**
  * The owner answers a press conference or interview: one answer index per

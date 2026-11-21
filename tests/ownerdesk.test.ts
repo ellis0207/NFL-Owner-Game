@@ -71,7 +71,7 @@ describe("the owner's press desk", () => {
     expect(held!.questions.length).toBeGreaterThanOrEqual(4);
     for (const q of held!.questions) {
       expect(q.text).not.toMatch(BAD);
-      expect(q.options.map((o) => o.tone)).toEqual(["candid", "confident", "deflect", "defiant"]);
+      expect(q.options.map((o) => o.tone)).toEqual(["candid", "confident", "deflect", "defiant", "gracious", "playful"]);
     }
     // Skipped (the fixture never answered it): the coverage says so.
     expect(held!.skipped).toBe(true);

@@ -44,7 +44,7 @@ export function PresserCard({ game, p, changed }: { game: GameState; p: Presser;
             <p className="ask">"{q.text}"</p>
             <div className="answers">
               {q.options.map((o, j) => (
-                <button key={o.tone} className="btn answer" aria-pressed={picks[i] === j} onClick={() => setPicks(picks.map((x, k) => (k === i ? j : x)))}>
+                <button key={j} className="btn answer" aria-pressed={picks[i] === j} onClick={() => setPicks(picks.map((x, k) => (k === i ? j : x)))}>
                   <span className="muted small">{TONE_LABEL[o.tone]}</span> {o.text}
                 </button>
               ))}

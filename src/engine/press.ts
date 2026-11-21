@@ -27,7 +27,11 @@ import { veteranReportDate } from "./season";
 import { standings } from "./standings";
 import { seasonTotals } from "./stats";
 import { parsePick, trades } from "./trades";
-import type { GameState, PressOption, PressQuestion, Position } from "./types";
+import type { GameState, OwnerTone, PressOption, PressQuestion, Position } from "./types";
+import { PRESS_Q, QUIET_CONTEXT } from "./media/content/questions";
+import { playerSlots, teamSlots } from "./media/facts";
+import { render, type Slots } from "./media/grammar";
+import { ALL_TONES, fillerTopics, ownerAnswers, ownerQuestion, ownerSlots, pickLine, pruneQuestionMemory, topicGroup } from "./media/questions";
 
 const KEY = RULES.keyDates;
 /** Days the owner has to answer, counting the day after it's asked. */
@@ -58,6 +62,10 @@ interface Ask {
   player?: string;
   team?: string;
   prospect?: string;
+  /** The question's angle in the bank (PRESS_Q), worded fresh each time; `question` is the fallback. */
+  ask?: string;
+  /** Plain words the bank's wordings can name: PR (a prospect), how, n. */
+  vars?: Record<string, string | number>;
 }
 
 const NO_COMMENT: PressOption = { key: "noComment", text: "No comment." };
@@ -91,7 +99,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push(biz.kind === "tickets"
       ? {
         topic: "tickets", key: `tickets:${biz.date}`, outlet: hostile("blitz") ? "blitz" : "ledger", by: "columnist", context: biz.context,
-        question: "Fans are upset about ticket prices. What do you say to them?",
+        question: "Fans are upset about ticket prices. What do you say to them?", ask: "ticketsUp",
         options: [
           { key: "invest", text: "Every dollar goes back into winning. They'll see it on the field." },
           { key: "market", text: "We price to the market. The demand is there." },
@@ -102,7 +110,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       }
       : {
         topic: "attendance", key: `attendance:${biz.date}`, outlet: "blitz", by: "columnist", context: biz.context,
-        question: "There were a lot of empty seats. What happened?",
+        question: "There were a lot of empty seats. What happened?", ask: "empty",
         options: [
           { key: "earn", text: "Our fans have been loyal. It's on us to give them a reason to come." },
           { key: "noGiveaways", text: "We're not going to give tickets away. Win and they'll come." },
@@ -123,6 +131,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
         topic: "draft", key: `draft:${day}`, outlet: "sentinel", by: "draft", prospect: top.player, player: top.player,
         context: `We took ${p.position} ${p.name} (${schoolName(p.school)}) at No. ${top.overall}.`,
         question: hostile("sentinel") ? `Most boards had ${p.name} going later. Did you reach?` : `What did you see in ${p.name}, and did you consider anyone else there?`,
+        ask: hostile("sentinel") ? "draftReach" : "draftPick", vars: { PR: p.name },
         options: [
           { key: "topBoard", text: `${last(p.name)} was at the top of our board. We're thrilled he was there.` },
           { key: "process", text: "We trust our scouts and our process. That's all you can do." },
@@ -144,6 +153,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       topic: "trade", key: `trade:${rec.id}`, outlet: "capspace", by: "insider", player: gone ?? got, team: other,
       context: `We traded with the ${teamLabel(other)}${gone ? `, sending away ${pname(gone)}` : ""}${got ? ` and getting ${pname(got)}` : ""}.`,
       question: gone ? `Why move on from ${pname(gone)} now?` : `What does ${got ? pname(got) : "this trade"} bring to the team?`,
+      ask: gone ? "tradeAway" : got ? "tradeGet" : undefined,
       options: [
         ...(gone ? [{ key: "thank", text: `We thank ${pname(gone)} for everything he gave this organization.` }] : []),
         { key: "better", text: "We believe we got better today. Simple as that." },
@@ -155,10 +165,12 @@ function candidates(state: GameState, rng: Rng): Ask[] {
   }
   // Notable signings.
   for (const s of state.signings.filter((x) => x.date === date && x.team === us && x.apy >= 6_000_000 && (x.kind === "extension" || x.kind === "free-agent"))) {
+    const panned = hostile("capspace") || s.grades.some((g) => g.grade.startsWith("C") || g.grade.startsWith("D"));
     out.push({
       topic: "signing", key: `signing:${s.id}`, outlet: "capspace", by: "reporter", player: s.player,
       context: `${pname(s.player)} signed for ${money(s.total)} over ${s.years} years (${money(s.apy)} a year). Early grades: ${s.grades.map((g) => g.grade).join(", ")}.`,
-      question: hostile("capspace") || s.grades.some((g) => g.grade.startsWith("C") || g.grade.startsWith("D")) ? `Some people think you overpaid ${pname(s.player)}. Did you?` : `What does ${pname(s.player)}'s deal say about where this team is going?`,
+      question: panned ? `Some people think you overpaid ${pname(s.player)}. Did you?` : `What does ${pname(s.player)}'s deal say about where this team is going?`,
+      ask: panned ? "overpaid" : "signed",
       options: [
         { key: "cornerstone", text: `${pname(s.player)} is a cornerstone. This deal is a statement.` },
         { key: "value", text: "We paid fair market value for a player we believe in." },
@@ -174,7 +186,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "release", key: `release:${t.player}:${date}`, outlet: "sideline", by: "reporter", player: t.player,
       context: `We released ${PLAYER_BY_ID[t.player].position} ${pname(t.player)}.`,
-      question: `Why part ways with ${pname(t.player)}?`,
+      question: `Why part ways with ${pname(t.player)}?`, ask: "release",
       options: [
         { key: "thank", text: `We thank ${pname(t.player)} for everything he gave us. This was hard.` },
         { key: "business", text: "It's a business. We made the decision that's best for the team." },
@@ -193,6 +205,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       topic: "contract", key: `contract:${id}:${s.id}`, outlet: "capspace", by: "insider", player: id,
       context: s.headline,
       question: out_ ? `${pname(id)} is ${out_.kind === "holdout" ? "holding out" : "not practicing"}. Will you get a deal done?` : `Where do things stand with ${pname(id)}?`,
+      ask: out_ ? "holdoutDeal" : "contractStatus", vars: { how: out_?.kind === "holdout" ? "holding out" : "not practicing" },
       options: [
         { key: "willPay", text: `We want ${pname(id)} here long term, and we're going to get it done.` },
         { key: "firm", text: "We have a number we believe is fair. We won't negotiate in public." },
@@ -209,7 +222,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "contract", key: `holdout:${id}:${h.since}`, outlet: "sideline", by: "insider", player: id,
       context: `${pname(id)} is ${h.kind === "holdout" ? "holding out of camp" : "holding in: he reported but isn't practicing"} while he waits for a new deal.`,
-      question: `Are you worried about ${pname(id)}?`,
+      question: `Are you worried about ${pname(id)}?`, ask: "worried",
       options: [
         { key: "willPay", text: `We want ${pname(id)} here long term, and we're going to get it done.` },
         { key: "firm", text: "We have a number we believe is fair. We won't negotiate in public." },
@@ -228,6 +241,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       topic: "rumor", key: `rumor:${id}:${date}`, outlet: "sideline", by: "insider", player: id,
       context: s.headline,
       question: requested ? `${pname(id)} wants out. Will you trade him?` : `Are you shopping ${pname(id)}?`,
+      ask: requested ? "wantsOut" : "shopping",
       options: [
         { key: "untouchable", text: `${pname(id)} isn't going anywhere.` },
         { key: "listen", text: "We listen on everybody. That's our job." },
@@ -248,7 +262,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "injury", key: `injury:${id}:${date}`, outlet: "sideline", by: "reporter", player: id, prospect: backup,
       context: `${pname(id)} is ${inj.seasonEnding ? "out for the season" : `out about ${Math.round(daysBetween(date, inj.returnDate) / 7)} weeks`} (${inj.type.toLowerCase()}).`,
-      question: `How does the team move on without ${pname(id)}?`,
+      question: `How does the team move on without ${pname(id)}?`, ask: "injury",
       options: [
         ...(backup ? [{ key: "backup", text: `We believe in ${pname(backup)}. This is his chance.` }] : []),
         { key: "outside", text: "We'll look at every option, inside and outside the building." },
@@ -280,6 +294,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
           topic: "loss", key: `loss:${g.id}`, outlet, by: outlet === "blitz" ? "columnist" : "reporter", team: opp,
           context: `We lost ${theirs}-${ours} to the ${teamLabel(opp)}.${record}${lossStreak >= 2 ? ` That's ${lossStreak} losses in a row.` : ""}`,
           question: hostile(outlet) || lossStreak >= 3 ? "What do you say to fans who are running out of patience?" : "What went wrong out there?",
+          ask: hostile(outlet) || lossStreak >= 3 ? "lossPatience" : "lossWhat", vars: { n: lossStreak },
           options: [
             { key: "backCoach", text: `I have full confidence in ${hc(state)} and the staff. We'll get it turned around.` },
             { key: "takeBlame", text: "That's on me. I'm responsible for what we put on the field." },
@@ -299,6 +314,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
           topic: "win", key: `win:${g.id}`, outlet, by: outlet === "blitz" ? "columnist" : "reporter", team: opp,
           context: `We beat the ${teamLabel(opp)} ${ours}-${theirs}.${record}${winStreak >= 3 ? ` That's ${winStreak} straight.` : ""}`,
           question: winStreak >= 3 ? "Is this a championship team?" : "What did you like about that win?",
+          ask: winStreak >= 3 ? "winBig" : "win", vars: { n: winStreak },
           options: [
             { key: "bold", text: "I'll say it: this is a Super Bowl team." },
             { key: "humble", text: "One game at a time. We haven't done anything yet." },
@@ -315,7 +331,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       out.push({
         topic: "coach", key: `coach:${rec.w}-${rec.l}`, outlet: "blitz", by: "insider",
         context: `${Number(streak.slice(1))} losses in a row. The Blitz has ${hc(state)} on its hot seat list.`,
-        question: `Is ${hc(state)}'s job safe?`,
+        question: `Is ${hc(state)}'s job safe?`, ask: "coachSafe", vars: { n: Number(streak.slice(1)) },
         options: [
           { key: "fullSupport", text: `${hc(state)} is our coach. Period.` },
           { key: "endOfSeason", text: "We'll evaluate everything at the end of the season." },
@@ -331,7 +347,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "expect", key: `expect:${RULES.season}`, outlet: "ledger", by: "columnist",
       context: "Veterans reported to training camp today.",
-      question: "What are your expectations for this season?",
+      question: "What are your expectations for this season?", ask: "expect",
       options: [
         { key: "title", text: "We expect to win the Super Bowl. Anything less is a disappointment." },
         { key: "playoffs", text: "We want to be in the playoffs. That's the standard here." },
@@ -346,7 +362,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "cuts", key: `cuts:${RULES.season}`, outlet: "sideline", by: "reporter",
       context: "We trimmed the roster to 53 today.",
-      question: "Were there any cuts that hurt?",
+      question: "Were there any cuts that hurt?", ask: "cuts",
       options: [
         { key: "toughest", text: "Toughest day of the year. Those guys gave us everything." },
         { key: "best53", text: "We kept the best 53. Simple as that." },
@@ -364,7 +380,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "deadline", key: "deadline", outlet: "ledger", by: "columnist",
       context: `The trade deadline is ${shortDate(KEY.tradeDeadline)}. We're ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}.`,
-      question: "Buyers or sellers?",
+      question: "Buyers or sellers?", ask: "deadline",
       options: [
         { key: "buy", text: "Buyers. We're here to win this year." },
         { key: "sell", text: "We have to be realistic about where we are." },
@@ -384,7 +400,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       out.push({
         topic: "contract", key: `expiring:${id}`, outlet: "capspace", by: "reporter", player: id,
         context: `${PLAYER_BY_ID[id].position} ${pname(id)}'s contract runs out after this season.`,
-        question: `Will ${pname(id)} be here next year?`,
+        question: `Will ${pname(id)} be here next year?`, ask: "expiring",
         options: [
           { key: "willPay", text: `We want ${pname(id)} here long term, and we're going to get it done.` },
           { key: "firm", text: "We have a number we believe is fair. We won't negotiate in public." },
@@ -405,7 +421,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       out.push({
         topic: "qb", key: `qb:${qb}`, outlet: "ledger", by: "columnist", player: qb,
         context: `${pname(qb)} has ${line.passTd ?? 0} TD and ${line.int ?? 0} INT, and we're ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}.`,
-        question: `Is ${pname(qb)} your quarterback going forward?`,
+        question: `Is ${pname(qb)} your quarterback going forward?`, ask: "qb",
         options: [
           { key: "backQb", text: `${pname(qb)} is our quarterback. Period.` },
           { key: "evaluate", text: "We'll evaluate every position after the season." },
@@ -421,7 +437,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "faPlans", key: "faPlans", outlet: "capspace", by: "columnist",
       context: "The negotiating window opens tomorrow.",
-      question: "How aggressive will you be in free agency?",
+      question: "How aggressive will you be in free agency?", ask: "faPlans",
       options: [
         { key: "aggressive", text: "Very. We want the best players, and we'll pay for them." },
         { key: "draft", text: "We build through the draft. Free agency fills holes." },
@@ -445,7 +461,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
     out.push({
       topic: "tamper", key: `tamper:${target}`, outlet: "blitz", by: "columnist", player: target, team,
       context: `${PLAYER_BY_ID[target].position} ${pname(target)} of the ${teamLabel(team)} is the talk of the league.`,
-      question: `Would you want ${pname(target)} on your team?`,
+      question: `Would you want ${pname(target)} on your team?`, ask: "tamper",
       options: [
         { key: "admire", text: "He's a great player. Any team would love to have him." },
         { key: "firstCall", text: "If he ever becomes available, we'll be the first call." },
@@ -464,7 +480,7 @@ function candidates(state: GameState, rng: Rng): Ask[] {
       out.push({
         topic: "prospect", key: `prospect:${p.id}`, outlet: "sentinel", by: "draft", prospect: p.id,
         context: `${mock.analyst}'s new mock has us taking ${p.position} ${p.name} (${schoolName(p.school)}) at No. ${i + 1}.`,
-        question: `Is ${p.name} your guy?`,
+        question: `Is ${p.name} your guy?`, ask: "prospect", vars: { PR: p.name },
         options: [
           { key: "praise", text: `${last(p.name)} is a special player. We'd be lucky to get him.` },
           { key: "smoke", text: "We're looking hard at a lot of positions. Quarterback included." },
@@ -484,6 +500,7 @@ function seasonAsk(state: GameState, how: "champion" | "eliminated" | "missed"):
     topic: "season", key: `season:${RULES.season}`, outlet: "ledger", by: "columnist",
     context: how === "champion" ? "We won the Super Bowl." : how === "eliminated" ? "Our season ended in the playoffs." : `Our season is over at ${rec.w}-${rec.l}${rec.t ? `-${rec.t}` : ""}, out of the playoffs.`,
     question: how === "champion" ? "What's next after a championship?" : "How would you grade this season?",
+    ask: how === "champion" ? "champion" : "grade",
     options: how === "champion"
       ? [
         { key: "proud", text: "I'm proud of every single person in this building. Enjoy it, then back to work." },
@@ -541,6 +558,10 @@ function consequences(state: GameState, q: PressQuestion, key: string, rng: Rng)
   const id = q.player;
   const rec = standings(state)[state.userTeam];
   const losing = rec.w + rec.l >= 3 && rec.w < rec.l;
+  if (key.startsWith("tone:")) {
+    toneEffect(state, q, key.slice(5), rng);
+    return;
+  }
   switch (`${q.topic}:${key}`) {
     // Losses.
     case "loss:backCoach": coach(state, 8 * r()); fans(state, losing ? -2 : 0); break;
@@ -954,6 +975,73 @@ function coachWeekly(state: GameState): void {
   }
 }
 
+// ---- More questions, more answers ----
+
+/** What the bank's wordings of a question can name. */
+function askSlots(state: GameState, a: Ask): Slots {
+  const us = state.userTeam;
+  const real = a.player && PLAYER_BY_ID[a.player] ? a.player : undefined;
+  return {
+    ...ownerSlots(state),
+    T: teamSlots(state, us, standings(state)),
+    P: real ? pname(real) : "", X: a.team && TEAM_BY_ID[a.team] ? nick(a.team) : "", C: hc(state),
+    PR: a.prospect ? draftClass(state.seed).byId[a.prospect]?.name ?? "" : "",
+    ...(a.vars ?? {}),
+  };
+}
+
+/** Which of the owner's answer sets fits a press desk question, for the extra ways to answer it. */
+function answerTopic(a: Ask): string {
+  if (a.topic === "tamper" || a.topic === "prospect") return "league";
+  if (a.player && PLAYER_BY_ID[a.player]) return "player";
+  if (a.topic === "tickets" || a.topic === "attendance") return "fans";
+  if (a.topic.includes(".")) return a.topic;
+  return "team";
+}
+
+/** Every question also takes a gracious and a playful answer (the bank's own questions take all six tones), before "No comment". */
+function withMoreAnswers(state: GameState, a: Ask, slots: Slots, rng: Rng): PressOption[] {
+  const real = a.player && PLAYER_BY_ID[a.player] ? playerSlots(state, a.player) : undefined;
+  const words = { ...slots, P: real ?? slots.P };
+  const keyed = a.options.filter((o) => o.key !== "noComment");
+  const have = new Set(keyed.map((o) => o.key));
+  const tones = (a.topic.includes(".") ? ALL_TONES : (["gracious", "playful"] as OwnerTone[])).filter((t) => !have.has(`tone:${t}`));
+  const extra = ownerAnswers(state, rng, answerTopic(a), words, tones).map((o) => ({ key: `tone:${o.tone}`, text: o.text }));
+  return [...keyed, ...extra, NO_COMMENT];
+}
+
+/** A question about the team, the owner's own life or the league, on a day with no news to ask about. */
+function quietAsk(state: GameState, rng: Rng): Ask | undefined {
+  const slots = ownerSlots(state);
+  const [t] = fillerTopics(state, rng, 1, slots);
+  if (!t) return undefined;
+  const group = topicGroup(t.topic) ?? "team";
+  const outlet = group === "personal" ? "ledger" : group === "league" ? (rng() < 0.5 ? "capspace" : "sideline") : pick(rng, ["ledger", "sideline", "blitz"]);
+  const words: Slots = { ...slots, P: t.player ? playerSlots(state, t.player) : undefined };
+  return {
+    topic: t.topic, key: `quiet:${state.date}`, outlet, by: group === "league" ? "insider" : outlet === "sideline" ? "reporter" : "columnist",
+    context: render(pick(rng, QUIET_CONTEXT[group]), { ...words, outlet: MEDIA_BY_ID[outlet].name }, { rng, banks: {}, tone: "straight" }),
+    question: ownerQuestion(state, rng, t.topic, words), player: t.player,
+    options: [],
+  };
+}
+
+/** What a tone of answer does, for the extra answers and the questions beyond the news. Hidden like the rest. */
+function toneEffect(state: GameState, q: PressQuestion, tone: string, rng: Rng): void {
+  const r = 0.7 + rng() * 0.6;
+  const rec = standings(state)[state.userTeam];
+  const losing = rec.w + rec.l >= 3 && rec.w < rec.l;
+  const ours = !!q.player && state.players[q.player]?.team === state.userTeam;
+  switch (tone) {
+    case "candid": fans(state, 1 * r); press(state, 1.5); changeRel(state, q.outlet, 1); break;
+    case "confident": fans(state, (losing ? 0.5 : 1.5) * r); teamMorale(state, 0.5); if (losing) press(state, -0.5); break;
+    case "deflect": changeRel(state, q.outlet, -1); press(state, -0.5); break;
+    case "defiant": teamMorale(state, 0.8); press(state, -2); changeRel(state, q.outlet, -3); fans(state, 0.5); break;
+    case "gracious": coach(state, 2 * r); teamMorale(state, 0.6); press(state, 0.5); if (ours) playerMorale(state, q.player, 2); break;
+    case "playful": changeRel(state, q.outlet, 2); press(state, 0.8); fans(state, losing ? -1 * r : 0.5); break;
+  }
+}
+
 // ---- The day ----
 
 export function openQuestions(state: GameState): PressQuestion[] {
@@ -969,19 +1057,30 @@ export function pressDaily(state: GameState): void {
   for (const q of openQuestions(state)) if (q.expires <= state.date) answerQuestion(state, q.id, -1);
   resolveStances(state);
   coachWeekly(state);
+  if (state.date.endsWith("-06-01")) pruneQuestionMemory(state);
   if (state.date >= addDays(KEY.draftStart, 3)) return;
   const rng = rngFor(state.seed, `press:${state.date}`);
   const asks = candidates(state, rng);
-  if (!asks.length || openQuestions(state).length >= 3) return;
+  if (openQuestions(state).length >= 3) return;
+  if (!asks.length) {
+    // A quiet day: now and then a reporter asks about something beyond the news.
+    const k = KEY;
+    const busy = state.date >= addDays(k.regularSeasonStart, -30) && state.date <= k.superBowl;
+    const quiet = openQuestions(state).length < 2 && rngFor(state.seed, `press:quiet:${state.date}`)() < (busy ? 0.28 : 0.16) ? quietAsk(state, rng) : undefined;
+    if (!quiet) return;
+    asks.push(quiet);
+  }
   const a = asks[0];
   m.asked[a.key] = state.date;
   const outlet = MEDIA_BY_ID[a.outlet];
+  const slots = askSlots(state, a);
+  const question = a.ask && PRESS_Q[a.ask] ? pickLine(state, rng, `p:${a.ask}`, PRESS_Q[a.ask], slots) || a.question : a.question;
   const q: PressQuestion = {
     id: nextId(state, "q"), date: state.date, expires: addDays(state.date, ANSWER_DAYS),
-    outlet: a.outlet, by: outlet[a.by], topic: a.topic, context: a.context, question: a.question, options: a.options,
+    outlet: a.outlet, by: outlet[a.by], topic: a.topic, context: a.context, question, options: withMoreAnswers(state, a, slots, rng),
     player: a.player, team: a.team, prospect: a.prospect,
   };
   // Older history drops off the end.
   m.questions.unshift(q);
-  send(state, "media", `${q.by}, ${outlet.name}`, "Request for comment", `${a.context}\n\n"${a.question}"\n\nAnswer on the Media page by ${shortDate(q.expires)}, or the team will decline to comment.`);
+  send(state, "media", `${q.by}, ${outlet.name}`, "Request for comment", `${a.context}\n\n"${q.question}"\n\nAnswer on the Media page by ${shortDate(q.expires)}, or the team will decline to comment.`);
 }

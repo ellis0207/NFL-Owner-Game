@@ -90,9 +90,9 @@ export interface OpinionState {
 }
 
 /** How the owner answers a question: straight, with a promise, with nothing, or at the critics. */
-export type OwnerTone = "candid" | "confident" | "deflect" | "defiant";
+export type OwnerTone = "candid" | "confident" | "deflect" | "defiant" | "gracious" | "playful";
 
-/** One question at a press conference or interview, with the four ways to answer it. */
+/** One question at a press conference or interview, with the ways to answer it (four in older saves, six now). */
 export interface PresserQuestion {
   /** The reporter asking (a press corps id). */
   by: string;

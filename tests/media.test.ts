@@ -38,7 +38,7 @@ describe("the media", () => {
     // Options are words only: nothing about what they do.
     for (const q of mediaState(state).questions) {
       expect(q.options.length).toBeGreaterThanOrEqual(4);
-      expect(q.options.length).toBeLessThanOrEqual(6);
+      expect(q.options.length).toBeLessThanOrEqual(8);
       for (const o of q.options) expect(Object.keys(o).sort()).toEqual(["key", "text"]);
     }
   });
