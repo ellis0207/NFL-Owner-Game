@@ -33,7 +33,7 @@ export const COMMITTEES: Record<Committee, { label: string; what: string; issues
 /** Who decides what: the commissioner's powers next to the owners' votes. */
 export const POWERS: { who: string; what: string }[] = [
   { who: "The commissioner", what: "Discipline of players, staff and clubs (fines, suspensions, lost picks), integrity investigations, the schedule and in-season moves, officiating, and conduct that hurts the league." },
-  { who: "The owners (24 of 32 votes)", what: "Playing rules and policies, the season's length and byes, revenue sharing, approving media deals, the commissioner's contract, new owners and relocation." },
+  { who: "The owners (three quarters of the votes)", what: "Playing rules and policies, the season's length and byes, revenue sharing, approving media deals, the commissioner's contract, new owners and relocation." },
   { who: "The players' union", what: "Pay, benefits and working conditions under the labor agreement. Changes there need the union's agreement, not just the owners'." },
 ];
 
@@ -294,14 +294,14 @@ function commissionerVote(state: GameState): void {
   r.passed = yes >= 24;
   if (r.passed) {
     c.through += 5;
-    news(state, "league", `Owners extend Commissioner ${c.name} through ${c.through} (${yes}-${32 - yes})`);
+    news(state, "league", `Owners extend Commissioner ${c.name} through ${c.through} (${yes}-${TEAMS.length - yes})`);
   } else {
     const rng = rngFor(state.seed, `newcommish:${r.year}`);
     const name = `${FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)]}`;
     news(state, "league", `Owners decline to extend Commissioner ${c.name}; ${name} is chosen to succeed`);
     lo.commissioner = { name, since: r.year, through: r.year + 5, approval: 60 };
   }
-  lo.log.unshift({ date: state.date, text: `Commissioner's contract vote: ${yes}-${32 - yes}${r.passed ? ", extended" : ", not extended"}` });
+  lo.log.unshift({ date: state.date, text: `Commissioner's contract vote: ${yes}-${TEAMS.length - yes}${r.passed ? ", extended" : ", not extended"}` });
 }
 
 // ---- In-season schedule moves (seasons after 2026) ----

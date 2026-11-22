@@ -28,6 +28,7 @@ import { CBA_2011 } from "./eras";
 import { money, news, send } from "./inbox";
 import { bindCaps, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { onCommittee } from "./leagueoffice";
+import { VOTES_TO_PASS } from "./owners";
 import { invalidateMarket } from "./market";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { gaussian, rngFor } from "./rng";
@@ -88,7 +89,7 @@ export interface LaborState {
 const OWNERS_OPEN: CbaTerms = { share: 0.475, minScale: 1.02, rookieScale: 0.95, benefits: 1.05, practice: 16, games: 18, safety: 0, cashFloor: 0.89 };
 const UNION_OPEN: CbaTerms = { share: 0.5, minScale: 1.12, rookieScale: 1.05, benefits: 1.3, practice: 12, games: 17, safety: 3, cashFloor: 0.92 };
 const TERM_YEARS = 10;
-const VOTES_NEEDED = 24;
+
 
 export const STANCES: Record<Stance, string> = {
   hard: "Hold out for better terms: a better deal for the clubs, but talks take longer and a lockout is likelier.",
@@ -255,7 +256,7 @@ function tentative(state: GameState): void {
   news(state, "labor", `The league and the players' union reach a tentative labor agreement; owners vote within a week, then the players`);
   note(state, "Tentative deal reached.");
   send(state, "league", "Management Council", "Tentative labor deal: your vote",
-    `${termsLine(d)}. The owners vote on ${shortDate(t.tentative.votesDue)} (24 of 32 needed), then the players ratify. ` +
+    `${termsLine(d)}. The owners vote on ${shortDate(t.tentative.votesDue)} (${VOTES_TO_PASS} of ${TEAMS.length} needed), then the players ratify. ` +
     "Cast our vote on the Owners page; if you don't, we'll vote with the committee.");
 }
 
@@ -285,15 +286,15 @@ function vote(state: GameState): void {
   const ours = tt.ourVote ?? (l.stance !== "hard" || t.w >= 0.5);
   const p = Math.max(0.6, Math.min(0.98, 0.85 + 0.6 * (t.w - 0.5)));
   const yes = TEAMS.filter((x) => x.id !== state.userTeam && r() < p).length + (ours ? 1 : 0);
-  if (yes < VOTES_NEEDED) {
-    news(state, "labor", `Owners reject the tentative labor deal, ${yes}-${32 - yes}; the committee goes back to the table`);
-    note(state, `Owners voted the deal down ${yes}-${32 - yes}.`);
+  if (yes < VOTES_TO_PASS) {
+    news(state, "labor", `Owners reject the tentative labor deal, ${yes}-${TEAMS.length - yes}; the committee goes back to the table`);
+    note(state, `Owners voted the deal down ${yes}-${TEAMS.length - yes}.`);
     back(state, 0.04);
     return;
   }
   const ratify = Math.max(0.5, Math.min(0.97, 0.97 - Math.max(0, t.w - 0.55) * 3));
   if (r() >= ratify) {
-    news(state, "labor", `Players vote down the tentative labor deal after the owners approved it ${yes}-${32 - yes}`);
+    news(state, "labor", `Players vote down the tentative labor deal after the owners approved it ${yes}-${TEAMS.length - yes}`);
     note(state, "The players voted the deal down.");
     back(state, -0.04);
     return;
@@ -332,7 +333,7 @@ function sign(state: GameState, terms: CbaTerms, yes: number): void {
   const owners = (state.owners ??= { relations: {}, rules: [], history: [] } as never);
   if (terms.games === 18 && rulesFor(state, start).games === 17) owners.rules.push({ rule: "games18", year: start, yes: 32, sponsor: "labor" });
   const len = `${from}-${a.through}`;
-  news(state, "labor", `Owners (${yes}-${32 - yes}) and players ratify a new labor agreement for ${len}${a.lockout ? `, ending the lockout${lost ? ` after ${lost} regular-season games were lost` : ""}` : ""}`);
+  news(state, "labor", `Owners (${yes}-${TEAMS.length - yes}) and players ratify a new labor agreement for ${len}${a.lockout ? `, ending the lockout${lost ? ` after ${lost} regular-season games were lost` : ""}` : ""}`);
   note(state, `New agreement for ${len} signed.`);
   send(state, "league", "Management Council", `New labor agreement, ${len}`,
     `${termsLine(terms)}. ${terms.games === 18 ? `The 18-game season starts in ${start}. ` : ""}Contracts already signed stay as written; ` +

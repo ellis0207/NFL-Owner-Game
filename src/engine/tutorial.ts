@@ -221,7 +221,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "league", title: "The other owners", page: "Owners",
-    how: "Rules, schedules and money are voted on by the 32 owners. Relationships decide votes: back a fellow owner's rule and he'll remember. The March meeting is when most of it happens.",
+    how: "Rules, schedules and money are voted on by the owners. Relationships decide votes: back a fellow owner's rule and he'll remember. The March meeting is when most of it happens.",
     task: "Read through the Owners page: your relations, the rules on the table and the clubs' profiles. Mark it done when you're ready.",
     watch: "Votes you lobby for later depend on the relations you see here.",
     metrics: ["value"],

@@ -82,20 +82,25 @@ export function ensurePositionCoaches(state: GameState): void {
   s.roomsBy ??= {};
   if (Object.values(s.people).some((c) => c.job?.room)) return;
   const taken = new Set(Object.values(s.people).map((c) => c.name));
-  for (const t of TEAMS) {
-    const hc = Object.values(s.people).find((c) => c.team === t.id && c.role === "HC");
-    const rooms = DATA.teams[t.id] ?? {};
-    for (const room of ROOMS) {
-      const names = (rooms[room === "ST" ? "STA" : room] ?? []).filter((n) => !Object.values(s.people).some((c) => c.name === n && c.team === t.id));
-      const list = names.length ? names : [undefined];
-      list.forEach((name, i) => {
-        const c = makeCoach(state, taken, t.id, room, i === 0, name, `${t.id}${room}${i}`);
-        if (hc) c.mentor = hc.id;
-        s.people[c.id] = c;
-      });
-    }
-    if (hc) s.roomsBy[t.id] = hc.id;
+  for (const t of TEAMS) staffRooms(state, t.id, taken);
+}
+
+/** One club's position rooms: the real coaches where the data has them, made-up ones elsewhere (a new club starts with all made up). */
+export function staffRooms(state: GameState, team: string, taken = new Set(Object.values(state.staff!.people).map((c) => c.name))): void {
+  const s = state.staff!;
+  s.roomsBy ??= {};
+  const hc = Object.values(s.people).find((c) => c.team === team && c.role === "HC");
+  const rooms = DATA.teams[team] ?? {};
+  for (const room of ROOMS) {
+    const names = (rooms[room === "ST" ? "STA" : room] ?? []).filter((n) => !Object.values(s.people).some((c) => c.name === n && c.team === team));
+    const list = names.length ? names : [undefined];
+    list.forEach((name, i) => {
+      const c = makeCoach(state, taken, team, room, i === 0, name, `${team}${room}${i}`);
+      if (hc) c.mentor = hc.id;
+      s.people[c.id] = c;
+    });
   }
+  if (hc) s.roomsBy[team] = hc.id;
 }
 
 // ---- Who teaches each room ----

@@ -22,7 +22,11 @@ import type { GameState, LeagueMeeting, OwnerRelation, OwnersState, RuleProposal
 const KEY = RULES.keyDates;
 
 /** Votes needed to change a playing rule or league policy. */
-export const VOTES_TO_PASS = 24;
+export let VOTES_TO_PASS = 24;
+/** Three quarters of the clubs, rounded up: 24 of 32, 26 of 34 after expansion. */
+export function setVotesToPass(clubs: number): void {
+  VOTES_TO_PASS = Math.ceil(clubs * 0.75);
+}
 /** Calls our owner can make before a meeting: goodwill runs out. */
 export const LOBBY_CALLS = 8;
 
@@ -135,7 +139,7 @@ function publishAgenda(state: GameState): void {
     m.proposals.push({ id: `${m.year}:${rule}`, rule, sponsor, committee: committeeView(c.appeal), lobby: {} });
   }
   send(state, "league", "League Office", `${m.year} playing rule and policy proposals`,
-    `The proposals for the annual league meeting are out. The owners vote on ${shortDate(m.voteDate)}; a change needs ${VOTES_TO_PASS} of 32 votes.\n\n` +
+    `The proposals for the annual league meeting are out. The owners vote on ${shortDate(m.voteDate)}; a change needs ${VOTES_TO_PASS} of ${TEAMS.length} votes.\n\n` +
     m.proposals.map((p) => `- ${RULE_BY_ID[p.rule].title} (${sponsorName(p.sponsor)})`).join("\n") +
     `\n\nClubs can submit their own until ${shortDate(m.deadline)}. The Owners page has the agenda, where each owner stands and how to vote.`);
   news(state, "league", `The league releases ${m.proposals.length} rule change proposals ahead of the annual meeting`);
@@ -248,8 +252,8 @@ function holdVote(state: GameState): void {
     // Owners remember who stood with them.
     if (p.sponsor !== "committee" && p.sponsor !== us) changeRapport(state, p.sponsor, votes[us] ? 6 : -4);
     if (p.sponsor === us) for (const [team, v] of Object.entries(votes)) if (team !== us) changeRapport(state, team, v ? 2 : -2);
-    lines.push(`${p.passed ? "Approved" : "Voted down"}, ${p.yes}-${32 - p.yes}: ${c.title}${p.amended ? " (as a one-season trial)" : ""}. We voted ${votes[us] ? "yes" : "no"}.`);
-    news(state, "league", `Owners ${p.passed ? "approve" : "reject"} proposal (${p.yes}-${32 - p.yes}): ${c.title.toLowerCase()}`);
+    lines.push(`${p.passed ? "Approved" : "Voted down"}, ${p.yes}-${TEAMS.length - p.yes}: ${c.title}${p.amended ? " (as a one-season trial)" : ""}. We voted ${votes[us] ? "yes" : "no"}.`);
+    news(state, "league", `Owners ${p.passed ? "approve" : "reject"} proposal (${p.yes}-${TEAMS.length - p.yes}): ${c.title.toLowerCase()}`);
   }
   m.done = true;
   const passed = m.proposals.filter((p) => p.passed);

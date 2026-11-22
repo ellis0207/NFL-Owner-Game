@@ -27,7 +27,7 @@ import { money, news, send } from "./inbox";
 import { CONTROL, OWNERSHIP_RULES, ownerShare } from "./investors";
 import { TEAM_BY_ID, TEAMS } from "./league";
 import { owner } from "./ownership";
-import { owners } from "./owners";
+import { owners, VOTES_TO_PASS } from "./owners";
 import { rngFor } from "./rng";
 import { MARKETS, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "./stadiums";
 import { standingState } from "./standing";
@@ -342,9 +342,9 @@ function leagueDecides(state: GameState, deal: ClubDeal): void {
     if (r() < p) yes++;
   }
   void voters;
-  deal.vote = { yes, needed: 24 };
-  if (yes < 24) {
-    failDeal(state, deal, `The owners voted it down: ${yes} for, 24 needed.`);
+  deal.vote = { yes, needed: VOTES_TO_PASS };
+  if (yes < VOTES_TO_PASS) {
+    failDeal(state, deal, `The owners voted it down: ${yes} for, ${VOTES_TO_PASS} needed.`);
     return;
   }
   atomic(state, () => closeDeal(state, deal));

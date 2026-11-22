@@ -64,7 +64,21 @@ const KEY = RULES.keyDates;
 const M = 1_000_000;
 
 /** Each team's share of national revenue (TV, NFL Ventures, licensing) by league year: it moves with the cap, which is built on it. */
+/**
+ * Each club's share of the national money against a 32-club league. After
+ * expansion the pie grows a little with the new markets, but it is cut more
+ * ways (expansion.ts sets it).
+ */
+let NATIONAL_SHARE = 1;
+export function bindNationalShare(clubs: number): void {
+  NATIONAL_SHARE = (32 / clubs) * (1 + 0.6 * (clubs - 32) / 32);
+}
+
 export function nationalRevenue(year: number): number {
+  return Math.round(nationalBase(year) * NATIONAL_SHARE);
+}
+
+function nationalBase(year: number): number {
   if (!PACK && year <= BASE_SEASON) return 472 * M;
   // Measured against 2026, the year the figure is set in: a historical start scales it back with the cap.
   return Math.round(472 * M * salaryCap(undefined, year) / (PACK ? REAL_CAPS[2026] : salaryCap(undefined, BASE_SEASON)));
@@ -191,6 +205,7 @@ export const CATEGORY: Record<LedgerCat, { label: string; side: "in" | "out" }> 
   insurance: { label: "Insurance premiums, less claim recoveries", side: "out" },
   relocation: { label: "Relocation: the league fee, leaving the old lease and moving", side: "out" },
   global: { label: "International program, net of overseas income", side: "out" },
+  expansion: { label: "Expansion fees: our share of what the new clubs paid", side: "in" },
 };
 
 /** Below-the-line items: they move cash but aren't operating income. */

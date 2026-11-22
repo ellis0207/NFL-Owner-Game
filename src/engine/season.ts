@@ -4,6 +4,7 @@ import { archiveDaily } from "./archive";
 import { constructionDaily } from "./construction";
 import { politicsDaily } from "./politics";
 import { relocationDaily } from "./relocation";
+import { expansionDaily } from "./expansion";
 import { clearPathway, globalDaily } from "./global";
 import { laborDaily, lockedOut } from "./labor";
 import { leagueMoneyDaily } from "./leaguemoney";
@@ -36,7 +37,7 @@ import { bindLeases, ensureLeases, leasesDaily } from "./leases";
 import { ensurePositionCoaches, positionCoachesDaily } from "./positionCoaches";
 import { capSummary } from "./cap";
 import { addDays, daysBetween, kickoff, shortDate, weekday } from "./dates";
-import { BASE_SEASON, GAME_BY_ID, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAM_BY_ID, teamLabel } from "./league";
+import { BASE_SEASON, GAME_BY_ID, GAMES_BY_DATE, onSeasonChange, PLAYER_BY_ID, PLAYERS, RULES, SCHEDULE, TEAMS, TEAM_BY_ID, teamLabel } from "./league";
 import { superBowlName } from "./calendar";
 import { applySeason, recordCredits, scheduleReleaseDate, scheduleReleased, startNewSeason } from "./seasons";
 import { weeklyDevelopment } from "./development";
@@ -119,9 +120,9 @@ export { gameTypeLabel, outLabel } from "./gametime";
 export let SEASON_OVER_DATE = "";
 
 
-/** A team's first regular-season game. */
+/** A team's first regular-season game (for a new club before its first schedule, the league's opener). */
 export function openingGame(team: string): ScheduledGame {
-  return SCHEDULE.find((g) => g.type === "REG" && (g.away === team || g.home === team))!;
+  return SCHEDULE.find((g) => g.type === "REG" && (g.away === team || g.home === team)) ?? SCHEDULE.find((g) => g.type === "REG")!;
 }
 
 /** Veterans report 47 days before a team's opener (48 before a Monday opener). */
@@ -725,6 +726,7 @@ function endDay(state: GameState): void {
   constructionDaily(state);
   politicsDaily(state);
   relocationDaily(state);
+  expansionDaily(state);
   globalDaily(state);
   leasesDaily(state);
   debtDaily(state);
@@ -802,7 +804,7 @@ function runCutdown(state: GameState): void {
     }
   }
   state.cutPlan = undefined;
-  news(state, "games", "All 32 teams trimmed their rosters to 53.");
+  news(state, "games", `All ${TEAMS.length} teams trimmed their rosters to 53.`);
 }
 
 

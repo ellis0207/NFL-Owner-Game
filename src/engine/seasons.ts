@@ -37,6 +37,7 @@ import { noteDraft } from "./review";
 import { seasonTotals } from "./stats";
 import { eraNewSeason } from "./eraevents";
 import { bindCustomLeague } from "./custompack";
+import { bindExpansion } from "./expansion";
 import type { DraftArchive, GameState, History, SeasonRecord, SeasonStats, SnapSeason } from "./types";
 
 function emptyHistory(): History {
@@ -75,6 +76,7 @@ export function applySeason(state: GameState): void {
   const schedule = season === BASE_SEASON || !state.schedule ? BASE_SCHEDULE : state.schedule;
   // The season's shape (games and byes) comes from the owners' votes, and the calendar is built on it.
   bindSeasonFormat(state, season);
+  bindExpansion(state);
   setLeagueSeason(season, keyDatesFor(season), schedule, season === BASE_SEASON ? undefined : state.waiverOrder);
   bindCaps(state.league?.caps ?? {});
   bindRules(state);

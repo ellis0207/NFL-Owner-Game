@@ -12,13 +12,14 @@ import type { GameState, RuleProposal } from "../../engine/types";
 import { LaborPanel } from "./LaborPanel";
 import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
 import { ClubProfiles, Realignment } from "./OwnersClubs";
+import { ExpansionPanel } from "./OwnersExpansion";
 import { tip } from "../tip";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
 
 export function OwnersScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [said, setSaid] = useState<string | null>(null);
-  const [tab, setTab] = useState<"League" | "Clubs" | "Realignment">("League");
+  const [tab, setTab] = useState<"League" | "Clubs" | "Realignment" | "Expansion">("League");
   const [pick, setPick] = useState("");
   const o = owners(game);
   const m = currentMeeting(game);
@@ -34,15 +35,16 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
   return (
     <section className="stack lg-chamber-page">
       <p className="muted">
-        The owners change the playing rules and league policies at the annual league meeting ({shortDate(meetingDay)}); a change needs {VOTES_TO_PASS} of 32 votes.
+        The owners change the playing rules and league policies at the annual league meeting ({shortDate(meetingDay)}); a change needs {VOTES_TO_PASS} of {TEAMS.length} votes.
         The proposals come out three weeks before{m ? "" : `, on ${shortDate(addDays(meetingDay, -21))}`}.
       </p>
       <div className="tabs" role="group" aria-label="View">
-        {(["League", "Clubs", "Realignment"] as const).map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
+        {(["League", "Clubs", "Realignment", "Expansion"] as const).map((t) => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {said && <p className="notice">{said}</p>}
       {tab === "Clubs" && <ClubProfiles game={game} />}
       {tab === "Realignment" && <Realignment game={game} say={say} />}
+      {tab === "Expansion" && <ExpansionPanel game={game} say={say} />}
       {tab === "League" && <>
 
       <LeagueOffice game={game} say={say} />
@@ -101,13 +103,13 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
       <section className="panel stack tight">
         <h3>The rulebook</h3>
         {o.rules.length === 0 ? <span className="muted">No changes since 2026.</span> : o.rules.map((r) => (
-          <span key={r.rule + r.year}>{r.year}{r.until ? " (trial season)" : ""}: {RULE_BY_ID[r.rule].title} <span className="muted">({sponsorName(r.sponsor)}, {r.yes}-{32 - r.yes})</span></span>
+          <span key={r.rule + r.year}>{r.year}{r.until ? " (trial season)" : ""}: {RULE_BY_ID[r.rule].title} <span className="muted">({sponsorName(r.sponsor)}, {r.yes}-{TEAMS.length - r.yes})</span></span>
         ))}
         {o.history.filter((h) => !h.passed).length > 0 && (
           <>
             <h4>Voted down</h4>
             {o.history.filter((h) => !h.passed).map((h) => (
-              <span key={h.rule + h.year} className="muted">{h.year}: {RULE_BY_ID[h.rule].title} ({sponsorName(h.sponsor)}, {h.yes}-{32 - h.yes})</span>
+              <span key={h.rule + h.year} className="muted">{h.year}: {RULE_BY_ID[h.rule].title} ({sponsorName(h.sponsor)}, {h.yes}-{TEAMS.length - h.yes})</span>
             ))}
           </>
         )}
@@ -126,7 +128,7 @@ function Proposal({ game, p, done, say }: { game: GameState; p: RuleProposal; do
     return (
       <div className="report">
         <strong>{c.title}</strong>
-        <Chamber yes={p.yes ?? 0} no={32 - (p.yes ?? 0)} undecided={0} need={VOTES_TO_PASS} />
+        <Chamber yes={p.yes ?? 0} no={TEAMS.length - (p.yes ?? 0)} undecided={0} need={VOTES_TO_PASS} />
         <span className={p.passed ? "good" : "bad"}>{p.passed ? "Approved" : "Voted down"}, {p.yes}-{32 - (p.yes ?? 0)}{p.amended ? " (as a one-season trial)" : ""}. We voted {p.votes?.[game.userTeam] ? "yes" : "no"}.</span>
         <span className="muted">{sponsorName(p.sponsor)}</span>
       </div>
@@ -205,19 +207,21 @@ function Hosting({ game, say }: { game: GameState; say: (t: string | null) => vo
 }
 
 /**
- * The owners' meeting as a chamber of 32 seats in three rows, filled from the
+ * The owners' meeting as a chamber of a seat per club (32 before expansion) in three rows, filled from the
  * left with yes votes, then undecided, then no; the tick marks the votes a
  * change needs.
  */
 export function Chamber({ yes, no, undecided, need }: { yes: number; no: number; undecided: number; need: number }) {
-  const rows = [{ r: 34, n: 8 }, { r: 50, n: 11 }, { r: 66, n: 13 }];
+  const total = Math.max(32, yes + no + undecided);
+  const extra = total - 32;
+  const rows = [{ r: 34, n: 8 }, { r: 50, n: 11 + Math.floor(extra / 2) }, { r: 66, n: 13 + Math.ceil(extra / 2) }];
   // Seats ordered left to right across all rows, by angle, so the colors sweep like a real chamber.
   const seats = rows.flatMap(({ r, n }) => Array.from({ length: n }, (_, i) => {
     const a = Math.PI - (Math.PI * (i + 0.5)) / n;
     return { x: 80 + r * Math.cos(a), y: 76 - r * Math.sin(a), a };
   })).sort((p, q) => q.a - p.a);
   const kind = (i: number) => (i < yes ? "yes" : i < yes + undecided ? "maybe" : i < yes + undecided + no ? "no" : "empty");
-  const t = Math.PI - (Math.PI * need) / 32;
+  const t = Math.PI - (Math.PI * need) / total;
   return (
     <svg className="lg-chamber" viewBox="0 0 160 82" role="img" aria-label={`${yes} yes, ${undecided} undecided, ${no} no; ${need} needed`}>
       {seats.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r="4.6" className={`lg-seat ${kind(i)}`} />)}

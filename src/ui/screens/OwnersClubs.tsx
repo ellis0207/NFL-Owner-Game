@@ -54,7 +54,7 @@ export function Realignment({ game, say }: { game: GameState; say: (t: string | 
   return (
     <section className="panel stack tight">
       <h3>Realignment</h3>
-      <span className="muted">The owners vote at the annual meeting; a swap needs 24 votes and takes effect the next season, and schedules, rivalries and the playoff path follow the new divisions. After a move, geography usually carries it; without one, owners weigh tradition and most proposals fail.</span>
+      <span className="muted">The owners vote at the annual meeting; a swap needs three quarters of the owners and takes effect the next season, and schedules, rivalries and the playoff path follow the new divisions. After a move, geography usually carries it; without one, owners weigh tradition and most proposals fail.</span>
       <label className="field"><span className="label">Swap our division with</span>
         <select defaultValue="" onChange={(x) => x.target.value && say(proposeRealign(game, x.target.value))}>
           <option value="">Choose a club</option>

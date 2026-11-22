@@ -68,13 +68,16 @@ const START: Omit<EconomyMonth, "month"> = { gap: 0.3, growth: 1.9, unemployment
 export function economy(state: GameState): EconomyState {
   if (state.economy) return state.economy;
   const metros: Record<string, MetroEconomy> = {};
-  for (const t of TEAMS) {
-    const rng = rngFor(state.seed, `metro:${t.id}`);
-    metros[t.id] = { sens: Math.round((0.7 + rng() * 0.6) * 100) / 100, local: Math.round(gaussian(rng) * 0.5 * 100) / 100, pop: 1, drift: Math.round(gaussian(rng) * 0.004 * 10000) / 10000 };
-  }
+  for (const t of TEAMS) metros[t.id] = newMetro(state, t.id);
   const month = state.date.slice(0, 7);
   state.economy = { now: { month, ...START }, history: [], metros, recessions: [], pending: [], log: [] };
   return state.economy;
+}
+
+/** A metro's own economy: how much it swings with the nation, and where it starts (a new club's city gets one when it joins). */
+function newMetro(state: GameState, team: string): MetroEconomy {
+  const rng = rngFor(state.seed, `metro:${team}`);
+  return { sens: Math.round((0.7 + rng() * 0.6) * 100) / 100, local: Math.round(gaussian(rng) * 0.5 * 100) / 100, pop: 1, drift: Math.round(gaussian(rng) * 0.004 * 10000) / 10000 };
 }
 
 /** Read without creating: old states and quick estimates see a normal economy. */
@@ -266,7 +269,7 @@ function step(state: GameState): void {
   };
   // Each metro has its own story: some grow, some lose jobs and people.
   for (const t of TEAMS) {
-    const m = e.metros[t.id];
+    const m = (e.metros[t.id] ??= newMetro(state, t.id));
     const mr = rngFor(state.seed, `metro:${t.id}:${month}`);
     m.local = r(0.97 * m.local + gaussian(mr) * 0.12 * v);
     m.pop = r(m.pop * (1 + m.drift / 12 + 0.00004 * metroGap(state, t.id)), 10000);

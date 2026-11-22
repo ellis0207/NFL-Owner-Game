@@ -260,7 +260,7 @@ export type LedgerCat =
   | "gatePool" | "gateShare" | "intl" | "deposits" | "capital"
   | "players" | "staff" | "staffOwed" | "businessOps" | "marketing" | "gameday" | "community" | "medical" | "facilities" | "scouts" | "scouting"
   | "stadium" | "projects" | "rent" | "debt" | "travel" | "benefits" | "league" | "fines" | "interest" | "distribution"
-  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow" | "insurance" | "relocation" | "global";
+  | "hosting" | "bids" | "loanIn" | "principal" | "loanFees" | "professional" | "seatLicenses" | "research" | "content" | "brand" | "venue" | "security" | "technology" | "revenueShare" | "legal" | "escrow" | "insurance" | "relocation" | "global" | "expansion";
 
 export interface LedgerEntry {
   date: string;
