@@ -10,6 +10,7 @@
 // goes into a renovation fund the owner's stadium projects draw on first.
 // The owner can also push on maintenance duties, the share of events, and
 // renewal options.
+import { bindLabUpkeep } from "./labstate";
 import { cityGoodwill } from "./community";
 import { leagueYear } from "./contracts";
 import { daysBetween } from "./dates";
@@ -54,6 +55,7 @@ export function bindLeases(state: GameState): void {
   for (const [team, l] of Object.entries(state.leases ?? {})) {
     Object.assign(STADIUM_BY_TEAM[team], { leaseThrough: l.through, rent: l.rent, upkeep: l.upkeep, eventShare: l.eventShare });
   }
+  bindLabUpkeep(state);
 }
 
 export function lease(state: GameState, team = state.userTeam): LeaseState | undefined {

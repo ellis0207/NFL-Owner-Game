@@ -545,3 +545,53 @@ export interface DraftArchive {
   /** The pick id of each selection, in the same order (drafts archived since the history batch), for trade outcomes. */
   pickIds?: string[];
 }
+
+/** A Stadium Lab design (src/lab): structure, experience, parking and land fields, kept as the Lab writes them. */
+export type LabDesign = Record<string, string | number | boolean>;
+
+/** What a stadium renovation from the Stadium page does once it opens (stadiumlab.ts). */
+export interface LabRenovation {
+  id: string;
+  team: string;
+  /** The building it was done to: it stays with the building if the club moves. */
+  at: string;
+  title: string;
+  design: LabDesign;
+  /** Seats and the Lab's roof kind after the work, and before it. */
+  capacity: number;
+  roof: string;
+  before: { capacity: number; roof: string };
+  /** Premium seats added (twenty a suite). */
+  premium: number;
+  /** Gate effects of the work, in the projects' terms (projects.ts), counting only what no project already did. */
+  effect: { demand: number; premium: number; perCap: number; sponsor: number };
+  /** Project ids (projects.ts) this work delivers, so they aren't built or counted twice. */
+  covers: string[];
+  /** Parking spaces the club runs added (or removed), and how many of them in garages; land bought. */
+  spaces: number;
+  garage: number;
+  acres: number;
+  /** Seats shut in a season the work runs through. */
+  closed: number;
+  /** Building's yearly upkeep multiplier after the work (bigger bowl, solar). */
+  upkeep: number;
+  surface?: "grass" | "turf";
+  /** Parts of the building it renews (facilities.ts keys). */
+  renews: string[];
+  /** Full price, our share (the budget, contingency included), the part of it that's contingency, and what's been paid. */
+  price: number;
+  cost: number;
+  contingency: number;
+  paid: number;
+  started: string;
+  opens: string;
+  opened?: boolean;
+  /** Over (or under, negative) the budget, settled on opening. */
+  overrun?: number;
+}
+
+export interface StadiumLabState {
+  renovations: LabRenovation[];
+  /** The owner's design in progress, by building. */
+  drafts: Record<string, LabDesign>;
+}

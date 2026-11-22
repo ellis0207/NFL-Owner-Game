@@ -15,7 +15,9 @@ import { TEAM_BY_ID } from "./league";
 import { addStory } from "./outlets";
 import { byline } from "./media/corps";
 import { rngFor } from "./rng";
+import { labCovers, labEffects } from "./labstate";
 import { drawFund, leaseFund } from "./leases";
+import { labValue } from "./stadiumlab";
 import { STADIUM_BY_TEAM } from "./stadiums";
 import type { GameState, Project } from "./types";
 
@@ -79,6 +81,12 @@ export function projectEffects(state: GameState): { gate: { demand: number; prem
     out.facilities += e.facilities ?? 0;
     out.medical += e.medical ?? 0;
   }
+  // Renovations designed on the Stadium page (stadiumlab.ts), counted only for what no project here did.
+  const l = labEffects(state);
+  out.gate.demand += l.demand;
+  out.gate.premiumMult += l.premium;
+  out.gate.perCap += l.perCap;
+  out.sponsor += l.sponsor;
   // A new building of our own (construction.ts).
   const n = newStadiumLift(state);
   out.gate.demand += n.demand;
@@ -109,11 +117,12 @@ const valueCache = new WeakMap<GameState, { key: string; value: number }>();
  */
 export function projectsRevenue(state: GameState): number {
   const list = state.business?.projects ?? [];
-  if (!list.length) return 0;
-  const key = `${state.date}:${list.map((p) => `${p.id}${p.opened ? 1 : 0}`).join(",")}`;
+  const lab = state.stadiumLab?.renovations ?? [];
+  if (!list.length && !lab.length) return 0;
+  const key = `${state.date}:${list.map((p) => `${p.id}${p.opened ? 1 : 0}`).join(",")}:${lab.map((r) => `${r.id}${r.opened ? 1 : 0}`).join(",")}`;
   const hit = valueCache.get(state);
   if (hit?.key === key) return hit.value;
-  const value = list.reduce((t, p) => t + projectYearly(state, p.id) * (p.opened ? 1 : 0.5), 0);
+  const value = list.reduce((t, p) => t + projectYearly(state, p.id) * (p.opened ? 1 : 0.5), 0) + labValue(state);
   valueCache.set(state, { key, value });
   return value;
 }
@@ -140,7 +149,9 @@ export function projectTerms(state: GameState, id: string): { cost: number; ours
     else if (s.structure === "publicAuthority") { share = 0.5; payer = `${s.owner} pays half, if it signs off`; }
   }
   const p = projects(state).find((x) => x.id === id);
-  if (p) blocked = p.opened ? "Done." : `Under way; opens ${shortDate(p.opens)}.`;
+  const lab = def.stadium ? labCovers(state, id) : undefined;
+  if (lab) blocked = lab.opened ? `Done in the ${lab.title}.` : `Part of the ${lab.title}, opening ${shortDate(lab.opens)}.`;
+  else if (p) blocked = p.opened ? "Done." : `Under way; opens ${shortDate(p.opens)}.`;
   else if (!buildSeason(state.date)) blocked ??= "Construction starts between February and May, so the work is done before the preseason.";
   else if (projects(state).filter((x) => !x.opened).length >= 2) blocked ??= "Two projects at a time is all the construction staff can run.";
   // Public renovation money from the lease pays for stadium work before our own does.

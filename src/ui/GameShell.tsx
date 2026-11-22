@@ -31,6 +31,7 @@ import { openQuestions } from "../engine/press";
 import { LeagueScreen } from "./screens/LeagueScreen";
 import { HistoryScreen } from "./screens/HistoryScreen";
 import { OwnersScreen } from "./screens/OwnersScreen";
+import { StadiumLabScreen } from "./screens/StadiumLabScreen";
 import { OwnerScreen } from "./screens/OwnerScreen";
 import { OwnershipScreen } from "./screens/OwnershipScreen";
 import { FrontOfficeScreen } from "./screens/FrontOfficeScreen";
@@ -389,6 +390,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Trades" && <TradesScreen key={tradeStart?.player ?? "trades"} game={game} changed={changed} start={tradeStart} />}
           {screen === "Cap" && <CapScreen game={game} changed={changed} />}
           {screen === "Business" && <BusinessScreen game={game} changed={changed} />}
+          {screen === "Stadium Lab" && <StadiumLabScreen game={game} changed={changed} />}
           {screen === "League" && <LeagueScreen game={game} />}
           {screen === "History" && <HistoryScreen game={game} />}
           {screen === "Owners" && <OwnersScreen game={game} changed={changed} />}

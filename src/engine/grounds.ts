@@ -14,6 +14,7 @@ import { constructionFactor } from "./economy";
 import { addDays, daysBetween, shortDate } from "./dates";
 import { nextId } from "./ids";
 import { RULES } from "./league";
+import { labClosure, labGrounds, labPremium } from "./labstate";
 import { controlOf, MARKETS, STADIUM_BY_TEAM, STADIUMS } from "./stadiums";
 import { rngFor } from "./rng";
 import type { GameState, GroundsState } from "./types";
@@ -177,7 +178,9 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
   // ---- The bowl ----
   const added = g.premium.filter((p) => p.opens <= date).reduce((t, p) => t + p.seats, 0);
   const projectSeats = clubsProject && clubsProject.opens <= date ? Math.round(s.capacity * CLUBS_PROJECT_SHARE) : 0;
-  const premium = Math.round(s.capacity * PREMIUM_SHARE) + added + projectSeats;
+  // Suites from a Stadium page renovation (stadiumlab.ts) take general seats one for one.
+  const labSeats = ours ? labPremium(state, date, team) : 0;
+  const premium = Math.round(s.capacity * PREMIUM_SHARE) + added + projectSeats + labSeats;
   const general = s.capacity - premium;
   const sections: Section[] = [
     { id: "lower", kind: "lower", seats: Math.round(general * 0.46), premium: false },
@@ -200,11 +203,23 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
     lower.seats -= n;
     sections.push({ id: "work-clubs", kind: "lower", seats: n, premium: false, closed: { from: clubsProject.started, to: clubsProject.opens, why: "Field-level clubs under construction" } });
   }
+  // A renovation that runs through a season plays around a closed part of the bowl.
+  const shut = ours ? labClosure(state, date, team) : undefined;
+  if (shut) {
+    const upper = sections[1];
+    const n = Math.min(shut.seats, upper.seats);
+    upper.seats -= n;
+    sections.push({ id: "work-lab", kind: "upper", seats: n, premium: false, closed: { from: date, to: shut.to, why: shut.why } });
+    notes.push(`${n.toLocaleString("en-US")} seats are closed for the renovation until ${shortDate(shut.to)}.`);
+  }
   const capacity = sections.filter((x) => !x.closed).reduce((t, x) => t + x.seats, 0);
   // ---- Land and parking ----
+  const lab = ours ? labGrounds(state, date, team) : { surface: 0, garage: 0, acres: 0, building: undefined };
   const garageAcres = g.garages.reduce((t, x) => t + x.acres, 0) + (parkingProject && parkingProject.started <= date ? 5 : 0);
+  const siteAcres = site.acres + lab.acres;
   const lotAcres = Math.max(0, site.acres - FOOTPRINT) * (site.site === "suburban" ? 0.8 : 0.7);
-  const free = Math.max(0, site.acres - FOOTPRINT - lotAcres);
+  // Land bought in a renovation is the club's to build on; the parking laid on it comes in as its own lots below.
+  const free = Math.max(0, siteAcres - FOOTPRINT - lotAcres - Math.max(0, lab.surface) / PER_ACRE - Math.max(0, lab.garage) / GARAGE_PER_ACRE);
   const surfaceAcres = Math.max(0, lotAcres - garageAcres);
   const control: LotControl = ctrl.parking ? "owned" : "operator";
   const share = s.gameDayShare;
@@ -217,6 +232,11 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
     lots.push({ id: "project-garage", name: "Garage and rideshare plaza", kind: "garage", spaces: PARKING_PROJECT_SPACES, control: "owned", share: 1, acres: 5, walk: 3, opens: open ? undefined : parkingProject.opens });
     if (!open) notes.push(`The parking garage project opens ${shortDate(parkingProject.opens)}.`);
   }
+  // A renovation's parking: new surface lots and garages the club runs (removed spaces come off the stadium lots).
+  if (lab.surface > 0) lots.push({ id: "lab-surface", name: "Renovation lots", kind: "surface", spaces: lab.surface, control: "owned", share: 1, acres: Math.round(lab.surface / PER_ACRE), walk: 10 });
+  else if (lab.surface < 0) lots[0].spaces = Math.max(0, lots[0].spaces + lab.surface);
+  if (lab.garage > 0) lots.push({ id: "lab-garage", name: "Renovation garage", kind: "garage", spaces: lab.garage, control: "owned", share: 1, acres: Math.round(lab.garage / GARAGE_PER_ACRE), walk: 4 });
+  if (lab.building) notes.push(`${lab.building.spaces.toLocaleString("en-US")} parking spaces from the renovation open ${shortDate(lab.building.opens)}.`);
   for (const x of g.garages) lots.push({ id: x.id, name: "New garage", kind: "garage", spaces: x.spaces, control: "owned", share: 1, acres: x.acres, walk: 4, opens: x.opens > date ? x.opens : undefined });
   const leasedSpaces = g.leases.filter((x) => x.through >= RULES.season).reduce((t, x) => t + x.spaces, 0);
   for (const x of g.leases) if (x.through >= RULES.season) lots.push({ id: x.id, name: x.name, kind: "surface", spaces: x.spaces, control: "leased", share: 1, acres: Math.round(x.spaces / PER_ACRE), walk: 15 });
@@ -225,7 +245,7 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
   const transitShare = site.transit, walkShare = site.site === "downtown" ? 0.06 : site.site === "urban" ? 0.03 : 0.01;
   const driveShare = Math.max(0.3, 1 - transitShare - walkShare - (0.07 + (site.site === "suburban" ? 0 : 0.03)));
   const sellout = (s.capacity * 0.95 / PER_CAR) * (driveShare / 0.8);
-  const baseClub = lots.filter((l) => !l.id.startsWith("garage") && !l.id.startsWith("lease") && l.id !== "project-garage").reduce((t, l) => t + l.spaces, 0);
+  const baseClub = lots.filter((l) => !l.id.startsWith("garage") && !l.id.startsWith("lease") && !l.id.startsWith("lab-") && l.id !== "project-garage").reduce((t, l) => t + l.spaces, 0);
   const nearby = Math.max(site.site === "downtown" ? 9000 + r() * 6000 : site.site === "urban" ? 4000 + r() * 3000 : 1500 + r() * 1500, (sellout - baseClub) * (1.02 + r() * 0.05));
   // The lots we lease are some of those same nearby lots, so they come out of the independent count.
   lots.push({ id: "independent", name: site.site === "downtown" ? "City and private garages nearby" : "Private lots nearby", kind: site.site === "downtown" ? "garage" : "surface", spaces: Math.max(0, Math.round(nearby - leasedSpaces)), control: "independent", share: 0, acres: 0, walk: site.site === "downtown" ? 12 : 20 });
@@ -235,11 +255,11 @@ export function groundsModel(state: GameState, date = state.date, team = state.u
   // ---- Running costs ----
   const garageUpkeep = g.garages.reduce((t, x) => t + x.spaces * 220, 0);
   const leaseRent = g.leases.filter((x) => x.through >= RULES.season).reduce((t, x) => t + x.rent, 0);
-  const premiumUpkeep = added * 600;
+  const premiumUpkeep = (added + labSeats) * 600 + Math.max(0, lab.garage) * 220 + Math.max(0, lab.surface) * 60;
   for (const x of g.garages) if (x.opens > date) notes.push(`Garage of ${x.spaces.toLocaleString("en-US")} spaces opens ${shortDate(x.opens)}.`);
   for (const x of g.premium) if (x.opens > date) notes.push(`${x.seats.toLocaleString("en-US")} club seats open ${shortDate(x.opens)}${x.phased ? "; the section is closed until then" : ""}.`);
   return {
-    team, stadium: s.name, site: site.site, acres: site.acres, freeAcres: Math.round(free * 10) / 10,
+    team, stadium: s.name, site: site.site, acres: Math.round(siteAcres * 10) / 10, freeAcres: Math.round(free * 10) / 10,
     transit, modes, sections, lots, capacity, upkeep: Math.round(garageUpkeep + leaseRent + premiumUpkeep), notes,
     leasable: Math.max(0, Math.round(nearby * LEASABLE - leasedSpaces)),
   };
@@ -303,7 +323,7 @@ export function gateGrounds(state: GameState, date: string): { general: number; 
   const seats = seatsOn(m);
   const base = Math.round(STADIUM_BY_TEAM[state.userTeam].capacity * PREMIUM_SHARE);
   // The clubs project's own money comes through its premium effect (projects.ts); only the owner's conversions scale suite and club income here.
-  const added = (state.grounds?.premium ?? []).filter((p) => p.opens <= date).reduce((t, p) => t + p.seats, 0);
+  const added = (state.grounds?.premium ?? []).filter((p) => p.opens <= date).reduce((t, p) => t + p.seats, 0) + labPremium(state, date);
   const price = MARKETS[state.userTeam].parking;
   return {
     general: seats.general, premium: seats.premium, premiumScale: (base + added) / Math.max(1, base),

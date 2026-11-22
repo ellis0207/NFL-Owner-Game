@@ -28,6 +28,7 @@ import { stadiumLoan, leagueStadiumLoan } from "./debt";
 import { constructionFactor } from "./economy";
 import { partDefs } from "./facilities";
 import { bindLeases } from "./leases";
+import { bindStadiumLab } from "./labstate";
 import { bindRelocation, cpuStadiumFailed, restoreStadiums } from "./relocation";
 import { metroPop } from "./fans";
 import { money, news, send } from "./inbox";
@@ -207,8 +208,9 @@ export function bindConstruction(state: GameState): void {
     });
     Object.assign(TEAM_BY_ID[n.team], { stadium: n.name, roof: n.roof === "open" ? "outdoors" : n.roof === "dome" ? "dome" : "retractable" });
   }
-  // Leases signed since (renegotiated rent and upkeep) sit on top.
+  // Leases signed since (renegotiated rent and upkeep) sit on top, then finished renovations (stadiumlab.ts).
   bindLeases(state);
+  bindStadiumLab(state);
 }
 
 function modelOf(s: Structure): Model {
