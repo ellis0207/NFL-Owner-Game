@@ -32,7 +32,7 @@ game manual. Every page opens under a header picture of its room, rendered in
 Blender, with the room's own type and colors; your club's colors stay the
 accent everywhere, and the date header is a stadium board. Today reads as a
 morning brief, the Inbox as a mail tray, Standings as a wall of division
-boards, and Owners shows each vote as a 32-seat chamber. In the film room
+boards, and Owners shows each vote as a chamber with a seat per club. In the film room
 the Roster opens as a depth-chart board (defense, the line of scrimmage,
 offense, specialists), with the full table a tap away and the choice
 remembered; the game plan sits on Game week beside the practice plan. The cap
@@ -1024,7 +1024,7 @@ Portland, Salt Lake City, Toronto and Columbus, plus a second team in a
 metro big enough for one. Leaving costs the rest of the lease and, under a
 non-relocation pledge, the public money back with a penalty. Applications
 go in between January 1 and February 15, the league's relocation committee
-reviews them, and the owners vote at the annual meeting (24 of 32), looking
+reviews them, and the owners vote at the annual meeting (three quarters), looking
 hard at whether the club tried to stay. An approved move pays a relocation
 fee over ten years and moving costs, ends the local sponsor and media
 deals, resets the fan base to the new market's football attachment, and
@@ -1033,6 +1033,20 @@ process) or leave the old one behind. The franchise keeps its records and
 history, and the move goes on its timeline. A stopgap venue means a new
 stadium; a moved club keeps its division unless the owners vote to realign.
 CPU clubs move rarely, and only after a stadium plan fails at home.
+
+The league can expand, once, by two clubs. The commissioner floats it at an
+annual meeting; the open cities bid with ownership groups (made up), and you
+can back it, push for a higher fee, oppose it, or bid for one of the new
+clubs yourself. Three quarters of the owners must vote yes. The fee (about
+1.25 times an average club's value) is split among the existing clubs over
+five league years, while the national money is cut more ways. The new clubs
+join two seasons later, one in each conference, in the nearest division, so
+two divisions hold five clubs and the schedule is built around them. Two
+weeks before the new league year they hire staffs and hold an expansion
+draft: every club leaves five players under contract exposed (you pick our
+list) and loses at most two. They pick first in every round of their first
+draft. If your bid won, you take over the new club then and your old one is
+sold. Owners > Expansion follows it all.
 
 The club can also grow abroad. The league grants marketing rights in up to
 three countries for five years; localized content, fan events and youth
@@ -1174,7 +1188,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
   New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
-  Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; international rights, audiences, currency and the player pathway `global.ts`.
+  Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; expansion (bids, the vote, the expansion draft, the new clubs) `expansion.ts`, with `flexschedule.ts` for divisions of five; international rights, audiences, currency and the player pathway `global.ts`.
   The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
   The owner's own wealth (holdings, personal debt, family office and trust, foundation, public profile, business conflicts) is `wealth.ts`.
   The franchise market (appraisals, listings, diligence, bids, financing, the league vote) is `franchisemarket.ts`; closing a purchase, switching clubs and the buyer and minority starts `takeover.ts`; owner aging, heirs, the estate, selling the club, the end of a tenure and the legacy review `succession.ts`; rival clubs' owners, governance, money, reputations, meddling and careers `rivals.ts`; the cause-and-effect log `causes.ts`; year records and all-or-nothing actions `archive.ts`.

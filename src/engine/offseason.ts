@@ -268,8 +268,10 @@ export function draftStanding(state: GameState): Record<string, { lost: number; 
 /** 2027 draft order: non-playoff teams worst first, then playoff teams by how far they went; ties go to the easier schedule. */
 export function draftOrder(state: GameState): string[] {
   const st = draftStanding(state);
-  return TEAMS.map((t) => t.id).sort((a, b) =>
-    st[a].lost - st[b].lost || st[a].pct - st[b].pct || st[a].sos - st[b].sos || a.localeCompare(b));
+  // Clubs joining the league next season pick first, in the order they were awarded (expansion.ts).
+  const fresh = (state.expansion?.clubs ?? []).filter((c) => c.activated && c.joins === RULES.season + 1).map((c) => c.id);
+  return [...fresh, ...TEAMS.map((t) => t.id).filter((t) => !fresh.includes(t)).sort((a, b) =>
+    st[a].lost - st[b].lost || st[a].pct - st[b].pct || st[a].sos - st[b].sos || a.localeCompare(b))];
 }
 
 /** Cap room a team should keep for its draft class (first-year cap hits under the rookie scale). */

@@ -33,7 +33,7 @@ export function Media({ game, changed }: { game: GameState; changed: () => void 
       <div className="split">
         <div className="panel stack tight">
           <h3>National TV and streaming</h3>
-          <p className="muted">The league signs these for all 32 clubs and splits them equally. Average yearly fees, approximate public reports.</p>
+          <p className="muted">The league signs these for every club and splits them equally. Average yearly fees, approximate public reports.</p>
           <table>
             <thead><tr><th>Partner</th><th>Package</th><th className="num">Per year</th><th className="num">Through</th></tr></thead>
             <tbody>

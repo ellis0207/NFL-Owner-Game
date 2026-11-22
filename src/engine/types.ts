@@ -1187,6 +1187,8 @@ export interface GameState {
   construction?: import("./construction").ConstructionState;
   politics?: import("./politics").PoliticsState;
   relocation?: import("./relocation").RelocationState;
+  /** League expansion: the proposal, the bids, the vote and the clubs that joined (expansion.ts). */
+  expansion?: import("./expansion").ExpansionState;
   global?: import("./global").GlobalState;
   legal?: LegalState;
   /** Offseason grades, fan expectations and the season's storylines. */

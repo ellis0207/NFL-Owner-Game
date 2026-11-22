@@ -8,6 +8,7 @@ import { addDays, daysBetween, weekday } from "./dates";
 import { NFL_HQ, miles } from "./collegeData";
 import { BASE_KEY_DATES, BASE_SCHEDULE, BASE_SEASON, TEAMS, TEAM_BY_ID } from "./league";
 import { formatFor, weeksOf, type SeasonFormat } from "./format";
+import { flexPairings, standardLeague } from "./flexschedule";
 import { makeRng, type Rng } from "./rng";
 import type { ScheduledGame } from "./types";
 
@@ -283,8 +284,8 @@ function shuffle<T>(rng: Rng, xs: T[]): T[] {
  */
 function byeCountsFor(rng: Rng, f: SeasonFormat): number[] {
   const span = weeksOf(f) - 8;
-  if (f.byes === 1 && span === 10) return shuffle(rng, [2, 4, 4, 2, 4, 4, 2, 4, 4, 2]);
-  const total = 32 * f.byes;
+  if (f.byes === 1 && span === 10 && TEAMS.length === 32) return shuffle(rng, [2, 4, 4, 2, 4, 4, 2, 4, 4, 2]);
+  const total = TEAMS.length * f.byes;
   const base = 2 * Math.floor(total / (2 * span));
   const counts = Array.from({ length: span }, () => base);
   let left = total - base * span;
@@ -321,8 +322,17 @@ function assignWeeks(rng: Rng, games: Pairing[], mustHome: Record<number, string
   }
   const left = new Set(games.map((_, i) => i));
   const weeks: number[][] = Array.from({ length: last + 1 }, () => []);
-  // The last week: every division plays two of its own games.
-  for (const conf of ["AFC", "NFC"] as const) {
+  const lastPlayed: Record<string, number> = {};
+  // The last week: every division plays two of its own games. A league with
+  // five-club divisions plays as many division games as it can that week.
+  const standard = standardLeague();
+  if (!standard) {
+    const w = matchWeek(rng, games, left, teams, last, new Set(), false, lastPlayed, true);
+    if (!w) return null;
+    for (const i of w) left.delete(i);
+    weeks[last] = w;
+  }
+  for (const conf of standard ? (["AFC", "NFC"] as const) : []) {
     for (const div of DIVS) {
       const t = divTeams(conf, div);
       const matchings = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
@@ -335,59 +345,10 @@ function assignWeeks(rng: Rng, games: Pairing[], mustHome: Record<number, string
       }
     }
   }
-  const lastPlayed: Record<string, number> = {};
   for (let w = 1; w < last; w++) {
     const avail = teams.filter((t) => !bye[t].includes(w));
-    const remaining = [...left];
-    const options: Record<string, number[]> = {};
-    for (const t of avail) options[t] = [];
-    const homeOnly = new Set(mustHome[w] ?? []);
-    for (const i of remaining) {
-      const g = games[i];
-      if (homeOnly.has(g.away)) continue;
-      if (options[g.home] && options[g.away]) {
-        options[g.home].push(i);
-        options[g.away].push(i);
-      }
-    }
-    const used = new Set<string>();
-    const chosen: number[] = [];
-    let steps = 0;
-    const solve = (): boolean => {
-      if (++steps > 4000) return false;
-      // The team with the fewest choices goes first.
-      let best: string | null = null;
-      let bestN = Infinity;
-      for (const t of avail) {
-        if (used.has(t)) continue;
-        const n = options[t].filter((i) => !used.has(games[i].home) && !used.has(games[i].away)).length;
-        if (n < bestN) { bestN = n; best = t; }
-      }
-      if (!best) return true;
-      if (bestN === 0) return false;
-      // Clubs that share a stadium are kept from both being home the same week where the grid allows it.
-      const homeNow = new Set(chosen.map((c) => games[c].home));
-      const clash = (i: number) => apart && SHARED.some(([a, b]) => (games[i].home === a && homeNow.has(b)) || (games[i].home === b && homeNow.has(a)));
-      const cands = shuffle(rng, options[best].filter((i) => !used.has(games[i].home) && !used.has(games[i].away)));
-      // Rematches close together are a last resort, and so is a shared stadium booked twice.
-      cands.sort((a, b) => recent(a) + (clash(a) ? 2 : 0) - recent(b) - (clash(b) ? 2 : 0));
-      for (const i of cands) {
-        const g = games[i];
-        used.add(g.home).add(g.away);
-        chosen.push(i);
-        if (solve()) return true;
-        chosen.pop();
-        used.delete(g.home);
-        used.delete(g.away);
-      }
-      return false;
-    };
-    const recent = (i: number) => {
-      const g = games[i];
-      const key = [g.home, g.away].sort().join("-");
-      return lastPlayed[key] !== undefined && w - lastPlayed[key] < 4 ? 1 : 0;
-    };
-    if (!solve()) return null;
+    const chosen = matchWeek(rng, games, left, avail, w, new Set(mustHome[w] ?? []), apart, lastPlayed, false);
+    if (!chosen) return null;
     for (const i of chosen) {
       left.delete(i);
       lastPlayed[[games[i].home, games[i].away].sort().join("-")] = w;
@@ -395,6 +356,59 @@ function assignWeeks(rng: Rng, games: Pairing[], mustHome: Record<number, string
     weeks[w] = chosen;
   }
   return left.size ? null : weeks;
+}
+
+/** One week's games: every available club paired once, from the games left. */
+function matchWeek(rng: Rng, games: Pairing[], left: Set<number>, avail: string[], w: number, homeOnly: Set<string>, apart: boolean, lastPlayed: Record<string, number>, preferDivision: boolean): number[] | null {
+  const remaining = [...left];
+  const options: Record<string, number[]> = {};
+  for (const t of avail) options[t] = [];
+  for (const i of remaining) {
+    const g = games[i];
+    if (homeOnly.has(g.away)) continue;
+    if (options[g.home] && options[g.away]) {
+      options[g.home].push(i);
+      options[g.away].push(i);
+    }
+  }
+  const used = new Set<string>();
+  const chosen: number[] = [];
+  let steps = 0;
+  const solve = (): boolean => {
+    if (++steps > 4000) return false;
+    // The team with the fewest choices goes first.
+    let best: string | null = null;
+    let bestN = Infinity;
+    for (const t of avail) {
+      if (used.has(t)) continue;
+      const n = options[t].filter((i) => !used.has(games[i].home) && !used.has(games[i].away)).length;
+      if (n < bestN) { bestN = n; best = t; }
+    }
+    if (!best) return true;
+    if (bestN === 0) return false;
+    // Clubs that share a stadium are kept from both being home the same week where the grid allows it.
+    const homeNow = new Set(chosen.map((c) => games[c].home));
+    const clash = (i: number) => apart && SHARED.some(([a, b]) => (games[i].home === a && homeNow.has(b)) || (games[i].home === b && homeNow.has(a)));
+    const cands = shuffle(rng, options[best].filter((i) => !used.has(games[i].home) && !used.has(games[i].away)));
+    // Rematches close together are a last resort, and so is a shared stadium booked twice.
+    cands.sort((a, b) => recent(a) + (clash(a) ? 2 : 0) - recent(b) - (clash(b) ? 2 : 0) + (preferDivision ? Number(games[b].division) - Number(games[a].division) : 0));
+    for (const i of cands) {
+      const g = games[i];
+      used.add(g.home).add(g.away);
+      chosen.push(i);
+      if (solve()) return true;
+      chosen.pop();
+      used.delete(g.home);
+      used.delete(g.away);
+    }
+    return false;
+  };
+  const recent = (i: number) => {
+    const g = games[i];
+    const key = [g.home, g.away].sort().join("-");
+    return lastPlayed[key] !== undefined && w - lastPlayed[key] < 4 ? 1 : 0;
+  };
+  return solve() ? chosen : null;
 }
 
 const INTL_SITES: [stadium: string, city: string, time: string][] = [
@@ -471,7 +485,7 @@ export function buildSchedule(season: number, seed: number, place: Record<string
   const rng = makeRng(seed ^ (season * 7919));
   const format = opts.format ?? formatFor(season);
   const last = weeksOf(format);
-  const pairs = seasonPairings(season, place, format.games);
+  const pairs = standardLeague() ? seasonPairings(season, place, format.games) : flexPairings(rng, format.games);
   const kickoff = kickoffDate(season);
   const sunday1 = addDays(kickoff, 3);
   const turkey = thanksgiving(season);
@@ -511,6 +525,7 @@ export function buildSchedule(season: number, seed: number, place: Record<string
       for (let i = 0; i < 9; i++) slots.push({ date: sunday, time: "13:00" });
       for (let i = 0; i < 4; i++) slots.push({ date: sunday, time: "16:25" });
       slots.push({ date: sunday, time: "20:20" });
+      while (slots.length < games.length) slots.push({ date: sunday, time: "13:00" });
     } else {
       const thursday = addDays(sunday, -3);
       const isTurkey = thursday === turkey;
@@ -644,7 +659,7 @@ function preseason(season: number, rng: Rng): ScheduledGame[] {
       const [home, away] = (homeCount[x] ?? 0) <= (homeCount[y] ?? 0) ? [x, y] : [y, x];
       homeCount[home] = (homeCount[home] ?? 0) + 1;
       met.add(key(x, y));
-      const date = addDays(k, days[w - 1][slot]);
+      const date = addDays(k, days[w - 1][Math.min(slot, days[w - 1].length - 1)]);
       out.push({
         id: `${season}_P${w}_${away}_${home}`, type: "PRE", week: w, date, weekday: weekday(date),
         timeET: times[slot % times.length], away, home, neutral: false, ...homeStadium(home),

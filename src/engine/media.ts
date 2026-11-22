@@ -636,7 +636,7 @@ function draftCoverage(state: GameState): void {
     const list = Object.entries(byTeam).map(([t, xs]) => [t, letter(xs.reduce((a, b) => a + b, 0) / xs.length)] as const).sort((a, b) => gp(b[1]) - gp(a[1]));
     story(state, O.ledger, "draft", {
       kind: "draft", college: true, teams: [list[0][0], state.userTeam],
-      headline: `${DRAFT_YEAR} draft class grades for all 32 teams`,
+      headline: `${DRAFT_YEAR} draft class grades for all ${TEAMS.length} teams`,
       body: list.map(([t, g]) => `${teamLabel(t)}: ${g}`).join("\n"),
     });
   }

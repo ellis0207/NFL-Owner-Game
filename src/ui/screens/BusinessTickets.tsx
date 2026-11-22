@@ -197,7 +197,7 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
           </div>
         )}
         <span className="muted">
-          34% of general ticket money, after a 15% stadium deduction, goes into a league pool shared by all 32 teams; suites and clubs aren't shared.
+          34% of general ticket money, after a 15% stadium deduction, goes into a league pool shared by every club; suites and clubs aren't shared.
           Playoff ticket money goes to the league, and the home team keeps what's sold inside the building.
           {acq && acq.added ? ` Finding new ticket buyers cost about ${money(acq.spend / acq.added)} each in ${acq.season}.` : ""}
         </span>

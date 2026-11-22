@@ -142,7 +142,7 @@ function note(state: GameState, text: string): void {
 /** Every market a club could move to now: open cities, and second-team cities big enough. */
 export function markets(state: GameState): MarketData[] {
   const season = state.season ?? RULES.season;
-  const taken = new Set([...relocation(state).moves.map((m) => m.market), ...TEAMS.map((t) => oldHome(state, t.id, season)?.market).filter((x): x is string => !!x)]);
+  const taken = new Set([...relocation(state).moves.map((m) => m.market), ...(state.expansion?.clubs ?? []).map((c) => c.market), ...TEAMS.map((t) => oldHome(state, t.id, season)?.market).filter((x): x is string => !!x)]);
   const out = OPEN_MARKETS.filter((m) => !taken.has(m.id));
   const year = Number(state.date.slice(0, 4));
   const count: Record<string, number> = {};
@@ -165,7 +165,7 @@ export function marketById(state: GameState, id: string): MarketData | undefined
   return markets(state).find((m) => m.id === id) ?? OPEN_MARKETS.find((m) => m.id === id);
 }
 
-function distance(a: [number, number], b: [number, number]): number {
+export function distance(a: [number, number], b: [number, number]): number {
   const r = Math.PI / 180;
   const d = Math.sin(((b[0] - a[0]) * r) / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(((b[1] - a[1]) * r) / 2) ** 2;
   return Math.round(3959 * 2 * Math.asin(Math.sqrt(d)));
@@ -177,7 +177,7 @@ export function neighbors(_state: GameState, m: MarketData, except?: string): st
 }
 
 /** The business a market would support: what the gate model reads for it. */
-function marketEconomics(m: MarketData) {
+export function marketEconomics(m: MarketData) {
   const size = Math.min(10, m.pop);
   return {
     metro: { pop: m.pop, region: m.wide, growth: m.growth, income: m.income, rivals: m.rivals },
@@ -366,11 +366,11 @@ function decide(state: GameState, b: Bid): void {
   const m = marketById(state, b.market)!;
   if (yes < VOTES_TO_PASS) {
     b.status = "denied";
-    news(state, "relocation", `Owners reject the ${teamLabel(b.team)}' move to ${m.city}, ${yes}-${32 - yes}`);
+    news(state, "relocation", `Owners reject the ${teamLabel(b.team)}' move to ${m.city}, ${yes}-${TEAMS.length - yes}`);
     if (b.team === state.userTeam) {
       delete relocation(state).lameDuck;
-      note(state, `The owners voted the move down, ${yes}-${32 - yes}.`);
-      send(state, "league", "League Office", "Relocation not approved", `The owners voted ${yes}-${32 - yes}; ${VOTES_TO_PASS} were needed. The club stays where it is. Fans here won't forget that we tried to leave.`);
+      note(state, `The owners voted the move down, ${yes}-${TEAMS.length - yes}.`);
+      send(state, "league", "League Office", "Relocation not approved", `The owners voted ${yes}-${TEAMS.length - yes}; ${VOTES_TO_PASS} were needed. The club stays where it is. Fans here won't forget that we tried to leave.`);
     }
     return;
   }
@@ -427,9 +427,9 @@ function move(state: GameState, b: Bid, m: MarketData, yes: number): void {
     // The old lease and any stadium plan in the old city end.
     if (state.construction?.plan && !["open", "shelved"].includes(state.construction.plan.stage)) state.construction.plan.stage = "shelved";
     if (state.construction) delete state.construction.exploreRelocation;
-    note(state, `The owners approved the move to ${m.city}, ${yes}-${32 - yes}.`);
+    note(state, `The owners approved the move to ${m.city}, ${yes}-${TEAMS.length - yes}.`);
     send(state, "league", "League Office", "Relocation approved",
-      `The owners approved the move ${yes}-${32 - yes}. The club plays in ${m.city} from the ${season} season, at ${m.venue.name}${m.venue.ready ? "" : " until a new stadium is built"}. The relocation fee is ${money(fee)}, paid over ten years. The division stays the same unless the owners vote to realign.`);
+      `The owners approved the move ${yes}-${TEAMS.length - yes}. The club plays in ${m.city} from the ${season} season, at ${m.venue.name}${m.venue.ready ? "" : " until a new stadium is built"}. The relocation fee is ${money(fee)}, paid over ten years. The division stays the same unless the owners vote to realign.`);
   }
   r.moves.push(mv);
   // The club's lease goes with the old building; the new home is leased (or shared).
@@ -447,7 +447,7 @@ function move(state: GameState, b: Bid, m: MarketData, yes: number): void {
     if (us) send(state, "business", businessChief(state), "A stadium in the new market", `The league approved the move on our promise of a new stadium in ${m.city}. Commission studies on the New stadium tab; the public side here has signaled it could fund about ${Math.round(m.publicLean * 100)}%.`);
     else c.cpu.push({ team, announced: state.date, approved: state.date, opens: season + 3, name: `${m.city} Stadium`, roof: m.climate.snow > 0.2 ? "dome" : "open", cost: Math.round(2_000 * M * inflation(season, 0.04) / (10 * M)) * 10 * M, structure: "publicTeam" });
   }
-  news(state, "relocation", `Owners approve the ${mv.fromCity} ${mv.fromName}' move to ${m.city}, ${yes}-${32 - yes}`);
+  news(state, "relocation", `Owners approve the ${mv.fromCity} ${mv.fromName}' move to ${m.city}, ${yes}-${TEAMS.length - yes}`);
 }
 
 function payFee(state: GameState): void {
@@ -474,6 +474,10 @@ interface Originals {
   team: Record<string, { city: string; conference: "AFC" | "NFC"; division: "East" | "North" | "South" | "West" }>;
 }
 let ORIG: Originals | undefined;
+/** Takes the 2026 snapshot now, before expansion clubs are laid on (expansion.ts). */
+export function primeOriginals(): void {
+  original();
+}
 /** The 2026 cities of the clubs a historical pack places elsewhere. */
 const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas" };
 /** The stadium names in a historical pack's first season. */

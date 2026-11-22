@@ -229,7 +229,7 @@ function Storylines({ game }: { game: GameState }) {
       {grades && (
         <section className="panel stack tight">
           <h3>Offseason grades</h3>
-          {Object.keys(grades).map((o) => <span key={o}>{o}: {grades[o][us]} <span className="muted">(No. {rank(o)} of 32, counting ties)</span></span>)}
+          {Object.keys(grades).map((o) => <span key={o}>{o}: {grades[o][us]} <span className="muted">(No. {rank(o)} of {Object.keys(grades[o]).length}, counting ties)</span></span>)}
           {r?.gm && <span>Our GM's own grade: {r.gm}</span>}
         </section>
       )}

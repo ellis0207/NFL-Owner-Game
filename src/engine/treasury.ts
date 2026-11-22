@@ -16,7 +16,7 @@ import { execBoost, execRole, signer } from "./executives";
 import { noteDecision } from "./delegation";
 import { money, send } from "./inbox";
 import { leagueYear } from "./contracts";
-import { RULES } from "./league";
+import { RULES, TEAMS } from "./league";
 import { rngFor } from "./rng";
 import type { Dept, GameState, LedgerCat } from "./types";
 
@@ -123,7 +123,7 @@ export function workingCapital(state: GameState): WorkingCapital {
   const receivables = Math.round((billed * dso) / 365);
   const payables = Math.round((spend * dpo) / 365);
   const deferred = deferredRevenue(state);
-  const poolDue = Math.round(business(state).pool / 32);
+  const poolDue = Math.round(business(state).pool / TEAMS.length);
   const cash = cashBalance(state);
   return { cash, receivables, payables, deferred, poolDue, net: cash + receivables + poolDue - payables - deferred, dso, dpo, reserve: reserveTarget(state) };
 }
