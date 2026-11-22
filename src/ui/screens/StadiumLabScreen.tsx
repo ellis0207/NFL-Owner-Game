@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { shortDate } from "../../engine/dates";
 import { TEAMS, teamLabel } from "../../engine/league";
-import { labDraft, labQuote, labVenue, saveDraft, startRenovation, SUITE_SEATS, type LabView } from "../../engine/stadiumlab";
+import { drawable, labDraft, labQuote, labVenue, saveDraft, startRenovation, SUITE_SEATS, type LabView } from "../../engine/stadiumlab";
 import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
 import { underWay } from "../../engine/labstate";
 import type { GameState } from "../../engine/types";
@@ -10,7 +10,7 @@ import { normalizeParking, parkingPlan } from "../../lab/parking.js";
 import { parcelPlan } from "../../lab/parcels.js";
 import { references } from "../../lab/references.js";
 import { setSurveys, surveys } from "../../lab/surveys.js";
-import type { LabConfig } from "../../lab/types";
+import type { LabConfig, LabVenue } from "../../lab/types";
 import { Viewer } from "../../lab/viewer.js";
 import { Callout, Card, StatRow, StatTile } from "../kit";
 import { money as small } from "../format";
@@ -49,6 +49,8 @@ export function StadiumLabScreen({ game, changed }: { game: GameState; changed: 
   };
   const quote = useMemo(() => labQuote(game, design, view), [design, view]);
   const busy = underWay(game, view.building);
+  const builtScene = useMemo(() => drawable(view, view.built), [view]);
+  const designScene = useMemo(() => drawable(view, design), [view, design]);
   const s = STADIUM_BY_TEAM[team];
   return (
     <section className="stack">
@@ -69,7 +71,8 @@ export function StadiumLabScreen({ game, changed }: { game: GameState; changed: 
       </StatRow>
       <div className={ours ? "sl-page" : "sl-page sl-wide"}>
         <div className="sl-main">
-          <Stage view={view} design={design} editable={ours} />
+          <Stage labId={view.labId} known={view.known} building={view.building} editable={ours}
+            built={builtScene} design={designScene} />
           {ours && <Impact game={game} view={view} design={design} quote={quote} msg={msg}
             start={() => { const r = startRenovation(game, design); setMsg(r); changed(); }}
             reset={() => { saveDraft(game, null); setDesign(view.built); setMsg(null); }} />}
@@ -83,13 +86,18 @@ export function StadiumLabScreen({ game, changed }: { game: GameState; changed: 
 }
 
 /** The 3D stage: the design or the building as it stands, four cameras, night lighting, the photo and the map credit. */
-function Stage({ view, design, editable }: { view: LabView; design: LabConfig; editable: boolean }) {
+export interface Scene { v: LabVenue; c: LabConfig }
+
+export function Stage({ labId, known, building, editable, built, design, designTitle = "Our design" }: {
+  labId?: string; known: boolean; building: string; editable: boolean; built?: Scene; design: Scene; designTitle?: string;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const viewer = useRef<Viewer | null>(null);
-  const [asBuilt, setAsBuilt] = useState(!editable);
+  const [asBuiltPick, setAsBuilt] = useState(!editable);
+  const asBuilt = asBuiltPick && !!built;
   const [camera, setCamera] = useState("orbit");
   const [flags, setFlags] = useState({ night: false, hideRoof: false, rotate: false });
-  const [mapped, setMapped] = useState(!!view.labId && !!surveys[view.labId]);
+  const [mapped, setMapped] = useState(!!labId && !!surveys[labId]);
   const [photo, setPhoto] = useState(false);
   const [label, setLabel] = useState<string | null>(null);
   useEffect(() => {
@@ -102,23 +110,23 @@ function Stage({ view, design, editable }: { view: LabView; design: LabConfig; e
   }, []);
   useEffect(() => { setAsBuilt(!editable); }, [editable]);
   useEffect(() => {
-    if (view.labId && !surveys[view.labId]) void loadSurveys().then(() => setMapped(!!surveys[view.labId!]));
-    else setMapped(!!view.labId && !!surveys[view.labId]);
-  }, [view.labId]);
-  const shown = asBuilt ? view.built : design;
+    if (labId && !surveys[labId]) void loadSurveys().then(() => setMapped(!!surveys[labId]));
+    else setMapped(!!labId && !!surveys[labId]);
+  }, [labId]);
+  const shown = asBuilt && built ? built : design;
   useEffect(() => {
     const v = viewer.current;
     if (!v) return;
-    try { v.load(view.model, shown); } catch { /* a model that fails to draw leaves the last one up */ }
-  }, [view, shown, mapped]);
+    try { v.load(shown.v, shown.c); } catch { /* a model that fails to draw leaves the last one up */ }
+  }, [shown, mapped]);
   const cam = (mode: string) => { setCamera(mode); const v = viewer.current; if (v) { v.hideRoof = flags.hideRoof; v.reset(mode); if (mode === "field") setFlags((f) => ({ ...f, hideRoof: true })); } };
   const flip = (k: keyof typeof flags) => { const next = { ...flags, [k]: !flags[k] }; setFlags(next); const v = viewer.current; if (v) { v[k] = next[k]; v.dirty = true; } };
-  const ref = view.labId ? references[view.labId] : undefined;
+  const ref = labId ? references[labId] : undefined;
   return (
-    <Card title={asBuilt ? "As it stands" : "Our design"} kicker={view.known ? "Architectural study" : "Estimated model"}>
+    <Card title={asBuilt ? "As it stands" : designTitle} kicker={known ? "Architectural study" : "Design study"}>
       <div className="sl-stage" ref={box}>
         <div className="sl-stage-top">
-          {editable ? (
+          {editable && built ? (
             <div className="sl-seg" role="group" aria-label="Design or as built">
               <button aria-pressed={!asBuilt} onClick={() => setAsBuilt(false)}>Design</button>
               <button aria-pressed={asBuilt} onClick={() => setAsBuilt(true)}>As built</button>
@@ -144,7 +152,7 @@ function Stage({ view, design, editable }: { view: LabView; design: LabConfig; e
       {label && <p className="muted">Selected: {label}</p>}
       {photo && ref && (
         <figure className="sl-figure">
-          <img src={`lab/${ref.file}`} alt={view.building} />
+          <img src={`lab/${ref.file}`} alt={building} />
           <figcaption>
             Photo: <a href={String(ref.url ?? "")} target="_blank" rel="noreferrer">{ref.title}</a> by {ref.credit},{" "}
             <a href={ref.licenseUrl} target="_blank" rel="noreferrer">{ref.license}</a>, via Wikimedia Commons. It shows the real building; the model is a study.
@@ -223,7 +231,7 @@ function History({ game, view }: { game: GameState; view: LabView }) {
 
 // ---- The editor ----
 
-function Slider({ label, value, min, max, step, show, help, onChange }: { label: string; value: number; min: number; max: number; step: number; show: string; help?: string; onChange: (x: number) => void }) {
+export function Slider({ label, value, min, max, step, show, help, onChange }: { label: string; value: number; min: number; max: number; step: number; show: string; help?: string; onChange: (x: number) => void }) {
   return (
     <label className="sl-control">
       <span>{label}<output>{show}</output></span>
@@ -233,7 +241,7 @@ function Slider({ label, value, min, max, step, show, help, onChange }: { label:
   );
 }
 
-function Choose({ label, value, options, help, onChange }: { label: string; value: string; options: Record<string, string>; help?: string; onChange: (x: string) => void }) {
+export function Choose({ label, value, options, help, onChange }: { label: string; value: string; options: Record<string, string>; help?: string; onChange: (x: string) => void }) {
   return (
     <label className="sl-control">
       <span>{label}</span>
@@ -253,7 +261,7 @@ function Num({ label, value, min, max, help, onChange }: { label: string; value:
   );
 }
 
-function Switch({ on, built, label, note, onChange }: { on: boolean; built: boolean; label: string; note: string; onChange: (x: boolean) => void }) {
+export function Switch({ on, built, label, note, onChange }: { on: boolean; built: boolean; label: string; note: string; onChange: (x: boolean) => void }) {
   return (
     <button role="switch" aria-checked={on} className="sl-switch" disabled={built} onClick={() => onChange(!on)}>
       <span><b>{label}</b><small>{built ? "Already built here" : note}</small></span>

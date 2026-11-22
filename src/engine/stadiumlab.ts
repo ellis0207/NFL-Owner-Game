@@ -11,7 +11,7 @@
 // laid over the stadium (labstate.ts), premium seats, parking and land go into
 // the grounds model, and the rest moves the gate like the matching project
 // would, counted once: a project already done here adds nothing twice.
-import { baseline, estimate, type LabEstimate } from "../lab/economics.js";
+import { baseline, customVenue, estimate, type LabEstimate } from "../lab/economics.js";
 import { venues } from "../lab/data.js";
 import { parkingProfiles } from "../lab/parking-data.js";
 import { normalizeParking, parkingPlan } from "../lab/parking.js";
@@ -65,6 +65,23 @@ export interface LabView {
   labId?: string;
   renovations: LabRenovation[];
   site: SiteKind;
+  /** A building the Lab doesn't know is drawn as a modern design of its own, from its record (shape and finishes seeded by its name). */
+  look?: { shape: string; rake: string; facade: string; board: string };
+}
+
+const pick = <T,>(xs: readonly T[], r: () => number): T => xs[Math.floor(r() * xs.length) % xs.length];
+
+/** What the viewer draws for a design: the Lab's own model for a known building, a custom design built on the record for any other. */
+export function drawable(view: LabView, c: LabConfig): { v: LabVenue; c: LabConfig } {
+  if (!view.look) return { v: view.model, c };
+  const L = view.look;
+  const v: LabVenue = { ...customVenue, name: view.building, capacity: c.capacity, roof: c.roof, color: c.color, facadeColor: "#abb8b2" };
+  const out = {
+    ...c, custom: true, name: view.building, shape: String(c.shape ?? L.shape), rake: String(c.rake ?? L.rake), decks: Number(c.decks ?? 0),
+    facade: c.facade === "original" ? L.facade : c.facade, board: c.board === "original" ? L.board : c.board,
+    parcelMode: false, parcelIds: "", parking: 0, garageFoot: 0, convert: 0, retire: 0, siteAcres: 150,
+  } as LabConfig;
+  return { v, c: normalizeParking(v, out) };
 }
 
 function labRoof(roof: string): string {
@@ -110,7 +127,12 @@ export function labVenue(state: GameState, team = state.userTeam): LabView {
     suites: Number(last?.suites ?? 0),
     market: MARKET[site], soft: 15, contingency: 20, landRate: LAND_RATE[site], lease: 0,
   });
-  return { team, building, model, venue, built: normalizeParking(venue, built), known: !!key, labId: key === "LA" ? "LAR" : key, renovations: done, site };
+  let look: LabView["look"];
+  if (!key) {
+    const r = rngFor(1, `lab-look:${building}`);
+    look = { shape: pick(["oval", "rectangular", "horseshoe"], r), rake: pick(["balanced", "steep"], r), facade: pick(["metal", "glass", "timber", "brick"], r), board: pick(["large", "halo"], r) };
+  }
+  return { team, building, model, venue, built: normalizeParking(venue, built), known: !!key, labId: key === "LA" ? "LAR" : key, renovations: done, site, look };
 }
 
 /** The parking the Lab plans around: the real inventory with the lots our renovations built added, or the game's own lots for a building the Lab doesn't know. */
@@ -415,4 +437,86 @@ function open(state: GameState, r: LabRenovation): void {
     headline: `${TEAM_BY_ID[state.userTeam].name} open the renovated ${r.at}`,
     body: `The ${TEAM_BY_ID[state.userTeam].name} showed off the finished renovation of ${r.at} today: ${r.capacity.toLocaleString("en-US")} seats, at ${money(r.price)} all in.`,
   });
+}
+
+// ---- A new stadium designed on a blank site (construction.ts) ----
+
+/** Seats a new stadium can be designed for (construction.ts's range). */
+export const NEW_SEATS = [55_000, 80_000] as const;
+const LAB_FOR_ROOF: Record<string, string> = { open: "open", dome: "fixed", retractable: "retractable" };
+
+/** The Lab design of the stadium in the plan: the owner's if there is one, else a plain building of the plan's size and roof. */
+export function newDesign(state: GameState): LabConfig | undefined {
+  const p = state.construction?.plan;
+  if (!p) return undefined;
+  const base = baseline(customVenue);
+  const plain = {
+    ...base, custom: true, name: p.name, capacity: p.capacity, roof: LAB_FOR_ROOF[p.roof] ?? "open", color: TEAM_COLORS[state.userTeam]?.[0] ?? "#356d58",
+    facade: "metal", board: "compact", parking: 0, garageFoot: 0, soft: 15, contingency: 20, market: 1,
+  } as LabConfig;
+  const d = p.lab ? ({ ...plain, ...p.lab, name: p.name, capacity: p.capacity } as LabConfig) : plain;
+  // The plan's roof wins unless the design holds a canopy, which the game counts as open air.
+  if (!(p.roof === "open" && d.roof === "canopy")) d.roof = LAB_FOR_ROOF[p.roof] ?? "open";
+  return d;
+}
+
+/** Fit-out lines: what a design adds beyond the base building that construction.ts prices by seats, roof and land. */
+function fitOutLines(d: LabDesign | LabConfig): { label: string; cost: number; basis: string }[] {
+  const c = { ...baseline(customVenue), ...d, custom: true, parking: 0, garageFoot: 0, market: 1, soft: 15, contingency: 0, land: 0 } as LabConfig;
+  const e = estimate(customVenue, c);
+  // The base building's price already covers its bowl, a fixed or retractable roof, a basic scoreboard and the field; parking comes with the site.
+  const base = new Set(["Stadium core and site work", "Fixed roof", "Retractable roof", "Playing surface and drainage"]);
+  return e.lines.filter((l) => !base.has(l.label) && !/parking/i.test(l.label) && !(l.label === "Video display system" && c.board === "compact"));
+}
+
+/** A design's fit-out in 2026 dollars, design fees included (construction.ts scales it with the building). */
+export function fitOut2026(d: LabDesign | LabConfig): number {
+  return Math.round(fitOutLines(d).reduce((t, l) => t + l.cost, 0) * 1.15);
+}
+
+export function fitOutItems(d: LabConfig): { label: string; cost: number; basis: string }[] {
+  return fitOutLines(d);
+}
+
+/** Save the owner's design to the plan: seats, roof and name go to construction's design, the rest is the fit-out. */
+export function setNewDesign(state: GameState, d: LabConfig): string | null {
+  const p = state.construction?.plan;
+  if (!p || p.stage !== "design") return "The building can be designed once the studies are in.";
+  p.capacity = Math.max(NEW_SEATS[0], Math.min(NEW_SEATS[1], Math.round(d.capacity / 1000) * 1000));
+  p.roof = d.roof === "fixed" ? "dome" : d.roof === "retractable" ? "retractable" : "open";
+  if (d.name && String(d.name).trim()) p.name = String(d.name).trim().slice(0, 60);
+  p.lab = Object.fromEntries(Object.entries({ ...d, capacity: p.capacity, name: p.name }).filter(([, x]) => ["string", "number", "boolean"].includes(typeof x))) as LabDesign;
+  return null;
+}
+
+/** What a new building's fit-out does to the gate (its newness is construction.ts's own lift, so the basics count half). */
+function fitOutEffect(d: LabDesign): { effect: LabEffect; covers: string[]; premium: number; upkeep: number } {
+  const effect: LabEffect = { demand: 0, premium: 0, perCap: 0, sponsor: 0 };
+  const covers: string[] = [];
+  const add = (fx: Partial<LabEffect>, proj?: string) => { for (const k of Object.keys(fx) as (keyof LabEffect)[]) effect[k] += fx[k] ?? 0; if (proj) covers.push(proj); };
+  if (d.board === "halo") add({ demand: 0.045, sponsor: 0.06 }, "boards");
+  else if (d.board === "large") add({ demand: 0.03, sponsor: 0.04 }, "boards");
+  if (d.wifi) add({ demand: 0.005, sponsor: 0.0125 }, "wifi");
+  if (d.amenities) add({ demand: 0.02, perCap: 0.1 }, "concourse");
+  if (d.plaza) add({ demand: 0.015, perCap: 0.04, sponsor: 0.01 });
+  if (d.led) add({ demand: 0.005, sponsor: 0.01 });
+  if (d.roof === "canopy") add({ demand: 0.015 });
+  return { effect, covers, premium: Number(d.suites ?? 0) * SUITE_SEATS, upkeep: d.solar ? 0.97 : 1 };
+}
+
+/** On opening day the new building's fit-out is recorded at it like a finished renovation, so the gate, grounds and later designs all read it. */
+export function openFitOut(state: GameState, n: { team: string; name: string; capacity: number; roof: string; opened: number }, d: LabDesign): void {
+  const f = fitOutEffect(d);
+  const roof = d.roof === "canopy" ? "canopy" : LAB_FOR_ROOF[n.roof] ?? "open";
+  stadiumLab(state).renovations.push({
+    id: nextId(state, "reno"), team: n.team, at: n.name, title: `${n.name} as designed`, kind: "new",
+    design: { ...d, roof, capacity: n.capacity }, capacity: n.capacity, roof, before: { capacity: n.capacity, roof },
+    premium: f.premium, effect: f.effect, covers: f.covers, spaces: 0, garage: 0, acres: 0, closed: 0, upkeep: f.upkeep,
+    renews: [], price: 0, cost: 0, contingency: 0, paid: 0, started: state.date, opens: state.date, opened: true,
+  });
+}
+
+/** The playing surface the design chose. */
+export function surfaceFromDesign(state: GameState, d: LabDesign): void {
+  if (state.facilities && d.surface) state.facilities.surface = d.surface === "turf" ? "turf" : "grass";
 }

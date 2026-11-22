@@ -556,6 +556,8 @@ export interface LabRenovation {
   /** The building it was done to: it stays with the building if the club moves. */
   at: string;
   title: string;
+  /** "new": the fit-out of a new stadium designed on a blank site (construction.ts), opened with the building. */
+  kind?: "new";
   design: LabDesign;
   /** Seats and the Lab's roof kind after the work, and before it. */
   capacity: number;

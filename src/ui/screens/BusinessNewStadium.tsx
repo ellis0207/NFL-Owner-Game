@@ -11,6 +11,7 @@ import { addCommitment, afterRejection, answerRival, answerSponsor, commissionIm
 import { STADIUM_BY_TEAM } from "../../engine/stadiums";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { NewStadiumDesigner } from "./NewStadiumDesigner";
 
 export function NewStadium({ game, changed }: { game: GameState; changed: () => void }) {
   const [said, setSaid] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export function NewStadium({ game, changed }: { game: GameState; changed: () => 
                 <label key={k}><input type="checkbox" checked={p.benefits[k]} onChange={(x) => say(designPlan(game, { benefits: { [k]: x.target.checked } }))} /> {{ jobs: "Local hiring", local: "Local contractors", access: "Community use" }[k]}</label>
               ))}
             </div>
+            <NewStadiumDesigner game={game} changed={changed} />
             <span>Estimated cost today: {money(baseCost(game, p))}. The public side could go up to {money(Math.round(baseCost(game, p) * MODELS[p.model].publicMax))} under this model.</span>
             <label className="field"><span className="label">Public money to ask for: {money(ask)}</span>
               <input type="range" min={0} max={Math.round(baseCost(game, p) * MODELS[p.model].publicMax)} step={25_000_000} value={ask} onChange={(x) => setAsk(Number(x.target.value))} /></label>

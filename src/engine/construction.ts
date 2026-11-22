@@ -29,6 +29,7 @@ import { constructionFactor } from "./economy";
 import { partDefs } from "./facilities";
 import { bindLeases } from "./leases";
 import { bindStadiumLab } from "./labstate";
+import { fitOut2026, openFitOut, surfaceFromDesign } from "./stadiumlab";
 import { bindRelocation, cpuStadiumFailed, restoreStadiums } from "./relocation";
 import { metroPop } from "./fans";
 import { money, news, send } from "./inbox";
@@ -39,7 +40,7 @@ import { startPolitics } from "./politics";
 import { gaussian, rngFor } from "./rng";
 import { STADIUM_BY_TEAM, type Stadium, type Structure } from "./stadiums";
 import { reserved } from "./investors";
-import type { GameState } from "./types";
+import type { GameState, LabDesign } from "./types";
 import { landForSite, type SiteFacts } from "./grounds";
 
 const M = 1_000_000;
@@ -115,6 +116,8 @@ export interface StadiumPlan {
   commitments: string[];
   /** Years the team agreed not to move, in return for public money. */
   stayUntil?: number;
+  /** The building as designed in Stadium Lab (stadiumlab.ts): shape, decks, finishes, suites and fit-out beyond the base building. */
+  lab?: LabDesign;
 }
 
 export interface CpuBuild { team: string; announced: string; approved?: string; opens?: number; name: string; roof: Roof; cost: number; structure: Structure; failed?: boolean }
@@ -292,7 +295,8 @@ export function baseCost(state: GameState, p: StadiumPlan): number {
   const site = p.sites.find((s) => s.id === p.site) ?? p.sites[0];
   const year = Number(state.date.slice(0, 4));
   const seats = 1_350 * M * (p.capacity / 65_000) ** 0.9;
-  const raw = seats * ROOFS[p.roof].build + (site?.land ?? 100 * M) + (p.benefits.local ? seats * 0.02 : 0);
+  // A Stadium Lab design adds its fit-out (suites, boards, finishes, plaza, a canopy) to the base building.
+  const raw = seats * ROOFS[p.roof].build + (site?.land ?? 100 * M) + (p.benefits.local ? seats * 0.02 : 0) + (p.lab ? fitOut2026(p.lab) : 0);
   return Math.round((raw * inflation(year, 0.04) * constructionFactor(state) + (p.mitigation ?? 0)) / M) * M;
 }
 
@@ -531,7 +535,9 @@ function openStadium(state: GameState): void {
   };
   const site = p.sites.find((x) => x.id === p.site);
   if (site) n.land = landForSite(state, us, site.kind, site.transit, site.parking);
+  if (p.lab) openFitOut(state, n, p.lab);
   replaceStadium(state, n);
+  if (p.lab) surfaceFromDesign(state, p.lab);
   delete c.temporary;
   note(state, `${p.name} opened.`);
   send(state, "business", businessChief(state), `${p.name} is open`,
@@ -652,12 +658,13 @@ export function shelvePlan(state: GameState): string | null {
 }
 
 /** Test and report helper: run the plan through to construction with sensible choices. */
-export function fastTrack(state: GameState, opts: { site?: string; roof?: Roof; model?: Model; ask?: number; contract?: ContractKind } = {}): void {
+export function fastTrack(state: GameState, opts: { site?: string; roof?: Roof; model?: Model; ask?: number; contract?: ContractKind; lab?: LabDesign } = {}): void {
   const c = construction(state);
   if (!c.plan || c.plan.stage === "shelved" || c.plan.stage === "open") commissionStudies(state);
   if (c.plan!.stage === "study") finishStudies(state);
   designPlan(state, { site: opts.site ?? "suburb", roof: opts.roof ?? "dome", model: opts.model ?? "partnership" });
   const p = c.plan!;
+  if (opts.lab) p.lab = opts.lab;
   submitDesign(state, 0);
   p.funding.public = opts.ask ?? Math.round(baseCost(state, p) * 0.3);
   const need = ourShareOf(state, p) * 1.05;
