@@ -23,6 +23,7 @@ const PREFIX: Record<string, string[]> = {
   "rooms/office.css": ["bd-"],
   "rooms/league.css": ["lg-"],
   "rooms/game.css": ["ut-"],
+  "lab.css": ["sl-", "district-labels"],
 };
 
 /**

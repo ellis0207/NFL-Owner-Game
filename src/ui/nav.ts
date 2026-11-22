@@ -6,7 +6,7 @@ export const NAV = [
   { id: "team", label: "Team", pages: ["Football", "Roster", "Schedule", "Game week", "Camp", "Clubhouse", "Staff", "Stats", "Analytics"] },
   { id: "moves", label: "Roster building", pages: ["Contracts", "Cap", "Free agents", "Trades"] },
   { id: "draft", label: "Draft", pages: ["College", "Scouting", "Draft"] },
-  { id: "office", label: "Owner's office", pages: ["Owner", "Ownership", "Front office", "Business", "Reports", "Agreements", "Legal"] },
+  { id: "office", label: "Owner's office", pages: ["Owner", "Ownership", "Front office", "Business", "Stadium Lab", "Reports", "Agreements", "Legal"] },
   { id: "league", label: "League", pages: ["Standings", "League", "Owners", "History"] },
   { id: "game", label: "Game", pages: ["Settings", "Guide", "Achievements", "Save"] },
 ] as const;
@@ -48,6 +48,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   Ownership: "Partners, the board, stake sales, returns, succession, and buying or selling a club",
   "Front office": "Executives, memos, meetings and culture",
   Business: "Books, tickets, sponsors, stadium, parking and markets",
+  "Stadium Lab": "Your stadium in 3D: design and price a renovation, or look at any club's building",
   Reports: "Saved reports and briefings, cause and effect, year records",
   Agreements: "Agreements and the archive",
   Legal: "Compliance and legal matters",

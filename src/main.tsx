@@ -20,6 +20,7 @@ import "./ui/styles/tips.css";
 import "./ui/styles/app.css";
 import "./ui/styles/hall.css";
 import "./ui/styles/mediapages.css";
+import "./ui/styles/lab.css";
 
 type Hot = { ready?: (fn: (data: unknown) => void) => void; data?: unknown };
 

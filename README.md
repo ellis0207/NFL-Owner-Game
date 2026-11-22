@@ -1048,6 +1048,25 @@ list) and loses at most two. They pick first in every round of their first
 draft. If your bid won, you take over the new club then and your old one is
 sold. Owners > Expansion follows it all.
 
+The Stadium Lab page shows any club's building in 3D (Stadium Lab, the
+owner's own design tool, built into the game): real 2026 venues modeled from
+photos, with the district around them mapped from OpenStreetMap, and an
+estimated bowl for buildings the Lab hasn't modeled (new stadiums, moved and
+expansion clubs). For our own building it is a renovation editor: seats,
+roof, exterior, seat color, surface, suites, video boards, concourses, Wi-Fi,
+lighting, solar, a fan plaza, new lots and garages, and land bought in zones,
+each drawn as you change it beside the building as it stands. The price
+starts from the Lab's line items (2026 rates) and is set in the game's terms:
+this year's construction costs, the city's building market and land, who
+pays by who owns the stadium, the lease's renovation fund and a public
+authority's sign-off. Work starts between February and May, is paid down
+monthly, closes part of the bowl in any season it runs through, and settles
+over or under its contingency the day it opens. Then the new bowl and roof
+are the stadium's (weather, hosting bids and the gate all follow), suites
+become premium seats, parking and land join the grounds, worn parts are
+renewed, and the rest lifts the gate like the matching project would,
+counted once.
+
 The club can also grow abroad. The league grants marketing rights in up to
 three countries for five years; localized content, fan events and youth
 programs build an audience over years against other clubs chasing the same
@@ -1189,6 +1208,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
   New stadiums (studies, sites, design, financing, bids, the build and opening, and other clubs' projects) are `construction.ts`; the public side (impact studies, the environmental review, voters, council votes and referenda, rival suburbs, sponsors' questions) `politics.ts`.
   Relocation (markets, exit costs, the league's application and vote, the move, realignment) is `relocation.ts`; expansion (bids, the vote, the expansion draft, the new clubs) `expansion.ts`, with `flexschedule.ts` for divisions of five; international rights, audiences, currency and the player pathway `global.ts`.
+  Stadium Lab (the 3D models, estimating rules, parking and land data) is vendored in `src/lab/` (see its README for patches and credits); renovations priced, paid and opened through the game are `stadiumlab.ts`, and what finished work does to the building `labstate.ts`.
   The ownership group (partners, stake sales, the board and reserved matters, capital calls, investor reports, bridge loans, returns) is `investors.ts`.
   The owner's own wealth (holdings, personal debt, family office and trust, foundation, public profile, business conflicts) is `wealth.ts`.
   The franchise market (appraisals, listings, diligence, bids, financing, the league vote) is `franchisemarket.ts`; closing a purchase, switching clubs and the buyer and minority starts `takeover.ts`; owner aging, heirs, the estate, selling the club, the end of a tenure and the legacy review `succession.ts`; rival clubs' owners, governance, money, reputations, meddling and careers `rivals.ts`; the cause-and-effect log `causes.ts`; year records and all-or-nothing actions `archive.ts`.

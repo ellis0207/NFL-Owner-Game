@@ -12,7 +12,7 @@ import type { TreasuryState } from "./treasury";
 import type { PeopleState } from "./people";
 import type { StandingState } from "./standing";
 
-import type { BusinessState, CommunityState, DepartmentsState, DraftArchive, FacilitiesState, LeagueState, LeaseState, MerchState, ReviewState, SeasonRecord, TeamMediaState, VenueState } from "./types-business";
+import type { BusinessState, CommunityState, DepartmentsState, DraftArchive, FacilitiesState, LeagueState, LeaseState, MerchState, ReviewState, SeasonRecord, StadiumLabState, TeamMediaState, VenueState } from "./types-business";
 import type { CfbWorld, CollegeState } from "./types-college";
 import type { ComplianceState, CrisisState, HostingState, LeagueMoneyState, LeagueOfficeState, LegalState, OwnersState, ProgramState, RedoAsk } from "./types-league";
 import type { FanState, MediaState, TeamFinance } from "./types-media";
@@ -1162,6 +1162,8 @@ export interface GameState {
   business?: BusinessState;
   /** What the owner changed around the stadium: garages, leased lots, seats rebuilt as clubs (grounds.ts). */
   grounds?: GroundsState;
+  /** Renovations designed on the Stadium page and the owner's drafts (stadiumlab.ts). */
+  stadiumLab?: StadiumLabState;
   /** The fan base and the market (fans.ts). */
   fans?: FanState;
   /** Batch J: the store and the brand (merch.ts), team media (teammedia.ts) and the venue (venue.ts). */

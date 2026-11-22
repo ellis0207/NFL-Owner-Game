@@ -74,6 +74,7 @@ import { communityDaily } from "./community";
 import { departmentsDaily } from "./departments";
 import { sponsorsDaily } from "./sponsors";
 import { projectsDaily } from "./projects";
+import { stadiumLabDaily } from "./stadiumlab";
 import { groundsDaily } from "./grounds";
 import { reviewDaily } from "./review";
 import type { GameState, ScheduledGame, Settings } from "./types";
@@ -722,6 +723,7 @@ function endDay(state: GameState): void {
   communityDaily(state);
   departmentsDaily(state);
   projectsDaily(state);
+  stadiumLabDaily(state);
   groundsDaily(state);
   constructionDaily(state);
   politicsDaily(state);
