@@ -1067,6 +1067,17 @@ become premium seats, parking and land join the grounds, worn parts are
 renewed, and the rest lifts the gate like the matching project would,
 counted once.
 
+A new stadium is designed the same way. Once the feasibility studies are in,
+Business > New stadium opens the Lab's blank-site builder: name, seats, roof
+(a seating canopy included), bowl shape, decks, rake, exterior, seat color,
+surface, suites, video boards, concourses, Wi-Fi, lighting, solar and a fan
+plaza. Seats, roof and name become the plan's; the rest is fit-out added to
+the building's price, and on opening day it is the building's: suites as
+premium seats, the boards and plaza on the gate, the surface on the field.
+Buildings the Lab never modeled (other clubs' new stadiums, moved and
+expansion clubs' homes) are drawn as modern designs of their own on the
+Stadium Lab page.
+
 The club can also grow abroad. The league grants marketing rights in up to
 three countries for five years; localized content, fan events and youth
 programs build an audience over years against other clubs chasing the same

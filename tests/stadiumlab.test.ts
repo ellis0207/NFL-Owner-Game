@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { bindConstruction } from "../src/engine/construction";
+import { baseCost, bindConstruction, construction, constructionDaily, fastTrack } from "../src/engine/construction";
 import { bindExpansion, forceExpansion, forceOpen, expansion } from "../src/engine/expansion";
 import { facilities } from "../src/engine/facilities";
 import { groundsModel, seatsOn } from "../src/engine/grounds";
 import { RULES } from "../src/engine/league";
 import { projectEffects, projectTerms } from "../src/engine/projects";
-import { labDraft, labQuote, labVenue, startRenovation, stadiumLabDaily } from "../src/engine/stadiumlab";
+import { drawable, labDraft, labQuote, labVenue, newDesign, setNewDesign, startRenovation, stadiumLabDaily } from "../src/engine/stadiumlab";
+import { labEffects } from "../src/engine/labstate";
 import { STADIUM_BY_TEAM } from "../src/engine/stadiums";
 import { parseSaveFile, toSaveFile } from "../src/save/codec";
 import type { GameState } from "../src/engine/types";
@@ -96,5 +97,35 @@ describe("Stadium Lab renovations", () => {
     try {
       expect(labQuote(s, plan(s).d).blocked).toMatch(/rent/);
     } finally { STADIUM_BY_TEAM.DET.structure = was; }
+  });
+
+  it("designs a new stadium in the Lab: the fit-out adds to its price and opens with the building", () => {
+    const s = (last = stateAt("DET", 5, AT));
+    fastTrack(s);
+    const plainCost = baseCost(s, construction(s).plan!);
+    reset(s);
+    const t = (last = stateAt("DET", 5, AT));
+    fastTrack(t, { lab: { suites: 40, board: "halo", plaza: true, amenities: true, shape: "horseshoe", facade: "glass", surface: "natural", roof: "fixed", capacity: 68000 } });
+    const p = construction(t).plan!;
+    expect(baseCost(t, p)).toBeGreaterThan(plainCost + 150e6);
+    t.date = p.opens!;
+    constructionDaily(t);
+    expect(p.stage).toBe("open");
+    expect(STADIUM_BY_TEAM.DET.name).toBe(p.name);
+    expect(labEffects(t).demand).toBeGreaterThan(0.05);
+    expect(seatsOn(groundsModel(t)).premium).toBeGreaterThanOrEqual(Math.round(STADIUM_BY_TEAM.DET.capacity * 0.12) + 800);
+    expect(facilities(t).surface).toBe("grass");
+    const view = labVenue(t);
+    expect(view.known).toBe(false);
+    expect(view.built.suites).toBe(40);
+    expect(drawable(view, view.built).c.shape).toBe("horseshoe");
+    expect(projectTerms(t, "boards").blocked).toMatch(/as designed/);
+  });
+
+  it("saves a design to the plan only in the design stage", () => {
+    const s = (last = stateAt("DET", 5, AT));
+    expect(setNewDesign(s, { capacity: 70000 } as never)).toMatch(/studies/);
+    fastTrack(s);
+    expect(newDesign(s)?.capacity).toBe(construction(s).plan!.capacity);
   });
 });
