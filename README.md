@@ -1078,6 +1078,13 @@ Buildings the Lab never modeled (other clubs' new stadiums, moved and
 expansion clubs' homes) are drawn as modern designs of their own on the
 Stadium Lab page.
 
+Business > Grounds draws our lots in the Lab's 3D district view, colored by
+who runs them (ours, leased, going up, independent). Pick a garage size or one
+of the named nearby lots for lease (closer lots cost more, since they fill
+first) and it is drawn in as proposed, next to what it would do on a sold-out
+day: the build cost or rent, parking money a game and a season, the payback,
+and the cars left with nowhere close.
+
 The club can also grow abroad. The league grants marketing rights in up to
 three countries for five years; localized content, fan events and youth
 programs build an audience over years against other clubs chasing the same

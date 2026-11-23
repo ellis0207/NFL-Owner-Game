@@ -1065,7 +1065,8 @@ export interface History {
 export interface GroundsState {
   /** `paid`: paid so far (a deposit, then monthly until it opens; absent in older saves, which paid it all up front). `at`: the stadium it was built at. */
   garages: { id: string; spaces: number; acres: number; cost: number; started: string; opens: string; paid?: number; at?: string }[];
-  leases: { id: string; name: string; spaces: number; rent: number; through: number; at?: string }[];
+  /** `lot`, `walk`, `kind`: the named nearby lot it came from (`leaseOffers`); absent for older saves' leases. */
+  leases: { id: string; name: string; spaces: number; rent: number; through: number; at?: string; lot?: string; walk?: number; kind?: "surface" | "garage" }[];
   premium: { id: string; seats: number; cost: number; started: string; opens: string; phased: boolean; paid?: number; at?: string }[];
 }
 

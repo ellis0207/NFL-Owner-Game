@@ -23,7 +23,7 @@ import { addDays, daysBetween, shortDate } from "./dates";
 import { creditLimit } from "./debt";
 import { constructionFactor } from "./economy";
 import { facilities, partDefs } from "./facilities";
-import { groundsModel, PREMIUM_SHARE, siteOf, type SiteKind } from "./grounds";
+import { groundsModel, leaseOffers, PREMIUM_SHARE, siteOf, type GroundsChange, type Lot, type SiteKind } from "./grounds";
 import { nextId } from "./ids";
 import { money, news, send } from "./inbox";
 import { bindStadiumLab, builtAt, stadiumLab, underWay } from "./labstate";
@@ -146,6 +146,8 @@ function profileFor(state: GameState, team: string, model: LabVenue, key: string
       if (r.garage > 0) facilities.push({ id: `lab-${r.id}-g`, name: `Garage built in the ${r.title}`, control: "managed", type: "garage", spaces: r.garage, quality: "built" });
       used += (Number(r.design.parking ?? 0) + Number(r.design.garageFoot ?? 0)) * 330 / 43560;
     }
+    // What the owner added on the Grounds page (garages, leased lots, the parking project) sits beside the surveyed lots.
+    if (team === state.userTeam) for (const l of groundsModel(state, state.date, team).lots) if (ADDED.test(l.id)) facilities.push(labLot(l));
     return { ...base, facilities, acreage: Math.max(0, Math.round((base.acreage - used) * 10) / 10) };
   }
   const m = groundsModel(state, state.date, team);
@@ -154,8 +156,37 @@ function profileFor(state: GameState, team: string, model: LabVenue, key: string
     context: `${m.site === "downtown" ? "Downtown" : m.site === "urban" ? "City" : "Suburban"} site (game estimate)`, source: null, sourceLabel: "Game estimate",
     notes: "Lots and land are the game's estimates for this building, not surveyed figures.", acreage: m.freeAcres, rebuildAcres: Math.round((main?.acres ?? 0) * 0.3),
     price: MARKETS[team]?.parking ?? 40, heading: 0, constraints: [],
-    facilities: m.lots.filter((l) => !l.opens).map((l) => ({ id: `g-${l.id}`, name: l.name, control: l.control === "independent" ? "shared" : "managed", type: l.kind, spaces: l.spaces, quality: "estimated" })),
+    facilities: m.lots.map(labLot),
   };
+}
+
+/** Lots from the Grounds page and the parking project, as opposed to the building's own. */
+const ADDED = /^(garage|lease|project-garage)/;
+
+/** A grounds lot as the Lab draws it: who runs it picks the color, and a garage still going up is drawn as work under way. */
+function labLot(l: Lot): LabProfile["facilities"][number] {
+  const control = l.opens ? "building" : l.control === "independent" ? "shared" : l.control === "leased" ? "leased" : "managed";
+  return { id: `g-${l.id}`, name: l.opens ? `${l.name} (opens ${shortDate(l.opens)})` : l.name, control, type: l.kind, spaces: l.spaces, quality: "estimated" };
+}
+
+/**
+ * Our grounds in 3D for the Grounds page, with a garage or a lease the owner
+ * is weighing drawn in as proposed. The Lab reads lots from its parking
+ * profile, so the proposal goes on a copy of ours for this drawing only.
+ */
+export function groundsScene(state: GameState, change?: GroundsChange): { view: LabView; scene: { v: LabVenue; c: LabConfig } } {
+  const view = labVenue(state);
+  const base = parkingProfiles[view.model.id];
+  if (change && base) {
+    const o = "lease" in change ? leaseOffers(state).find((x) => x.id === change.lease) : undefined;
+    const f = "garage" in change
+      ? { id: "proposed-garage", name: `Proposed garage, ${change.garage.toLocaleString("en-US")} spaces`, control: "proposed", type: "garage", spaces: change.garage, quality: "proposed" }
+      : o && { id: "proposed-lease", name: `${o.name} (to lease)`, control: "proposed", type: o.kind, spaces: o.spaces, quality: "proposed" };
+    if (f) parkingProfiles[view.model.id] = { ...base, facilities: [...base.facilities, f] };
+  }
+  const scene = drawable(view, view.built);
+  // A made-up building is drawn as a custom design, which has no lots of its own; point it at our profile so the lots show.
+  return { view, scene: view.known ? { ...scene } : { v: { ...scene.v, id: view.model.id }, c: scene.c } };
 }
 
 /** The owner's design in progress at our building (the building as it stands when there is none). */

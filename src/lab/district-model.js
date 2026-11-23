@@ -1,6 +1,6 @@
 // Site geometry uses local yards. OSM outlines identify mapped use, never ownership.
 const directions={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
-const palette={managed:'#738b85',shared:'#718fa8',mapped:'#a2aaa4',proposed:'#408c68',open:'#a4ba87'};
+const palette={managed:'#738b85',shared:'#718fa8',mapped:'#a2aaa4',proposed:'#408c68',open:'#a4ba87',leased:'#c6a55b',building:'#b9c4b0'};
 const normalize=s=>String(s||'').toLowerCase().replace(/parking|stadium|car park|lot|garage|[^a-z0-9]/g,'');
 const lotNumber=s=>String(s||'').toLowerCase().match(/\blot\s*(\d+)\b/)?.[1];
 const area=ring=>ring.reduce((a,p,i)=>{const q=ring[(i+1)%ring.length];return a+p[0]*q[1]-p[1]*q[0]},0)/2;

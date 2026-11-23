@@ -88,14 +88,14 @@ export function StadiumLabScreen({ game, changed }: { game: GameState; changed: 
 /** The 3D stage: the design or the building as it stands, four cameras, night lighting, the photo and the map credit. */
 export interface Scene { v: LabVenue; c: LabConfig }
 
-export function Stage({ labId, known, building, editable, built, design, designTitle = "Our design" }: {
-  labId?: string; known: boolean; building: string; editable: boolean; built?: Scene; design: Scene; designTitle?: string;
+export function Stage({ labId, known, building, editable, built, design, designTitle = "Our design", camera: startCamera = "orbit" }: {
+  labId?: string; known: boolean; building: string; editable: boolean; built?: Scene; design: Scene; designTitle?: string; camera?: string;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const viewer = useRef<Viewer | null>(null);
   const [asBuiltPick, setAsBuilt] = useState(!editable);
   const asBuilt = asBuiltPick && !!built;
-  const [camera, setCamera] = useState("orbit");
+  const [camera, setCamera] = useState(startCamera);
   const [flags, setFlags] = useState({ night: false, hideRoof: false, rotate: false });
   const [mapped, setMapped] = useState(!!labId && !!surveys[labId]);
   const [photo, setPhoto] = useState(false);
@@ -105,6 +105,7 @@ export function Stage({ labId, known, building, editable, built, design, designT
     let v: Viewer;
     try { v = new Viewer(box.current); } catch { return; }
     v.onSelect = (l) => setLabel(`${l.name}${l.match ? ` (${l.match})` : ""}`);
+    if (startCamera !== "orbit") v.reset(startCamera);
     viewer.current = v;
     return () => { v.destroy(); viewer.current = null; };
   }, []);
