@@ -15,6 +15,8 @@ The modules are copied from the Lab's `dist/` as they were, with these patches:
   (filled by `setSurveys`) instead of the 2.3 MB `site-surveys.js`. The game
   serves them as `lab/site-surveys.json` (`assets/lab/`) and the page fetches
   them when it opens; a district draws without them until then.
+- `district-model.js`: two more lot colors, `leased` (lots the club leases)
+  and `building` (a garage still going up), for the Grounds page's 3D view.
 - `*.d.ts` and `types.d.ts`: TypeScript declarations for what the game imports.
 - `lab-original.css.txt`: the Lab's own stylesheet, kept for reference; the page
   is styled by `src/ui/styles/lab.css`.

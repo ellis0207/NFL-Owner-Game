@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { shortDate } from "../../engine/dates";
-import { DEPOSIT, buildGarage, convertToPremium, garageCost, groundsModel, leaseCost, leaseLot, parkingDay, premiumCost, seatsOn, type GroundsModel, type Lot, type Section } from "../../engine/grounds";
+import { DEPOSIT, convertToPremium, groundsModel, parkingDay, premiumCost, seatsOn, type GroundsModel, type Lot, type Section } from "../../engine/grounds";
 import { MARKETS, STADIUM_BY_TEAM } from "../../engine/stadiums";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { GroundsEditor } from "./GroundsEditor";
 
 const SITE_LABEL = { downtown: "Downtown", urban: "In the city, outside the core", suburban: "Suburban" } as const;
 const CONTROL_LABEL = { owned: "Ours", leased: "Leased by us", operator: "Run by the stadium operator", independent: "Independent (earns us nothing)" } as const;
@@ -84,8 +85,6 @@ export function GroundsPlan({ m }: { m: GroundsModel }) {
 
 export function Grounds({ game, changed }: { game: GameState; changed: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
-  const [garage, setGarage] = useState(2000);
-  const [lease, setLease] = useState(1000);
   const [seats, setSeats] = useState(1500);
   const [phased, setPhased] = useState(true);
   const m = groundsModel(game);
@@ -148,22 +147,10 @@ export function Grounds({ game, changed }: { game: GameState; changed: () => voi
           </dl>
         </div>
       </div>
+      <GroundsEditor game={game} changed={changed} say={setMsg} date={game.date} />
       <div className="panel stack tight">
-        <h3>Changes</h3>
+        <h3>Club seats</h3>
         {st.structure === "tenant" && <p className="muted">We rent {st.name}; changes to the bowl are {st.owner}'s call.</p>}
-        <div className="btn-row">
-          <select value={garage} onChange={(e) => setGarage(Number(e.target.value))} aria-label="Garage size">
-            {[1000, 2000, 3000, 4000].map((x) => <option key={x} value={x}>{n(x)} spaces</option>)}
-          </select>
-          <button onClick={() => act(buildGarage(game, garage), `The garage is under way.`)}>Build a garage on our lots ({money(garageCost(game, garage))}, {Math.round(DEPOSIT * 100)}% now)</button>
-        </div>
-        <div className="btn-row">
-          <select value={lease} onChange={(e) => setLease(Number(e.target.value))} aria-label="Lot size">
-            {[500, 1000, 2000].map((x) => <option key={x} value={x}>{n(x)} spaces</option>)}
-          </select>
-          <button onClick={() => act(leaseLot(game, lease), "The lot is ours to run for three seasons.")}>Lease a nearby lot ({money(leaseCost(game, lease))} a year)</button>
-          <span className="muted">{m.leasable >= 100 ? `About ${n(m.leasable)} nearby spaces are free to lease.` : "Every nearby lot for lease is ours."}</span>
-        </div>
         <div className="btn-row">
           <select value={seats} onChange={(e) => setSeats(Number(e.target.value))} aria-label="Seats to convert">
             {[500, 1000, 1500, 2500].map((x) => <option key={x} value={x}>{n(x)} seats</option>)}

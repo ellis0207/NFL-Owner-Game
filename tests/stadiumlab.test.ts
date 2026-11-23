@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { baseCost, bindConstruction, construction, constructionDaily, fastTrack } from "../src/engine/construction";
 import { bindExpansion, forceExpansion, forceOpen, expansion } from "../src/engine/expansion";
 import { facilities } from "../src/engine/facilities";
-import { groundsModel, seatsOn } from "../src/engine/grounds";
+import { groundsImpact, groundsModel, leaseLot, leaseOffers, seatsOn } from "../src/engine/grounds";
+import { parkingProfiles } from "../src/lab/parking-data.js";
 import { RULES } from "../src/engine/league";
 import { projectEffects, projectTerms } from "../src/engine/projects";
-import { drawable, labDraft, labQuote, labVenue, newDesign, setNewDesign, startRenovation, stadiumLabDaily } from "../src/engine/stadiumlab";
+import { drawable, groundsScene, labDraft, labQuote, labVenue, newDesign, setNewDesign, startRenovation, stadiumLabDaily } from "../src/engine/stadiumlab";
 import { labEffects } from "../src/engine/labstate";
 import { STADIUM_BY_TEAM } from "../src/engine/stadiums";
 import { parseSaveFile, toSaveFile } from "../src/save/codec";
@@ -127,5 +128,32 @@ describe("Stadium Lab renovations", () => {
     expect(setNewDesign(s, { capacity: 70000 } as never)).toMatch(/studies/);
     fastTrack(s);
     expect(newDesign(s)?.capacity).toBe(construction(s).plan!.capacity);
+  });
+
+  it("draws our grounds with a proposed garage or lease, and leases a named lot", () => {
+    const s = (last = stateAt("DET", 5, AT));
+    const offers = leaseOffers(s);
+    expect(offers.length).toBeGreaterThan(1);
+    expect(leaseOffers(s)).toEqual(offers);
+    expect(offers.reduce((t, o) => t + o.spaces, 0)).toBeLessThanOrEqual(groundsModel(s).leasable + 100);
+    // Closer lots cost more a space.
+    const [near, far] = [offers[0], offers[offers.length - 1]];
+    if (near.walk < far.walk) expect(near.rent / near.spaces).toBeGreaterThan(far.rent / far.spaces * 0.99);
+    const lease = groundsImpact(s, { lease: near.id });
+    expect(lease.yearly).toBe(near.rent);
+    expect(lease.perGame).toBeGreaterThanOrEqual(0);
+    const garage = groundsImpact(s, { garage: 2000 });
+    expect(garage.cost).toBeGreaterThan(0);
+    expect(garage.after.club).toBeGreaterThanOrEqual(garage.before.club);
+    const { view } = groundsScene(s, { garage: 2000 });
+    expect(parkingProfiles[view.model.id].facilities.some((f) => f.control === "proposed" && f.spaces === 2000)).toBe(true);
+    expect(leaseLot(s, 0, near.id)).toBeNull();
+    expect(leaseOffers(s).some((o) => o.id === near.id)).toBe(false);
+    const lot = groundsModel(s).lots.find((l) => l.name === near.name)!;
+    expect(lot.walk).toBe(near.walk);
+    expect(lot.control).toBe("leased");
+    groundsScene(s);
+    expect(parkingProfiles[view.model.id].facilities.some((f) => f.control === "leased" && f.name === near.name)).toBe(true);
+    expect(parkingProfiles[view.model.id].facilities.some((f) => f.control === "proposed")).toBe(false);
   });
 });
