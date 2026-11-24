@@ -84,7 +84,13 @@ export interface Call {
 }
 
 // What a player is doing, when it isn't simply standing or running: kept per frame in `Track.act`.
-export const ACT = { auto: 0, fall: 1, throw: 2, kick: 3, block: 4, catch: 5, cheer: 6, kneel: 7, set: 8 } as const;
+export const ACT = {
+  auto: 0, fall: 1, throw: 2, kick: 3, block: 4, catch: 5, cheer: 6, kneel: 7, set: 8,
+  // The exchanges: the center's snap (a long snap to a holder or punter), the quarterback's handoff and the back taking it.
+  snap: 9, longsnap: 10, handoff: 11, take: 12,
+  // The officials' signals; a touchdown or a good kick is `cheer` with the arms straight up.
+  incomplete: 13, first: 14, toss: 15,
+} as const;
 
 /** A play worked out frame by frame, in field yards (x from the away goal line, y from midfield toward the far sideline). */
 export interface Track {

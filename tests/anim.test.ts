@@ -79,7 +79,9 @@ describe("acting out the play-by-play", () => {
 
   it("puts 22 men on the field and is the same every time", () => {
     const { n, t } = play(/ runs (up the middle|off|around|wide)/);
-    expect(t.pos).toHaveLength(22);
+    // Twenty-two players and the seven officials.
+    expect(t.team.filter((x) => x !== 2)).toHaveLength(22);
+    expect(t.team.filter((x) => x === 2)).toHaveLength(7);
     expect(t.team.filter((x) => x === 0)).toHaveLength(11);
     const again = buildTrack(book, log, n, players)!;
     expect(Array.from(again.pos[6])).toEqual(Array.from(t.pos[6]));
@@ -206,7 +208,7 @@ describe("acting out the play-by-play", () => {
   it("drops a flag on a penalty before the snap", () => {
     const { t } = play(/^Penalty on \w+: (False start|Encroachment|Defensive offside|Neutral zone infraction)/);
     expect(t.flag).not.toBeNull();
-    expect(t.pos).toHaveLength(23);
+    expect(t.pos).toHaveLength(29);
   });
 
   it("steps a penalty off to the next snap's spot behind an official, with the call shown", () => {
@@ -215,7 +217,7 @@ describe("acting out the play-by-play", () => {
       const next = log.plays[n + 1];
       const spot = next[2] === 0 ? next[5] : 100 - next[5];
       expect(Math.abs(t.ball[last(t) * 3] - spot)).toBeLessThan(1.5);
-      expect(t.team.filter((x) => x === 2)).toHaveLength(1);
+      expect(t.team.filter((x) => x === 2)).toHaveLength(7);
       expect(t.caption?.[1]).toMatch(/\d+ yards/);
       // The official carried it there.
       expect(Array.from(t.holder)).toContain(t.team.indexOf(2));
@@ -261,6 +263,30 @@ describe("acting out the play-by-play", () => {
 function glbMoves(): string[] {
   return (JSON.parse(readFileSync("assets/anim/player3d.json", "utf8")).animations as { name: string }[]).map((a) => a.name);
 }
+
+describe("the choreography around a play", () => {
+  it("snaps the ball, hands it off and has the officials take their places", () => {
+    const { t } = play(/ runs (up the middle|off|around|wide)/);
+    expect(t.act.some((a) => a.includes(ACT.snap))).toBe(true);
+    expect(t.act.some((a) => a.includes(ACT.handoff))).toBe(true);
+    expect(t.act.some((a) => a.includes(ACT.take))).toBe(true);
+    // The umpire stands behind the linebackers, the referee behind the quarterback.
+    const refs = t.team.map((x, i) => (x === 2 ? i : -1)).filter((i) => i >= 0);
+    const depth = refs.map((i) => (t.pos[i][0] - t.ball[0]) * t.dir);
+    expect(Math.min(...depth)).toBeLessThan(-8);
+    expect(Math.max(...depth)).toBeGreaterThan(15);
+  });
+
+  it("signals an incomplete pass and a touchdown", () => {
+    const inc = play(/ pass .*incomplete/).t;
+    expect(inc.act.some((a, i) => inc.team[i] === 2 && a.includes(ACT.incomplete))).toBe(true);
+    const td = play(/ pass .* TOUCHDOWN/).t;
+    const end = last(td);
+    expect(td.act.filter((a, i) => td.team[i] === 2 && a[end] === ACT.cheer).length).toBeGreaterThanOrEqual(2);
+    // The scorer has company.
+    expect(td.act.filter((a, i) => td.team[i] === 0 && a[end] === ACT.cheer).length).toBeGreaterThanOrEqual(2);
+  });
+});
 
 describe("the 3D players", () => {
   it("ships a model under its budget with every move the field view asks for", () => {
