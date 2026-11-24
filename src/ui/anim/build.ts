@@ -18,6 +18,7 @@ import { STAT_INDEX } from "../../engine/stats";
 import type { GameLog } from "../../engine/types";
 import { ACT, sample, type Call, type PlayBook, type Slot, type Track } from "./book";
 import { playerNamed, readCall } from "./read";
+import { extend, stage } from "./stagecraft";
 
 const RATE = 20, DT = 1 / RATE;
 const RUN = 7.8;        // yards a second with the ball in the open field
@@ -106,7 +107,7 @@ const reach = (to: P, at: number): Move => {
   };
 };
 
-class Scene {
+export class Scene {
   men: Man[] = [];
   /** The ball each frame: x, y, height, and who holds it (-1 nobody). */
   ballAt: (s: number, sc: Scene) => [number, number, number, number] = () => [0, 0, 0, -1];
@@ -152,7 +153,7 @@ class Scene {
   }
 }
 
-interface Take {
+export interface Take {
   frames: number;
   pos: Float32Array[];
   ball: Float32Array;
@@ -222,9 +223,20 @@ function tackle(sc: Scene, t: Take, carrier: number, end: number, by: number[], 
   const spot: P = [t.pos[carrier][e * 2], t.pos[carrier][e * 2 + 1]];
   const tackler = standIn(sc, t, sc.byId(id), by, e, spot);
   if (tackler < 0) return -1;
+  // The pile: one or two more who were closing in land on top, then get up.
+  const pile = by.filter((i) => i !== tackler && i !== carrier && t.act[i][e] !== ACT.fall)
+    .map((i) => ({ i, d: Math.hypot(t.pos[i][e * 2] - spot[0], t.pos[i][e * 2 + 1] - spot[1]) }))
+    .filter((x) => x.d < 6.5).sort((a, b) => a.d - b.d).slice(0, 2);
+  if (pile.length) extend(t, e + fr(1.6));
   arrive(t, tackler, e, spot, true);
   mark(t, carrier, end, 99, ACT.fall);
   mark(t, tackler, end - 0.15, 99, ACT.fall);
+  pile.forEach(({ i, d }, k) => {
+    const late = Math.max(0.15, d / 7) + k * 0.12;
+    const side = k % 2 ? -1 : 1;
+    arrive(t, i, Math.min(t.frames - 1, e + fr(late)), [spot[0] + 0.35, spot[1] + side * 0.7], true, 0.3);
+    mark(t, i, end + late - 0.15, end + late + 0.75, ACT.fall);
+  });
   t.named.push({ who: tackler, from: e, to: t.frames });
   return tackler;
 }
@@ -339,25 +351,7 @@ function seat(groups: string[][], g: number, id: string | undefined): void {
 
 // ---- The plays ----
 
-interface Built { sc: Scene; take: Take; flagAt?: number; /** Seconds a kicked ball is in the air, end over end. */ tumble?: [number, number]; carrier?: number; end?: number; /** Words for the banner, and when they go up. */ note?: [number, string] }
-
-/** Lengthens a finished take: everyone holds where he was. */
-function extend(t: Take, frames: number): void {
-  if (frames <= t.frames) return;
-  const longer = <A extends Float32Array | Int8Array | Uint8Array>(a: A, per: number): A => {
-    const out = new (a.constructor as new (n: number) => A)(frames * per);
-    out.set(a);
-    for (let f = t.frames; f < frames; f++) for (let k = 0; k < per; k++) out[f * per + k] = a[(t.frames - 1) * per + k];
-    return out;
-  };
-  t.pos = t.pos.map((p) => longer(p, 2));
-  t.act = t.act.map((a) => longer(a, 1));
-  t.face = t.face.map((a) => longer(a, 1));
-  t.ball = longer(t.ball, 3);
-  t.holder = longer(t.holder, 1);
-  for (const x of t.named) if (x.to >= t.frames) x.to = frames;
-  t.frames = frames;
-}
+export interface Built { sc: Scene; take: Take; flagAt?: number; /** Seconds a kicked ball is in the air, end over end. */ tumble?: [number, number]; carrier?: number; end?: number; /** Words for the banner, and when they go up. */ note?: [number, string] }
 
 /**
  * A fumble: the ball comes out where the carrier went down, bounces a couple
@@ -1077,6 +1071,10 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
     const next = castAt(log, n + 1).ball;
     if (next !== null) walkOff(built, (next - los) * dir);
   }
+  const scrimmage = call.kind !== "kickoff" && call.kind !== "punt" && call.kind !== "fg";
+  const next = castAt(log, n + 1);
+  const first = scrimmage && !call.score && next.poss === o && next.down === 1 && !call.turnover;
+  stage(built, call, { ydl: row[5], hash, first, scrimmage });
   const track = onField(built, los, dir, hash, built.note ?? (built.flagAt !== undefined && call.caption ? [built.flagAt, `Flag: ${call.caption}`] : undefined));
 
   // The try after a touchdown, by the club that scored, at the end it scored in.
@@ -1098,10 +1096,12 @@ export function buildTrack(book: PlayBook, log: GameLog, n: number, box?: { away
       const def2 = (mine ? def : boxGroups(box?.[sides[1 - t.side]], false)).map((g) => [...g]);
       tried = pass ? passPlay(book, two, off2, def2, n + 1, flip, 100 - line, 0) : runPlay(book, two, off2, def2, n + 1, flip);
       tried.note = [(tried.end ?? 1.5) + 0.2, t.good ? "Two-point try is good" : "Two-point try fails"];
+      stage(tried, two, { ydl: 100 - line, hash: 0, first: false, scrimmage: true });
       track.then = onField(tried, fieldX(t.side, 100 - line), tdir, 0, tried.note);
     } else {
       const kick: Call = { ...call, kind: "fg", style: t.blocked ? "blocked" : t.good ? "good" : frac(n, 11) < 0.5 ? "left" : "right", next: null, recoverer: undefined, ids: { kicker: t.kicker }, names: { kicker: t.kickerName }, try: undefined };
       tried = fieldGoal(kick, 100 - LEAGUE_RULES.xpLine, 0, n);
+      stage(tried, kick, { ydl: 100 - LEAGUE_RULES.xpLine, hash: 0, first: false, scrimmage: false });
       tried.note = t.blocked ? [tried.note?.[0] ?? 1.5, "Extra point is blocked"] : [(tried.take.frames - 1) / RATE - 1.1, t.good ? "Extra point is good" : "Extra point is no good"];
       track.then = onField(tried, fieldX(t.side, 100 - LEAGUE_RULES.xpLine), tdir, 0, tried.note);
     }

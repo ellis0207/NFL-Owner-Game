@@ -124,6 +124,13 @@ export function plan(t: Track, i: number, seed: number): Plan {
       if (t.team[i] === 2) clip = "ref_td";
       else { const r = hash(seed + i, 5); clip = has && r < 0.3 ? "spike" : r < 0.45 ? "leap" : r < 0.6 ? "dance" : r < 0.72 ? "flex" : r < 0.84 ? "point" : "cheer"; }
     } else if (code === ACT.kneel) clip = group === "QB" ? "kneel" : "hold";
+    else if (code === ACT.snap) clip = "snap";
+    else if (code === ACT.longsnap) clip = "longsnap";
+    else if (code === ACT.handoff) clip = "handoff";
+    else if (code === ACT.take) clip = "take";
+    else if (code === ACT.incomplete) clip = "ref_incomplete";
+    else if (code === ACT.first) clip = "ref_first";
+    else if (code === ACT.toss) clip = "ref_flag";
     else if (code === ACT.set && sp <= 1.2) clip = line ? "stance3" : "ready";
     else if (code === ACT.block && sp <= 3.5) {
       const rel = Math.abs(wrap(headingOf(vx, vy) - heading[f]));
