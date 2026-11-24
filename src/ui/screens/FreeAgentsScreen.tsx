@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TeamBadge } from "../gfx";
 import { accruedSeasons, capSummary, teamPlayerIds } from "../../engine/cap";
 import { claimedDeal, dealCapHit, leagueYear, practiceWeekly } from "../../engine/contracts";
 import { ageOn, shortDate } from "../../engine/dates";
@@ -319,7 +320,7 @@ function Wire({ game }: { game: GameState }) {
           <tbody>
             {rows.map((t, i) => (
               <tr key={`${t.date}-${t.player}-${i}`} className="clickable" {...tip("player", t.player)} onClick={() => ui.openPlayer(t.player)}>
-                <td>{shortDate(t.date)}</td><td>{t.team}</td><td>{t.text.charAt(0).toUpperCase() + t.text.slice(1)}</td>
+                <td>{shortDate(t.date)}</td><td><TeamBadge team={t.team} size={18} /></td><td>{t.text.charAt(0).toUpperCase() + t.text.slice(1)}</td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={3} className="muted">No moves yet.</td></tr>}

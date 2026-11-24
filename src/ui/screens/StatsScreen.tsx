@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Leaderboard } from "../gfx";
 import { PLAYER_BY_ID, RULES, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { seasonTotals, teamTotals, type SeasonLine, type StatKey, type StatLine } from "../../engine/stats";
 import type { GameState, GameType } from "../../engine/types";
@@ -78,22 +79,9 @@ export function StatsScreen({ game }: { game: GameState }) {
           {LEADERS.map((cat) => {
             const top = entries.filter(([, s]) => cat.value(s.line) > 0).sort((a, b) => cat.value(b[1].line) - cat.value(a[1].line)).slice(0, 8);
             return (
-              <div key={cat.title} className="stack tight">
+              <div key={cat.title} className="panel stack tight">
                 <h3>{cat.title}</h3>
-                <div className="table-wrap">
-                  <table>
-                    <tbody>
-                      {top.map(([pid, s], i) => (
-                        <tr key={pid} className={`clickable ${s.team === game.userTeam ? "mine" : ""}`} {...tip("player", pid)} onClick={() => ui.openPlayer(pid)}>
-                          <td className="num muted">{i + 1}</td>
-                          <td className="name">{PLAYER_BY_ID[pid].name} <span className="muted">{s.team}</span>{cat.fmt && <div className="muted" style={{ fontWeight: 400 }}>{cat.fmt(s.line)}</div>}</td>
-                          <td className="num"><strong>{cat.value(s.line)}</strong></td>
-                        </tr>
-                      ))}
-                      {top.length === 0 && <tr><td className="muted">None yet</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
+                {top.length ? <Leaderboard onPick={ui.openPlayer} rows={top.map(([pid, s]) => ({ key: pid, team: s.team, mine: s.team === game.userTeam, who: <span {...tip("player", pid)}>{PLAYER_BY_ID[pid].name}</span>, sub: cat.fmt ? cat.fmt(s.line) : s.team, value: cat.value(s.line) }))} /> : <span className="muted">None yet</span>}
               </div>
             );
           })}

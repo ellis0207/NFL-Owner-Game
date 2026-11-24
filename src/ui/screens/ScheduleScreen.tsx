@@ -6,6 +6,7 @@ import { matchup } from "../../engine/standings";
 import type { GameState } from "../../engine/types";
 import { useUi } from "../ui";
 import { tip } from "../tip";
+import { Chip, Columns, Icon, TeamBadge } from "../gfx";
 
 export function ScheduleScreen({ game }: { game: GameState }) {
   const ui = useUi();
@@ -22,44 +23,54 @@ export function ScheduleScreen({ game }: { game: GameState }) {
       </section>
     );
   }
+  const rows = games.map((g) => {
+    const m = matchup(game, g)!;
+    const home = m.home === us;
+    const opp = home ? m.away : m.home;
+    const r = game.results[g.id];
+    let res: "W" | "L" | "T" | undefined, ours = 0, theirs = 0;
+    if (r) {
+      ours = home ? r.homeScore : r.awayScore;
+      theirs = home ? r.awayScore : r.homeScore;
+      res = ours > theirs ? "W" : ours < theirs ? "L" : "T";
+      if (g.type === "REG") { if (res === "W") w++; else if (res === "L") l++; else t++; }
+    }
+    return { g, home, opp, r, res, ours, theirs, rec: r && g.type === "REG" ? `${w}-${l}${t ? `-${t}` : ""}` : "" };
+  });
+  const done = rows.filter((x) => x.r && x.g.type !== "PRE");
   return (
     <section className="stack">
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Week</th><th>Date</th><th>Opponent</th><th>Kickoff</th><th>Site</th><th className="num">Result</th><th className="num">Record</th></tr>
-          </thead>
-          <tbody>
-            {games.map((g) => {
-              const m = matchup(game, g)!;
-              const home = m.home === us;
-              const opp = home ? m.away : m.home;
-              const r = game.results[g.id];
-              let result = "";
-              let cls = "";
-              if (r) {
-                const ours = home ? r.homeScore : r.awayScore;
-                const theirs = home ? r.awayScore : r.homeScore;
-                const res = ours > theirs ? "W" : ours < theirs ? "L" : "T";
-                cls = res === "W" ? "good" : res === "L" ? "bad" : "";
-                result = `${res} ${ours}-${theirs}${r.overtime ? " OT" : ""}`;
-                if (g.type === "REG") { if (res === "W") w++; else if (res === "L") l++; else t++; }
-              }
-              const isToday = g.date === game.date;
-              return (
-                <tr key={g.id} className={`${isToday ? "mine" : ""} ${r ? "clickable" : ""}`} {...tip("game", g.id)} onClick={r ? () => ui.openBox(g.id) : undefined}>
-                  <td>{g.type === "REG" ? g.week : gameTypeLabel(g)}</td>
-                  <td className="num">{g.weekday.slice(0, 3)} {shortDate(g.date)}</td>
-                  <td className="name">{g.neutral ? "vs" : home ? "vs" : "at"} <span {...tip("team", opp)}>{teamLabel(opp)}</span></td>
-                  <td className="num">{kickoff(g.timeET)}</td>
-                  <td>{g.stadium}{g.city ? `, ${g.city}` : ""}</td>
-                  <td className={`num ${cls}`}>{result}</td>
-                  <td className="num">{r && g.type === "REG" ? `${w}-${l}${t ? `-${t}` : ""}` : ""}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {done.length > 1 && (
+        <div className="panel stack tight">
+          <h3>Point margin, game by game</h3>
+          <Columns values={done.map((x) => x.ours - x.theirs)} labels={done.map((x) => x.opp)} height={110} tone="good" format={(v) => (v > 0 ? `+${v}` : String(v))} />
+        </div>
+      )}
+      <div className="gx-grid tm-sched">
+        {rows.map(({ g, home, opp, r, res, ours, theirs, rec }) => {
+          const isToday = g.date === game.date;
+          return (
+            <button key={g.id} type="button" className={`gx-tile tm-game${res ? ` res-${res}` : ""}${isToday ? " today" : ""}`} {...tip("game", g.id)}
+              onClick={r ? () => ui.openBox(g.id) : undefined} disabled={!r} aria-label={`${teamLabel(opp)} ${shortDate(g.date)}`}>
+              <div className="gx-tile-top">
+                <span className="gx-kicker">{g.type === "REG" ? `Week ${g.week}` : gameTypeLabel(g)}</span>
+                <Chip icon={g.neutral ? "globe" : home ? "stadium" : "flag"}>{g.neutral ? "Neutral" : home ? "Home" : "Away"}</Chip>
+              </div>
+              <div className="gx-row">
+                <TeamBadge team={opp} size={38} noTip />
+                <span className="tm-game-opp"><span className="muted">{g.neutral || home ? "vs" : "at"}</span> <strong>{teamLabel(opp)}</strong>
+                  <span className="muted">{g.weekday.slice(0, 3)} {shortDate(g.date)} · {kickoff(g.timeET)}</span></span>
+              </div>
+              {r ? (
+                <div className="gx-row tm-game-result">
+                  <span className={`tm-res tm-res-${res}`}>{res}</span>
+                  <span className="gx-big">{ours}-{theirs}{r.overtime ? " OT" : ""}</span>
+                  {rec && <span className="muted tm-game-rec">{rec}</span>}
+                </div>
+              ) : <span className="muted tm-game-site"><Icon name="stadium" size={13} /> {g.stadium}{g.city ? `, ${g.city}` : ""}</span>}
+            </button>
+          );
+        })}
       </div>
       <p className="muted">Tap a result for the box score. Playoff games appear here once the bracket is set. All times Eastern.</p>
     </section>

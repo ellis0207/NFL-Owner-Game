@@ -4,6 +4,7 @@ import { useState } from "react";
 import { care, DOCTOR_COST, DOCTOR_ROLE, franchiseReputation, ownerStanding, replaceDoctor } from "../../engine/playercare";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Dials, Gauge, toneFor } from "../gfx";
 
 export function StandingPanel({ game }: { game: GameState }) {
   const s = ownerStanding(game);
@@ -11,8 +12,15 @@ export function StandingPanel({ game }: { game: GameState }) {
   return (
     <section className="panel stack">
       <h3>How players see the club</h3>
-      <p>Agents rate the owner {s.score >= 70 ? "well" : s.score >= 50 ? "about average" : "poorly"} ({s.score} of 100 in the players' association survey), and the franchise's reputation with players is {rep >= 0.65 ? "strong" : rep >= 0.45 ? "middling" : "weak"}. Free agents who care about stability and loyalty lean toward well-run clubs.</p>
-      <ul>{s.parts.map(([k, v]) => <li key={k}>{k}: {v}</li>)}</ul>
+      <div className="gx-row" style={{ alignItems: "flex-start", gap: "1.5rem" }}>
+        <Dials>
+          <Gauge value={s.score / 100} label="Players' survey" text={`${s.score}`} sub="of 100" zones />
+        </Dials>
+        <div style={{ flex: "1 1 260px" }}>
+          <Bars rows={s.parts.map(([k, v]) => ({ label: k, value: v, text: String(v), tone: toneFor(v / 100, false, [0.45, 0.65]) }))} max={100} />
+        </div>
+      </div>
+      <p className="muted">Agents rate the owner {s.score >= 70 ? "well" : s.score >= 50 ? "about average" : "poorly"} ({s.score} of 100 in the players' association survey), and the franchise's reputation with players is {rep >= 0.65 ? "strong" : rep >= 0.45 ? "middling" : "weak"}. Free agents who care about stability and loyalty lean toward well-run clubs.</p>
     </section>
   );
 }

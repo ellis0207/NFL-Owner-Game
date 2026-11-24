@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Avatar, Chip, Hud, HudStat, Leaderboard, Scatter, Spark, TeamTag } from "../gfx";
 import { addAdv, emptyAdv, perPlay } from "../../engine/analytics";
 import { shortDate } from "../../engine/dates";
 import { PLAYER_BY_ID, TEAM_BY_ID } from "../../engine/league";
@@ -53,13 +54,18 @@ function TeamTab({ game }: { game: GameState }) {
         EPA is how many points a play added to the offense's expected score; a success is a play with positive EPA. Adjusted numbers account for the opponents faced.
         League average this season: {f2(perPlay(all.epa, all.n))} a play ({f2(perPlay(all.pe, all.pn))} a dropback, {f2(perPlay(all.re, all.rn))} a run), {pct(all.s / Math.max(1, all.n))} success.
       </span>
+      <div className="panel stack tight">
+        <h3>Offense against defense, adjusted EPA a play</h3>
+        <Scatter points={rows.map(([t]) => ({ key: t, team: t, x: adj[t].off, y: adj[t].def, mine: t === game.userTeam }))} xLabel="Better offense" yLabel="Better defense" invertY />
+        <span className="muted">Top right is good on both sides; bottom left struggles on both.</span>
+      </div>
       <div className="table-wrap">
         <table>
           <thead><tr><th>Team</th><th className="num">Off EPA/play</th><th className="num">Adj</th><th className="num">Success</th><th className="num">Dropback</th><th className="num">Run</th><th className="num">Def EPA/play</th><th className="num">Adj</th><th className="num">Def success</th><th className="num">20+ plays</th></tr></thead>
           <tbody>
             {rows.map(([t, v]) => (
               <tr key={t} className={t === game.userTeam ? "highlight" : ""}>
-                <td className="name">{TEAM_BY_ID[t].name}</td>
+                <td className="name"><TeamTag team={t} name={TEAM_BY_ID[t].name} /></td>
                 <td className="num">{f2(perPlay(v.off.epa, v.off.n))}</td>
                 <td className="num">{f2(adj[t].off)}</td>
                 <td className="num">{pct(v.off.s / Math.max(1, v.off.n))}</td>
@@ -93,19 +99,8 @@ function PlayersTab({ game }: { game: GameState }) {
               <h3>{title}</h3>
               {!list.length && <span className="muted">Not enough plays yet.</span>}
               {list.length > 0 && (
-                <table>
-                  <thead><tr><th>Player</th><th className="num">Plays</th><th className="num">EPA</th><th className="num">Success</th></tr></thead>
-                  <tbody>
-                    {list.map((p) => (
-                      <tr key={p.id} className={`clickable${game.players[p.id]?.team === game.userTeam ? " highlight" : ""}`} {...tip("player", p.id)} onClick={() => ui.openPlayer(p.id)}>
-                        <td className="name">{PLAYER_BY_ID[p.id].name} <span className="muted">{game.players[p.id]?.team ?? ""}</span></td>
-                        <td className="num">{p.n}</td>
-                        <td className="num">{f2(p.epa / p.n)}</td>
-                        <td className="num">{pct(p.s / p.n)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Leaderboard onPick={ui.openPlayer} rows={list.map((p) => ({ key: p.id, team: game.players[p.id]?.team ?? undefined, mine: game.players[p.id]?.team === game.userTeam,
+                  who: <span {...tip("player", p.id)}>{PLAYER_BY_ID[p.id].name}</span>, sub: `${p.n} plays · ${pct(p.s / p.n)} success`, value: p.epa / p.n, text: f2(p.epa / p.n) }))} />
               )}
             </div>
           );
@@ -139,15 +134,16 @@ function DepartmentTab({ game, changed }: { game: GameState; changed: () => void
       <div className="split">
         <div className="panel stack tight">
           <h3>Standing with the football staff</h3>
-          <dl className="kv">
-            <dt>The analysts</dt><dd>{a.level ? credibilityWord(a.credibility) : "No department"}</dd>
-            <dt>The head coach</dt><dd>{buyInWord(b)}</dd>
-          </dl>
+          <div className="gx-grid">
+            <div className="gx-tile sunk gx-row"><Avatar name="Analytics" icon="chart" size={36} /><span><span className="gx-kicker">The analysts</span><br /><strong>{a.level ? credibilityWord(a.credibility) : "No department"}</strong></span></div>
+            <div className="gx-tile sunk gx-row"><Avatar name="Head Coach" icon="whistle" size={36} /><span><span className="gx-kicker">The head coach</span><br /><strong>{buyInWord(b)}</strong></span></div>
+          </div>
           <span className="muted">Trust grows when advice is taken and works. Coaches can disagree for good reasons; the game plan on Game week shows both sides.</span>
         </div>
         <div className="panel stack tight">
           <h3>Is it paying off?</h3>
-          <span>This season: {a.advice.followed} fourth-down calls changed by the analysts, and about {a.advice.lost.toFixed(1)} expected points left on the field when the coach went the other way.</span>
+          <div className="gx-row"><HudStat icon="check" label="Calls changed" value={String(a.advice.followed)} tone="good" /><HudStat icon="target" label="Points left on the field" value={a.advice.lost.toFixed(1)} tone={a.advice.lost > 3 ? "bad" : undefined} /></div>
+          <span className="muted">This season: {a.advice.followed} fourth-down calls changed by the analysts, and about {a.advice.lost.toFixed(1)} expected points left on the field when the coach went the other way.</span>
           <span className="muted">Data stays inside the football and business offices; the department keeps its records for the season and starts fresh after the draft.</span>
         </div>
       </div>
@@ -172,7 +168,7 @@ function OutlookTab({ game }: { game: GameState }) {
         {!at && <span className="muted">No regular-season games yet.</span>}
         {at && (
           <>
-            <span>{at.w}-{at.l}{at.t ? `-${at.t}` : ""}, {at.pf} points for and {at.pa} against.</span>
+            <Hud><HudStat icon="trophy" label="Record" value={`${at.w}-${at.l}${at.t ? `-${at.t}` : ""}`} /><HudStat icon="football" label="Points for" value={String(at.pf)} tone="good" /><HudStat icon="shield" label="Points against" value={String(at.pa)} tone="bad" /></Hud>
             {at.lines.map((l, i) => <span key={i}>{l}</span>)}
           </>
         )}
@@ -182,7 +178,7 @@ function OutlookTab({ game }: { game: GameState }) {
         <span className="muted">Starters getting old for their position, or whose contracts run out within two seasons.</span>
         {!rows.length && <span>No starter is aging out or near the end of a deal.</span>}
         {rows.map((r) => (
-          <span key={r.id}><button className="link" {...tip("player", r.id)} onClick={() => ui.openPlayer(r.id)}>{PLAYER_BY_ID[r.id].name}</button> <span className="muted">{r.pos}{r.age !== null ? `, ${r.age}` : ""}</span>: {r.flags.join("; ")}.</span>
+          <div key={r.id} className="gx-row"><span className="gx-pos">{r.pos}</span><button className="link" {...tip("player", r.id)} onClick={() => ui.openPlayer(r.id)}>{PLAYER_BY_ID[r.id].name}</button>{r.age !== null && <span className="muted">{r.age}</span>}{r.flags.map((f) => <Chip key={f} icon={/contract/i.test(f) ? "pen" : "clock"} tone={/this season|past/i.test(f) ? "warn" : undefined}>{f}</Chip>)}</div>
         ))}
       </div>
     </div>
@@ -200,6 +196,12 @@ function TrendsTab({ game }: { game: GameState }) {
         Passing tilt: {now.pass >= 0 ? "+" : ""}{(now.pass * 100).toFixed(1)} points of pass rate; two-deep coverage: {now.twoHigh >= 0 ? "+" : ""}{(now.twoHigh * 100).toFixed(1)} points.
       </span>
       <span className="muted">After each season the league copies what worked. When passing beats running by more than usual, teams throw more, and defenses answer with more two-deep shells.</span>
+      {a.trends.length > 1 && (
+        <div className="gx-row" style={{ gap: "1.5rem" }}>
+          <Spark values={a.trends.map((t) => t.pass)} label="Pass tilt by season" width={160} height={40} />
+          <Spark values={a.trends.map((t) => t.twoHigh)} label="Two-deep tilt by season" width={160} height={40} tone="warn" />
+        </div>
+      )}
       {a.trends.length > 0 && (
         <table>
           <thead><tr><th>Season</th><th className="num">EPA/dropback</th><th className="num">EPA/run</th><th className="num">Pass tilt</th><th className="num">Two-deep tilt</th></tr></thead>

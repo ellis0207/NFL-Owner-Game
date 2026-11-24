@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Chip, Pips, TeamBadge, Timeline } from "../gfx";
 import { battleStandings, campNote } from "../../engine/camp";
 import { teamPlayerIds } from "../../engine/cap";
 import { shortDate } from "../../engine/dates";
@@ -61,6 +62,16 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
         {game.date < RULES.keyDates.otasStart && `OTAs open ${shortDate(RULES.keyDates.otasStart)} and minicamp ${shortDate(RULES.keyDates.minicampStart)}. `}
         {game.date < veteranReportDate(team) ? `Veterans report to camp ${shortDate(veteranReportDate(team))}.` : `Veterans reported ${shortDate(veteranReportDate(team))}; the cutdown to 53 is ${shortDate(RULES.keyDates.rosterCutdown)}.`}
       </p>
+      <section className="panel stack tight">
+        <h3>The road to the 53</h3>
+        <Timeline today={game.date} points={[
+          { label: "OTAs", date: RULES.keyDates.otasStart, sub: shortDate(RULES.keyDates.otasStart) },
+          { label: "Minicamp", date: RULES.keyDates.minicampStart, sub: shortDate(RULES.keyDates.minicampStart) },
+          { label: "Veterans report", date: veteranReportDate(team), sub: shortDate(veteranReportDate(team)) },
+          { label: "Cutdown to 53", date: RULES.keyDates.rosterCutdown, sub: shortDate(RULES.keyDates.rosterCutdown) },
+          { label: "Week 1", date: RULES.keyDates.regularSeasonStart, sub: shortDate(RULES.keyDates.regularSeasonStart) },
+        ]} />
+      </section>
       {said && <p className="notice">{said}</p>}
 
       {decisions.length > 0 && (
@@ -89,7 +100,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
           const order = battleStandings(game, b);
           return (
             <div key={b.pos} className="report">
-              <strong>{POSITION_NAMES[b.pos]}</strong>
+              <div className="gx-row"><span className="gx-pos">{b.pos}</span><strong>{POSITION_NAMES[b.pos]}</strong>{b.winner ? <Chip icon="trophy" tone="good">Decided</Chip> : <Chip icon="clock" tone="warn">Open</Chip>}</div>
               <span>
                 {b.winner ? <>{link(b.winner)} won the job{order.find((x) => x !== b.winner) ? <> over {link(order.find((x) => x !== b.winner)!)}</> : null}.</>
                   : order.length >= 2 ? <>{link(order[0])} leads {link(order[1])} for now.</> : "Undecided."}
@@ -104,7 +115,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
         <section className="panel stack tight">
           <h3>How camp is going</h3>
           {notes.map(([id, n]) => (
-            <span key={id}>{link(id)} <span className="muted">{PLAYER_BY_ID[id].position}</span> · <span className={n === "Strong camp" ? "good" : "bad"}>{n}</span></span>
+            <span key={id}>{link(id)} <span className="muted">{PLAYER_BY_ID[id].position}</span> · <Chip icon={n === "Strong camp" ? "up" : "down"} tone={n === "Strong camp" ? "good" : "bad"}>{n}</Chip></span>
           ))}
         </section>
       )}
@@ -120,8 +131,8 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
                 <tbody>
                   {spring.map(([id, s]) => (
                     <tr key={id}>
-                      <td>{link(id)}</td><td>{PLAYER_BY_ID[id].position}</td>
-                      <td>{s.plan === "away" ? "Absent" : "Some sessions"}</td>
+                      <td>{link(id)}</td><td><span className="gx-pos">{PLAYER_BY_ID[id].position}</span></td>
+                      <td><Chip icon={s.plan === "away" ? "alert" : "clock"} tone={s.plan === "away" ? "bad" : "warn"}>{s.plan === "away" ? "Absent" : "Some sessions"}</Chip></td>
                       <td className="muted">{s.reason ? REASON[s.reason] : ""}</td>
                       <td>{s.minicamp ? MINICAMP[s.minicamp] : "Reported"}</td>
                     </tr>
@@ -140,7 +151,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
         {suspended.length > 0 && (
           <>
             <h4>Suspended around the league</h4>
-            {suspended.map((s) => <span key={s.id}>{link(s.id)} <span className="muted">{teamLabel(s.team)}</span> · {s.games} game{s.games === 1 ? "" : "s"} left</span>)}
+            {suspended.map((s) => <div key={s.id} className="gx-row"><TeamBadge team={s.team} size={20} />{link(s.id)}<Pips n={s.games} of={Math.max(s.games, 4)} tone="bad" label={`${s.games} game${s.games === 1 ? "" : "s"} left`} /></div>)}
           </>
         )}
         {league.length > 0 && (

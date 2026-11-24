@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Chip, Icon, Pips, TeamTag, WordScale, stepOf } from "../gfx";
 import { teamPlayerIds } from "../../engine/cap";
 import { unhappyStarters } from "../../engine/lockerroom";
 import { chemistryWord, clubhouse, leaders, marketability, marketWord, mentors, personality, posOf, trustOf, trustWord } from "../../engine/clubhouse";
@@ -15,6 +16,9 @@ import { tip } from "../tip";
 
 const TABS = ["Locker room", "Development", "Medical"] as const;
 type Tab = (typeof TABS)[number];
+
+const CHEM_STEPS = ["Divided", "Fraying", "Ordinary", "Together", "Close-knit"];
+const MARKET_STEPS = ["Little outside interest", "A local favorite", "Known around the league", "A national name"];
 
 export function ClubhouseScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const [tab, setTab] = useState<Tab>("Locker room");
@@ -53,26 +57,27 @@ function LockerTab({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Chemistry</h3>
-          <strong>{chemistryWord(chem)}</strong>
+          <div className="gx-row"><Icon name="users" size={26} /><WordScale steps={CHEM_STEPS} at={stepOf(CHEM_STEPS, chemistryWord(chem))} /></div>
+          <div className="gx-row"><Chip icon="trophy" tone={rank <= 8 ? "good" : rank <= 24 ? undefined : "bad"}>{rank <= 8 ? "Top quarter of the league" : rank <= 24 ? "League average" : "Bottom quarter"}</Chip></div>
           <span className="muted">{rank <= 8 ? "One of the closest rooms in the league" : rank <= 24 ? "About average for the league" : "One of the least settled rooms in the league"}, by the staff's read.</span>
           <span className="muted">It comes from continuity among the starters, veterans the room follows, how happy and present people are, and the head coach. It matters on the field: a close-knit room against a divided one is worth about a win a season, never as much as talent. Two or three unhappy starters split a room fast.</span>
-          {unhappyStarters(game, us).length > 0 && <span>Unhappy starters: {unhappyStarters(game, us).map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>)}</span>}
+          {unhappyStarters(game, us).length > 0 && <div className="gx-row"><Chip icon="alert" tone="bad">Unhappy starters</Chip>{unhappyStarters(game, us).map((id) => <Name key={id} id={id} />)}</div>}
         </div>
         <div className="panel stack tight">
           <h3>Leaders</h3>
-          {leaders(game, us).length ? leaders(game, us).map((id) => <span key={id}><Name id={id} /> <span className="muted">{posOf(game, id)}</span></span>) : <span className="muted">No clear voices in the room yet.</span>}
+          {leaders(game, us).length ? <div className="gx-grid">{leaders(game, us).map((id) => <div key={id} className="gx-tile sunk gx-row"><Icon name="star" className="warn" /><span className="gx-pos">{posOf(game, id)}</span><Name id={id} /></div>)}</div> : <span className="muted">No clear voices in the room yet.</span>}
         </div>
       </div>
       <div className="split">
         <div className="panel stack tight">
           <h3>Mentors</h3>
-          {mentors(game, us).length ? mentors(game, us).map(([m, y]) => <span key={y}><Name id={m} /> is looking after <Name id={y} /></span>) : <span className="muted">No veterans paired with young players right now.</span>}
+          {mentors(game, us).length ? mentors(game, us).map(([m, y]) => <div key={y} className="gx-row"><Chip icon="user">Veteran</Chip><Name id={m} /><Icon name="handshake" /><Name id={y} /><Chip icon="school">Young</Chip></div>) : <span className="muted">No veterans paired with young players right now.</span>}
           <span className="muted">Young players with a veteran in their room tend to develop a little faster.</span>
         </div>
         <div className="panel stack tight">
           <h3>The coaches' trust</h3>
-          {leaned.length > 0 && <span>Lean on: {leaned.map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>)}</span>}
-          {doghouse.length > 0 && <span>In the doghouse: {doghouse.map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /></span>)}</span>}
+          {leaned.length > 0 && <div className="gx-row"><Chip icon="up" tone="good">Lean on</Chip>{leaned.map((id) => <Name key={id} id={id} />)}</div>}
+          {doghouse.length > 0 && <div className="gx-row"><Chip icon="down" tone="bad">In the doghouse</Chip>{doghouse.map((id) => <Name key={id} id={id} />)}</div>}
           {!leaned.length && !doghouse.length && <span className="muted">Nobody stands out either way.</span>}
           <span className="muted">Trust grows with good play and showing up, and starts over under a new head coach. It tips close depth chart calls.</span>
         </div>
@@ -80,17 +85,19 @@ function LockerTab({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Unhappy with their role</h3>
-          {concerns.length ? concerns.map((id) => <span key={id}><Name id={id} /> <span className="muted">backup for {c.roleWeeks[id]} weeks</span></span>) : <span className="muted">Nobody paid or drafted to start is sitting.</span>}
+          {concerns.length ? concerns.map((id) => <div key={id} className="gx-row"><Name id={id} /><Pips n={Math.min(c.roleWeeks[id], 8)} of={8} tone="warn" label={`backup for ${c.roleWeeks[id]} weeks`} /></div>) : <span className="muted">Nobody paid or drafted to start is sitting.</span>}
         </div>
         <div className="panel stack tight">
           <h3>Best-known players</h3>
-          {names.map(({ id, m }) => <span key={id}><Name id={id} />: <span className="muted">{marketWord(m)}</span></span>)}
+          {names.map(({ id, m }) => <div key={id} className="gx-row"><Name id={id} /><WordScale steps={MARKET_STEPS} at={stepOf(MARKET_STEPS, marketWord(m))} /></div>)}
           <span className="muted">Names people know sell jerseys at the team store.</span>
         </div>
       </div>
       <div className="panel stack tight">
         <h3>League chemistry</h3>
-        <span className="muted">{ranked.slice(0, 5).map(([t]) => TEAM_BY_ID[t].name).join(", ")} have the closest rooms; {ranked.slice(-3).map(([t]) => TEAM_BY_ID[t].name).join(", ")} the most unsettled, from what's reported around the league.</span>
+        <div className="gx-row"><Chip icon="heart" tone="good">Closest rooms</Chip>{ranked.slice(0, 5).map(([t]) => <TeamTag key={t} team={t} name={TEAM_BY_ID[t].name} />)}</div>
+        <div className="gx-row"><Chip icon="alert" tone="bad">Most unsettled</Chip>{ranked.slice(-3).map(([t]) => <TeamTag key={t} team={t} name={TEAM_BY_ID[t].name} />)}</div>
+        <span className="muted">From what's reported around the league.</span>
       </div>
       {c.log.length > 0 && (
         <div className="panel stack tight">
@@ -171,14 +178,15 @@ function MedicalTab({ game, changed }: { game: GameState; changed: () => void })
                 const inj = game.players[id].injury!;
                 const pending = inj.testsOn && game.date < inj.testsOn;
                 return (
-                  <tr key={id}><td className="name"><Name id={id} /></td><td>{inj.type}</td><td>{shortDate(inj.date)}</td>
+                  <tr key={id}><td className="name"><Name id={id} /></td><td><Chip icon="cross" tone={inj.seasonEnding ? "bad" : "warn"}>{inj.type}</Chip></td><td>{shortDate(inj.date)}</td>
                     <td>{outLabel(game.date, knownReturn(game, inj), inj.seasonEnding)}{pending ? <span className="muted"> (tests back {shortDate(inj.testsOn!)})</span> : ""}</td></tr>
                 );
               })}
             </tbody>
           </table>
         ) : <span className="muted">Nobody hurt.</span>}
-        <span className="muted">First estimates are firmed up by follow-up tests. The doctors decide when a player is cleared; concussions are the independent consultant's call. Medical budget: {["minimal", "league average", "above average", "top of the league"][lvl]} (set on the Business screen).</span>
+        <span className="muted">First estimates are firmed up by follow-up tests. The doctors decide when a player is cleared; concussions are the independent consultant's call. (Medical budget is set on the Business screen.)</span>
+        <Pips n={lvl + 1} of={4} label={`Medical budget: ${["minimal", "league average", "above average", "top of the league"][lvl]}`} />
       </div>
       <div className="split">
         <div className="panel stack tight">

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Chip, FormChips, Icon, Versus, WordScale, stepOf } from "../gfx";
+import { recentForm } from "../gfxdata";
 import { teamPlayerIds } from "../../engine/cap";
 import { clubhouse, posOf, starters } from "../../engine/clubhouse";
 import { shortDate, weekday } from "../../engine/dates";
@@ -18,6 +20,9 @@ import { rivalryHeat, rivalryWord } from "../../engine/records";
 import { tip } from "../tip";
 import { GamePlan } from "./GamePlan";
 
+const RIVAL_STEPS = ["Quiet", "Growing", "Heated", "Bitter"];
+const CLAIM_STEPS = ["Will clear", "Should clear", "Could be claimed", "Likely to be claimed"];
+
 export function GameWeekScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
   const us = game.userTeam;
@@ -28,6 +33,16 @@ export function GameWeekScreen({ game, changed }: { game: GameState; changed: ()
   const Name = ({ id }: { id: string }) => <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>;
   return (
     <section className="stack">
+      {g && opp && (
+        <div className="panel stack tight tm-matchup">
+          <h3>{weekday(g.date)} {shortDate(g.date)}</h3>
+          <Versus away={m!.away} home={m!.home} awayLabel={<span className="gx-big">{TEAM_BY_ID[m!.away].name}</span>} homeLabel={<span className="gx-big">{TEAM_BY_ID[m!.home].name}</span>} mid={<>
+            <span>{m!.home === us ? "Home" : "Away"}</span>
+            <WordScale steps={RIVAL_STEPS} at={stepOf(RIVAL_STEPS, rivalryWord(rivalryHeat(game, us, opp)))} label={<><Icon name="flame" size={13} /> Rivalry</>} compact />
+          </>} />
+          <div className="gx-vs"><FormChips results={recentForm(game, m!.away, 5)} /><FormChips results={recentForm(game, m!.home, 5)} /></div>
+        </div>
+      )}
       <p className="muted">{g && opp ? `Next: ${m!.home === us ? "vs" : "at"} the ${TEAM_BY_ID[opp].name}, ${weekday(g.date)} ${shortDate(g.date)}.${rivalryWord(rivalryHeat(game, us, opp)) !== "Quiet" ? ` A ${rivalryWord(rivalryHeat(game, us, opp)).toLowerCase()} rivalry.` : ""}` : "No game in the next ten days."} Anyone signed or claimed on game day can't play until the next game.</p>
       <div className="panel stack tight">
         <h3>This week's practice plan</h3>
@@ -72,7 +87,7 @@ function Report({ game, team, title, Name }: { game: GameState; team: string; ti
             {ids.map((id) => (
               <tr key={id}>
                 <td className="name"><Name id={id} /> <span className="muted">{posOf(game, id)}</span></td>
-                {days.map((d) => { const c = r!.days[d][id]; return <td key={d} title={c?.[1]}>{c ? c[0] : "FP"}</td>; })}
+                {days.map((d) => { const c = r!.days[d][id]; const v = c ? c[0] : "FP"; return <td key={d} title={c?.[1]}><span className={`tm-prac tm-prac-${v}`}>{v}</span></td>; })}
                 <td>{g && days.length === 3 ? gameStatus(game, id, g) ?? "" : ""}</td>
               </tr>
             ))}
@@ -91,7 +106,7 @@ function GameDay({ game, Name }: { game: GameState; Name: NameC }) {
   return (
     <div className="panel stack tight">
       <h3>Game-day inactives (as of today)</h3>
-      <span>{[...hurt, ...inactive].length ? [...hurt, ...inactive].map((id, i) => <span key={id}>{i ? ", " : ""}<Name id={id} /> <span className="muted">{posOf(game, id)}{hurt.includes(id) ? ", hurt" : ""}</span></span>) : "Nobody yet."}</span>
+      <div className="gx-grid">{[...hurt, ...inactive].length ? [...hurt, ...inactive].map((id) => <div key={id} className="gx-tile sunk gx-row"><span className="gx-pos">{posOf(game, id)}</span><Name id={id} />{hurt.includes(id) && <Chip icon="cross" tone="bad">Hurt</Chip>}</div>) : <span className="muted">Nobody yet.</span>}</div>
       {emergency && <span>Emergency quarterback: <Name id={emergency} />. He's inactive, but can play if both active quarterbacks go out.</span>}
     </div>
   );
@@ -107,7 +122,7 @@ function Emergency({ game, changed, Name }: { game: GameState; changed: () => vo
       {msg && <span className="notice">{msg}</span>}
       {emergencyList(game).map(({ pos, ids }) => (
         <div key={pos}>
-          <strong>{pos}</strong>{" "}
+          <span className="gx-pos">{pos}</span>{" "}
           {ids.length ? ids.map((id, i) => (
             <span key={id}>{i ? " · " : ""}<Name id={id} /> <span className="muted">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</span>{" "}
               <button className="link" onClick={() => { signStreetFreeAgent(game, game.userTeam, id); setMsg(`Signed ${PLAYER_BY_ID[id].name}.`); changed(); }}>sign</button>
@@ -130,7 +145,7 @@ function Bubble({ game, Name }: { game: GameState; Name: NameC }) {
     <div className="panel stack tight">
       <h3>Bottom of the roster: waiver risk</h3>
       <span className="muted">If we let these players go, would someone claim them? The front office's read.</span>
-      {ids.map((id) => { const p = claimOdds(game, id); return <span key={id}><Name id={id} /> <span className="muted">{posOf(game, id)}</span>: {claimOddsWord(p)}</span>; })}
+      {ids.map((id) => { const p = claimOdds(game, id); return <div key={id} className="gx-row"><span className="gx-pos">{posOf(game, id)}</span><Name id={id} /><WordScale steps={CLAIM_STEPS} at={stepOf(CLAIM_STEPS, claimOddsWord(p))} invert /></div>; })}
     </div>
   );
 }

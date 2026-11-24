@@ -16,6 +16,8 @@ import { useUi } from "../ui";
 import { tip } from "../tip";
 import { posOf, starters } from "../../engine/clubhouse";
 import { readPrefs, writePrefs } from "../prefs";
+import { Chip, Hud, HudStat, Pips } from "../gfx";
+import { Meter } from "../kit";
 
 /** Which reserve list, and whether his practice window is open. */
 function reserveLabel(p: PlayerState): string {
@@ -70,8 +72,18 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
   }
   for (const list of byPos.values()) list.sort((a, b) => (depthIndex[a] ?? 99) - (depthIndex[b] ?? 99));
 
+  const count = (st: string[]) => ids.filter((id) => st.includes(game.players[id].status)).length;
+  const active = count(["active", "camp"]), ps = count(["ps"]), irN = count(["ir"]);
+  const irUsed = game.irReturns?.[game.userTeam] ?? 0;
   return (
     <section className="stack">
+      <Hud>
+        <HudStat icon="users" label={beforeCutdown ? "In camp" : "53-man roster"} value={beforeCutdown ? `${ids.length}` : `${active} / 53`} tone={!beforeCutdown && active > 53 ? "bad" : undefined}
+          sub={beforeCutdown ? <Meter value={plan.size / Math.max(ids.length, 1)} label={`Keeping ${plan.size}`} tone={plan.size > 53 ? "bad" : "good"} /> : <Meter value={active / 53} />} />
+        <HudStat icon="clipboard" label="Practice squad" value={String(ps)} />
+        <HudStat icon="cross" label="Injured reserve" value={String(irN)} tone={irN > 6 ? "warn" : undefined} sub={<Pips n={irUsed} of={IR_RETURNS} tone="warn" label={`${irUsed} of ${IR_RETURNS} returns used`} />} />
+        <HudStat icon="alert" label="Hurt" value={String(hurt.length)} tone={hurt.length > 3 ? "bad" : hurt.length ? "warn" : "good"} />
+      </Hud>
       {beforeCutdown && (
         <div className="notice stack">
           <strong>Cutdown to 53 is due {shortDate(RULES.keyDates.rosterCutdown)}.</strong>
@@ -107,7 +119,7 @@ export function RosterScreen({ game, changed }: { game: GameState; changed: () =
             const inj = game.players[id].injury!;
             return (
               <button key={id} className="link" style={{ textDecoration: "none" }} {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
-                <strong>{PLAYER_BY_ID[id].name}</strong> <span className="muted">{PLAYER_BY_ID[id].position}</span> · {inj.type} · {outLabel(game.date, knownReturn(game, inj), inj.seasonEnding)}
+                <span className="gx-pos">{PLAYER_BY_ID[id].position}</span> <strong>{PLAYER_BY_ID[id].name}</strong> <Chip icon="cross" tone={inj.seasonEnding ? "bad" : "warn"}>{inj.type}</Chip> {outLabel(game.date, knownReturn(game, inj), inj.seasonEnding)}
                 {game.players[id].status === "ir" ? " · on IR" : ""}
               </button>
             );
