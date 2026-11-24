@@ -113,6 +113,10 @@ export interface Track {
   span: [number, number];
   /** +1 when the offense heads toward x = 100. */
   dir: 1 | -1;
+  /** Per player: his group in the lineup (QB, OL, CB, K, REF...), which picks his stance and moves in 3D. */
+  group?: string[];
+  /** Frames between which a loose ball tumbles end over end (a kick) instead of spiraling. */
+  tumble?: [number, number];
   /** The try after a touchdown, played once this is over. */
   then?: Track;
 }

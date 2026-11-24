@@ -10,6 +10,7 @@ import { onColor } from "./format";
 import { PlayLine } from "./GameFeed";
 import { animAssets, type AnimAssets } from "./anim/assets";
 import { FieldPlayers } from "./anim/FieldPlayers";
+import { playerModel, type Model3D } from "./anim/Players3D";
 import { buildTrack } from "./anim/build";
 import type { Track } from "./anim/book";
 import { readPrefs } from "./prefs";
@@ -238,6 +239,7 @@ export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResul
   const [auto, setAuto] = useState(false);
   // Animated players: the art loads once, and `moving` is the play (by its count) being acted out.
   const [assets, setAssets] = useState<AnimAssets | null>(null);
+  const [model, setModel] = useState<Model3D | null>(null);
   const [moving, setMoving] = useState<number | null>(null);
   const [trying, setTrying] = useState<number | null>(null);
   const [speed, setSpeed] = useState(1);
@@ -245,7 +247,8 @@ export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResul
     const still = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!readPrefs().animate || still) return;
     let open = true;
-    void animAssets().then((a) => { if (open) setAssets(a); });
+    // The 3D players come first when they can be had, so the field never shows the sprites and then swaps.
+    void Promise.all([animAssets(), playerModel()]).then(([a, m]) => { if (open) { setModel(m); setAssets(a); } });
     return () => { open = false; };
   }, []);
   // Each row worked out as a play once, the first time it is asked for. Null is a row with nothing to act out.
@@ -341,7 +344,7 @@ export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResul
         <div className="gridiron-wrap">
           <Field r={r} cast={cast} players={!!stage} live={!!play} view={view} />
           {assets && stage && (
-            <FieldPlayers assets={assets} teams={[ids[side], ids[1 - side]]} offenseHome={side === 1} view={view ?? [0, W]}
+            <FieldPlayers assets={assets} model={model} teams={[ids[side], ids[1 - side]]} offenseHome={side === 1} view={view ?? [0, W]}
               follow={follow} home={fieldView} track={stage.track} playing={!!play} speed={speed} onEnd={() => { if (whole?.then && trying !== at) setTrying(at); else { setTrying(null); setMoving(null); } }} />
           )}
         </div>
