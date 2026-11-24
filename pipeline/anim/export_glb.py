@@ -1,4 +1,4 @@
-"""Builds the 3D player and the football, keys every move and writes assets/anim/player.glb.
+"""Builds the 3D player and the football, keys every move and writes assets/anim/player3d.json (glTF).
 
     python3 pipeline/anim/export_glb.py assets/anim [--save player.blend] [--preview <dir> [clip ...]]
 
@@ -7,8 +7,11 @@ scene so a move can be reshaped by hand in Blender and exported from there;
 `--preview` renders a contact sheet of frames from the field view's camera
 angle for checking a move by eye.
 """
+import base64
+import json
 import math
 import os
+import struct
 import sys
 
 import bpy
@@ -30,7 +33,8 @@ def build_scene():
 
 def export(out_dir):
     os.makedirs(out_dir, exist_ok=True)
-    path = os.path.join(out_dir, "player.glb")
+    # glTF with its buffers inside, saved as .json: the published game serves only common web types, and .glb isn't one.
+    path = os.path.join(out_dir, "player3d.glb")
     bpy.ops.export_scene.gltf(
         filepath=path, export_format="GLB", use_selection=False,
         export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
@@ -38,7 +42,19 @@ def export(out_dir):
         export_apply=False, export_skins=True, export_morph=False, export_lights=False, export_cameras=False,
         export_materials="EXPORT", export_image_format="NONE", export_yup=True,
     )
-    return path
+    final = os.path.join(out_dir, "player3d.json")
+    with open(path, "rb") as f:
+        data = f.read()
+    os.remove(path)
+    # A GLB is a JSON chunk and a binary chunk; the binary goes inside the JSON as a data URI.
+    n = struct.unpack_from("<I", data, 12)[0]
+    gltf = json.loads(data[20:20 + n])
+    m = struct.unpack_from("<I", data, 20 + n)[0]
+    blob = data[28 + n:28 + n + m]
+    gltf["buffers"][0]["uri"] = "data:application/octet-stream;base64," + base64.b64encode(blob).decode()
+    with open(final, "w") as f:
+        json.dump(gltf, f, separators=(",", ":"))
+    return final
 
 
 def preview(out_dir, arm, clips):

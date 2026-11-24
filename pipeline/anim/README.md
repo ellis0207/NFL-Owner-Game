@@ -26,7 +26,7 @@ the sprites below when it doesn't:
   kicks, punts, celebrations, officials' signals). Each pose is set down so
   its lowest part touches the grass.
 - `export_glb.py` keys every move into a Blender action and writes
-  `player.glb`; `--preview` renders frames of chosen moves to check them by
+  `player3d.json`; `--preview` renders frames of chosen moves to check them by
   eye (`PREVIEW_ELEV=8` for a side view).
 
 - `rig.py` builds the figure from code (two bodies: `skill` and `line`). Its
