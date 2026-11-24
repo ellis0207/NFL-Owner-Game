@@ -12,6 +12,7 @@ import { PROJECTS, projects, projectTerms } from "../../engine/projects";
 import { STADIUM_BY_TEAM } from "../../engine/stadiums";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Avatar, Chip, Ring } from "../gfx";
 
 export function Sponsors({ game, changed }: { game: GameState; changed: () => void }) {
   const l = localDeals(game);
@@ -58,9 +59,9 @@ export function Sponsors({ game, changed }: { game: GameState; changed: () => vo
                 return (
                   <tr key={c}>
                     <td>{LOCAL_CATS[c].label}{d?.exclusive ? <span className="muted"> (exclusive)</span> : null}</td>
-                    <td>{d?.partner ?? <span className="muted">None</span>}{next && next !== d ? <span className="muted">{next.partner === d?.partner ? ` (renewed through ${next.start + next.years - 1})` : ` (then ${next.partner})`}</span> : null}
+                    <td>{d ? <span className="gx-row" style={{ flexWrap: "nowrap", display: "inline-flex" }}><Avatar name={d.partner} size={26} icon="briefcase" />{d.partner}</span> : <span className="muted">None</span>}{next && next !== d ? <span className="muted">{next.partner === d?.partner ? ` (renewed through ${next.start + next.years - 1})` : ` (then ${next.partner})`}</span> : null}
                       {d?.scandal && (
-                        <div className="btn-row"><span className="bad">In the news</span>
+                        <div className="btn-row"><Chip icon="alert" tone="bad">In the news</Chip>
                           <button className="btn small" onClick={() => { setMsg(dropPartner(game, c) ?? `We ended the partnership with ${d.partner}.`); changed(); }}>End it</button>
                           <button className="btn small" onClick={() => { keepPartner(game, c); setMsg(`We're standing by ${d.partner}.`); changed(); }}>Stand by them</button>
                         </div>
@@ -68,8 +69,8 @@ export function Sponsors({ game, changed }: { game: GameState; changed: () => vo
                     </td>
                     <td className="num">{d ? money(c === "naming" ? namingIncome(game, year) : dealValue(d, year)) : "—"}</td>
                     <td>{d ? d.start + d.years - 1 : "—"}</td>
-                    <td>{d ? relWord(d.rel ?? 60) : ""}</td>
-                    <td className="num">{del != null ? `${Math.round(del * 100)}%` : ""}</td>
+                    <td>{d ? <Chip icon="handshake" tone={(d.rel ?? 60) >= 65 ? "good" : (d.rel ?? 60) < 45 ? "bad" : undefined}>{relWord(d.rel ?? 60)}</Chip> : ""}</td>
+                    <td className="num">{del != null ? <Ring size={36} value={del} text={Math.round(del * 100)} tone={del < 0.93 ? "bad" : "good"} /> : ""}</td>
                   </tr>
                 );
               })}

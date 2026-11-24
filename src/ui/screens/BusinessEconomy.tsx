@@ -10,6 +10,7 @@ import { openLoans } from "../../engine/debt";
 import { COVERS, type Cover, DISTRESS_OPTIONS, distressOption, premium, riskScore, setFlood, setPolicy, settleClaim, shocks } from "../../engine/shocks";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Columns } from "../gfx";
 import { estimatesShown, Evidence } from "../Help";
 
 export function EconomyRisk({ game, changed }: { game: GameState; changed: () => void }) {
@@ -40,6 +41,7 @@ export function EconomyRisk({ game, changed }: { game: GameState; changed: () =>
           {e.recessions.length > 0 && <span className="muted">Recessions: {e.recessions.map((r) => `${r.start}${r.end ? ` to ${r.end}` : " (now)"}`).join(", ")}.</span>}
           {e.log.slice(0, 4).map((l, i) => <span key={i} className="muted">{shortDate(l.date)}: {l.text}</span>)}
           <h4>Past years in 2026 dollars</h4>
+          {closed.length > 1 && <Columns values={closed.map((c) => realDollars(game, c.operating, c.year))} labels={closed.map((c) => String(c.year))} format={money} />}
           {closed.length === 0 ? <span className="muted">Closed years appear here after the first audit.</span> : (
             <div className="table-wrap"><table>
               <thead><tr><th>Year</th><th className="num">Revenue</th><th className="num">In 2026 dollars</th><th className="num">Operating</th><th className="num">In 2026 dollars</th></tr></thead>
@@ -54,6 +56,10 @@ export function EconomyRisk({ game, changed }: { game: GameState; changed: () =>
           <label className="field"><span className="label">Base rate: {(sc.rate * 100).toFixed(1)}%</span><input type="range" min={0.01} max={0.08} step={0.0025} value={sc.rate} onChange={(x) => setSc({ ...sc, rate: Number(x.target.value) })} /></label>
           <label className="field"><span className="label">Ticket prices: {Math.round(sc.price * 100)}%</span><input type="range" min={-0.15} max={0.2} step={0.01} value={sc.price} onChange={(x) => setSc({ ...sc, price: Number(x.target.value) })} /></label>
           <label className="field"><span className="label">Attendance: {Math.round(sc.attendance * 100)}%</span><input type="range" min={-0.15} max={0.1} step={0.01} value={sc.attendance} onChange={(x) => setSc({ ...sc, attendance: Number(x.target.value) })} /></label>
+          <Bars signed rows={[
+            { label: "Revenue change", value: result.revenue - base.revenue, text: signed(result.revenue - base.revenue), tone: result.revenue >= base.revenue ? "good" : "bad" },
+            { label: "Operating change", value: result.operating - base.operating, text: signed(result.operating - base.operating), tone: result.operating >= base.operating ? "good" : "bad" },
+          ]} />
           <dl className="kv">
             <dt>Revenue</dt><dd>{money(result.revenue)} ({signed(result.revenue - base.revenue)})</dd>
             <dt>Operating income</dt><dd>{money(result.operating)} ({signed(result.operating - base.operating)})</dd>

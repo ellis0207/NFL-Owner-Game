@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Grade, TeamBadge } from "../gfx";
 import { mediaRank } from "../../engine/college";
 import { schoolName } from "../../engine/collegeData";
 import { shortDate } from "../../engine/dates";
@@ -265,7 +266,7 @@ function Ticker({ game }: { game: GameState }) {
       {made.length === 0 && <span className="muted">No picks yet.</span>}
       {made.map((m) => (
         <div key={m.pick}>
-          <span className="num">{m.overall}.</span> <strong className={m.team === game.userTeam ? "good" : undefined}>{teamName(m.team)}</strong>{" "}
+          <span className="wr-pickno">{m.overall}</span> <TeamBadge team={m.team} size={22} /> <strong className={m.team === game.userTeam ? "good" : undefined}>{teamName(m.team)}</strong>{" "}
           <Name game={game} id={m.player} />
           {parsePick(m.pick).from !== m.team && <span className="muted"> (from {parsePick(m.pick).from})</span>}
           {m.by === "gm" && <span className="muted"> · GM's pick</span>}
@@ -297,7 +298,7 @@ function Upcoming({ game, changed }: { game: GameState; changed: () => void }) {
       {next.length === 0 && <span className="muted">No more picks today.</span>}
       {next.map((s) => (
         <div key={s.pick} className="btn-row" style={{ alignItems: "baseline" }}>
-          <span><span className="num">{s.overall}.</span> <strong className={s.team === game.userTeam ? "good" : undefined}>{teamName(s.team)}</strong>
+          <span><span className="wr-pickno">{s.overall}</span> <TeamBadge team={s.team} size={22} /> <strong className={s.team === game.userTeam ? "good" : undefined}>{teamName(s.team)}</strong>
             <span className="muted"> R{s.round}{parsePick(s.pick).from !== s.team ? ` from ${parsePick(s.pick).from}` : ""}{parsePick(s.pick).comp ? " comp" : ""}</span></span>
           {s.team !== game.userTeam && (
             <button className="btn small" onClick={() => setAsk({ pick: s.pick, answer: askPrice(game, s.team, [{ kind: "pick", pick: s.pick }]) })}>Trade up</button>
@@ -329,7 +330,7 @@ function OurPicks({ game }: { game: GameState }) {
       <h3 style={{ margin: 0 }}>Our picks</h3>
       {ours.length === 0 && <span className="muted">We have no picks left in this draft.</span>}
       {ours.map((s) => (
-        <div key={s.pick}>{slotLabel(s)}{parsePick(s.pick).from !== game.userTeam ? <span className="muted"> · from {teamLabel(parsePick(s.pick).from)}</span> : null}{parsePick(s.pick).comp ? <span className="muted"> · compensatory</span> : null}</div>
+        <div key={s.pick} className="gx-row"><span className={`rb-round r${s.round}`}>R{s.round}</span>{slotLabel(s)}{parsePick(s.pick).from !== game.userTeam ? <span className="muted"> · from {teamLabel(parsePick(s.pick).from)}</span> : null}{parsePick(s.pick).comp ? <span className="muted"> · compensatory</span> : null}</div>
       ))}
     </div>
   );
@@ -362,10 +363,10 @@ function Order({ game }: { game: GameState }) {
                 <tr key={s.pick} className={s.team === game.userTeam ? "ours" : undefined}>
                   <td className="num">{s.overall}</td>
                   <td className="num">{s.inRound}</td>
-                  <td><strong className={s.team === game.userTeam ? "good" : undefined}>{teamLabel(s.team)}</strong></td>
+                  <td><span className="gx-teamtag"><TeamBadge team={s.team} size={22} noTip /><strong className={s.team === game.userTeam ? "good" : undefined}>{teamLabel(s.team)}</strong></span></td>
                   <td className="muted">{[from !== s.team ? `From ${from}` : "", c ? `Compensatory: lost ${c.player} to ${c.to}` : ""].filter(Boolean).join(" · ")}</td>
                   <td className="name">{m ? <Name game={game} id={m.player} /> : ""}</td>
-                  <td>{m?.grade ?? ""}</td>
+                  <td>{m?.grade ? <Grade g={m.grade} /> : ""}</td>
                 </tr>
               );
             })}

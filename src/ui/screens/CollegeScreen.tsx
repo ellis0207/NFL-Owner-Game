@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Chip, Hud, HudStat, Trend } from "../gfx";
 import {
   AWARDS, awardRace, COLLEGE_SEASON, FINAL_POLL, collegeGames, collegeRecords, collegeWeeks, conferenceStandings, latestPoll, prospectLine,
   prospectTotals, rankOf, recordLabel, watchList, type AwardDef,
@@ -21,6 +22,10 @@ export function CollegeScreen({ game }: { game: GameState }) {
   const c = game.college!;
   return (
     <section className="stack wr-varsity">
+      <Hud>
+        <HudStat icon="school" label="FBS programs" value="138" sub={`${COLLEGE_SEASON} season`} />
+        {c.champion ? <HudStat icon="trophy" label="National champion" value={schoolName(c.champion)} tone="good" /> : <HudStat icon="calendar" label="Season" value="Every Saturday" />}
+      </Hud>
       <p className="muted">
         All 138 FBS teams, {c.champion ? `${schoolName(c.champion)} won the national title.` : `playing the ${COLLEGE_SEASON} season every Saturday.`} Programs
         rise and fall with their recruiting classes and their coaches. The NFL prospects are the players we track: their stats and game logs are on
@@ -118,11 +123,11 @@ function PollTable({ game, poll, prev }: { game: GameState; poll: CollegePoll; p
             const move = was === -1 ? "NR" : was >= 0 ? (was === i ? "—" : was > i ? `▲${was - i}` : `▼${i - was}`) : "";
             return (
               <tr key={t}>
-                <td className="num">{i + 1}</td>
+                <td className="num"><span className={`wr-media${i < 4 ? " r1" : i < 12 ? " r2" : ""}`}>{i + 1}</span></td>
                 <td className="name"><SchoolLink game={game} id={t} rank={false} /></td>
                 <td className="num">{recordLabel(recs[t])}</td>
                 <td>{conferenceName(COLLEGE_TEAM[t].conference)}</td>
-                <td className={`num ${move.startsWith("▲") ? "good" : move.startsWith("▼") ? "bad" : ""}`}>{was >= 0 ? `${was + 1} ` : ""}<span className="muted">{move}</span></td>
+                <td className="num">{was >= 0 ? <>{was + 1} <Trend delta={was - i} text={was === i ? undefined : String(Math.abs(was - i))} /></> : move ? <Chip icon="star" tone="good">New</Chip> : ""}</td>
               </tr>
             );
           })}

@@ -11,6 +11,7 @@ import { RULES, teamLabel } from "../../engine/league";
 import { authorization, entities, exposure, legal, openMatters, setLegalPolicy, settleMatter, TERMS } from "../../engine/legal";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Chip, Gauge, Hud, HudStat, IconHead, Pips, TeamTag } from "../gfx";
 import { Evidence } from "../Help";
 
 type Tab = "compliance" | "crisis" | "legal";
@@ -42,6 +43,12 @@ function Compliance({ game, say }: { game: GameState; say: (t: string | null) =>
     <div className="split">
       <section className="panel stack tight">
         <h3>Our compliance office</h3>
+        <Hud>
+          <HudStat icon="shield" label="Staffing" value={<Pips n={c.staff + 1} of={STAFF_LEVELS.length} />} sub={STAFF_LEVELS[c.staff].label} />
+          <HudStat icon="book" label="Training" value={trainedNow(game) ? "Current" : "Lapsed"} tone={trainedNow(game) ? "good" : "warn"} />
+          <HudStat icon="pen" label={`${RULES.season} certification`} value={c.certified.includes(RULES.season) ? "Filed" : "Due"} tone={c.certified.includes(RULES.season) ? "good" : "warn"} />
+          <HudStat icon="alert" label="Violations" value={c.strikes} tone={c.strikes ? "bad" : "good"} />
+        </Hud>
         <span>{STAFF_LEVELS[c.staff].label}{c.staff ? `, led by ${c.officer}` : ""}: <span className="muted">{STAFF_LEVELS[c.staff].what}</span></span>
         <div className="btn-row">
           <select value={c.staff} onChange={(e) => say(setComplianceStaff(game, Number(e.target.value)))} aria-label="Compliance staffing">
@@ -49,7 +56,7 @@ function Compliance({ game, say }: { game: GameState; say: (t: string | null) =>
           </select>
           <button className="btn small" onClick={() => say(holdTraining(game) ?? "Training done and documented.")}>Hold league-rules training</button>
         </div>
-        <span className="muted">Training: {trainedNow(game) ? `current (${shortDate(c.trained!)})` : "none in the last year"}. Violations on record: {c.strikes ? `${c.strikes}, which raise scrutiny and penalties` : "none"}.</span>
+        {c.strikes > 0 && <span className="muted">Violations on record raise scrutiny and penalties.</span>}
         <div className="btn-row">
           <span>{RULES.season} policy acknowledgments and conflict disclosures: {c.certified.includes(RULES.season) ? "certified" : "not yet certified"}</span>
           {!c.certified.includes(RULES.season) && <button className="btn small primary" onClick={() => say(certify(game) ?? "Certified and filed.")}>Sign and file</button>}
@@ -60,9 +67,10 @@ function Compliance({ game, say }: { game: GameState; say: (t: string | null) =>
           <button className={`btn small${c.funding === "letter" ? " primary" : ""}`} onClick={() => say(setFunding(game, "letter"))}>Letter of credit ({(LETTER_FEE * 100).toFixed(2)}% a year)</button>
           <button className={`btn small${c.funding === "cash" ? " primary" : ""}`} onClick={() => say(setFunding(game, "cash"))}>Cash in escrow</button>
         </div>
+        {c.funding === "cash" && fundingRequired(game) > 0 && <Gauge value={c.escrow / fundingRequired(game)} label="Escrow funded" text={money(c.escrow)} sub={`of ${money(fundingRequired(game))}`} tone={c.escrow >= fundingRequired(game) ? "good" : "warn"} />}
         <span className="muted">In escrow now: {money(c.escrow)}. Cash ties up money we could spend; a letter of credit costs a fee but keeps the cash.</span>
         <h4>Filings</h4>
-        {c.filings.slice(0, 6).map((f) => <span key={f.id} className="muted">{shortDate(f.due)}: {f.kind}{f.late ? `, late (fined ${money(f.fine ?? 0)})` : ", on time"}</span>)}
+        {c.filings.slice(0, 6).map((f) => <span key={f.id} className="gx-row"><Chip icon={f.late ? "alert" : "check"} tone={f.late ? "bad" : "good"}>{f.late ? `Late, ${money(f.fine ?? 0)}` : "On time"}</Chip><span className="muted">{shortDate(f.due)}: {f.kind}</span></span>)}
         <h4>Cap audits</h4>
         {c.audits.length ? c.audits.slice(0, 4).map((a) => <span key={a.year} className="muted">{a.year}: {a.findings.length ? `${a.findings.join("; ")}. ${money(a.capCharge)} cap charge, ${money(a.fine)} fine.` : "clean"}</span>) : <span className="muted">The league audits each club's books in June.</span>}
         <h4>Trade physicals</h4>
@@ -73,6 +81,7 @@ function Compliance({ game, say }: { game: GameState; say: (t: string | null) =>
         {cases.length === 0 && <span className="muted">No inquiries into the club.</span>}
         {cases.map((k) => (
           <div key={k.id} className="stack tight">
+            <span className="gx-row"><Chip icon="gavel" tone={k.stage === "sanctioned" ? "bad" : "warn"}>{k.stage}</Chip>{k.sanction && <Chip icon="alert" tone="bad">Sanctioned</Chip>}</span>
             <span><strong>{CASE_KINDS[k.kind]?.label ?? k.kind}</strong> (opened {shortDate(k.opened)}): {k.text} Stage: {k.stage}.{k.sanction ? ` Sanction: ${k.sanction}.` : ""}{k.outcome ? ` ${k.outcome}.` : ""}</span>
             {(k.stage === "inquiry" || k.stage === "interviews") && (
               <div className="btn-row">
@@ -86,7 +95,7 @@ function Compliance({ game, say }: { game: GameState; say: (t: string | null) =>
         ))}
         <h4>Around the league</h4>
         <span className="muted">Sanctions this season: {sanctionsIn(game, RULES.season).length}.</span>
-        {league.map((k) => <span key={k.id} className="muted">{shortDate(k.opened)}: {teamLabel(k.team)}, {CASE_KINDS[k.kind]?.label.toLowerCase()}: {k.outcome ?? k.stage}</span>)}
+        {league.map((k) => <span key={k.id} className="gx-row"><TeamTag team={k.team} name={teamLabel(k.team)} /><span className="muted">{shortDate(k.opened)}, {CASE_KINDS[k.kind]?.label.toLowerCase()}: {k.outcome ?? k.stage}</span></span>)}
         {c.log.length > 0 && <><h4>Compliance log</h4>{c.log.slice(0, 8).map((l, i) => <span key={i} className="muted">{shortDate(l.date)}: {l.text}</span>)}</>}
       </section>
     </div>
@@ -112,7 +121,7 @@ function Crises({ game, say }: { game: GameState; say: (t: string | null) => voi
         {c.crises.filter((x) => x.stage !== "resolved" || (x.findings && !x.remediation && x.fault > 0.5)).length === 0 && <span className="muted">Nothing open.</span>}
         {c.crises.filter((x) => x.stage !== "resolved" || (x.findings && !x.remediation && x.fault > 0.5)).map((x) => (
           <div key={x.id} className="stack tight">
-            <span><strong>{x.title}</strong> ({shortDate(x.date)}): {x.text}.{x.findings ? ` ${x.findings} ${x.outcome}` : x.reviewDue ? ` Findings due ${shortDate(x.reviewDue)}.` : ""}</span>
+            <IconHead icon="flame" tone="bad" sub={shortDate(x.date)}>{x.title}</IconHead><span> {x.text}.{x.findings ? ` ${x.findings} ${x.outcome}` : x.reviewDue ? ` Findings due ${shortDate(x.reviewDue)}.` : ""}</span>
             {x.stage !== "resolved" && PLAYBOOK.map((s) => (
               <div key={s.key} className="btn-row">
                 <span>{s.label}:</span>
@@ -167,7 +176,7 @@ function Legal({ game, say }: { game: GameState; say: (t: string | null) => void
           <div className="table-wrap"><table>
             <thead><tr><th>Matter</th><th>Stage</th><th className="num">Likely loss</th><th className="num">Range</th><th className="num">Spent</th><th className="num">To settle</th><th></th></tr></thead>
             <tbody>{exp.map((e) => (
-              <tr key={e.id}><td>{e.kind}{e.insured ? ` (${Math.round(e.insured * 100)}% insured)` : ""}</td><td>{e.stage}</td><td className="num">{money(e.mid)}</td><td className="num">{money(e.low)} to {money(e.high)}</td><td className="num">{money(e.spent)}</td><td className="num">{money(e.demand)}</td>
+              <tr key={e.id}><td>{e.kind}{e.insured ? ` (${Math.round(e.insured * 100)}% insured)` : ""}</td><td><Chip icon="scales">{e.stage}</Chip></td><td className="num">{money(e.mid)}</td><td className="num"><span className="rb-share" style={{ width: 70, position: "relative" }}><span style={{ marginLeft: `${(e.low / Math.max(1, e.high)) * 100}%`, width: `${(1 - e.low / Math.max(1, e.high)) * 100}%`, background: "var(--warn)" }} /></span>{money(e.low)} to {money(e.high)}</td><td className="num">{money(e.spent)}</td><td className="num">{money(e.demand)}</td>
                 <td><button className="btn small" onClick={() => say(settleMatter(game, e.id) ?? "Settled.")}>Settle</button></td></tr>
             ))}</tbody>
           </table></div>

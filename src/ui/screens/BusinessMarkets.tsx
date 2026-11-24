@@ -13,6 +13,7 @@ import {
 } from "../../engine/relocation";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Ring } from "../gfx";
 
 const LEVEL = ["None", "Light", "Steady", "Heavy"];
 
@@ -39,7 +40,7 @@ export function Relocation({ game, changed }: { game: GameState; changed: () => 
             const st = r.studies.find((x) => x.market === m.id);
             return (
               <tr key={m.id}><td>{m.city}{m.incumbent ? ` (second team, with the ${teamLabel(m.incumbent)})` : `, ${m.region}`}</td><td className="num">{m.pop.toFixed(1)}</td>
-                <td>{m.venue.name}{m.venue.ready ? "" : " (temporary)"}</td><td className="num">{st ? `${Math.round(st.score * 100)}` : "-"}</td>
+                <td>{m.venue.name}{m.venue.ready ? "" : " (temporary)"}</td><td className="num">{st ? <Ring size={38} value={st.score} text={Math.round(st.score * 100)} tone={st.score >= 0.55 ? "good" : st.score < 0.45 ? "bad" : undefined} /> : "-"}</td>
                 <td><button className="btn small" onClick={() => say(marketStudy(game, m.id))}>{st ? "Restudy" : "Study ($1.5M)"}</button>{" "}
                   <button className="btn small" aria-pressed={pick.market === m.id} onClick={() => setPick({ ...pick, market: m.id })}>Consider</button></td></tr>
             );

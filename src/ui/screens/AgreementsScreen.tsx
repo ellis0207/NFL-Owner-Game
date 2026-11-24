@@ -13,6 +13,7 @@ import { history } from "../../engine/seasons";
 import { tradeOutcomes } from "../../engine/records";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Chip, Stacked, TeamTag } from "../gfx";
 import { useUi } from "../ui";
 import { entityFor, TERMS } from "../../engine/legal";
 import { tip } from "../tip";
@@ -78,11 +79,12 @@ function Center({ game }: { game: GameState }) {
           <option value="amount">Largest first</option><option value="ends">Expiring first</option><option value="party">By name</option>
         </select>
       </div>
+      {(() => { const by = new Map<string, number>(); all.filter((a) => a.kind !== "Loan").forEach((a) => by.set(a.kind, (by.get(a.kind) ?? 0) + a.amount)); return <Stacked label="A year's commitments by kind (loans aside)" parts={[...by].sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v, text: money(v) }))} />; })()}
       <span className="muted">{rows.length} of {all.length} agreements. Amounts are per year, except loans (balance owed).</span>
       <div className="table-wrap"><table>
         <thead><tr><th>Kind</th><th>Counterparty</th><th>What</th><th className="num">Amount</th><th>Signed</th><th>Runs</th><th>Status</th><th>Club company</th><th>Exit</th><th>Renewal</th></tr></thead>
         <tbody>{rows.slice(0, 150).map((a, i) => (
-          <tr key={i}><td>{a.kind}</td><td className="name">{a.player ? <button className="link" {...tip("player", a.player!)} onClick={() => ui.openPlayer(a.player!)}>{a.party}</button> : a.party}</td><td>{a.what}</td><td className="num">{money(a.amount)}</td><td>{a.signed ?? ""}</td><td>{a.starts ? `${a.starts} to ${a.ends}` : `to ${a.ends}`}</td><td>{a.status}</td><td>{entityFor(game, a.kind).split(",")[0]}</td><td className="muted">{TERMS[a.kind]?.exit ?? ""}</td><td className="muted">{TERMS[a.kind]?.renewal ?? ""}</td></tr>
+          <tr key={i}><td><Chip>{a.kind}</Chip></td><td className="name">{a.player ? <button className="link" {...tip("player", a.player!)} onClick={() => ui.openPlayer(a.player!)}>{a.party}</button> : a.party}</td><td>{a.what}</td><td className="num">{money(a.amount)}</td><td>{a.signed ?? ""}</td><td>{a.starts ? `${a.starts} to ${a.ends}` : `to ${a.ends}`}</td><td><Chip tone={/expir|ends|due/i.test(a.status) ? "warn" : undefined}>{a.status}</Chip></td><td>{entityFor(game, a.kind).split(",")[0]}</td><td className="muted">{TERMS[a.kind]?.exit ?? ""}</td><td className="muted">{TERMS[a.kind]?.renewal ?? ""}</td></tr>
         ))}</tbody>
       </table></div>
     </div>
@@ -105,7 +107,7 @@ function Archive({ game }: { game: GameState }) {
           <thead><tr><th>Season</th><th>Record</th><th>Points</th><th>Playoffs</th><th>Champion</th></tr></thead>
           <tbody>{hist.seasons.filter((s) => !from || s.season >= Number(from.slice(0, 4))).map((s) => {
             const r = s.records[team];
-            return <tr key={s.season}><td>{s.season}</td><td>{r ? `${r[0]}-${r[1]}${r[2] ? `-${r[2]}` : ""}` : "-"}</td><td>{r ? `${r[3]}-${r[4]}` : "-"}</td><td>{s.playoffs[team] ?? "Missed"}</td><td>{s.champion ? teamLabel(s.champion) : "-"}</td></tr>;
+            return <tr key={s.season}><td>{s.season}</td><td>{r ? <span className="gx-row" style={{ flexWrap: "nowrap" }}><span className="rb-share"><span style={{ width: `${(r[0] / Math.max(1, r[0] + r[1] + r[2])) * 100}%`, background: r[0] > r[1] ? "var(--good)" : r[0] < r[1] ? "var(--bad)" : "var(--warn)" }} /></span>{`${r[0]}-${r[1]}${r[2] ? `-${r[2]}` : ""}`}</span> : "-"}</td><td>{r ? `${r[3]}-${r[4]}` : "-"}</td><td>{s.playoffs[team] ?? "Missed"}</td><td>{s.champion ? <TeamTag team={s.champion} name={teamLabel(s.champion)} /> : "-"}</td></tr>;
           })}</tbody>
         </table></div>
       )}

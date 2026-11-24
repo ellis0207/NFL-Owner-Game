@@ -12,6 +12,7 @@ import { CALENDAR_KINDS, ownerCalendar, schedule, type CalendarItem } from "../.
 import { constituents, credibility, credWord, meetOfficial, reputationTrend, setStance, standingState, STANCES, type Stance } from "../../engine/standing";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Trend, WordScale } from "../gfx";
 import { estimatesShown, Evidence, Help } from "../Help";
 
 export function OwnerStanding({ game, changed }: { game: GameState; changed: () => void }) {
@@ -32,7 +33,7 @@ export function OwnerStanding({ game, changed }: { game: GameState; changed: () 
             <thead><tr><th>Audience</th><th>View of you</th><th>Change over a year</th></tr></thead>
             <tbody>{cred.map((a) => {
               const t = trend.find((x) => x.key === a.key || (a.key === "employees" && x.key === "staff"));
-              return <tr key={a.key} title={a.why}><td>{a.label}</td><td>{credWord(a.score)}</td><td>{t ? (t.change > 3 ? "Rising" : t.change < -3 ? "Falling" : "Steady") : "-"}</td></tr>;
+              return <tr key={a.key} title={a.why}><td>{a.label}</td><td><WordScale compact steps={["Poor", "Low", "Mixed", "Solid", "High"]} at={a.score >= 75 ? 4 : a.score >= 60 ? 3 : a.score >= 45 ? 2 : a.score >= 30 ? 1 : 0} /></td><td>{t ? <Trend delta={t.change > 3 ? 1 : t.change < -3 ? -1 : 0} text={t.change > 3 ? "Rising" : t.change < -3 ? "Falling" : "Steady"} /> : "-"}</td></tr>;
             })}</tbody>
           </table></div>
           {s.broken.length > 0 && <span className="bad">On the record: {s.broken.slice(-3).map((b) => b.text.toLowerCase()).join("; ")}.</span>}

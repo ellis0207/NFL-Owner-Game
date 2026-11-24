@@ -7,6 +7,7 @@ import {
 } from "../../engine/merch";
 import type { GameState, MerchChannel, RebrandKind } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Leaderboard, Stacked } from "../gfx";
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
@@ -77,6 +78,7 @@ export function Store({ game, changed }: { game: GameState; changed: () => void 
           <input type="range" min={60} max={150} step={5} value={Math.round(m.depth * 100)} onChange={(e) => { setOrderDepth(game, Number(e.target.value) / 100); changed(); }} aria-label="Order depth" />
         </label>
         <span className="muted">The order goes in six weeks before the season. Too few and fans leave without one; too many and they're marked down after the season. A player traded or cut leaves his jerseys to a liquidator.</span>
+        <Leaderboard rows={(Object.keys(m.stock).length ? Object.entries(m.stock).map(([id, st]) => ({ id, name: st.name, units: Object.keys(m.stock).length ? st.sold : st.demand })) : forecast.map((f) => ({ id: f.id, name: f.name, units: f.units }))).sort((a, b) => b.units - a.units).slice(0, 8).map((r) => ({ key: r.id, who: r.name, team: game.userTeam, value: r.units, text: Math.round(r.units).toLocaleString("en-US"), sub: Object.keys(m.stock).length ? "sold" : "forecast" }))} />
         <div className="table-wrap">
           <table>
             <thead><tr><th>Player</th><th className="num">Forecast</th><th className="num">Ordered</th><th className="num">Sold</th><th></th></tr></thead>
@@ -90,6 +92,9 @@ export function Store({ game, changed }: { game: GameState; changed: () => void 
       {[s, last].filter(Boolean).map((x) => (
         <div key={x!.season} className="panel stack tight">
           <h3>{x!.season} statement{x!.season === RULES.season ? " so far" : ""}</h3>
+          <Stacked label={`Gross sales ${money(x!.gross)}`} parts={[{ label: "Online", value: x!.online, text: money(x!.online) }, { label: "At the stadium", value: x!.stands, text: money(x!.stands) }]} />
+          <Bars rows={([["Cost of goods", x!.cogs], ["Operators and partners", x!.operatorShare], ["Returns", x!.returns], ["Discounts", x!.discounts], ["Markdowns", x!.markdowns], ["Write-offs", x!.writeoffs], ["Counterfeits", x!.counterfeit], ["Missed, no stock", x!.lostSales]] as [string, number][]).map(([l, v]) => ({ label: l, value: Math.abs(v), text: money(v), tone: "bad" as const }))} />
+          <details><summary className="muted">Line by line</summary>
           <dl className="kv">
             <dt>Gross sales</dt><dd>{money(x!.gross)} ({money(x!.online)} online, {money(x!.stands)} at the stadium)</dd>
             <dt>Cost of goods</dt><dd>{money(x!.cogs)}</dd>
@@ -99,6 +104,7 @@ export function Store({ game, changed }: { game: GameState; changed: () => void 
             <dt>Lost to counterfeits</dt><dd>{money(x!.counterfeit)}</dd>
             <dt>Missed for lack of stock</dt><dd>{money(x!.lostSales)}</dd>
           </dl>
+          </details>
         </div>
       ))}
     </div>

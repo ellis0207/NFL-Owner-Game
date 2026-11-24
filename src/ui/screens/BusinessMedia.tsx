@@ -8,6 +8,7 @@ import {
 } from "../../engine/teammedia";
 import type { GameState, TeamMediaState } from "../../engine/types";
 import { money } from "../format";
+import { Hud, HudStat, Stacked } from "../gfx";
 
 const billions = (x: number) => `$${(x / 1e9).toFixed(2)}B`;
 const ACCESS: Record<TeamMediaState["access"], string> = {
@@ -42,6 +43,7 @@ export function Media({ game, changed }: { game: GameState; changed: () => void 
               ))}
             </tbody>
           </table>
+          <Stacked label={`Our share, ${year}: ${money(nb.total)}`} parts={[{ label: "TV and streaming", value: nb.tv, text: money(nb.tv) }, { label: "Licensing", value: nb.licensing, text: money(nb.licensing) }, { label: "Other league business", value: nb.other, text: money(nb.other) }]} />
           <dl className="kv">
             <dt>Our share, {year}</dt><dd>{money(nb.total)}: {money(nb.tv)} TV and streaming, {money(nb.licensing)} licensing, {money(nb.other)} other league business</dd>
             <dt>Opt-out</dt><dd>The league can leave the deals after the {OPT_OUT} season</dd>
@@ -50,6 +52,11 @@ export function Media({ game, changed }: { game: GameState; changed: () => void 
         </div>
         <div className="panel stack tight">
           <h3>Our audience</h3>
+          <Hud>
+            <HudStat icon="users" label="Social followers" value={`${(t.followers / 1e6).toFixed(2)}M`} sub={t.followers0 ? `${t.followers >= t.followers0 ? "+" : ""}${Math.round((t.followers / t.followers0 - 1) * 100)}% since we took over` : undefined} tone={t.followers0 && t.followers < t.followers0 ? "bad" : "good"} />
+            <HudStat icon="tv" label="Digital value" value={`${audienceLift(game) >= 1 ? "+" : ""}${Math.round((audienceLift(game) - 1) * 100)}%`} sub="on what digital partners pay" />
+            <HudStat icon="money" label={`Content, ${year}`} value={money(content.revenue - content.cost)} sub={`${money(content.cost)} to run`} tone={content.revenue < content.cost ? "bad" : "good"} />
+          </Hud>
           <dl className="kv">
             <dt>Social followers</dt><dd>{(t.followers / 1e6).toFixed(2)}M{t.followers0 ? ` (${t.followers >= t.followers0 ? "+" : ""}${Math.round((t.followers / t.followers0 - 1) * 100)}% since we took over)` : ""}</dd>
             <dt>Digital value</dt><dd>{audienceLift(game) >= 1 ? "+" : ""}{Math.round((audienceLift(game) - 1) * 100)}% on what digital partners pay for our audience</dd>

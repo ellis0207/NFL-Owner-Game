@@ -5,6 +5,9 @@ import { execRole } from "../../engine/executives";
 import { RULES } from "../../engine/league";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Avatar, Bars, Hud, HudStat, Pips, Ring, Stacked } from "../gfx";
+
+const DEPT_ICON: Record<string, string> = { travel: "globe", security: "shield", it: "gear" };
 
 const LEVELS = ["Lean", "Standard", "Strong", "Best in the league"];
 const METRIC: Record<string, string> = {
@@ -31,7 +34,7 @@ export function Departments({ game, changed }: { game: GameState; changed: () =>
           const extra = k === "it" ? cost.technology : k === "security" ? cost.security : cost.travel;
           return (
             <div key={k} className="panel stack tight">
-              <h3>{def.label}</h3>
+              <div className="gx-row"><Avatar name={x.director} icon={DEPT_ICON[k]} /><div className="stack tight" style={{ flex: 1, minWidth: 0 }}><h3>{def.label}</h3><Pips n={x.budget + 1} of={4} label={LEVELS[x.budget]} /></div></div>
               <span className="muted">{x.director} (made up), {def.title.toLowerCase()}, reports to {boss ? `${boss.name}` : "an open executive job"}.</span>
               <label className="stack tight">
                 <span className="label">Budget</span>
@@ -48,7 +51,7 @@ export function Departments({ game, changed }: { game: GameState; changed: () =>
                 </label>
               ))}
               <span className="muted">{extra ? `${extra > 0 ? "Costs" : "Saves"} ${money(Math.abs(extra))} a year against the budget.` : "Inside the budget."}</span>
-              {m && <span className="muted">{m.quarter}: {Object.entries(m.values).map(([n, v]) => `${METRIC[n] ?? n} ${n === "costPerTrip" ? money(v) : v}`).join(", ")}</span>}
+              {m && <><span className="label">{m.quarter}</span><Hud>{Object.entries(m.values).map(([n, v]) => <HudStat key={n} icon={n === "incidents" ? "alert" : n === "costPerTrip" ? "money" : "check"} label={METRIC[n] ?? n} value={n === "costPerTrip" ? money(v) : v} tone={n === "incidents" && v > 0 ? "bad" : undefined} />)}</Hud></>}
             </div>
           );
         })}
@@ -73,14 +76,16 @@ export function Departments({ game, changed }: { game: GameState; changed: () =>
               })}
             </tbody>
           </table></div>
-          <span className="muted">Chance of a serious attack this quarter, by the staff's estimate: about {Math.round(cyberRisk(game) * 1000) / 10}%.</span>
+          <Bars max={1.5} rows={Object.entries(SYSTEMS).map(([k, sys]) => { const age = RULES.season - d.systems[k].since; return { label: sys.label, value: Math.min(1.5, age / sys.life), text: `${age} of ${sys.life} yrs`, tone: age > sys.life ? "bad" : age > sys.life * 0.75 ? "warn" : "good" }; })} />
+          <div className="gx-row"><Ring size={64} value={Math.min(1, cyberRisk(game) * 10)} text={`${Math.round(cyberRisk(game) * 1000) / 10}%`} tone={cyberRisk(game) > 0.05 ? "bad" : undefined} />
+          <span className="muted">Chance of a serious attack this quarter, by the staff's estimate: about {Math.round(cyberRisk(game) * 1000) / 10}%.</span></div>
         </div>
         <div className="panel stack tight">
           <h3>Last road trip</h3>
           {trip ? (
             <dl className="kv">
               <dt>Where</dt><dd>{trip.where}, {shortDate(trip.date)} ({trip.miles.toLocaleString()} miles, {trip.people} people on the manifest)</dd>
-              <dt>Costs</dt><dd>Charter {money(trip.costs.charter)}, hotel {money(trip.costs.hotel)}, buses {money(trip.costs.ground)}, meals {money(trip.costs.meals)}, equipment {money(trip.costs.equipment)}, security {money(trip.costs.security)}</dd>
+              <dt>Costs</dt><dd><Stacked parts={[["Charter", trip.costs.charter], ["Hotel", trip.costs.hotel], ["Buses", trip.costs.ground], ["Meals", trip.costs.meals], ["Equipment", trip.costs.equipment], ["Security", trip.costs.security]].map(([l, v]) => ({ label: l as string, value: v as number, text: money(v as number) }))} /></dd>
               {trip.note && <><dt>Notes</dt><dd>{trip.note}</dd></>}
             </dl>
           ) : <span className="muted">The first report comes after the first road game.</span>}

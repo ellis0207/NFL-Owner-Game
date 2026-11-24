@@ -19,6 +19,9 @@ import { GroupedTabs } from "../Tabs";
 import { BONUS_PCTS, BONUS_TARGETS, setExecBonus } from "../../engine/boardroom";
 import { execScores } from "../../engine/memos";
 import { leagueYear } from "../../engine/contracts";
+import { Avatar, Chip, Gauge, Hud, HudStat, Ring, type Tone } from "../gfx";
+
+const moodTone = (e: Exec): Tone | undefined => (e.satisfaction >= 70 ? "good" : e.satisfaction < 35 ? "bad" : e.satisfaction < 50 ? "warn" : undefined);
 
 const TABS = ["Executives", "People", "Decision rights", "Memos", "Meetings", "Culture", "Departments", "Record"] as const;
 type Tab = (typeof TABS)[number];
@@ -66,6 +69,12 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
       {msg && <p className="notice">{msg}</p>}
       <div className="panel stack tight">
         <h3>The executive team</h3>
+        <Hud>
+          <HudStat icon="star" label="As an employer" value={reputationWord(x.reputation)} />
+          <HudStat icon="users" label="Report to you" value={ownerSpan(game)} tone={ownerSpan(game) > 4 ? "warn" : undefined} />
+          <HudStat icon="briefcase" label="Filled" value={`${EXEC_KEYS.filter((r) => execRole(game, r)).length} of ${EXEC_KEYS.length}`} />
+          <HudStat icon="money" label="Pay over budget" value={money(execPayrollOver(game))} tone={execPayrollOver(game) > 0 ? "warn" : undefined} />
+        </Hud>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Job</th><th>Who</th><th>Reports to</th><th>Contract</th><th>Last review</th><th>Mood</th><th /></tr></thead>
@@ -77,7 +86,7 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
                 return (
                   <tr key={r}>
                     <td title={EXEC_ROLES[r].what}><strong>{EXEC_ROLES[r].label}</strong></td>
-                    <td>{e ? <><span {...tip("exec", e.id)}>{e.name}</span><br /><span className="muted">{e.resume[0]}</span></> : <span className="muted">{EXEC_ROLES[r].optional ? "Not filled (optional)" : `Vacant${d ? `: ${d.name} acting` : ""}`}</span>}</td>
+                    <td>{e ? <span className="gx-row" style={{ flexWrap: "nowrap" }}><Avatar name={e.name} size={34} /><span><span {...tip("exec", e.id)}>{e.name}</span><br /><span className="muted">{e.resume[0]}</span></span></span> : <span className="muted">{EXEC_ROLES[r].optional ? "Not filled (optional)" : `Vacant${d ? `: ${d.name} acting` : ""}`}</span>}</td>
                     <td>
                       {r === "PRES" ? "You" : !e && EXEC_ROLES[r].optional ? "" : (
                         <select value={x.reportsTo[r]} onChange={(ev) => run(() => setReportsTo(game, r, ev.target.value as ExecRole | "owner"))}>
@@ -87,8 +96,8 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
                       )}
                     </td>
                     <td className="muted">{e?.contract ? `${money(e.contract.salary)} through ${e.contract.through}${e.contract.guaranteed ? ", guaranteed" : ""}` : ""}</td>
-                    <td className="muted">{e?.reviews[0] ? `${e.reviews[0].year}: ${e.reviews[0].score}` : ""}</td>
-                    <td className="muted">{e ? moodWord(e) : ""}</td>
+                    <td>{e?.reviews[0] ? <Ring size={44} value={e.reviews[0].score / 100} text={e.reviews[0].score} sub={e.reviews[0].year} tone={e.reviews[0].score >= 65 ? "good" : e.reviews[0].score < 45 ? "bad" : undefined} /> : ""}</td>
+                    <td>{e ? <Chip icon="heart" tone={moodTone(e)}>{moodWord(e)}</Chip> : ""}</td>
                     <td>
                       <div className="btn-row">
                         {e && <button className="btn small" onClick={() => run(() => fireExec(game, r))}>Let go</button>}
@@ -107,11 +116,7 @@ function Executives({ game, changed }: { game: GameState; changed: () => void })
             {SEARCH_FIRMS.map((f) => <option key={f.id} value={f.id}>{f.id}: {Math.round(f.fee * 100)}% of first-year pay. {f.what}</option>)}
           </select>
         </label>
-        <dl className="kv">
-          <dt>As an employer</dt><dd>{reputationWord(x.reputation)}</dd>
-          <dt>Reporting to you directly</dt><dd>{ownerSpan(game)} {ownerSpan(game) > 4 ? <span className="muted">(a wide span: more lands on your desk)</span> : null}</dd>
-          <dt>Pay over the business budget</dt><dd>{money(execPayrollOver(game))} a year</dd>
-        </dl>
+        {ownerSpan(game) > 4 && <span className="muted">{ownerSpan(game)} people report to you directly, a wide span: more lands on your desk.</span>}
         <span className="muted">Nobody's ability is on paper. You see it in their department's results, their reviews and what other clubs think of them. A vacant job is covered by the deputy.</span>
       </div>
       <BonusTargets game={game} changed={changed} />
@@ -196,7 +201,7 @@ function BonusTargets({ game, changed }: { game: GameState; changed: () => void 
                 <td><select aria-label="Bonus" value={b.pct} onChange={(ev) => set(Number(ev.target.value), b.target)}>{BONUS_PCTS.map((x) => <option key={x} value={x}>{x ? `${x * 100}% of salary` : "None"}</option>)}</select></td>
                 <td><select aria-label="Target" value={b.target} disabled={!b.pct} onChange={(ev) => set(b.pct, Number(ev.target.value))}>{BONUS_TARGETS.map((x) => <option key={x} value={x}>{x}{x >= 80 ? " (stretch)" : x <= 50 ? " (easy)" : ""}</option>)}</select></td>
                 <td className="num">{b.pct ? money(e.contract!.salary * b.pct) : ""}</td>
-                <td className={!b.pct || sc === undefined ? "muted" : sc >= b.target ? "good" : "bad"}>{sc === undefined ? "" : b.pct ? `${sc} (${sc >= b.target ? "on track" : "behind"})` : sc}</td>
+                <td>{sc === undefined ? "" : <span className="gx-row" style={{ flexWrap: "nowrap" }}><Ring size={40} value={sc / 100} text={sc} tone={!b.pct ? undefined : sc >= b.target ? "good" : "bad"} />{b.pct ? <Chip icon={sc >= b.target ? "check" : "alert"} tone={sc >= b.target ? "good" : "bad"}>{sc >= b.target ? "On track" : "Behind"}</Chip> : null}</span>}</td>
               </tr>
             );
           })}</tbody>
@@ -213,6 +218,7 @@ function Rights({ game, changed }: { game: GameState; changed: () => void }) {
     <div className="stack">
       <div className="panel stack tight">
         <h3>How you want to work</h3>
+        <Gauge value={load} label="Decisions you keep" text={`${Math.round(load * 100)}%`} tone={load >= 0.85 ? "warn" : load <= 0.25 ? "warn" : "good"} />
         <div className="btn-row">
           {Object.entries(PRESETS).map(([k, p]) => <button key={k} className="btn small" title={p.what} onClick={() => { setPreset(game, k); changed(); }}>{p.label}</button>)}
         </div>
@@ -286,7 +292,7 @@ function OrgChart({ game }: { game: GameState }) {
     const area = EXEC_ROLES[r].area;
     return (
       <li key={r}>
-        <strong>{EXEC_ROLES[r].label}</strong>: {e ? <span {...tip("exec", e.id)}>{e.name}</span> : <span className="muted">vacant{d ? `, ${d.name} acting` : ""}</span>}
+        <strong>{EXEC_ROLES[r].label}</strong>: {e ? <span {...tip("exec", e.id)}><Avatar name={e.name} size={22} /> {e.name}</span> : <span className="muted">vacant{d ? `, ${d.name} acting` : ""}</span>}
         {area && <span className="muted"> · {AREAS[area].label.toLowerCase()}: {mode(game, area) === "delegate" ? "decides" : mode(game, area) === "approve" ? "proposes" : "advises"}</span>}
         {r === "FOPS" && <span className="muted"> · the GM and head coach report here</span>}
         {kids.length > 0 && <ul className="org">{kids.map(node)}</ul>}

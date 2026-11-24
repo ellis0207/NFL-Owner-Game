@@ -10,6 +10,7 @@ import {
 import { tenure } from "../../engine/takeover";
 import type { GameState, LegacyReview, SuccessionState } from "../../engine/types";
 import { money } from "../format";
+import { Avatar, Chip, Hud, HudStat } from "../gfx";
 
 type Say = (msg: string | null, ok?: string) => void;
 const big = (x: number) => (Math.abs(x) >= 1e9 ? billions(x) : money(x));
@@ -29,12 +30,12 @@ export function Succession({ game, say }: { game: GameState; say: Say }) {
     <div className="stack">
       <div className="panel stack">
         <h3>You</h3>
-        <dl className="kv">
-          <dt>Age</dt><dd>{age}</dd>
-          <dt>Health</dt><dd>{healthWord(s.health)}</dd>
-          <dt>Generation</dt><dd>{s.generation === 1 ? "The first of your family to own the club" : `Owner number ${s.generation} in the family`}</dd>
-          <dt>Your role</dt><dd>{INVOLVEMENT[s.involvement]}</dd>
-        </dl>
+        <Hud>
+          <HudStat icon="user" label="Age" value={age} />
+          <HudStat icon="heart" label="Health" value={healthWord(s.health)} />
+          <HudStat icon="users" label="Generation" value={s.generation === 1 ? "First" : `No. ${s.generation}`} sub={s.generation === 1 ? "of your family to own the club" : "in the family"} />
+          <HudStat icon="briefcase" label="Your role" value={INVOLVEMENT[s.involvement]} />
+        </Hud>
         <div className="btn-row">
           {(Object.keys(INVOLVEMENT) as SuccessionState["involvement"][]).filter((k) => k !== s.involvement).map((k) => (
             <button key={k} className="btn small" onClick={() => say(setInvolvement(game, k), "Your role changed.")}>{k === "full" ? "Run it yourself" : k === "chair" ? "Step back to chair" : "Retire from daily duties"}</button>
@@ -52,7 +53,7 @@ export function Succession({ game, say }: { game: GameState; say: Say }) {
                 const r = heirReport(game, h);
                 return (
                   <tr key={h.id}>
-                    <td>{h.name}{s.successor === h.id ? " (successor)" : ""}<div className="muted">{h.relation}{h.role ? ", works at the club" : ""}</div></td>
+                    <td><span className="gx-row" style={{ flexWrap: "nowrap" }}><Avatar name={h.name} size={34} /><span>{h.name} {s.successor === h.id && <Chip icon="key" tone="good">Successor</Chip>}<div className="muted">{h.relation}{h.role ? ", works at the club" : ""}</div></span></span></td>
                     <td className="num">{h.age}</td><td>{r.interest}</td><td>{r.business}</td><td>{r.football}</td><td>{r.temper}</td><td>{r.ready}</td>
                     <td>
                       <div className="btn-row">

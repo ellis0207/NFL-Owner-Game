@@ -1,4 +1,6 @@
 import { initialTab } from "../ui";
+import { Bars, Chip, Hud, HudStat, WordScale } from "../gfx";
+import { FAN_STEPS, fanStep } from "../gfxdata";
 import { useState } from "react";
 import {
   answerOffer, billions, BUDGET_LEVELS, business, businessChief, cashBalance, CATEGORY, deptCost, DEPTS, nationalRevenue,
@@ -95,8 +97,15 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
     setMsg(ownerCash(game, amount));
     changed();
   };
+  const proj = projectedYear(game);
   return (
     <div className="stack">
+      <Hud>
+        <span {...tip("cash")}><HudStat icon="bank" label="Cash" value={money(cash)} tone={cash < 0 ? "bad" : "good"} sub={`${money(creditLimit(game))} credit line`} /></span>
+        <span {...tip("team", us)}><HudStat icon="trend" label="Franchise value" value={billions(valuation(game, us))} sub="Gridiron Ledger estimate" /></span>
+        <HudStat icon="chart" label="Operating income, on pace" value={money(proj.operating)} tone={proj.operating < 0 ? "bad" : "good"} sub={`on ${money(proj.revenue)} revenue`} />
+        <HudStat icon="heart" label="Fans" value={FAN_STEPS[fanStep(game.pressure.fans)]} sub={<WordScale steps={FAN_STEPS} at={fanStep(game.pressure.fans)} compact />} />
+      </Hud>
       <div className="split">
         <div className="panel stack tight">
           <h3>The bank</h3>
@@ -128,6 +137,10 @@ function Overview({ game, changed }: { game: GameState; changed: () => void }) {
               </div>
             )}
           </div>
+          <Bars rows={[
+            { key: "r", label: <span {...tip("pnl", year, "revenue")}>Revenue</span>, value: p.totalRevenue, text: money(p.totalRevenue), tone: "good" },
+            { key: "e", label: <span {...tip("pnl", year, "expenses")}>Expenses</span>, value: p.totalExpenses, text: money(p.totalExpenses), tone: "bad" },
+          ]} />
           <dl className="kv">
             <dt>Revenue</dt><dd {...tip("pnl", year, "revenue")}>{money(p.totalRevenue)}</dd>
             <dt>Expenses</dt><dd {...tip("pnl", year, "expenses")}>{money(p.totalExpenses)}</dd>
@@ -150,13 +163,7 @@ function Statement({ title, rows, year }: { title: string; rows: { cat: keyof ty
   return (
     <div className="panel stack tight">
       <h3>{title}</h3>
-      <div className="table-wrap">
-        <table>
-          <tbody>
-            {rows.map((r) => <tr key={r.cat} {...tip("ledger", r.cat, year)}><td>{CATEGORY[r.cat].label}</td><td className="num">{money(Math.abs(r.amount))}{r.amount < 0 && title === "Revenue" ? " out" : ""}</td></tr>)}
-          </tbody>
-        </table>
-      </div>
+      <Bars rows={[...rows].sort((x, y) => Math.abs(y.amount) - Math.abs(x.amount)).map((r) => ({ key: r.cat, label: <span {...tip("ledger", r.cat, year)}>{CATEGORY[r.cat].label}</span>, value: Math.abs(r.amount), text: `${money(Math.abs(r.amount))}${r.amount < 0 && title === "Revenue" ? " out" : ""}`, tone: title === "Expenses" ? "bad" : r.amount < 0 ? "warn" : "good" }))} />
     </div>
   );
 }
@@ -196,7 +203,7 @@ function Stadium({ game, changed }: { game: GameState; changed: () => void }) {
   const offers = b.events.filter((e) => e.status === "offered");
   const upcoming = b.events.filter((e) => e.status === "booked" && e.date >= game.date);
   const past = b.events.filter((e) => e.status === "held" || e.status === "refused").slice().reverse();
-  const yes = (x: boolean) => (x ? "Yes" : "No");
+  const yes = (x: boolean) => <Chip icon={x ? "check" : "lock"} tone={x ? "good" : undefined}>{x ? "Yes" : "No"}</Chip>;
   return (
     <div className="stack">
       <div className="split">

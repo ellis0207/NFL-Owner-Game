@@ -11,6 +11,7 @@ import { money } from "../format";
 import { FOLLOW_UPS, followUp, memoPriority, type FollowUp } from "../../engine/desk";
 import { Evidence } from "../Help";
 import { AGENDA_TOPICS, agendaOrder, setAgenda } from "../../engine/people";
+import { Chip, Gauge, Hud, HudStat, IconHead, Ring, Spark } from "../gfx";
 
 export function Desk({ game, changed }: { game: GameState; changed: () => void }) {
   const o = office(game);
@@ -25,7 +26,7 @@ export function Desk({ game, changed }: { game: GameState; changed: () => void }
         <div className="panel stack tight">
           <h3>Decided</h3>
           {closed.map((m) => (
-            <span key={m.id}>{shortDate(m.date)}: {m.title}: <strong>{m.status === "lapsed" ? m.notes.at(-1) : m.options[m.choice ?? 0]?.label}</strong></span>
+            <span key={m.id} className="gx-row"><Chip icon={m.status === "lapsed" ? "clock" : "check"} tone={m.status === "lapsed" ? "warn" : "good"}>{shortDate(m.date)}</Chip> {m.title}: <strong>{m.status === "lapsed" ? m.notes.at(-1) : m.options[m.choice ?? 0]?.label}</strong></span>
           ))}
         </div>
       )}
@@ -40,10 +41,10 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
   return (
     <div className="panel stack tight">
       <div className="btn-row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-        <h3>{m.title}</h3>
-        <span className={urgent ? "bad" : "muted"}>Due {shortDate(m.deadline)} · {memoPriority(game, m).why.join(", ")}</span>
+        <IconHead icon="mail" sub={`From ${m.from}, ${shortDate(m.date)}`}>{m.title}</IconHead>
+        <span className="btn-row"><Chip icon="clock" tone={urgent ? "bad" : undefined}>Due {shortDate(m.deadline)}</Chip>{m.amount ? <Chip icon="money">{money(m.amount)}</Chip> : null}</span>
       </div>
-      <span className="muted">From {m.from}, {shortDate(m.date)}</span>
+      <span className="muted">{memoPriority(game, m).why.join(", ")}</span>
       {msg && <p className="notice">{msg}</p>}
       <span style={{ whiteSpace: "pre-line" }}>{m.problem}</span>
       {m.voices?.length ? <Crossroads voices={m.voices} options={m.options} stakes={m.stakes} /> : null}
@@ -52,7 +53,7 @@ function MemoCard({ memo: m, game, changed }: { memo: Memo; game: GameState; cha
       {m.cash && <span className="muted">Cash: {m.cash.map((c) => `${money(c.amount)} ${c.when}`).join("; ")}</span>}
       {m.comparables?.length ? <span className="muted">Comparables: {m.comparables.join("; ")}</span> : null}
       <span className="muted">Budget: {m.budget}</span>
-      <span className="muted">Risks: {m.risks.join(" ")}</span>
+      <span className="muted"><Chip icon="alert" tone="warn">Risks</Chip> {m.risks.join(" ")}</span>
       {m.conditions && <span className="muted">Why: {m.conditions}</span>}
       {m.notes.map((n, i) => <span key={i}>{n}</span>)}
       <span className="muted">If you don't answer: {m.ifLate}</span>
@@ -153,17 +154,17 @@ export function Record({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Consistency with your priorities</h3>
-          <dl className="kv"><dt>This year</dt><dd className={c.score >= 70 ? "good" : c.score < 50 ? "bad" : ""}>{c.score} of 100</dd></dl>
+          <Gauge value={c.score / 100} label="This year" text={c.score} sub="of 100" tone={c.score >= 70 ? "good" : c.score < 50 ? "bad" : undefined} zones />
           {c.notes.map((n, i) => <span key={i} className="muted">{n}</span>)}
         </div>
         <div className="panel stack tight">
           <h3>Stability at the top</h3>
-          <dl className="kv">
-            <dt>Average time in the job</dt><dd>{st.avgTenure} years</dd>
-            <dt>Departures, last two years</dt><dd>{st.departures}</dd>
-            <dt>What they cost</dt><dd>{money(st.cost)}</dd>
-            <dt>Reorganizations</dt><dd>{st.reorgs}</dd>
-          </dl>
+          <Hud>
+            <HudStat icon="clock" label="Time in the job" value={`${st.avgTenure} yrs`} />
+            <HudStat icon="users" label="Departures (2 yrs)" value={st.departures} tone={st.departures > 2 ? "bad" : undefined} />
+            <HudStat icon="money" label="What they cost" value={money(st.cost)} />
+            <HudStat icon="swap" label="Reorganizations" value={st.reorgs} />
+          </Hud>
         </div>
       </div>
       <div className="panel stack tight">
@@ -175,7 +176,7 @@ export function Record({ game }: { game: GameState }) {
               {EXEC_KEYS.map((r) => {
                 const e = execRole(game, r);
                 if (!e) return null;
-                return <tr key={r}><td>{EXEC_ROLES[r].label}</td><td>{e.name}</td><td className="muted">{e.reviews.length ? e.reviews.slice(0, 3).map((v) => `${v.year}: ${v.score} (${v.text})`).join(" · ") : "First review at the end of the league year."}</td></tr>;
+                return <tr key={r}><td>{EXEC_ROLES[r].label}</td><td>{e.name}</td><td>{e.reviews.length ? <span className="gx-row">{e.reviews.slice(0, 3).map((v) => <span key={v.year} className="gx-row" style={{ flexWrap: "nowrap" }} title={v.text}><Ring size={42} value={v.score / 100} text={v.score} sub={v.year} tone={v.score >= 65 ? "good" : v.score < 45 ? "bad" : undefined} /><span className="muted">{v.text}</span></span>)}</span> : <span className="muted">First review at the end of the league year.</span>}</td></tr>;
               })}
             </tbody>
           </table>
@@ -184,6 +185,14 @@ export function Record({ game }: { game: GameState }) {
       {o.trends.length > 0 && (
         <div className="panel stack tight">
           <h3>Month by month</h3>
+          <div className="gx-grid">
+            {([["Fans", "fans"], ["Press", "media"], ["Head coach", "coach"], ["Executives", "staff"]] as const).map(([l, k]) => {
+              const vs = o.trends.slice(-12).map((t) => t[k]);
+              const last = vs.at(-1) ?? 50;
+              return <div key={k} className="gx-tile"><span className="gx-kicker">{l}</span><span className="gx-big">{last}</span><Spark values={vs} tone={last >= 60 ? "good" : last < 40 ? "bad" : undefined} /></div>;
+            })}
+          </div>
+          <details><summary className="muted">Table</summary>
           <div className="table-wrap">
             <table>
               <thead><tr><th>Month</th><th className="num">Fans</th><th className="num">Press</th><th className="num">Head coach</th><th className="num">Executives</th></tr></thead>
@@ -192,6 +201,7 @@ export function Record({ game }: { game: GameState }) {
               </tbody>
             </table>
           </div>
+          </details>
           <span className="muted">Confidence readings from the staff's own surveys and conversations, 0 to 100; 50 is ordinary.</span>
         </div>
       )}
@@ -210,7 +220,7 @@ export function Record({ game }: { game: GameState }) {
               <thead><tr><th>Date</th><th>Area</th><th>Decision</th><th>By</th><th>Approved</th><th className="num">Amount</th><th>Why</th></tr></thead>
               <tbody>
                 {o.trail.slice(0, 60).map((t, i) => (
-                  <tr key={i}><td>{shortDate(t.date)}</td><td>{t.area}</td><td>{t.what}</td><td className="muted">{t.by}</td><td>{{ owner: "You", delegated: "Delegated", policy: "By default" }[t.approved]}</td><td className="num">{t.amount ? money(t.amount) : ""}</td><td className="muted">{t.why ?? ""}</td></tr>
+                  <tr key={i}><td>{shortDate(t.date)}</td><td>{t.area}</td><td>{t.what}</td><td className="muted">{t.by}</td><td><Chip icon={t.approved === "owner" ? "user" : t.approved === "delegated" ? "users" : "book"}>{{ owner: "You", delegated: "Delegated", policy: "By default" }[t.approved]}</Chip></td><td className="num">{t.amount ? money(t.amount) : ""}</td><td className="muted">{t.why ?? ""}</td></tr>
                 ))}
               </tbody>
             </table>

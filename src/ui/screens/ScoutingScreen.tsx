@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Hud, HudStat, Ring } from "../gfx";
 import { CountUp } from "../kit";
 import { COLLEGE_SEASON, injuryNote, mediaRank, prospectLine, prospectTotals } from "../../engine/college";
 import { RULES } from "../../engine/league";
@@ -56,13 +57,17 @@ function Budget({ game }: { game: GameState }) {
   const lasts = week > 0 ? Math.floor(left / week) : Infinity;
   return (
     <div className="panel stack tight">
-      <div className="figures" style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-        <div className="figure"><span className="label">Budget left</span><strong><CountUp text={String(money(left))} fromZero /></strong></div>
-        <div className="figure"><span className="label">Spent</span><strong><CountUp text={String(money(s.spent))} fromZero /></strong></div>
-        <div className="figure"><span className="label">This week's plan</span><strong><CountUp text={String(money(week))} fromZero /></strong></div>
-        <div className="figure"><span className="label">Weeks to the draft</span><strong><CountUp text={String(weeks)} fromZero /></strong></div>
+      <div className="gx-row" style={{ gap: "1.2rem", alignItems: "center" }}>
+        <Ring value={s.budget ? s.spent / s.budget : 0} label="Budget used" size={90} tone={lasts < weeks ? "warn" : undefined} />
+        <div style={{ flex: "1 1 320px" }}>
+          <Hud>
+            <HudStat icon="money" label="Budget left" value={<CountUp text={String(money(left))} fromZero />} tone={lasts < weeks ? "warn" : "good"} />
+            <HudStat icon="chart" label="Spent" value={<CountUp text={String(money(s.spent))} fromZero />} />
+            <HudStat icon="clipboard" label="This week's plan" value={<CountUp text={String(money(week))} fromZero />} />
+            <HudStat icon="calendar" label="Weeks to the draft" value={<CountUp text={String(weeks)} fromZero />} />
+          </Hud>
+        </div>
       </div>
-      <div className="meter" aria-label="Budget used"><span style={{ width: `${Math.min(100, (100 * s.spent) / s.budget)}%`, background: "var(--team)" }} /></div>
       <span className={`muted${lasts < weeks ? " warn" : ""}`}>
         {week === 0 ? "No assignments: the scouts are sitting in the office." : lasts >= weeks ? "At this pace the budget lasts through the draft." : `At this pace the budget runs out in about ${lasts} week${lasts === 1 ? "" : "s"}, ${weeks - lasts} short of the draft.`}
       </span>
@@ -244,14 +249,14 @@ function Board({ game, changed }: { game: GameState; changed: () => void }) {
               const hurt = injuryNote(game, p.id);
               return (
                 <tr key={p.id}>
-                  <td className="num">{media <= 300 ? media : "—"}</td>
+                  <td className="num">{media <= 300 ? <span className={`wr-media${media <= 32 ? " r1" : media <= 100 ? " r2" : ""}`}>{media}</span> : "—"}</td>
                   <td className="name"><button className="link" onClick={() => ui.openProspect(p.id)}>{p.name}</button>{hurt && <span className="bad" title={hurt}> ✚</span>}</td>
-                  <td>{p.position}</td>
+                  <td><span className="gx-pos">{p.position}</span></td>
                   <td>{schoolName(p.school)}</td>
                   <td>{p.classYear}</td>
                   <td>{height(p.heightIn)}, {p.weightLb}</td>
                   <td className="muted">{prospectLine(p, prospectTotals(game, p.id))}</td>
-                  <td>{knowledgeLabel(know)}</td>
+                  <td><span className="rb-share wr-know"><span style={{ width: `${Math.min(100, know)}%` }} /></span>{knowledgeLabel(know)}</td>
                   <td>{report.grade ?? "—"}</td>
                   <td>
                     {listed

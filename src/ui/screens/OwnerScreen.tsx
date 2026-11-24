@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Donut, Gauge, Hud, HudStat, Pips, Radar } from "../gfx";
 import { billions } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
 import { RULES } from "../../engine/league";
@@ -46,6 +47,10 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
       {tab === "overview" && <div className="split">
         <div className="panel stack tight">
           <h3>{RULES.season} scorecard so far</h3>
+          <div className="gx-row" style={{ justifyContent: "space-around" }}>
+            <Radar axes={GOAL_KEYS.map((g) => ({ label: GOALS[g].label.replace(/^(Win|Make|Grow the|Serve the|Earn|Run a) /i, ""), value: card.scores[g] }))} size={250} />
+            <Gauge value={card.overall / 100} label="By your priorities" text={String(card.overall)} sub={scoreWord(card.overall)} zones />
+          </div>
           <div className="table-wrap">
             <table>
               <tbody>
@@ -54,7 +59,7 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
                     <td title={GOALS[g].what}>{GOALS[g].label}</td>
                     <td className="num">{card.scores[g]}</td>
                     <td className="muted">{scoreWord(card.scores[g])}</td>
-                    <td className="muted">weight {o.weights[g]}</td>
+                    <td><Pips n={o.weights[g]} of={5} label="weight" /></td>
                   </tr>
                 ))}
                 <tr><td><strong>By your priorities</strong></td><td className="num"><strong>{card.overall}</strong></td><td><strong>{scoreWord(card.overall)}</strong></td><td /></tr>
@@ -65,6 +70,10 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
         </div>
         <div className="panel stack tight">
           <h3>Your stake</h3>
+          <Hud>
+            <HudStat icon="trend" label="Your equity now" value={billions(ownerEquity(game))} sub={`bought at ${billions(o.purchase)}`} tone={ownerEquity(game) >= o.purchase * ownerShare(game) ? "good" : "bad"} />
+            <HudStat icon="chart" label="Return a year" value={ret.years < 0.75 ? "Too early" : pct(ret.annual)} tone={ret.years < 0.75 ? undefined : ret.annual >= ret.benchmark ? "good" : "bad"} sub={ret.years < 0.75 ? undefined : `market about ${pct(ret.benchmark)}`} />
+          </Hud>
           <dl className="kv">
             <dt>Bought</dt><dd>{shortDate(o.since)} {o.since.slice(0, 4)} at {billions(o.purchase)}</dd>
             {ownerShare(game) < 1 && <><dt>Your share of the club</dt><dd>{pct(ownerShare(game))} <span className="muted">(Ownership page)</span></dd></>}
@@ -99,10 +108,10 @@ export function OwnerScreen({ game, changed }: { game: GameState; changed: () =>
         </div>
         <div className="panel stack tight">
           <h3>Your wealth</h3>
-          <dl className="kv">
-            <dt>Net worth</dt><dd>{billions(nw.total)}</dd>
-            <dt>In the team</dt><dd>{Math.round(nw.concentration * 100)}%</dd>
-          </dl>
+          <Donut size={120} center={billions(nw.total)} parts={[
+            { label: "In the team", value: nw.concentration, text: `${Math.round(nw.concentration * 100)}%`, color: "var(--team)" },
+            { label: "Everything else", value: 1 - nw.concentration, text: `${Math.round((1 - nw.concentration) * 100)}%`, color: "var(--room-accent)" },
+          ]} label="Net worth" />
           <span className="muted">{concentrationWord(nw.concentration)}. Your holdings, family arrangements, foundation and public profile are on the Money tab.</span>
         </div>
       </div>}

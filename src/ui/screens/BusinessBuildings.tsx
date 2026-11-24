@@ -9,6 +9,7 @@ import { leaseSummary } from "../../engine/leases";
 import { controlOf, STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../../engine/stadiums";
 import type { FacilitiesState, GameState } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Chip, Gauge, Hud, HudStat } from "../gfx";
 
 export function Buildings({ game, changed }: { game: GameState; changed: () => void }) {
   const f = facilities(game);
@@ -33,7 +34,7 @@ export function Buildings({ game, changed }: { game: GameState; changed: () => v
           return (
             <tr key={k}>
               <td>{d.label}{k === "field" ? ` (${f.surface === "grass" ? "natural grass" : "artificial turf"})` : ""}</td>
-              <td className={`num ${r.value < 25 ? "bad" : ""}`}>{word(r.value)} {r.measured ? `(${r.value})` : `(about ${Math.round(r.value / 5) * 5})`}</td>
+              <td className="num"><span className="gx-row" style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}><span className={r.value < 25 ? "bad" : ""}>{word(r.value)} {r.measured ? `(${r.value})` : `(about ${Math.round(r.value / 5) * 5})`}</span><span className="rb-share" style={{ width: 70 }}><span style={{ width: `${r.measured ? r.value : Math.round(r.value / 5) * 5}%`, background: r.value < 25 ? "var(--bad)" : r.value < 50 ? "var(--warn)" : "var(--good)" }} /></span></span></td>
               <td className="num">{f.parts[k]?.replaced}</td>
               <td className="num">{money(d.cost * inflation(year))}</td>
               <td>{k !== "roof" && (site === "complex" || ours) && <button className="btn small" onClick={() => act(() => replacePart(game, k), `${d.label} replaced.`)}>Replace</button>}</td>
@@ -49,14 +50,21 @@ export function Buildings({ game, changed }: { game: GameState; changed: () => v
       <div className="split">
         <div className="panel stack tight">
           <h3>{s.name}</h3>
+          <div className="gx-row">
+            {studied ? <Gauge value={stadiumCondition(game) / 100} label="Condition" text={Math.round(stadiumCondition(game))} sub="measured" zones /> : <Chip icon="building">Condition: {word(stadiumCondition(game))}</Chip>}
+            <Hud>
+              <HudStat icon="stadium" label="Seats" value={s.capacity.toLocaleString()} sub={`opened ${s.opened}`} />
+              <HudStat icon="alert" label="Backlog" value={bl.cost ? money(bl.cost) : "None"} tone={bl.cost ? "bad" : "good"} />
+              {value != null && <HudStat icon="bank" label="Building value" value={money(value)} />}
+            </Hud>
+          </div>
           <dl className="kv">
             <dt>Ownership</dt><dd>{STRUCTURE_LABEL[s.structure]} ({s.owner}); operated by {s.operator}</dd>
             <dt>Opened</dt><dd>{s.opened}, {s.capacity.toLocaleString()} seats, {s.roof === "open" ? "open air" : s.roof === "dome" ? "fixed roof" : "retractable roof"}</dd>
             <dt>Our rights</dt><dd>{ctl.booking === "full" ? "Book any event" : ctl.booking === "partner" ? "Events with the co-owner's yes" : ctl.booking === "approval" ? "Events with the landlord's approval" : "No event booking"}; {ctl.concessions ? "we set concession and parking prices" : "the landlord sets concession and parking prices"}</dd>
             {lease && <><dt>Lease</dt><dd>{lease}</dd></>}
-            <dt>Condition</dt><dd>{studied ? `${Math.round(stadiumCondition(game))} of 100, measured` : `${word(stadiumCondition(game) + 0)} by the operations director's read`}</dd>
-            <dt>Backlog</dt><dd className={bl.cost ? "bad" : undefined}>{bl.cost ? `${money(bl.cost)}: ${bl.parts.join(", ").toLowerCase()}` : "Nothing past due"}</dd>
-            {value != null && <><dt>Value apart from the team</dt><dd>About {money(value)} {s.structure === "coowned" ? "(our half)" : ""}</dd></>}
+            {bl.cost > 0 && <><dt>Past due</dt><dd className="bad">{bl.parts.join(", ").toLowerCase()}</dd></>}
+            {value != null && s.structure === "coowned" && <><dt>Building value</dt><dd>Our half</dd></>}
           </dl>
           {ours ? (
             <label className="stack tight">
@@ -82,7 +90,7 @@ export function Buildings({ game, changed }: { game: GameState; changed: () => v
           <span className="label">Players' and staff survey</span>
           {f.surveys[0] ? (
             <>
-              <ul>{Object.entries(f.surveys[0].scores).map(([k, v]) => <li key={k} className={v < 5.5 ? "bad" : undefined}>{k}: {v.toFixed(1)}</li>)}</ul>
+              <Bars max={10} rows={Object.entries(f.surveys[0].scores).map(([k, v]) => ({ label: k, value: v, text: v.toFixed(1), tone: v < 5.5 ? "bad" as const : v >= 7.5 ? "good" as const : undefined }))} />
               <span className="muted">{f.surveys[0].year}: {f.surveys[0].notes.join(" ")}</span>
             </>
           ) : <span className="muted">The survey goes out in June.</span>}

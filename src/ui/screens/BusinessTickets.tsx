@@ -11,6 +11,7 @@ import {
 } from "../../engine/ticketing";
 import type { ConcessionTier, GameState, GameTier, Promo, Zone } from "../../engine/types";
 import { money } from "../format";
+import { Columns, Gauge, Hud, HudStat, Ring, Stacked, TeamTag } from "../gfx";
 
 function heatWords(heat: number): string {
   return heat >= 1.6 ? "Resale prices are far above face value" : heat >= 1.15 ? "Resale prices are above face value" : heat >= 0.95 ? "Selling out at face value"
@@ -45,12 +46,19 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
       <div className="split">
         <div className="panel stack tight">
           <h3>This season</h3>
+          <Hud>
+            <HudStat icon="ticket" label="Season-ticket holders" value={b.holders.toLocaleString("en-US")} />
+            <HudStat icon="money" label="Season ticket" value={`$${Math.round(mk.ticket * (b.index?.season ?? 1))}`} sub={`a game, locked for ${RULES.season}`} />
+            <HudStat icon="stadium" label="Seats" value={s.capacity.toLocaleString("en-US")} />
+            <HudStat icon="chart" label="Revenue per seat" value={rp ? `$${rp}` : "-"} sub={rp ? "a seat a game" : "after the first home game"} />
+          </Hud>
+          <div className="gx-row">
+            {use != null && <Gauge value={use} label="Suites and clubs in use" text={pct(use)} sub={`${pct(t.premiumBook)} leased`} />}
+            {f && next && <Gauge value={Math.min(1, f.sold / f.capacity)} label={`Next home game, ${shortDate(next.date)}`} text={`${Math.min(100, Math.round((f.sold / f.capacity) * 100))}%`} sub="expected sold" tone={f.sold / f.capacity < 0.9 ? "warn" : "good"} />}
+          </div>
           <dl className="kv">
-            <dt>Season-ticket holders</dt><dd>{b.holders.toLocaleString("en-US")}</dd>
-            <dt>Season-ticket price</dt><dd>${Math.round(mk.ticket * (b.index?.season ?? 1))} a game on average (locked for {RULES.season})</dd>
-            <dt>Stadium</dt><dd>{s.capacity.toLocaleString("en-US")} seats, about {Math.round(s.capacity * 0.12).toLocaleString("en-US")} in suites and clubs, {Math.round(s.capacity * ACCESSIBLE).toLocaleString("en-US")} accessible</dd>
-            <dt>Revenue per seat</dt><dd>{rp ? `$${rp} a seat a game (tickets, suites, food, parking, store)` : "After the first home game"}</dd>
-            <dt>Suites and clubs in use</dt><dd>{use != null ? `${pct(use)} this season` : "Not measured yet"}; {pct(t.premiumBook)} of the premium seats are leased</dd>
+            <dt>Stadium</dt><dd>About {Math.round(s.capacity * 0.12).toLocaleString("en-US")} in suites and clubs, {Math.round(s.capacity * ACCESSIBLE).toLocaleString("en-US")} accessible</dd>
+            
           </dl>
           <label className="field">
             <span className="label">Single-game prices: {Math.round(b.prices.single * 100)}% of market (about ${Math.round(mk.ticket * (b.index?.season ?? 1) * 1.2 * b.prices.single)} a seat on average)</span>
@@ -174,6 +182,7 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
       <Intelligence game={game} changed={changed} setMsg={setMsg} />
       <div className="panel stack tight">
         <h3>The gate</h3>
+        {b.gates.length > 1 && <Columns values={[...b.gates].reverse().map((g) => g.revenue)} labels={[...b.gates].reverse().map((g) => g.opp)} format={money} />}
         {b.gates.length === 0 ? <p className="muted">No home games yet.</p> : (
           <div className="table-wrap">
             <table>
@@ -182,8 +191,8 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
                 {b.gates.map((g) => (
                   <tr key={g.game}>
                     <td>{shortDate(g.date)}</td>
-                    <td>{g.type === "PRE" ? "Preseason" : g.type === "POST" ? "Playoffs" : g.tier ? TIER_LABEL[g.tier] : "Regular season"} vs {TEAM_BY_ID[g.opp]?.name ?? g.opp}</td>
-                    <td className="num">{g.sold.toLocaleString("en-US")} <span className="muted">({Math.round((g.sold / g.capacity) * 100)}%)</span></td>
+                    <td><TeamTag team={g.opp} name={TEAM_BY_ID[g.opp]?.name ?? g.opp} /> <span className="muted">{g.type === "PRE" ? "Preseason" : g.type === "POST" ? "Playoffs" : g.tier ? TIER_LABEL[g.tier] : "Regular season"}</span></td>
+                    <td className="num"><span className="gx-row" style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}>{g.sold.toLocaleString("en-US")}<Ring size={40} value={g.sold / g.capacity} text={Math.round((g.sold / g.capacity) * 100)} tone={g.sold / g.capacity >= 0.98 ? "good" : g.sold / g.capacity < 0.85 ? "bad" : undefined} /></span></td>
                     <td className="num">{g.attendance ? <>{g.attendance.toLocaleString("en-US")} <span className="muted">({(g.noShows ?? 0).toLocaleString("en-US")} no-shows)</span></> : "-"}</td>
                     <td className="num">{g.type === "POST" ? "League gate" : `${g.singleSold.toLocaleString("en-US")} of ${g.singleSeats.toLocaleString("en-US")}`}{g.groups ? <span className="muted"> +{g.groups.toLocaleString("en-US")} groups</span> : null}</td>
                     <td className="num">{g.price ? `$${g.price}` : "-"}{g.dynamic && g.dynamic !== 1 ? <span className="muted"> ({signed(g.dynamic - 1)})</span> : null}</td>
@@ -212,6 +221,7 @@ function Base({ game }: { game: GameState }) {
   return (
     <div className="panel stack tight">
       <h3>Season-ticket base</h3>
+      <Stacked label={`${total.toLocaleString("en-US")} holders`} parts={[{ label: "Longtime (10+ yrs)", value: t.tenure.long, text: t.tenure.long.toLocaleString("en-US") }, { label: "Mid (4-9)", value: t.tenure.mid, text: t.tenure.mid.toLocaleString("en-US") }, { label: "Newest (1-3)", value: t.tenure.recent, text: t.tenure.recent.toLocaleString("en-US") }]} />
       <dl className="kv">
         <dt>Longtime holders (10+ years)</dt><dd>{t.tenure.long.toLocaleString("en-US")} ({total ? pct(t.tenure.long / total) : "-"})</dd>
         <dt>Mid (4 to 9 years)</dt><dd>{t.tenure.mid.toLocaleString("en-US")}</dd>

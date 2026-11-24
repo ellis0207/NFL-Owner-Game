@@ -7,6 +7,7 @@ import { owner } from "../../engine/ownership";
 import { TEAM_BY_ID } from "../../engine/league";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Hud, HudStat } from "../gfx";
 
 export function Community({ game, changed }: { game: GameState; changed: () => void }) {
   const c = community(game);
@@ -21,6 +22,11 @@ export function Community({ game, changed }: { game: GameState; changed: () => v
       <div className="split">
         <div className="panel stack tight">
           <h3>The {TEAM_BY_ID[game.userTeam].name} Foundation</h3>
+          <Hud>
+            <HudStat icon="bank" label="Balance" value={money(c.foundation.balance)} />
+            <HudStat icon="heart" label="Given in grants" value={money(c.foundation.given)} tone="good" />
+            <HudStat icon="money" label="Raised" value={money(c.foundation.raised)} />
+          </Hud>
           <dl className="kv">
             <dt>Balance</dt><dd>{money(c.foundation.balance)}</dd>
             <dt>Given</dt><dd>{money(c.foundation.given)} in grants; fundraisers brought in {money(c.foundation.raised)}; your own gifts {money(c.foundation.ownerGiven)}</dd>
