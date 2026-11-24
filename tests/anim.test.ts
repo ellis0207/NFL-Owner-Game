@@ -257,16 +257,14 @@ describe("acting out the play-by-play", () => {
   });
 });
 
-/** The moves in the 3D player model (assets/anim/player.glb), read from its JSON chunk. */
+/** The moves in the 3D player model (assets/anim/player3d.json, glTF). */
 function glbMoves(): string[] {
-  const b = readFileSync("assets/anim/player.glb");
-  const len = b.readUInt32LE(12);
-  return (JSON.parse(b.subarray(20, 20 + len).toString("utf8")).animations as { name: string }[]).map((a) => a.name);
+  return (JSON.parse(readFileSync("assets/anim/player3d.json", "utf8")).animations as { name: string }[]).map((a) => a.name);
 }
 
 describe("the 3D players", () => {
   it("ships a model under its budget with every move the field view asks for", () => {
-    expect(statSync("assets/anim/player.glb").size).toBeLessThan(2_000_000);
+    expect(statSync("assets/anim/player3d.json").size).toBeLessThan(2_000_000);
     const moves = new Set(glbMoves());
     const asked = new Set<string>();
     for (let n = 0; n < log.plays.length; n++) {

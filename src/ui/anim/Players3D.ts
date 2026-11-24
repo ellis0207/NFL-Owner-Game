@@ -1,5 +1,5 @@
 // The players drawn as live 3D figures: the skinned model and its moves made
-// in Blender (pipeline/anim/export_glb.py, served as anim/player.glb), posed
+// in Blender (pipeline/anim/export_glb.py, served as anim/player3d.json), posed
 // for every frame of a play from the track build.ts works out. The same
 // figure plays every club and every official; each wears its own colors,
 // number and build (from the player's real height and weight).
@@ -34,7 +34,7 @@ export function playerModel(): Promise<Model3D | null> {
     try {
       const probe = document.createElement("canvas");
       if (!probe.getContext("webgl2") && !probe.getContext("webgl")) return null;
-      const res = await fetch("anim/player.glb");
+      const res = await fetch("anim/player3d.json");
       if (!res.ok) return null;
       const gltf = await new GLTFLoader().parseAsync(await res.arrayBuffer(), "");
       const ball = gltf.scene.getObjectByName("football");
