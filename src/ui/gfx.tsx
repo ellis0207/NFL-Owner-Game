@@ -495,3 +495,29 @@ export function Grade({ g, title }: { g: string; title?: string }) {
   const k = g.trim().charAt(0).toUpperCase();
   return <span className={`gx-grade g-${"ABCDF".includes(k) ? k : "C"}`} title={title}>{g}</span>;
 }
+
+/** A radar of a few scores on the same 0-to-max scale: the owner's scorecard, a club's profile. */
+export function Radar({ axes, max = 100, size = 220, ring = 0.5 }: { axes: { label: string; value: number }[]; max?: number; size?: number; ring?: number }) {
+  const n = axes.length;
+  if (n < 3) return null;
+  const c = 50, R = 34;
+  const at = (i: number, r: number) => {
+    const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+    return [c + Math.cos(a) * r, c + Math.sin(a) * r];
+  };
+  const poly = (f: (i: number) => number) => axes.map((_, i) => at(i, f(i)).map((v) => v.toFixed(2)).join(",")).join(" ");
+  return (
+    <figure className="gx-radar" style={{ width: size }}>
+      <svg viewBox="0 0 100 100" width={size} height={size} role="img" aria-label={axes.map((a) => `${a.label} ${a.value}`).join(", ")}>
+        {[0.25, 0.5, 0.75, 1].map((k) => <polygon key={k} points={poly(() => R * k)} className={`gx-radar-grid${k === ring ? " mid" : ""}`} />)}
+        {axes.map((_, i) => { const [x, y] = at(i, R); return <line key={i} x1={c} y1={c} x2={x} y2={y} className="gx-radar-grid" />; })}
+        <polygon points={poly((i) => R * clamp01(axes[i].value / max))} className="gx-radar-area" />
+        {axes.map((a, i) => { const [x, y] = at(i, R * clamp01(a.value / max)); return <circle key={i} cx={x} cy={y} r="1.6" className="gx-radar-dot" />; })}
+        {axes.map((a, i) => {
+          const [x, y] = at(i, R + 9);
+          return <text key={i} x={x} y={y} textAnchor={x < c - 3 ? "end" : x > c + 3 ? "start" : "middle"} dominantBaseline="middle" className="gx-radar-label">{a.label}<tspan className="gx-radar-val" dx="1.5">{Math.round(a.value)}</tspan></text>;
+        })}
+      </svg>
+    </figure>
+  );
+}

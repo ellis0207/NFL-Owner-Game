@@ -227,3 +227,13 @@ td .gx-form { gap: 1px; }
 .gx-grade.g-B { background: color-mix(in srgb, var(--good) 55%, #3a9bc4); }
 .gx-grade.g-C { background: var(--warn); }
 .gx-grade.g-D, .gx-grade.g-F { background: var(--bad); }
+/* Radar */
+.gx-radar { margin: 0 auto; }
+.gx-radar svg { display: block; overflow: visible; }
+.gx-radar-grid { fill: none; stroke: var(--rule); stroke-width: 0.4; }
+.gx-radar-grid.mid { stroke: var(--muted); stroke-dasharray: 1.5 1; }
+.gx-radar-area { fill: color-mix(in srgb, var(--room-accent, var(--team)) 30%, transparent); stroke: var(--room-accent, var(--team)); stroke-width: 1.2; stroke-linejoin: round; }
+.gx-radar-dot { fill: var(--room-accent, var(--team)); }
+.gx-radar-label { font-size: 4.2px; fill: var(--muted); font-family: var(--font-body); }
+.gx-radar-val { font-weight: 700; fill: var(--ink); font-family: var(--font-mono); }
+.gx-row > .gx-hud { flex: 1 1 320px; min-width: 0; }

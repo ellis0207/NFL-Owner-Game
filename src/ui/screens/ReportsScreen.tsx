@@ -13,6 +13,7 @@ import { seasonTotals } from "../../engine/stats";
 import { payrollByDept } from "../../engine/treasury";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Chip, Leaderboard, Ring, Stacked } from "../gfx";
 import { agreements } from "./AgreementsScreen";
 
 export function ReportsScreen({ game, changed }: { game: GameState; changed: () => void }) {
@@ -29,7 +30,7 @@ export function ReportsScreen({ game, changed }: { game: GameState; changed: () 
         <h3>What needs you, in order</h3>
         <span className="muted">Ranked by deadline, money at stake, strategic weight and whether only you can decide it.</span>
         {desk.length === 0 && <span className="muted">Nothing open.</span>}
-        {desk.map((d) => <span key={d.id}>{d.title} <span className="muted">({d.why.join(", ")}{d.deadline ? `; due ${shortDate(d.deadline)}` : ""})</span></span>)}
+        {desk.map((d, i) => <span key={d.id} className="gx-row"><span className="gx-pos">{i + 1}</span><strong>{d.title}</strong>{d.deadline && <Chip icon="clock" tone={d.deadline <= game.date ? "bad" : undefined}>Due {shortDate(d.deadline)}</Chip>}<span className="muted">{d.why.join(", ")}</span></span>)}
       </div>
       <div className="panel stack tight">
         <h3>Save a report</h3>
@@ -57,10 +58,10 @@ export function ReportsScreen({ game, changed }: { game: GameState; changed: () 
 
 function Report({ game, kind, params }: { game: GameState; kind: string; params: Record<string, string> }) {
   const team = game.userTeam;
-  if (kind === "cap") return <ul>{capPlanner(game, team, []).map((p) => <li key={p.year}>{p.year}: {money(p.committed)} committed, {money(p.dead)} dead, {money(p.space)} space</li>)}</ul>;
+  if (kind === "cap") return <div className="stack tight">{capPlanner(game, team, []).map((p) => <Stacked key={p.year} label={`${p.year}: ${money(p.space)} space`} parts={[{ label: "Committed", value: p.committed, text: money(p.committed), color: "var(--team)" }, { label: "Dead", value: p.dead, text: money(p.dead), color: "var(--bad)" }, { label: "Space", value: Math.max(0, p.space), text: money(p.space), color: "var(--good)" }]} />)}</div>;
   if (kind === "budget") {
     const rows = budgetVsActual(game, Number(params.year) || leagueYear(game.date)).filter((r) => Math.abs(r.variance) > 100_000).sort((a, b) => a.variance - b.variance).slice(0, 12);
-    return <ul>{rows.map((r) => <li key={r.cat}>{CATEGORY[r.cat].label}: {r.variance >= 0 ? "ahead by" : "behind by"} {money(Math.abs(r.variance))}</li>)}</ul>;
+    return <Bars signed rows={rows.map((r) => ({ key: r.cat, label: CATEGORY[r.cat].label, value: r.variance, text: `${r.variance >= 0 ? "ahead" : "behind"} ${money(Math.abs(r.variance))}`, tone: r.variance >= 0 ? "good" : "bad" }))} />;
   }
   if (kind === "injuries") {
     const hurt = Object.entries(game.players).filter(([, p]) => p.team === team && p.injury);
@@ -69,15 +70,15 @@ function Report({ game, kind, params }: { game: GameState; kind: string; params:
   if (kind === "leaders") {
     const key = params.stat || "passYds";
     const rows = Object.entries(seasonTotals(game, "REG")).filter(([, r]) => r.team === team).map(([id, r]) => [id, Number((r.line as Record<string, number>)[key] ?? 0)] as const).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    return <ol>{rows.map(([id, v]) => <li key={id}>{PLAYER_BY_ID[id]?.name ?? id}: {v}</li>)}</ol>;
+    return <Leaderboard rows={rows.map(([id, v]) => ({ key: id, who: PLAYER_BY_ID[id]?.name ?? id, team, value: v, text: v.toLocaleString("en-US") }))} />;
   }
   if (kind === "standings") {
     const me = TEAM_BY_ID[team];
     const st = standings(game);
     const div = TEAMS.filter((t) => t.conference === me.conference && t.division === me.division).sort((a, b) => (st[b.id]?.w ?? 0) - (st[a.id]?.w ?? 0));
-    return <ol>{div.map((t) => <li key={t.id}>{t.name}: {st[t.id]?.w ?? 0}-{st[t.id]?.l ?? 0}{st[t.id]?.t ? `-${st[t.id].t}` : ""}</li>)}</ol>;
+    return <Leaderboard rows={div.map((t) => ({ key: t.id, who: t.name, team: t.id, value: st[t.id]?.w ?? 0, text: `${st[t.id]?.w ?? 0}-${st[t.id]?.l ?? 0}${st[t.id]?.t ? `-${st[t.id].t}` : ""}`, mine: t.id === team }))} />;
   }
-  if (kind === "payroll") return <ul>{payrollByDept(game).map((r) => <li key={r.dept}>{r.dept}: {money(r.amount)}</li>)}</ul>;
+  if (kind === "payroll") return <Bars rows={payrollByDept(game).map((r) => ({ key: r.dept, label: r.dept, value: r.amount, text: money(r.amount) }))} />;
   if (kind === "contracts") {
     const within = Number(params.within) || 1;
     const rows = agreements(game).filter((a) => a.ends <= RULES.season + within).sort((a, b) => b.amount - a.amount).slice(0, 25);
@@ -98,11 +99,11 @@ function CauseEffect({ game }: { game: GameState }) {
         const checked = (game.causes ?? []).filter((c) => c.outcome);
         if (!checked.length) return null;
         const inside = checked.filter((c) => c.outcome!.within).length;
-        return <span>Staff forecasts checked against results: {inside} of {checked.length} landed inside the staff's range. A result is what was observed; the note on each says how much of it the decision itself can be credited with.</span>;
+        return <span className="gx-row"><Ring size={56} value={inside / checked.length} text={`${inside}/${checked.length}`} /> Staff forecasts checked against results: {inside} of {checked.length} landed inside the staff's range. A result is what was observed; the note on each says how much of it the decision itself can be credited with.</span>;
       })()}
       {log.map((c) => (
         <div key={c.id}>
-          <strong>{shortDate(c.date)} {c.date.slice(0, 4)}:</strong> {c.text}
+          <Chip icon="bolt">{shortDate(c.date)} {c.date.slice(0, 4)}</Chip> {c.text}
           {c.forecast && <div className="muted small">Forecast ({c.forecast.option}): {c.forecast.metric.toLowerCase()}. {c.outcome ? (c.outcome.within ? "Result inside the range." : "Result outside the range.") : "Not yet measured."} Attribution: {c.forecast.attribution === "direct" ? "direct" : c.forecast.attribution === "partial" ? "partly the decision" : "observed only, not credited to the decision"}.</div>}
           {c.effects.length > 0 && <ul className="plain muted">{c.effects.map((e, i) => <li key={i}>{e.text}</li>)}</ul>}
         </div>

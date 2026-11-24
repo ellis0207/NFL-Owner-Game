@@ -9,6 +9,7 @@ import {
   sellHolding, setFamilyOffice, setFocus, setVisibility, syncHoldings, wealth,
 } from "../../engine/wealth";
 import { money } from "../format";
+import { Bars, Gauge } from "../gfx";
 
 const M = 1_000_000;
 const big = (x: number) => (Math.abs(x) >= 1e9 ? billions(x) : money(x));
@@ -37,11 +38,12 @@ export function OwnerMoney({ game, say }: { game: GameState; say: (msg: string |
             {nw.debt > 0 && <><dt>Personal debt</dt><dd className="bad">{big(nw.debt)}</dd></>}
             <dt>Net worth</dt><dd><strong>{big(nw.total)}</strong></dd>
           </dl>
-          <span className={nw.concentration >= 0.65 ? "bad" : ""}>{concentrationWord(nw.concentration)}: {pc(nw.concentration)} of your net worth.</span>
+          <Gauge value={nw.concentration} label="In the team" text={pc(nw.concentration)} sub={concentrationWord(nw.concentration)} tone={nw.concentration >= 0.65 ? "bad" : undefined} />
           {nw.concentration >= 0.65 && <span className="muted">Advisers would spread it out: a minority stake sale on the Ownership page turns part of the team into cash.</span>}
         </div>
         <div className="panel stack tight">
           <h3>The team against the market</h3>
+          <Bars rows={[{ label: "Your stake", value: opp.stake, text: big(opp.stake), color: "var(--team)" }, { label: "Same money in stocks", value: opp.alt, text: big(opp.alt), color: "var(--muted)" }]} />
           <dl className="kv">
             <dt>Your stake now</dt><dd>{big(opp.stake)}</dd>
             <dt>The same money in stocks</dt><dd>{big(opp.alt)}</dd>
@@ -60,6 +62,7 @@ export function OwnerMoney({ game, say }: { game: GameState; say: (msg: string |
             {[25, 100, 250, 1000].map((x) => <option key={x} value={x * M}>{big(x * M)}</option>)}
           </select>
         </div>
+        <Bars rows={HOLDING_KEYS.map((k: Holding) => ({ key: k, label: HOLDINGS[k].label, value: w.holdings[k], text: `${big(w.holdings[k])} (${pc(w.holdings[k] / outside)})` }))} />
         <div className="table-wrap">
           <table>
             <thead><tr><th>Holding</th><th className="num">Value</th><th className="num">Share</th><th>Selling</th><th /></tr></thead>

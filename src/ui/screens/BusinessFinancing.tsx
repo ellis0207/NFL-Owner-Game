@@ -8,6 +8,7 @@ import {
 } from "../../engine/debt";
 import type { GameState, LoanKind } from "../../engine/types";
 import { money } from "../format";
+import { Gauge, Hud, HudStat } from "../gfx";
 
 const pct = (x: number) => `${(x * 100).toFixed(2)}%`;
 
@@ -27,6 +28,7 @@ export function Financing({ game, changed }: { game: GameState; changed: () => v
       <div className="split">
         <div className="panel stack tight">
           <h3>Credit line</h3>
+          <Gauge value={drawn(game) / Math.max(1, f.limit)} label="Drawn" text={money(drawn(game))} sub={`of ${money(f.limit)}`} tone={drawn(game) > f.limit * 0.6 ? "bad" : drawn(game) ? "warn" : "good"} />
           <dl className="kv">
             <dt>Bank</dt><dd>{f.lender}</dd>
             <dt>Size</dt><dd>{money(f.limit)}</dd>
@@ -43,6 +45,13 @@ export function Financing({ game, changed }: { game: GameState; changed: () => v
         </div>
         <div className="panel stack tight">
           <h3>How lenders see us</h3>
+          <Hud>
+            <HudStat icon="bank" label="Standing" value={trustWord(d.trust)} />
+            <HudStat icon="shield" label="Coverage" value={cov >= 99 ? "No debt" : `${cov.toFixed(2)}x`} tone={cov < 1.5 ? "bad" : "good"} />
+            <HudStat icon="scales" label="Debt to earnings" value={`${leverage(game).toFixed(2)}x`} tone={leverage(game) > 5 ? "bad" : undefined} />
+            <HudStat icon="trend" label="Market rate" value={pct(marketRate(game))} />
+          </Hud>
+          <Gauge value={1 - Math.max(0, debtRoom(game, "general")) / LEAGUE_DEBT_LIMIT} label="League debt limit used" text={`${Math.round((1 - Math.max(0, debtRoom(game, "general")) / LEAGUE_DEBT_LIMIT) * 100)}%`} sub={`${money(Math.max(0, debtRoom(game, "general")))} room left`} />
           <dl className="kv">
             <dt>Standing</dt><dd>{trustWord(d.trust)}</dd>
             <dt>Earnings they count</dt><dd>{money(earningsBase(game))} a year</dd>

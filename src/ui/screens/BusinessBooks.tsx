@@ -8,6 +8,7 @@ import type { GameState, LedgerCat } from "../../engine/types";
 import { money } from "../format";
 import { tip } from "../tip";
 import { estimatesShown } from "../Help";
+import { Bars, Stacked } from "../gfx";
 
 /** The statements: accrual income statement, balance sheet, cash flow, ratios, with any line opening its ledger entries. */
 export function Books({ game }: { game: GameState }) {
@@ -37,6 +38,14 @@ export function Books({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Income statement</h3>
+          <Bars signed rows={[
+            { label: "Revenue", value: inc.revenue, text: money(inc.revenue), tone: "good" },
+            { label: "Player pay", value: inc.players, text: money(inc.players), tone: "bad" },
+            { label: "Other spending", value: inc.otherExpenses, text: money(inc.otherExpenses), tone: "bad" },
+            { label: "Depreciation", value: inc.depreciation, text: money(inc.depreciation), tone: "bad" },
+            { label: "Interest", value: inc.interest, text: money(inc.interest), tone: "bad" },
+            { label: <strong>Net income</strong>, value: inc.net, text: money(inc.net), tone: inc.net < 0 ? "bad" : "good" },
+          ]} />
           <div className="table-wrap">
             <table>
               <tbody>
@@ -59,6 +68,8 @@ export function Books({ game }: { game: GameState }) {
         </div>
         <div className="panel stack tight">
           <h3>Balance sheet today</h3>
+          <Stacked label={`Owns ${money(bs.totalAssets)}`} parts={bs.assets.map((a) => ({ label: a.label, value: a.amount, text: money(a.amount) }))} />
+          <Stacked total={bs.totalAssets} label={`Owes ${money(bs.totalLiabilities)}, equity ${money(bs.equity)}`} parts={[...bs.liabilities.map((a, i) => ({ label: a.label, value: a.amount, text: money(a.amount), color: i % 2 ? "var(--warn)" : "var(--bad)" })), { label: "Owner's equity", value: Math.max(0, bs.equity), text: money(bs.equity), color: "var(--good)" }]} />
           <div className="table-wrap">
             <table>
               <tbody>
@@ -78,6 +89,11 @@ export function Books({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Cash flow</h3>
+          <Bars signed rows={[
+            { label: "Operations", value: cf.totals.operating, text: money(cf.totals.operating), tone: cf.totals.operating < 0 ? "bad" : "good" },
+            { label: "Buildings", value: cf.totals.investing, text: money(cf.totals.investing), tone: cf.totals.investing < 0 ? "bad" : "good" },
+            { label: "Loans and owner", value: cf.totals.financing, text: money(cf.totals.financing), tone: cf.totals.financing < 0 ? "bad" : "good" },
+          ]} />
           <div className="table-wrap">
             <table>
               <tbody>
@@ -107,9 +123,7 @@ export function Books({ game }: { game: GameState }) {
       </div>
       <div className="panel stack tight">
         <h3>Operating cash by line</h3>
-        <div className="table-wrap">
-          <table><tbody>{cf.operating.filter((r) => r.cat !== "deposits").map((r) => line(r.cat, r.amount))}</tbody></table>
-        </div>
+        <Bars signed rows={cf.operating.filter((r) => r.cat !== "deposits").map((r) => ({ key: r.cat, label: <button className="link" {...tip("ledger", r.cat, year)} onClick={() => setDrill(drill === r.cat ? null : r.cat)}>{CATEGORY[r.cat].label}</button>, value: r.amount, text: money(r.amount), tone: r.amount < 0 ? "bad" : "good" }))} />
       </div>
       {drill && <Drill game={game} year={year} cat={drill} />}
       <Assets game={game} />

@@ -9,6 +9,7 @@ import { decideDispute, distributionForecast, distributionStatus, leagueHealth, 
 import { LEAGUE_RULES } from "../../engine/rules";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Stacked } from "../gfx";
 import { Estimate, estimatesShown, Evidence, Range } from "../Help";
 
 export function LeagueMoney({ game, changed }: { game: GameState; changed: () => void }) {
@@ -29,6 +30,7 @@ export function LeagueMoney({ game, changed }: { game: GameState; changed: () =>
       <div className="split">
         <div className="panel stack tight">
           <h3>Our share of national revenue, {year}</h3>
+          <Stacked label="Where it comes from" parts={[{ label: "National media", value: p.media, text: money(p.media) }, { label: "League sponsorship", value: p.sponsorship, text: money(p.sponsorship) }, { label: "Licensing", value: p.licensing, text: money(p.licensing) }, { label: "Other", value: p.other, text: money(p.other) }]} />
           <dl className="kv">
             <dt>National media</dt><dd>{money(p.media)}</dd>
             <dt>League sponsorship</dt><dd>{money(p.sponsorship)}</dd>

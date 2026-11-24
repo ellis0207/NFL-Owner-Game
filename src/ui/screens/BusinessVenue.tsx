@@ -6,6 +6,7 @@ import {
 } from "../../engine/venue";
 import type { GameState, VenuePlan, VenueStaffing } from "../../engine/types";
 import { money } from "../format";
+import { Bars, Hud, HudStat } from "../gfx";
 
 function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: Record<T, string>; onChange: (v: T) => void }) {
   return (
@@ -96,6 +97,11 @@ export function GameDay({ game, changed }: { game: GameState; changed: () => voi
         <div className="split">
           <div className="panel stack tight">
             <h3>Last home game, {shortDate(r.date)}</h3>
+            <Hud>
+              <HudStat icon="users" label="In the building" value={r.attendance.toLocaleString()} sub={`${r.sold.toLocaleString()} sold`} />
+              <HudStat icon="clock" label="Parking to seat" value={`${r.arrival} min`} tone={r.arrival > 45 ? "bad" : undefined} />
+              <HudStat icon="store" label="Spend per fan" value={`$${r.perCap.food + r.perCap.merch + r.perCap.parking}`} sub={`$${r.perCap.food} food, $${r.perCap.merch} store, $${r.perCap.parking} parking`} />
+            </Hud>
             <dl className="kv">
               <dt>Crowd</dt><dd>{r.attendance.toLocaleString()} in the building, {r.distributed.toLocaleString()} tickets out ({r.sold.toLocaleString()} sold)</dd>
               <dt>Lines</dt><dd>{r.arrival} min parking to seat; gates {r.gateWait}, food {r.foodWait}, restrooms {r.restroomWait} at the worst</dd>
@@ -110,6 +116,15 @@ export function GameDay({ game, changed }: { game: GameState; changed: () => voi
           </div>
           <div className="panel stack tight">
             <h3>The event's books</h3>
+            <Bars signed rows={[
+              { label: "Revenue", value: r.revenue, text: money(r.revenue), tone: "good" },
+              { label: "Staff", value: -r.costs.labor, text: money(r.costs.labor), tone: "bad" },
+              { label: "Security", value: -r.costs.security, text: money(r.costs.security), tone: "bad" },
+              { label: "Presentation", value: -r.costs.show, text: money(r.costs.show), tone: "bad" },
+              { label: "Other", value: -r.costs.other, text: money(r.costs.other), tone: "bad" },
+              { label: <strong>Profit</strong>, value: r.profit, text: money(r.profit), tone: r.profit < 0 ? "bad" : "good" },
+            ]} />
+            <details><summary className="muted">Line by line</summary>
             <dl className="kv">
               <dt>Revenue</dt><dd>{money(r.revenue)}</dd>
               <dt>Staff</dt><dd>{money(r.costs.labor)}</dd>
@@ -118,8 +133,9 @@ export function GameDay({ game, changed }: { game: GameState; changed: () => voi
               <dt>Other</dt><dd>{money(r.costs.other)}</dd>
               <dt>After the visitors' share</dt><dd className={r.profit < 0 ? "bad" : undefined}>{money(r.profit)}</dd>
             </dl>
+            </details>
             <span className="label">Complaints</span>
-            <span>{Object.entries(r.complaints).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(", ") || "None worth noting"}</span>
+            {Object.values(r.complaints).some((n) => n > 0) ? <Bars rows={Object.entries(r.complaints).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).map(([c, n]) => ({ label: c, value: n, tone: "warn" as const }))} /> : <span>None worth noting</span>}
             {v.flags.length > 0 && <span className="muted">Recurring: {v.flags.slice(0, 3).map((f) => `${f.cat} (${shortDate(f.date)})`).join(", ")}</span>}
             {v.investigations.length > 0 && (
               <>

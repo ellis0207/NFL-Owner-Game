@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { billions, valuation } from "../../engine/business";
 import { shortDate } from "../../engine/dates";
 import { wantsWord } from "../../engine/crossroads";
@@ -17,6 +17,7 @@ import { money } from "../format";
 import { GroupedTabs } from "../Tabs";
 import { Deals } from "./OwnershipDeals";
 import { Succession } from "./OwnershipSuccession";
+import { Avatar, Bars, Chip, Donut, Gauge, HudStat, Hud, Stacked, TeamTag } from "../gfx";
 
 type Tab = "Stakes" | "Board" | "Investors" | "Reports" | "Succession" | "Deals";
 // Partners and governance of the club you own, then buying and selling clubs.
@@ -79,6 +80,17 @@ function Stakes({ game, say }: { game: GameState; say: Say }) {
     <>
       <div className="panel stack tight">
         <h3>Who owns the {TEAM_BY_ID[game.userTeam].name}</h3>
+        <div className="gx-row">
+          <Donut size={130} center={<span style={{ display: "grid" }}><strong>{pc(ownerShare(game))}</strong><span className="muted" style={{ fontSize: "0.65rem" }}>YOURS</span></span>}
+            parts={[{ label: game.ownerName, value: ownerShare(game), text: pc(ownerShare(game)), color: "var(--team)" },
+              ...s.partners.map((p, i) => ({ label: p.name, value: p.pct, text: pc(p.pct), color: `hsl(${(i * 67 + 200) % 360} 45% 52%)` }))]} />
+          <Hud>
+            <HudStat icon="bank" label="Club value" value={billions(value)} />
+            <HudStat icon="users" label="Partners" value={s.partners.length} />
+            <HudStat icon="money" label="You put in" value={money(o.putIn)} />
+            <HudStat icon="trend" label="You took out" value={money(o.takenOut)} tone="good" />
+          </Hud>
+        </div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Owner</th><th>Kind</th><th className="num">Share</th><th className="num">Paid</th><th className="num">Capital calls</th><th className="num">Distributions</th><th>Board</th><th>Terms</th><th>Mood</th></tr></thead>
@@ -90,8 +102,8 @@ function Stakes({ game, say }: { game: GameState; say: Say }) {
               {s.partners.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td><td>{KIND[p.kind]}</td><td className="num">{pc(p.pct)}</td><td className="num">{big(p.paid)}</td>
-                  <td className="num">{money(p.calls)}</td><td className="num">{money(p.distributions)}</td><td>{p.board ? "Seat" : "No"}</td>
-                  <td>{TERMS[p.terms].label}</td><td className={p.mood < 42 ? "bad" : p.mood >= 58 ? "good" : ""}>{moodWord(p.mood)}</td>
+                  <td className="num">{money(p.calls)}</td><td className="num">{money(p.distributions)}</td><td>{p.board ? <Chip icon="key">Seat</Chip> : <span className="muted">No</span>}</td>
+                  <td>{TERMS[p.terms].label}</td><td><Chip icon="heart" tone={p.mood < 42 ? "bad" : p.mood >= 58 ? "good" : undefined}>{moodWord(p.mood)}</Chip></td>
                 </tr>
               ))}
             </tbody>
@@ -170,7 +182,7 @@ function Stakes({ game, say }: { game: GameState; say: Say }) {
           <div className="table-wrap">
             <table>
               <thead><tr><th>Club</th><th>Controlled by</th></tr></thead>
-              <tbody>{TEAMS.filter((t) => t.id !== game.userTeam).map((t) => <tr key={t.id}><td>{t.name}</td><td>{CONTROL[t.id] ?? "Unknown"}</td></tr>)}</tbody>
+              <tbody>{TEAMS.filter((t) => t.id !== game.userTeam).map((t) => <tr key={t.id}><td><TeamTag team={t.id} name={t.name} /></td><td>{CONTROL[t.id] ?? "Unknown"}</td></tr>)}</tbody>
             </table>
           </div>
           <span className="muted">The real controlling owners, approximately, as of 2026.</span>
@@ -191,12 +203,12 @@ function Board({ game, say }: { game: GameState; say: Say }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>The board</h3>
-          <dl className="kv">{board(game).map((d) => <Fragment key={d.name}><dt>{d.name}</dt><dd>{d.role}</dd></Fragment>)}</dl>
+          <div className="gx-grid">{board(game).map((d) => <div key={d.name} className="gx-row"><Avatar name={d.name} size={36} icon={/chair/i.test(d.role) ? "key" : undefined} /><div className="stack tight"><strong>{d.name}</strong><span className="muted">{d.role}</span></div></div>)}</div>
           <span className="muted">The board meets each quarter and votes on reserved matters. Partner directors join when a partner's terms give them a seat.</span>
         </div>
         <div className="panel stack tight">
           <h3>Reserved matters</h3>
-          <ul>{(Object.keys(MATTERS) as Matter[]).map((m) => <li key={m}>{MATTERS[m].label}</li>)}</ul>
+          <div className="btn-row">{(Object.keys(MATTERS) as Matter[]).map((m) => <Chip key={m} icon="gavel">{MATTERS[m].label}</Chip>)}</div>
           <span>{!s.partners.length ? "With no partners, your vote carries them." : share >= BOARD_MAJORITY ? `You hold ${pctText(share)}, enough to carry them alone; partners still notice how they're asked.` : `You hold ${pctText(share)}. These need two-thirds of the shares, so you need partners' votes.`}</span>
         </div>
       </div>
@@ -206,7 +218,7 @@ function Board({ game, say }: { game: GameState; say: Say }) {
           <h3>Covenants</h3>
           <div className="table-wrap">
             <table>
-              <tbody>{covenants(game).map((c) => <tr key={c.what}><td>{c.what}</td><td className={c.ok ? "good" : "bad"}>{c.status}</td></tr>)}</tbody>
+              <tbody>{covenants(game).map((c) => <tr key={c.what}><td>{c.what}</td><td><Chip icon={c.ok ? "check" : "alert"} tone={c.ok ? "good" : "bad"}>{c.status}</Chip></td></tr>)}</tbody>
             </table>
           </div>
           <span className="muted">A broken lender covenant stops distributions; the investor agreement and the league's rules stop actions that would break them.</span>
@@ -292,8 +304,10 @@ function Investors({ game, say }: { game: GameState; say: Say }) {
           const r = partnerReturn(game, p);
           return (
             <div key={p.id} className="panel stack tight">
-              <h3>{p.name}</h3>
-              <span className="muted">{KIND[p.kind]}. {p.background}.</span>
+              <div className="gx-row"><Avatar name={p.name} icon={p.kind === "fund" ? "bank" : p.kind === "celebrity" ? "star" : p.kind === "family" ? "users" : "user"} />
+                <div className="stack tight" style={{ flex: 1, minWidth: 0 }}><h3>{p.name}</h3><span className="muted">{KIND[p.kind]}. {p.background}.</span></div>
+                <Chip icon="heart" tone={p.mood < 42 ? "bad" : p.mood >= 58 ? "good" : undefined}>{moodWord(p.mood)}</Chip></div>
+              <Gauge size={110} value={r.multiple / 3} label="Stake worth" text={`${r.multiple.toFixed(2)}x`} sub={big(r.value)} tone={r.multiple < 1 ? "bad" : r.multiple >= 1.5 ? "good" : undefined} />
               <dl className="kv">
                 <dt>Stake</dt><dd>{pc(p.pct)} since {shortDate(p.since)} {p.since.slice(0, 4)}</dd>
                 <dt>Their money in</dt><dd>{big(p.paid + p.calls)}</dd>
@@ -326,6 +340,7 @@ function Reports({ game }: { game: GameState }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Value</h3>
+          <Stacked label={`Enterprise value ${billions(r.enterprise)}`} parts={[{ label: "Your equity", value: Math.max(0, r.ours), text: billions(r.ours), color: "var(--team)" }, { label: "Partners", value: Math.max(0, r.clubEquity - r.ours), text: billions(r.clubEquity - r.ours) }, { label: "Net debt", value: Math.max(0, r.netDebt), text: money(r.netDebt), color: "var(--bad)" }]} />
           <dl className="kv">
             <dt>Enterprise value</dt><dd>{billions(r.enterprise)}</dd>
             <dt>Net debt</dt><dd>{money(r.netDebt)}</dd>
@@ -338,7 +353,13 @@ function Reports({ game }: { game: GameState }) {
         </div>
         <div className="panel stack tight">
           <h3>Returns a year</h3>
-          {early ? <span className="muted">Too early to say; returns show after about nine months.</span> : (
+          {early ? <span className="muted">Too early to say; returns show after about nine months.</span> : (<>
+            <Bars signed rows={[
+              { label: "Club value", value: r.evGrowth, text: pc(r.evGrowth), tone: r.evGrowth >= 0 ? "good" : "bad" },
+              { label: "Your equity", value: r.nominal, text: pc(r.nominal), tone: r.nominal >= 0 ? "good" : "bad" },
+              { label: "After inflation", value: r.real, text: pc(r.real), tone: r.real >= 0 ? "good" : "bad" },
+              { label: "Hurdle", value: r.hurdle, text: pc(r.hurdle), color: "var(--muted)" },
+            ]} />
             <dl className="kv">
               <dt>Club value</dt><dd>{pc(r.evGrowth)}</dd>
               <dt>Your equity</dt><dd>{pc(r.nominal)}</dd>
@@ -346,18 +367,14 @@ function Reports({ game }: { game: GameState }) {
               <dt>Your hurdle</dt><dd>{pc(r.hurdle)}</dd>
               <dt>Against the hurdle</dt><dd className={r.excess >= 0 ? "good" : "bad"}>{r.excess >= 0 ? "+" : ""}{pc(r.excess)}</dd>
             </dl>
-          )}
+          </>)}
           <span className="muted">The hurdle is the safe rate plus a stock-market premium, a premium for money you can't get out quickly, and more for the club's debt. Beating it means the risk paid.</span>
         </div>
       </div>
       <div className="panel stack tight">
         <h3>If the club ran short</h3>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Source</th><th className="num">Up to</th><th>How</th></tr></thead>
-            <tbody>{contingency(game).map((c) => <tr key={c.source}><td>{c.source}</td><td className="num">{money(c.amount)}</td><td className="muted">{c.how}</td></tr>)}</tbody>
-          </table>
-        </div>
+        <Bars rows={contingency(game).map((c) => ({ label: c.source, value: c.amount, text: money(c.amount) }))} />
+        {contingency(game).map((c) => <span key={c.source} className="muted"><strong>{c.source}:</strong> {c.how}</span>)}
       </div>
       <div className="split">
         <div className="panel stack tight">

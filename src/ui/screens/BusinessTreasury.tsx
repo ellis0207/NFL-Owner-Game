@@ -12,6 +12,7 @@ import {
 } from "../../engine/treasury";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Bars } from "../gfx";
 import { Help } from "../Help";
 
 export function Treasury({ game, changed }: { game: GameState; changed: () => void }) {
@@ -26,6 +27,14 @@ export function Treasury({ game, changed }: { game: GameState; changed: () => vo
       <div className="split">
         <div className="panel stack tight">
           <h3>Working capital <Help k="workingCapital" /></h3>
+          <Bars signed rows={[
+            { label: "Cash", value: wc.cash, text: money(wc.cash), tone: "good" },
+            { label: "Owed by partners", value: wc.receivables, text: money(wc.receivables), tone: "good" },
+            { label: "Gate pool due", value: wc.poolDue, text: money(wc.poolDue), tone: "good" },
+            { label: "Owed to vendors", value: -wc.payables, text: money(-wc.payables), tone: "bad" },
+            { label: "Unplayed tickets", value: -wc.deferred, text: money(-wc.deferred), tone: "bad" },
+            { label: <strong>Net</strong>, value: wc.net, text: money(wc.net), tone: wc.net < wc.reserve ? "bad" : "good" },
+          ]} />
           <dl className="kv">
             <dt>Cash</dt><dd>{money(wc.cash)}</dd>
             <dt>Owed to us by partners</dt><dd>{money(wc.receivables)}</dd>
@@ -101,10 +110,7 @@ export function Treasury({ game, changed }: { game: GameState; changed: () => vo
       <div className="split">
         <div className="panel stack tight">
           <h3>Payroll by department</h3>
-          <div className="table-wrap"><table>
-            <thead><tr><th>Department</th><th className="num">Paid this year</th><th className="num">People</th></tr></thead>
-            <tbody>{payrollByDept(game).map((r) => <tr key={r.dept} title={r.note}><td>{r.dept}</td><td className="num">{money(r.amount)}</td><td className="num">{r.people}</td></tr>)}</tbody>
-          </table></div>
+          <Bars rows={payrollByDept(game).map((r) => ({ key: r.dept, label: <span title={r.note}>{r.dept} <span className="muted">({r.people})</span></span>, value: r.amount, text: money(r.amount) }))} />
         </div>
         <div className="panel stack tight">
           <h3>Staff cuts</h3>

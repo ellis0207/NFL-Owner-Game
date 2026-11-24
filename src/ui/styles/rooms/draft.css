@@ -68,3 +68,9 @@
   padding-right: 1.3rem;
   border-radius: 3px 0 0 3px;
 }
+/* Pick numbers and big-board ranks as tags (graphics pass). */
+.wr-pickno { display: inline-grid; place-items: center; min-width: 2.2em; padding: 0 0.25rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; background: var(--sunk); border: 1px solid var(--rule); }
+.wr-media { display: inline-grid; place-items: center; min-width: 2.2em; border-radius: 4px; font-family: var(--font-mono); font-weight: 600; }
+.wr-media.r1 { background: color-mix(in srgb, var(--panel) 70%, #c9971f); }
+.wr-media.r2 { background: color-mix(in srgb, var(--panel) 80%, #8f9aa5); }
+.wr-know { width: 36px; }

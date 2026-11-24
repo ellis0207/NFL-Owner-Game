@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { TeamBadge } from "../gfx";
+import { Chip, Hud, HudStat, TeamBadge } from "../gfx";
+import { Meter } from "../kit";
 import { accruedSeasons, capSummary, teamPlayerIds } from "../../engine/cap";
 import { claimedDeal, dealCapHit, leagueYear, practiceWeekly } from "../../engine/contracts";
 import { ageOn, shortDate } from "../../engine/dates";
@@ -35,11 +36,12 @@ export function FreeAgentsScreen({ game, changed }: { game: GameState; changed: 
   const onWire = Object.keys(game.waivers ?? {}).length;
   return (
     <section className="stack">
-      <p className="muted">
-        {counts.roster} of {rosterLimit(game)} roster spots used{counts.ps ? `, ${counts.ps} of ${RULES.rosterLimits.practiceSquad} on the practice squad` : ""}.
-        {" "}We're {ordinal(order.indexOf(us) + 1)} in the waiver order.
-        {game.settings.capRules === "real" ? ` Cap space: ${money(capSummary(game, us).space)}.` : ""}
-      </p>
+      <Hud>
+        <HudStat icon="users" label="Roster spots" value={`${counts.roster} / ${rosterLimit(game)}`} sub={<Meter value={counts.roster / rosterLimit(game)} tone={counts.roster >= rosterLimit(game) ? "warn" : undefined} />} />
+        <HudStat icon="clipboard" label="Practice squad" value={`${counts.ps} / ${RULES.rosterLimits.practiceSquad}`} sub={<Meter value={counts.ps / RULES.rosterLimits.practiceSquad} />} />
+        <HudStat icon="flag" label="Waiver order" value={ordinal(order.indexOf(us) + 1)} sub={`of ${order.length}`} />
+        {game.settings.capRules === "real" && <HudStat icon="cap" label="Cap space" value={money(capSummary(game, us).space)} tone={capSummary(game, us).space < 0 ? "bad" : "good"} />}
+      </Hud>
       <div className="tabs" role="group" aria-label="View">
         {TABS.map(([k, label]) => (
           <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>
@@ -133,10 +135,10 @@ function Available({ game, changed }: { game: GameState; changed: () => void }) 
               return (
                 <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>
                   <td className="name">{p.name}</td>
-                  <td>{p.position}</td>
+                  <td><span className="gx-pos">{p.position}</span></td>
                   <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
-                  <td className="num">{p.yearsExp === 0 ? "R" : p.yearsExp}</td>
-                  <td>{source === "ps" ? ps.team : ps.lastTeam ?? ""}</td>
+                  <td className="num">{p.yearsExp === 0 ? <Chip>R</Chip> : p.yearsExp}</td>
+                  <td>{(source === "ps" ? ps.team : ps.lastTeam) ? <TeamBadge team={(source === "ps" ? ps.team : ps.lastTeam)!} size={20} /> : ""}</td>
                   <td className="muted">{gradeShort(game, id)}</td>
                   <td className="muted">{recentSeasonLine(game, id)}</td>
                   <td className="num">{source === "ps" ? "" : Number.isFinite(price) ? (price <= 1_400_000 ? "Minimum" : money(price)) : ""}</td>
@@ -200,13 +202,13 @@ function Waivers({ game, changed }: { game: GameState; changed: () => void }) {
               const ok = canClaim(game, us, w.player);
               return (
                 <tr key={w.player} className="clickable" {...tip("player", w.player)} onClick={() => ui.openPlayer(w.player)}>
-                  <td className="name">{p.name}</td><td>{p.position}</td>
+                  <td className="name">{p.name}</td><td><span className="gx-pos">{p.position}</span></td>
                   <td className="num">{ageOn(p.birthDate, game.date) ?? ""}</td>
-                  <td>{w.from}</td>
+                  <td><TeamBadge team={w.from} size={20} /></td>
                   <td className="muted">{gradeShort(game, w.player)}</td>
                   <td className="num">{money(dealCapHit(deal, year))}</td>
                   <td className="num">{deal.years.length}</td>
-                  <td>{claimDueLabel(w)}</td>
+                  <td><Chip icon="clock">{claimDueLabel(w)}</Chip></td>
                   <td onClick={(e) => e.stopPropagation()}>
                     {w.from === us ? <span className="muted">Ours</span> : mine ? (
                       <div className="btn-row">

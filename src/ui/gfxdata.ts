@@ -47,3 +47,9 @@ export const PULSE_STEPS = ["Angry", "Restless", "Routine", "Happy"];
 export function pulseStep(v: number): number {
   return v >= 65 ? 3 : v >= 45 ? 2 : v >= 30 ? 1 : 0;
 }
+
+/** The building's readings and relationships, as culture.ts words them. */
+export const CULTURE_STEPS = ["Broken", "Strained", "Mixed", "Good", "Strong"];
+export function cultureStep(v: number): number {
+  return v >= 75 ? 4 : v >= 60 ? 3 : v >= 45 ? 2 : v >= 30 ? 1 : 0;
+}

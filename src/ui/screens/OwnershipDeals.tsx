@@ -11,6 +11,7 @@ import { buyMore, tenure } from "../../engine/takeover";
 import type { ClubDeal, GameState, StakeTerms } from "../../engine/types";
 import { wealth } from "../../engine/wealth";
 import { money } from "../format";
+import { Hud, HudStat, Stacked, TeamBadge, TeamTag } from "../gfx";
 
 type Say = (msg: string | null, ok?: string) => void;
 const big = (x: number) => (Math.abs(x) >= 1e9 ? billions(x) : money(x));
@@ -47,7 +48,7 @@ export function Deals({ game, say }: { game: GameState; say: Say }) {
               <tbody>
                 {open.map((l) => (
                   <tr key={l.team + l.since}>
-                    <td>{name(l.team)}</td><td>{l.seller}</td><td>{REASONS[l.reason]}</td><td className="num">{big(l.ask)}</td><td>{shortDate(l.closes)}</td>
+                    <td><TeamTag team={l.team} name={name(l.team)} /></td><td>{l.seller}</td><td>{REASONS[l.reason]}</td><td className="num">{big(l.ask)}</td><td>{shortDate(l.closes)}</td>
                     <td><button className="link" data-view onClick={() => setLook(l.team)}>Appraise</button></td>
                   </tr>
                 ))}
@@ -63,15 +64,20 @@ export function Deals({ game, say }: { game: GameState; say: Say }) {
             {TEAMS.map((x) => <option key={x.id} value={x.id}>{x.city} {x.name}</option>)}
           </select>
         </label>
+        <div className="gx-row">
+          <TeamBadge team={look} size={64} />
+          <Hud>
+            <HudStat icon="bank" label="Worth" value={big(a.value)} sub={`${a.multiple.toFixed(1)}x revenue`} />
+            <HudStat icon="chart" label="Operating income" value={big(a.operating)} tone={a.operating < 0 ? "bad" : undefined} />
+            <HudStat icon="money" label="Equity" value={big(a.equity)} />
+          </Hud>
+        </div>
+        <Stacked label={`Revenue ${big(a.revenue)}`} parts={[{ label: "Shared national", value: a.national, text: big(a.national) }, { label: "Local", value: a.local, text: big(a.local) }]} />
         <dl className="kv">
           <dt>Controlled by</dt><dd>{controller(game, look)}</dd>
-          <dt>What it's worth</dt><dd>{big(a.value)} ({a.multiple.toFixed(1)}x revenue)</dd>
-          <dt>Revenue</dt><dd>{big(a.revenue)}: {big(a.national)} shared national money, {big(a.local)} local</dd>
-          <dt>Operating income</dt><dd>{big(a.operating)}</dd>
           <dt>Market</dt><dd>{a.market}</dd>
           <dt>Stadium</dt><dd>{a.stadium}</dd>
           <dt>Debt (estimate)</dt><dd>{big(a.debt)}</dd>
-          <dt>Equity</dt><dd>{big(a.equity)}</dd>
           <dt>Comparable sales</dt><dd>{a.comps || "None yet"}</dd>
         </dl>
         {!deal && look !== game.userTeam && (
@@ -101,7 +107,7 @@ export function Deals({ game, say }: { game: GameState; say: Say }) {
             <thead><tr><th>Date</th><th>Club</th><th>Buyer</th><th className="num">Price</th></tr></thead>
             <tbody>
               {[...f.sales].reverse().slice(0, 12).map((s, i) => (
-                <tr key={i}><td>{s.date.slice(0, 4)}</td><td>{TEAM_BY_ID[s.team]?.name ?? s.team}</td><td>{s.buyer}</td><td className="num">{big(s.price)}</td></tr>
+                <tr key={i}><td>{s.date.slice(0, 4)}</td><td><TeamTag team={s.team} name={TEAM_BY_ID[s.team]?.name ?? s.team} /></td><td>{s.buyer}</td><td className="num">{big(s.price)}</td></tr>
               ))}
             </tbody>
           </table>
