@@ -1,4 +1,5 @@
 import { CompareToggle } from "../Comparison";
+import { Avatar, Chip, Icon, Ring, TeamBadge } from "../gfx";
 import { dismissalComparison } from "../../engine/compare";
 import { useState } from "react";
 import {
@@ -31,6 +32,9 @@ const IMPRESSION = ["", "Poor", "Mixed", "Solid", "Strong", "Outstanding"];
 
 const team = (id: string) => TEAM_BY_ID[id]?.name ?? id;
 
+/** The small badge on each staff card's portrait. */
+const ROLE_ICON: Record<string, string> = { HC: "whistle", GM: "briefcase", OC: "football", DC: "shield", ST: "flag", TRN: "cross", PRO: "eye", COL: "school" };
+
 function ageText(c: Coach): string {
   const a = coachAge(c);
   return c.birthYearEstimated ? `about ${a}` : `${a}`;
@@ -52,9 +56,15 @@ function seasonText(r: CoachSeason): string {
 function Record({ c }: { c: Coach }) {
   if (!c.record.length) return <span className="muted">{c.background ?? "No NFL record in this job yet."}</span>;
   return (
-    <ul className="muted" style={{ margin: 0, paddingLeft: "1.1rem" }}>
-      {c.record.slice(-3).reverse().map((r) => <li key={`${r.season}-${r.team}`}>{seasonText(r)}</li>)}
-    </ul>
+    <div className="gx-seasons">
+      {c.record.slice(-6).map((r) => (
+        <span key={`${r.season}-${r.team}`} className={`gx-season ${r.w > r.l ? "good" : r.l > r.w ? "bad" : ""}`} title={seasonText(r)}>
+          <span className="muted">{r.season} {r.role}</span>
+          <b>{r.w}-{r.l}{r.t ? `-${r.t}` : ""}</b>
+          <span className="gx-row" style={{ gap: 2 }}><TeamBadge team={r.team} size={14} noTip />{r.playoffs > 0 && <Icon name="trophy" size={12} />}{r.playoffs >= 4 && <Icon name="star" size={12} />}</span>
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -155,21 +165,22 @@ function PositionCoaches({ game }: { game: GameState }) {
   return (
     <section className="panel stack tight">
       <h3>Position coaches</h3>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Room</th><th>Coach</th><th>Age</th><th>Under contract through</th><th>Salary</th></tr></thead>
-          <tbody>
-            {ROOMS.flatMap((r) => rooms[r].map((c, i) => (
-              <tr key={c.id}>
-                <td>{i === 0 ? ROOM_TITLE[r].replace(/ coach$/, "") : ""}</td>
-                <td><span {...tip("coach", c.id)}>{c.name}</span><div className="muted">{roomLine(c)}</div></td>
-                <td>{ageText(c)}</td>
-                <td>{c.contract?.through ?? "-"}</td>
-                <td>{c.contract ? money(c.contract.salary) : "-"}</td>
-              </tr>
-            )))}
-          </tbody>
-        </table>
+      <div className="gx-grid">
+        {ROOMS.filter((r) => rooms[r].length).map((r) => (
+          <div key={r} className="gx-tile sunk">
+            <span className="gx-kicker">{ROOM_TITLE[r].replace(/ coach$/, "")}</span>
+            {rooms[r].map((c) => (
+              <div key={c.id} className="gx-row">
+                <Avatar name={c.name} size={32} />
+                <span style={{ display: "grid", lineHeight: 1.25, minWidth: 0 }}>
+                  <strong {...tip("coach", c.id)}>{c.name}</strong>
+                  <span className="muted" style={{ fontSize: "0.78rem" }}>{roomLine(c)} · age {ageText(c)}</span>
+                  <span className="muted" style={{ fontSize: "0.78rem" }}>{c.contract ? `${money(c.contract.salary)} through ${c.contract.through}` : "No contract"}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
       <p className="muted">
         Position coaches teach their rooms day to day, so a good one helps young players grow. The head coach hires them and
@@ -192,8 +203,10 @@ function OurStaff({ game, act, searches }: { game: GameState; act: (r: { ok: boo
     <>
       {install && (install.offense < 1 || install.defense < 1) && (
         <p className="notice">
-          {install.offense < 1 && `The new offense is about ${Math.round(install.offense * 100)}% installed. `}
-          {install.defense < 1 && `The new defense is about ${Math.round(install.defense * 100)}% installed. `}
+          <span className="gx-row">
+            {install.offense < 1 && <Ring value={install.offense} label="Offense installed" size={64} />}
+            {install.defense < 1 && <Ring value={install.defense} label="Defense installed" size={64} />}
+          </span>
           New schemes take the spring, camp and the first weeks of the season to become second nature.
         </p>
       )}
@@ -214,10 +227,15 @@ function OurStaff({ game, act, searches }: { game: GameState; act: (r: { ok: boo
           const expiring = k && k.through <= RULES.season;
           return (
             <div key={role} className="card">
-              <span className="role">{TITLE[role]}{c.interimFrom ? " (interim)" : ""}</span>
-              <span className="who" {...tip("coach", c.id)}>{c.name}</span>
+              <div className="gx-row">
+                <Avatar name={c.name} icon={ROLE_ICON[role] ?? "whistle"} />
+                <span style={{ display: "grid" }}>
+                  <span className="role">{TITLE[role]}{c.interimFrom ? " (interim)" : ""}</span>
+                  <span className="who" {...tip("coach", c.id)}>{c.name}</span>
+                </span>
+              </div>
               <span className="muted">Age {ageText(c)} · {c.hiredYear >= RULES.season ? "First season in the job" : `In the job since ${c.hiredYear}`}</span>
-              {k && <span><span className="label">Contract</span> {money(k.salary)} a year through {k.through}{expiring ? <span className="warn"> · expiring</span> : ""}</span>}
+              {k && <div className="gx-row"><Chip icon="money">{money(k.salary)}/yr</Chip><Chip icon="calendar" tone={expiring ? "warn" : undefined}>through {k.through}{expiring ? " · expiring" : ""}</Chip></div>}
               {scheme && <span><span className="label">Scheme</span> {scheme}</span>}
               {c.callsPlays.length > 0 && <span><span className="label">Calls plays</span> {c.callsPlays.join(" and ")}</span>}
               <Tags game={game} c={c} looks={1} />

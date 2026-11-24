@@ -178,3 +178,24 @@
   .tm-name { white-space: normal; overflow-wrap: anywhere; }
   .tm-jersey { min-width: 1.2rem; }
 }
+
+/* The schedule as a wall of game cards (graphics pass). */
+.tm-sched { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
+.tm-game { text-align: left; font: inherit; color: inherit; cursor: pointer; border-left: 4px solid var(--rule); }
+.tm-game:disabled { cursor: default; opacity: 1; }
+.tm-game.res-W { border-left-color: var(--good); }
+.tm-game.res-L { border-left-color: var(--bad); }
+.tm-game.today { box-shadow: 0 0 0 2px var(--room-accent); }
+.tm-game-opp { display: grid; line-height: 1.2; min-width: 0; }
+.tm-game-opp .muted { font-size: 0.78rem; }
+.tm-res { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; font-family: var(--font-broadcast); font-weight: 700; color: var(--panel); background: var(--muted); }
+.tm-res-W { background: var(--good); }
+.tm-res-L { background: var(--bad); }
+.tm-game-rec { margin-left: auto; font-family: var(--font-mono); }
+.tm-game-site { font-size: 0.78rem; }
+/* Practice report cells as status lights (graphics pass). */
+.tm-prac { display: inline-grid; place-items: center; min-width: 2.4em; padding: 0 0.3rem; border-radius: 4px; font-family: var(--font-broadcast); font-size: 0.72rem; font-weight: 600; color: var(--panel); background: var(--good); }
+.tm-prac-LP { background: var(--warn); }
+.tm-prac-DNP { background: var(--bad); }
+.tm-matchup .gx-vs-mid { display: grid; gap: 0.3rem; justify-items: center; min-width: 150px; }
+@media (max-width: 560px) { .tm-matchup .gx-big { font-size: 1rem; } .tm-matchup .gx-vs-mid { min-width: 100px; } }

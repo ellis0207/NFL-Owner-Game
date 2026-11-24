@@ -70,3 +70,8 @@
 .lg-archive .tab-groups { background: var(--lg-parch); border-color: var(--lg-parch-rule); }
 .lg-archive .tab-group .label { font-family: var(--font-serif); text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: var(--ink); font-weight: 600; }
 .lg-archive .tabs button[aria-pressed="true"] { background: #6e5131; border-color: #6e5131; color: #f6ead0; }
+/* Point differential in the standings (graphics pass). */
+.lg-diff { font-family: var(--font-mono); }
+.lg-diff.good { color: var(--good); }
+.lg-diff.bad { color: var(--bad); }
+.lg-seeds .gx-badge { margin-right: 0.4rem; }

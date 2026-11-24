@@ -8,6 +8,10 @@ import { tip } from "./tip";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { liveGame, liveRows } from "../engine/clock";
 import { castAt } from "../engine/gamecast";
+import { TeamBadge } from "./gfx";
+
+/** The club's shield beside its abbreviation on a score tile. */
+const who = (team: string, text: string) => <span className="gx-teamtag"><TeamBadge team={team} size={18} noTip />{text}</span>;
 
 /** A sliver of the club color beside its name on a score tile. */
 const swatch = (team: string) => ({ ["--sw" as string]: TEAM_COLORS[team]?.[0] ?? "transparent" });
@@ -25,8 +29,8 @@ export function Score({ game, id }: { game: GameState; id: string }) {
     const when = c.at === 0 ? "Kickoff" : `${c.q <= 4 ? `Q${c.q}` : c.q === 5 ? "OT" : `${c.q - 4}OT`} ${Math.floor(c.clock / 60)}:${String(Math.round(c.clock) % 60).padStart(2, "0")}`;
     return (
       <button className="score clickable live" {...tip("game", id)} onClick={() => ui.openBox(id)} aria-label={`Live: ${m.away} ${c.away}, ${m.home} ${c.home}, ${when}`}>
-        <div className="row" style={swatch(m.away)}><span>{m.away}</span><span>{c.away}</span></div>
-        <div className="row" style={swatch(m.home)}><span>{g.neutral ? m.home : `@${m.home}`}</span><span>{c.home}</span></div>
+        <div className="row" style={swatch(m.away)}><span>{who(m.away, m.away)}</span><span>{c.away}</span></div>
+        <div className="row" style={swatch(m.home)}><span>{who(m.home, g.neutral ? m.home : `@${m.home}`)}</span><span>{c.home}</span></div>
         <div className="meta"><span className="pill">Live</span> {when} · {g.label ?? gameTypeLabel(g)}</div>
       </button>
     );
@@ -35,8 +39,8 @@ export function Score({ game, id }: { game: GameState; id: string }) {
   const homeWin = r && r.homeScore > r.awayScore;
   const body = (
     <>
-      <div className={`row ${awayWin ? "win" : ""}`} style={swatch(m.away)}><span {...tip("team", m.away)}>{m.away}</span><span>{r ? r.awayScore : ""}</span></div>
-      <div className={`row ${homeWin ? "win" : ""}`} style={swatch(m.home)}><span {...tip("team", m.home)}>{g.neutral ? m.home : `@${m.home}`}</span><span>{r ? r.homeScore : ""}</span></div>
+      <div className={`row ${awayWin ? "win" : ""}`} style={swatch(m.away)}><span {...tip("team", m.away)}>{who(m.away, m.away)}</span><span>{r ? r.awayScore : ""}</span></div>
+      <div className={`row ${homeWin ? "win" : ""}`} style={swatch(m.home)}><span {...tip("team", m.home)}>{who(m.home, g.neutral ? m.home : `@${m.home}`)}</span><span>{r ? r.homeScore : ""}</span></div>
       <div className="meta">{r ? (r.overtime ? "Final/OT" : "Final") : kickoff(g.timeET)} · {g.label ?? gameTypeLabel(g)}{r && game.box[id] ? " · Box score" : ""}</div>
     </>
   );

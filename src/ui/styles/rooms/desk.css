@@ -131,3 +131,8 @@
 .dk-problem { border-left: 3px solid var(--rule); padding: 2px 0 2px 10px; }
 .dk-problem.sev2 { border-left-color: var(--warn, #c98a1a); }
 .dk-problem.sev3 { border-left-color: var(--bad, #c0392b); }
+.dk-lede + .gx-hud { margin-bottom: 1rem; }
+/* The kind of letter as a small seal on the sender's disc (graphics pass). */
+.dk-sender { position: relative; }
+.dk-kind { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--room-accent); color: #fff; box-shadow: 0 0 0 2px var(--panel); }
+.dk-grade { display: inline-grid; place-items: center; min-width: 2.4rem; height: 2.4rem; padding: 0 0.3rem; border-radius: 8px; font-family: var(--font-serif); font-size: 1.4rem; font-weight: 700; color: #fff; background: var(--room-accent); }

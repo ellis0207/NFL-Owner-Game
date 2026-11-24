@@ -1,4 +1,6 @@
 import { FORMATS, type FormatId } from "../../engine/media/formats";
+import { Bars, Dials, Gauge, Icon, TeamBadge, toneFor } from "../gfx";
+import { FORMAT } from "../../engine/format";
 import { initialTab } from "../ui";
 import { useState } from "react";
 import { daysBetween, shortDate } from "../../engine/dates";
@@ -219,7 +221,7 @@ function Storylines({ game }: { game: GameState }) {
       {r?.expect ? (
         <section className="panel stack tight">
           <h3>{r.season} season</h3>
-          <span>Fans expect about {r.expect.wins} wins. {expectLabel(r.expect.wins)}.</span>
+          <div className="gx-row"><Gauge value={r.expect.wins / FORMAT.games} label="Wins fans expect" text={String(r.expect.wins)} sub={expectLabel(r.expect.wins)} /></div>
           {r.storylines.length ? list(r.storylines) : <span className="muted">The media haven't settled on their storylines yet.</span>}
         </section>
       ) : (
@@ -229,8 +231,10 @@ function Storylines({ game }: { game: GameState }) {
       {grades && (
         <section className="panel stack tight">
           <h3>Offseason grades</h3>
-          {Object.keys(grades).map((o) => <span key={o}>{o}: {grades[o][us]} <span className="muted">(No. {rank(o)} of {Object.keys(grades[o]).length}, counting ties)</span></span>)}
-          {r?.gm && <span>Our GM's own grade: {r.gm}</span>}
+          <div className="gx-grid">
+            {Object.keys(grades).map((o) => <div key={o} className="gx-tile sunk gx-row"><span className="dk-grade">{grades[o][us]}</span><span><strong>{o}</strong><br /><span className="muted">No. {rank(o)} of {Object.keys(grades[o]).length}</span></span></div>)}
+            {r?.gm && <div className="gx-tile sunk gx-row"><span className="dk-grade">{r.gm}</span><span><strong>Our GM's own grade</strong></span></div>}
+          </div>
         </section>
       )}
       {r?.past && r.past.length > 0 && (
@@ -255,7 +259,7 @@ function ArcTracker({ game }: { game: GameState }) {
   const row = (a: Arc) => (
     <tr key={a.id}>
       <td>{ARC_LABEL[a.kind] ?? a.kind}{mine(a) && <span className="pill">Ours</span>}</td>
-      <td>{subject(a)}</td>
+      <td><span className="gx-teamtag">{a.team && <TeamBadge team={a.team} size={18} noTip />}{subject(a)}</span></td>
       <td>{arcStage(a.ending ?? a.phase)}</td>
       <td className="muted">{a.ending ? shortDate(a.ended!) : `${daysBetween(a.opened, game.date)} days`}</td>
     </tr>
@@ -287,6 +291,8 @@ const HUDDLE_FILTERS = { ours: "Our team", all: "Everyone", player: "Players", p
 type HuddleFilter = keyof typeof HUDDLE_FILTERS;
 
 /** The Huddle, the league's social platform: the feed, what's trending and how each club's fans feel. */
+const TEAM_BY_ID_NAME = (t: string) => teamLabel(t).split(" ").slice(-1)[0];
+
 function Huddle({ game }: { game: GameState }) {
   const [f, setF] = useState<HuddleFilter>("ours");
   const us = game.userTeam;
@@ -315,16 +321,13 @@ function Huddle({ game }: { game: GameState }) {
       <div className="stack">
         <section className="panel stack tight">
           <h3>Trending</h3>
-          {trend.length === 0 ? <span className="muted">Nothing yet.</span> : <ol>{trend.map((t) => <li key={t.topic}>{t.topic} <span className="muted">{t.posts} posts</span></li>)}</ol>}
+          {trend.length === 0 ? <span className="muted">Nothing yet.</span> : <Bars rows={trend.map((t) => ({ key: t.topic, label: <><Icon name="trend" size={13} /> {t.topic}</>, value: t.posts, text: `${t.posts} posts` }))} />}
         </section>
         <section className="panel stack tight">
           <h3>Fan mood</h3>
-          <span>{teamLabel(us)} fans are {sentimentWord(ours)} ({Math.round(ours)} of 100).</span>
+          <Dials><Gauge value={ours / 100} label={`${teamLabel(us)} fans`} text={String(Math.round(ours))} sub={sentimentWord(ours)} zones /></Dials>
           <p className="muted">How fans feel online moves trust in the club and the pressure on it a little each week.</p>
-          <div className="table-wrap"><table>
-            <thead><tr><th>Club</th><th>Mood</th></tr></thead>
-            <tbody>{moods.map((m) => <tr key={m.id}><td>{teamLabel(m.id)}{m.id === us && <span className="pill">Ours</span>}</td><td>{sentimentWord(m.v)} ({Math.round(m.v)})</td></tr>)}</tbody>
-          </table></div>
+          <Bars max={100} rows={moods.map((m) => ({ key: m.id, label: <span className="gx-teamtag"><TeamBadge team={m.id} size={16} noTip />{TEAM_BY_ID_NAME(m.id)}</span>, value: m.v, text: `${Math.round(m.v)} ${sentimentWord(m.v)}`, tone: m.id === us ? undefined : toneFor(m.v / 100, false, [0.4, 0.6]), color: m.id === us ? "var(--team)" : undefined }))} />
         </section>
       </div>
     </div>

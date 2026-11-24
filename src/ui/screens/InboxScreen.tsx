@@ -3,6 +3,7 @@ import { shortDate } from "../../engine/dates";
 import type { GameState, InboxItem, InboxKind } from "../../engine/types";
 import { messagePriority } from "../../engine/desk";
 import { useUi } from "../ui";
+import { Icon } from "../gfx";
 
 export function InboxScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const ui = useUi();
@@ -39,7 +40,7 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
         <div className="tabs" role="group" aria-label="Show">
           {([["all", "All"], ["unread", "Unread"], ...kinds] as [Filter, string][]).map(([k, label]) => {
             const n = k === "all" ? game.inbox.length : k === "unread" ? game.inbox.filter((m) => !m.read).length : game.inbox.filter((m) => m.kind === k).length;
-            return <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{label} <span className="num" style={{ opacity: 0.7 }}>{n}</span></button>;
+            return <button key={k} aria-pressed={filter === k} onClick={() => setFilter(k)}>{k !== "all" && <Icon name={k === "unread" ? "mail" : KIND_ICON[k as InboxKind] ?? "mail"} size={13} />} {label} <span className="num" style={{ opacity: 0.7 }}>{n}</span></button>;
           })}
         </div>
       )}
@@ -52,7 +53,7 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
             {list.map((m) => (
               <article key={m.id} role="listitem" className={`inbox-item dk-envelope${m.read ? "" : " unread"}${open === m.id ? " open" : ""}${(m.priority ?? 1) >= 3 && !m.read ? " urgent" : ""}`}>
                 <button className="head" onClick={() => toggle(m.id)} aria-expanded={open === m.id}>
-                  <span className="dk-sender" aria-hidden="true">{initials(m.from)}</span>
+                  <span className="dk-sender" aria-hidden="true">{initials(m.from)}<span className="dk-kind"><Icon name={KIND_ICON[m.kind] ?? "mail"} size={11} /></span></span>
                   <span className="dk-envelope-text">
                     <span className="dk-envelope-top"><span className="dk-from">{m.from}</span><span className="muted num">{shortDate(m.date)}</span></span>
                     <span className="subject">{(m.priority ?? 1) >= 3 && !m.read ? "Urgent: " : ""}{m.title}</span>
@@ -87,6 +88,9 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
 }
 
 type Filter = "all" | "unread" | InboxKind;
+/** The picture on each kind of letter. */
+const KIND_ICON: Record<InboxKind, string> = { staff: "whistle", game: "football", transaction: "swap", business: "money", league: "shield", media: "megaphone", system: "gear" };
+
 const KINDS: [InboxKind, string][] = [["staff", "Staff"], ["game", "Games"], ["transaction", "Moves"], ["business", "Business"], ["league", "League"], ["media", "Media"], ["system", "System"]];
 
 /** A sender's initials for the envelope: "Head coach Dan Quinn" gives "DQ", "League office" gives "LO". */

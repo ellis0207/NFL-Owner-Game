@@ -41,6 +41,21 @@ export function CapTools({ game, changed }: { game: GameState; changed: () => vo
         {trial.length > 0 && <button onClick={() => setTrial([])}>Clear trials</button>}
       </div>
       {trial.length > 0 && <span className="muted">Trials: {trial.map((t) => `${t.label} (${t.terms.years} yrs, ${money(t.terms.total)}${t.cutAfter ? `, cut after ${t.cutAfter}` : ""})`).join("; ")}</span>}
+      <div className="rb-plan">
+        {plan.map((p) => (
+          <div key={p.year} className="rb-plan-year">
+            <span className="rb-plan-bar" title={`${p.year}: ${money(p.committed)} committed, ${money(p.dead)} dead, ${money(p.added)} trials, ${money(p.space)} space`}>
+              <span style={{ height: `${Math.max(0, p.space) / p.cap * 100}%`, background: "var(--good)" }} />
+              <span style={{ height: `${p.added / p.cap * 100}%`, background: "var(--warn)" }} />
+              <span style={{ height: `${p.dead / p.cap * 100}%`, background: "var(--bad)" }} />
+              <span style={{ height: `${Math.min(p.committed, p.cap) / p.cap * 100}%`, background: "var(--team)" }} />
+            </span>
+            <strong className={p.space < 0 ? "bad" : "good"}>{money(p.space)}</strong>
+            <span className="muted">{p.year}</span>
+          </div>
+        ))}
+        <span className="gx-legend vertical"><span><i style={{ background: "var(--team)" }} />Committed</span><span><i style={{ background: "var(--bad)" }} />Dead</span><span><i style={{ background: "var(--warn)" }} />Trials</span><span><i style={{ background: "var(--good)" }} />Space</span></span>
+      </div>
       <div className="table-wrap">
         <table>
           <thead><tr><th>Year</th><th className="num">Cap</th><th className="num">Committed</th><th className="num">Dead</th><th className="num">Trials</th><th className="num">Space</th></tr></thead>

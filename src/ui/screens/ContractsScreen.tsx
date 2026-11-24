@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Bars, Chip, Grade, Hud, HudStat, Leaderboard, TeamBadge } from "../gfx";
 import { capHit, capSummary, teamPlayerIds } from "../../engine/cap";
 import { dealOf, dealYearsLeft, leagueYear, projectedCap } from "../../engine/contracts";
 import { ageOn, shortDate } from "../../engine/dates";
@@ -55,10 +56,10 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
                     return (
                       <tr key={n.player} className="clickable" {...tip("player", n.player)} onClick={() => ui.openTalks(n.player)}>
                         <td className="name">{PLAYER_BY_ID[n.player].name}</td>
-                        <td>{PLAYER_BY_ID[n.player].position}</td>
+                        <td><span className="gx-pos">{PLAYER_BY_ID[n.player].position}</span></td>
                         <td>{shortDate(n.opened)}</td>
-                        <td>{status}</td>
-                        <td>{n.handler === "gm" ? "GM" : "You"}</td>
+                        <td><Chip icon={n.status === "agreed" ? "check" : n.status === "ended" ? "lock" : n.pending ? "clock" : last.from === "agent" ? "pen" : "handshake"} tone={n.status === "agreed" ? "good" : n.status === "ended" ? undefined : last.from === "agent" && !n.pending ? "warn" : undefined}>{status}</Chip></td>
+                        <td><Chip icon={n.handler === "gm" ? "briefcase" : "user"}>{n.handler === "gm" ? "GM" : "You"}</Chip></td>
                         <td className="num">{money(last.terms.total / last.terms.years)}/yr · {last.terms.years} yrs</td>
                       </tr>
                     );
@@ -81,9 +82,9 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
                 <tr key={s.id} className="clickable" {...tip("player", s.player)} onClick={() => ui.openPlayer(s.player)}>
                   <td>{shortDate(s.date)}</td>
                   <td className="name">{PLAYER_BY_ID[s.player].name} <span className="muted">{PLAYER_BY_ID[s.player].position}</span></td>
-                  <td>{s.team}</td>
+                  <td><TeamBadge team={s.team} size={20} /></td>
                   <td className="num">{s.years}</td><td className="num">{money(s.total)}</td><td className="num">{money(s.apy)}</td><td className="num">{money(s.guaranteed)}</td>
-                  <td title={s.grades.map((g) => `${g.outlet}: ${g.grade}. ${g.take}`).join("\n")}>{s.grades.map((g) => g.grade).join(" · ")}</td>
+                  <td title={s.grades.map((g) => `${g.outlet}: ${g.grade}. ${g.take}`).join("\n")}>{s.grades.map((g, i) => <Grade key={i} g={g.grade} />)}</td>
                 </tr>
               ))}
               {game.signings.length === 0 && <tr><td colSpan={8} className="muted">No new contracts signed yet this season.</td></tr>}
@@ -98,16 +99,8 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
         <div className="split">
           <div className="stack tight">
             <h3>{year + 1} tags and tenders{game.league?.caps[year + 1] ? "" : " (projected)"}</h3>
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Position</th><th className="num">Franchise</th><th className="num">Transition</th></tr></thead>
-                <tbody>
-                  {(Object.keys(GROUP_POS) as TagGroup[]).map((g) => (
-                    <tr key={g}><td>{GROUP_NAME[g]}</td><td className="num">{money(franchiseTag(game, GROUP_POS[g], year + 1))}</td><td className="num">{money(transitionTag(game, GROUP_POS[g], year + 1))}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Bars rows={(Object.keys(GROUP_POS) as TagGroup[]).map((g) => ({ key: g, label: GROUP_NAME[g], value: franchiseTag(game, GROUP_POS[g], year + 1), text: <>{money(franchiseTag(game, GROUP_POS[g], year + 1))} <span className="muted">/ {money(transitionTag(game, GROUP_POS[g], year + 1))}</span></> }))} />
+            <span className="muted">Franchise tag, then the transition tag in grey.</span>
             <span className="muted">
               RFA tenders: first round {money(rfaTender(game, "first", year + 1))}, second round {money(rfaTender(game, "second", year + 1))}, right of first refusal {money(rfaTender(game, "original", year + 1))}.
               {" "}{game.league?.caps[year + 1]
@@ -120,7 +113,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
             {game.offseason?.draftOrder && (
               <div className="stack tight">
                 <h3>{NEXT} draft order</h3>
-                <p className="muted">{game.offseason.draftOrder.map((t, i) => `${i + 1}. ${t}`).join(" · ")}</p>
+                <div className="rb-order">{game.offseason.draftOrder.map((t, i) => <span key={i} className={t === us ? "mine" : undefined}><b>{i + 1}</b><TeamBadge team={t} size={22} /></span>)}</div>
                 <span className="muted">First round, before any trades. The draft itself is coming in a later update.</span>
               </div>
             )}
@@ -130,11 +123,11 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
 
       <div className="panel stack tight">
         <h3>Cash</h3>
-        <dl className="kv">
-          <dt>Paid to players in {year}</dt><dd>{money(cashPaid(game, us, year))}</dd>
-          <dt>Owed in {year + 1} under current deals</dt><dd>{money(cashNextYear(game, us))}</dd>
-          <dt>Cash in the bank</dt><dd {...tip("cash")}>{money(cashBalance(game))}</dd>
-        </dl>
+        <Hud>
+          <HudStat icon="money" label={`Paid to players in ${year}`} value={money(cashPaid(game, us, year))} />
+          <HudStat icon="calendar" label={`Owed in ${year + 1}`} value={money(cashNextYear(game, us))} />
+          <span {...tip("cash")}><HudStat icon="bank" label="Cash in the bank" value={money(cashBalance(game))} tone={cashBalance(game) < 0 ? "bad" : "good"} /></span>
+        </Hud>
         <span className="muted">Cash is not the cap: signing bonuses are paid when the deal is signed even though the cap spreads them over up to five years. The full books are on the Business page.</span>
       </div>
     </section>
@@ -163,7 +156,7 @@ function Extensions({ game }: { game: GameState }) {
               return (
                 <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openTalks(id)}>
                   <td className="name">{PLAYER_BY_ID[id].name}{game.players[id].holdout ? <span className="pill inj" style={{ marginLeft: 6 }}>{game.players[id].holdout!.kind === "holdout" ? "Holdout" : "Hold-in"}</span> : null}</td>
-                  <td>{PLAYER_BY_ID[id].position}</td>
+                  <td><span className="gx-pos">{PLAYER_BY_ID[id].position}</span></td>
                   <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
                   <td className="num">{dealYearsLeft(deal, year)}</td>
                   <td className="num">{money(deal!.apy)}</td>
@@ -196,7 +189,7 @@ function OurDeals({ game }: { game: GameState }) {
                 <td>{shortDate(s.date)}</td>
                 <td className="name">{PLAYER_BY_ID[s.player].name}</td>
                 <td className="num">{s.years}</td><td className="num">{money(s.apy)}</td>
-                <td title={s.grades.map((g) => `${g.outlet}: ${g.take}`).join("\n")}>{s.grades.map((g) => g.grade).join(" · ")}</td>
+                <td title={s.grades.map((g) => `${g.outlet}: ${g.take}`).join("\n")}>{s.grades.map((g, i) => <Grade key={i} g={g.grade} />)}</td>
                 <td>{regrade(game, s)}</td>
               </tr>
             ))}
@@ -230,16 +223,7 @@ function TopContracts({ game }: { game: GameState }) {
           {(Object.keys(TAG_GROUP) as Position[]).map((x) => <option key={x}>{x}</option>)}
         </select>
       </div>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Player</th><th>Team</th><th className="num">Per year</th><th className="num">Guaranteed</th><th>Signed</th></tr></thead>
-          <tbody>
-            {list.map(({ p, d }) => (
-              <tr key={p.id}><td className="name">{p.name}</td><td>{game.players[p.id].team}</td><td className="num">{money(d!.apy)}</td><td className="num">{money(d!.guaranteedAtSigning)}</td><td>{d!.signed.slice(0, 4)}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Leaderboard rows={list.map(({ p, d }) => ({ key: p.id, team: game.players[p.id].team ?? undefined, mine: game.players[p.id].team === game.userTeam, who: <span {...tip("player", p.id)}>{p.name}</span>, sub: `${money(d!.guaranteedAtSigning)} guaranteed · signed ${d!.signed.slice(0, 4)}`, value: d!.apy, text: money(d!.apy) }))} />
     </div>
   );
 }
@@ -292,7 +276,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
                   return (
                     <tr key={id} className="clickable" {...tip("player", id)} onClick={() => ui.openTalks(id)}>
                       <td className="name">{PLAYER_BY_ID[id].name}</td>
-                      <td>{PLAYER_BY_ID[id].position}</td>
+                      <td><span className="gx-pos">{PLAYER_BY_ID[id].position}</span></td>
                       <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
                       <td>{CLASS_LABEL[cls]}</td>
                       <td className="num">{money(capHit(id, RULES.season, game))}</td>
@@ -338,7 +322,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
               <tbody>
                 {gone.map((f) => (
                   <tr key={f.player} className="clickable" {...tip("player", f.player)} onClick={() => ui.openTalks(f.player)}>
-                    <td className="name">{PLAYER_BY_ID[f.player].name}</td><td>{PLAYER_BY_ID[f.player].position}</td>
+                    <td className="name">{PLAYER_BY_ID[f.player].name}</td><td><span className="gx-pos">{PLAYER_BY_ID[f.player].position}</span></td>
                     <td>{faStatus(game, f.player)}</td>
                   </tr>
                 ))}
@@ -359,7 +343,7 @@ function OurFreeAgents({ game, changed }: { game: GameState; changed: () => void
                   const done = game.offseason?.options[id];
                   return (
                     <tr key={id}>
-                      <td className="name">{PLAYER_BY_ID[id].name}</td><td>{PLAYER_BY_ID[id].position}</td>
+                      <td className="name">{PLAYER_BY_ID[id].name}</td><td><span className="gx-pos">{PLAYER_BY_ID[id].position}</span></td>
                       <td className="num">{money(info.amount)}</td><td>{({ twoProBowls: "Two Pro Bowls", oneProBowl: "One Pro Bowl", playingTime: "Playing time", basic: "Basic" } as const)[info.tier]}</td>
                       <td className="num">{money(Math.round(teamValue(game, us, id, info.year) / 500_000) * 500_000)}</td>
                       <td>{done ? (done === "exercised" ? "Exercised" : "Declined") : (
@@ -416,8 +400,14 @@ export function FreeAgencyBoard({ game, changed }: { game: GameState; changed: (
     .slice(0, 150);
   const space = capSummary(game, us, NEXT).space - committed(game, us);
   const deadline = game.date < RULES.keyDates.franchiseTagDeadline ? ` Tags are due ${shortDate(RULES.keyDates.franchiseTagDeadline)}.` : "";
+  const topValue = Math.max(1, ...rows.map((r) => r.value));
   return (
     <div className="stack tight">
+      <Hud>
+        <HudStat icon="cap" label={`${NEXT} space after agreed deals`} value={money(space)} tone={space < 0 ? "bad" : "good"} />
+        <HudStat icon="users" label="Players on this board" value={String(rows.length)} />
+        <HudStat icon={open ? "handshake" : "lock"} label="Market" value={open ? "Open" : "Closed"} tone={open ? "good" : undefined} sub={open ? undefined : `Opens ${shortDate(RULES.keyDates.negotiatingWindowOpens)}`} />
+      </Hud>
       <p className="muted">
         {open
           ? `Free agency is open${game.date < RULES.keyDates.newLeagueYear ? ` (negotiating window: agreements are signed on ${shortDate(RULES.keyDates.newLeagueYear)})` : ""}. We have ${money(space)} of ${NEXT} cap space after deals we've agreed to.`
@@ -458,11 +448,11 @@ export function FreeAgencyBoard({ game, changed }: { game: GameState; changed: (
                 <tr key={id} className="clickable" {...tip("player", id)} onClick={() => (open || mine ? ui.openTalks(id) : ui.openPlayer(id))}>
                   <td className="num">{rank}</td>
                   <td className="name">{PLAYER_BY_ID[id].name}</td>
-                  <td>{PLAYER_BY_ID[id].position}</td>
+                  <td><span className="gx-pos">{PLAYER_BY_ID[id].position}</span></td>
                   <td className="num">{ageOn(PLAYER_BY_ID[id].birthDate, game.date) ?? ""}</td>
-                  <td>{from(id)}</td>
+                  <td>{from(id) ? <TeamBadge team={from(id)!} size={20} /> : <Chip icon="user">FA</Chip>}</td>
                   <td className="muted">{recentSeasonLine(game, id)}</td>
-                  <td className="num">{money(Math.round(value / 250_000) * 250_000)}</td>
+                  <td className="num"><span className="rb-share"><span style={{ width: `${(value / topValue) * 100}%` }} /></span>{money(Math.round(value / 250_000) * 250_000)}</td>
                   <td>{talking ? "In talks with us" : open ? faStatus(game, id) : ps?.team ? (faClass(id) === "UFA" ? "Under contract" : `Under contract (${faClass(id)})`) : "Free agent"}</td>
                   {open && (
                     <td onClick={(e) => e.stopPropagation()}>

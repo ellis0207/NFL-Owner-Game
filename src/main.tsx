@@ -7,6 +7,7 @@ import { applyPrefs } from "./ui/prefs";
 // Styles: the shared base, the shell's pieces, then one file per room.
 import "./ui/styles/base.css";
 import "./ui/styles/kit.css";
+import "./ui/styles/gfx.css";
 import "./ui/styles/masthead.css";
 import "./ui/styles/rooms/desk.css";
 import "./ui/styles/rooms/team.css";

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TeamBadge } from "./gfx";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { agentFor, clientsOnTeam, STYLE_LABEL } from "../engine/agents";
 import { dealOf, leagueYear } from "../engine/contracts";
@@ -274,7 +275,7 @@ export function NegotiationPanel({ game, id, onClose, changed }: { game: GameSta
               <tbody>
                 {compList.map((c) => (
                   <tr key={c.id}>
-                    <td className="name">{c.name}</td><td>{c.team}</td><td>{c.signed.slice(0, 4)}</td>
+                    <td className="name">{c.name}</td><td><TeamBadge team={c.team} size={18} /></td><td>{c.signed.slice(0, 4)}</td>
                     <td className="num">{c.years}</td><td className="num">{money(c.apy)}</td><td className="num">{money(c.guaranteed)}</td>
                     <td className="num">{(c.share * 100).toFixed(1)}%</td>
                   </tr>

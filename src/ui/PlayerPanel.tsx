@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TeamBadge } from "./gfx";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { askLine, openAsk, promiseTalks, refuseAsk } from "../engine/redo";
 import { releaseCost } from "../engine/cap";
@@ -302,7 +303,7 @@ export function PlayerPanel({ game, id, onClose, changed }: { game: GameState; i
                     const share = snaps ? Math.max(snaps.offShare, snaps.defShare) : 0;
                     return (
                       <tr key={season}>
-                        <td>{season}</td><td>{s.team}</td><td className="num">{snaps?.games ?? s.g ?? ""}</td>
+                        <td>{season}</td><td>{s.team ? <TeamBadge team={s.team} size={18} /> : null}</td><td className="num">{snaps?.games ?? s.g ?? ""}</td>
                         <td>{statLine(p.position, s, snaps)}</td>
                         <td className="num">{snaps ? `${Math.max(snaps.offense, snaps.defense) || snaps.st}${share ? ` (${Math.round(share * 100)}%)` : ""}` : ""}</td>
                       </tr>

@@ -21,6 +21,8 @@ import { MEDIA_BY_ID } from "../../engine/outlets";
 import { StoryCard } from "./MediaScreen";
 import { business, cashBalance, gateForecast } from "../../engine/business";
 import { fanMood } from "./BusinessScreen";
+import { Chip, FormChips, Hud, HudStat, Icon, Ring, TeamBadge, TeamTag, WordScale } from "../gfx";
+import { FAN_STEPS, PULSE_STEPS, fanStep, pulseStep, recentForm } from "../gfxdata";
 import { openSearches, proposals } from "../../engine/carousel";
 import { ROLE_NAME, staff } from "../../engine/coaches";
 import { tip } from "../tip";
@@ -67,14 +69,29 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
     return next.date === game.date ? `Game day: ${opp}.` : `Next game ${shortDate(next.date)}, ${opp}.`;
   })();
 
+  const nextM = next ? matchup(game, next) : undefined;
+  const nextOpp = nextM ? (nextM.home === game.userTeam ? nextM.away : nextM.home) : undefined;
   return (
     <>
       <p className="dk-lede">
         <span className="dk-dateline">{longDate(game.date)}</span>{" "}
-        {waitingOnUs ? `${waitingOnUs} decision${waitingOnUs === 1 ? "" : "s"} wait${waitingOnUs === 1 ? "s" : ""} on you this morning.` : "Nothing waits on you this morning."}{" "}
-        {nextLine}{" "}
-        {unreadCount ? `${unreadCount} unread in the inbox.` : ""}
+        {nextLine}
       </p>
+      <Hud>
+        <HudStat icon="clipboard" label="Decisions waiting" value={String(waitingOnUs)} tone={waitingOnUs ? "warn" : "good"} sub={waitingOnUs ? "On your desk" : "Nothing waits on you"} />
+        {next && nextOpp && (
+          <div className="gx-hud-stat" {...tip("game", next.id)}>
+            <TeamBadge team={nextOpp} size={36} noTip />
+            <span className="gx-hud-body">
+              <span className="gx-hud-label">{next.date === game.date ? "Game day" : "Next game"}</span>
+              <strong className="gx-hud-value">{nextM!.home === game.userTeam ? "vs" : "at"} {nextOpp}</strong>
+              <span className="gx-hud-sub">{shortDate(next.date)} <FormChips results={recentForm(game, nextOpp, 5)} /></span>
+            </span>
+          </div>
+        )}
+        <HudStat icon="mail" label="Inbox" value={`${unreadCount} unread`} tone={unreadCount > 20 ? "warn" : undefined} sub={unread[0]?.title} />
+        <HudStat icon="money" label="Cash" value={money(cashBalance(game))} tone={cashBalance(game) < 0 ? "bad" : undefined} sub={<WordScale steps={FAN_STEPS} at={fanStep(game.pressure.fans)} label="Fans" compact />} />
+      </Hud>
       {isSeasonOver(game) && game.champion && (
         <section className="panel champion">
           <span className="label">{superBowlName(RULES.season)} champion</span>
@@ -178,7 +195,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
             <span className="muted">For {shortDate(next.date)}</span>
             {report.map(([id, st]) => (
               <div key={id}>
-                <span className={st === "Out" ? "bad" : "warn"}>{st}</span>{" "}
+                <Chip icon="cross" tone={st === "Out" ? "bad" : "warn"}>{st}</Chip>{" "}
                 <button className="link" {...tip("player", id)} onClick={() => ui.openPlayer(id)}>{PLAYER_BY_ID[id].name}</button>{" "}
                 <span className="muted">{PLAYER_BY_ID[id].position} · {game.players[id].injury!.type}</span>
               </div>
@@ -199,7 +216,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
             </div>
             {waiting.map((n) => (
               <div key={n.player}>
-                <span className="warn">Our move</span>{" "}
+                <Chip icon="pen" tone="warn">Our move</Chip>{" "}
                 <button className="link" onClick={() => ui.openTalks(n.player)}>{PLAYER_BY_ID[n.player].name}</button>
                 <span className="muted"> · the agent answered on {shortDate(n.rounds[n.rounds.length - 1].date)}</span>
               </div>
@@ -211,7 +228,8 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
                 <button className="link" onClick={() => ui.openTalks(id)}>{PLAYER_BY_ID[id].name}</button>
               </div>
             ))}
-            <span className="muted">{pulse.fans} {pulse.media}</span>
+            <WordScale steps={PULSE_STEPS} at={pulseStep(game.pressure.fans)} label={pulse.fans} compact />
+            <WordScale steps={PULSE_STEPS} at={pulseStep(game.pressure.media)} label={pulse.media} compact />
           </section>
         );
       })()}
@@ -225,7 +243,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
             <button className="btn small" onClick={() => go("Inbox")}>Open inbox</button>
           </div>
           {unread.map((m) => (
-            <div key={m.id}><strong>{m.title}</strong> <span className="muted">· {m.from}</span></div>
+            <div key={m.id} className="gx-row"><Icon name={m.priority && m.priority > 1 ? "alert" : "mail"} className={m.priority && m.priority > 1 ? "warn" : undefined} /><strong>{m.title}</strong> <span className="muted">· {m.from}</span></div>
           ))}
         </section>
       )}
@@ -315,7 +333,7 @@ function OpenProblems({ game, go }: { game: GameState; go: (s: Screen, tab?: str
         const weeks = Math.floor((Date.parse(game.date) - Date.parse(p.since)) / (7 * 86400000));
         return (
           <div key={p.id} className={`dk-problem sev${p.severity}`}>
-            <span className={p.severity >= 3 ? "bad" : p.severity === 2 ? "warn" : "muted"}>{SEVERITY[p.severity]}</span>{" "}
+            <Chip icon={p.severity >= 2 ? "alert" : "eye"} tone={p.severity >= 3 ? "bad" : p.severity === 2 ? "warn" : undefined}>{SEVERITY[p.severity]}</Chip>{" "}
             <button className="link" onClick={() => go(p.link.screen as Screen, p.link.tab)}><strong>{p.title}</strong></button>
             <span className="muted">{weeks >= 1 ? ` · for ${weeks} week${weeks === 1 ? "" : "s"}` : " · new"}</span>
             <div className="muted">{p.detail}</div>
@@ -340,18 +358,20 @@ function BusinessToday({ game, go }: { game: GameState; go: (s: Screen) => void 
         <h2>Business</h2>
         <button className="btn small" onClick={() => go("Business")}>Open business</button>
       </div>
-      <span className="muted">Cash: <span {...tip("cash")}>{money(cashBalance(game))}</span>. {fanMood(game.pressure.fans)}</span>
-      {today.map((e) => <div key={e.id}><span className="good">At the stadium today</span> {e.name}</div>)}
+      <div className="gx-row"><Icon name="money" /><span {...tip("cash")}><strong>{money(cashBalance(game))}</strong></span><span className="muted">cash</span></div>
+      <WordScale steps={FAN_STEPS} at={fanStep(game.pressure.fans)} label={fanMood(game.pressure.fans)} compact />
+      {today.map((e) => <div key={e.id}><Chip icon="stadium" tone="good">At the stadium today</Chip> {e.name}</div>)}
       {f && next && (
-        <div>
-          <span className="label">Next home game</span>{" "}
-          {shortDate(next.date)} vs {teamLabel(next.home === us ? next.away! : next.home!)}: about {Math.min(100, Math.round((f.sold / f.capacity) * 100))}% sold
-          {f.heat >= 1.15 ? ", and resale prices are above face value." : f.heat < 0.95 ? ", with seats still available." : "."}
+        <div className="gx-row">
+          <Ring value={f.sold / f.capacity} size={64} tone={f.sold / f.capacity >= 0.97 ? "good" : f.sold / f.capacity < 0.85 ? "warn" : undefined} />
+          <span><span className="label">Next home game</span><br />
+            {shortDate(next.date)} vs <TeamTag team={next.home === us ? next.away! : next.home!} name={teamLabel(next.home === us ? next.away! : next.home!)} size={16} /><br />
+            <span className="muted">{f.heat >= 1.15 ? "Resale prices are above face value." : f.heat < 0.95 ? "Seats still available." : "Sold about as expected."}</span></span>
         </div>
       )}
       {offers.map((e) => (
         <div key={e.id}>
-          <span className="warn">Booking request</span>{" "}
+          <Chip icon="calendar" tone="warn">Booking request</Chip>{" "}
           <button className="link" onClick={() => go("Business")}>{e.name}</button>
           <span className="muted"> · {shortDate(e.date)}, answer by {shortDate(e.expires!)}</span>
         </div>
@@ -373,7 +393,7 @@ function StaffToday({ game, go }: { game: GameState; go: (s: Screen) => void }) 
       </div>
       {searches.map((s) => (
         <div key={s.role}>
-          <span className="warn">Open job</span> {ROLE_NAME[s.role]}
+          <Chip icon="briefcase" tone="warn">Open job</Chip> {ROLE_NAME[s.role]}
           <span className="muted">
             {" "}· {s.agreed ? `agreed with ${people[s.agreed.id]?.name ?? "a candidate"}` : `${Object.keys(s.interviews).length} interviewed`}
             {s.interim ? `, ${people[s.interim]?.name ?? "an interim"} filling in` : ""}
@@ -382,7 +402,7 @@ function StaffToday({ game, go }: { game: GameState; go: (s: Screen) => void }) 
       ))}
       {props.map((p) => (
         <div key={p.id}>
-          <span className="warn">Needs your approval</span>{" "}
+          <Chip icon="check" tone="warn">Needs your approval</Chip>{" "}
           <button className="link" onClick={() => go("Staff")}>{people[p.candidate]?.name}</button>
           <span className="muted"> as {ROLE_NAME[p.role]}</span>
         </div>

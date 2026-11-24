@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TeamBadge } from "../gfx";
 import { addDays, kickoff, longDate, shortDate } from "../../engine/dates";
 import { BASE_SEASON, GAME_BY_ID, RULES, teamLabel } from "../../engine/league";
 import { DRAFT_OVER } from "../../engine/draft";
@@ -24,17 +25,18 @@ function shiftMonth(month: string, by: number): string {
 }
 
 /** "vs DET" / "at GB", and "W 24-17" once played. */
-function gameLine(game: GameState, id: string): { opp: string; result?: string; cls?: string } {
+function gameLine(game: GameState, id: string): { opp: string; team: string; result?: string; cls?: string } {
   const g = GAME_BY_ID[id];
   const m = matchup(game, g)!;
   const home = m.home === game.userTeam;
   const opp = `${g.neutral ? "vs" : home ? "vs" : "at"} ${home ? m.away : m.home}`;
   const r = game.results[id];
-  if (!r) return { opp };
+  const team = home ? m.away : m.home;
+  if (!r) return { opp, team };
   const ours = home ? r.homeScore : r.awayScore;
   const theirs = home ? r.awayScore : r.homeScore;
   const res = ours > theirs ? "W" : ours < theirs ? "L" : "T";
-  return { opp, result: `${res} ${ours}-${theirs}`, cls: res === "W" ? "good" : res === "L" ? "bad" : undefined };
+  return { opp, team, result: `${res} ${ours}-${theirs}`, cls: res === "W" ? "good" : res === "L" ? "bad" : undefined };
 }
 
 export function CalendarScreen({ game }: { game: GameState }) {
@@ -64,7 +66,7 @@ export function CalendarScreen({ game }: { game: GameState }) {
   const chip = (a: AgendaItem, d: string) => {
     if (a.kind === "game" && a.gameId) {
       const line = gameLine(game, a.gameId);
-      return <span key={a.id} className="cal-chip game">{line.opp}{line.result && <b className={line.cls}> {line.result}</b>}</span>;
+      return <span key={a.id} className="cal-chip game"><TeamBadge team={line.team} size={14} noTip /> {line.opp}{line.result && <b className={line.cls}> {line.result}</b>}</span>;
     }
     if (a.kind === "off") return <span key={a.id} className="cal-chip off">Bye</span>;
     const short = a.id === "meeting:weekly" ? "Front office" : a.title.replace(/[:,(].*$/, "");

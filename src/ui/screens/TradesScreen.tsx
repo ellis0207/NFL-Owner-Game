@@ -1,4 +1,5 @@
 import { initialTab } from "../ui";
+import { Bars, Grade, Icon, TeamBadge } from "../gfx";
 import { useState } from "react";
 import { teamPlayerIds } from "../../engine/cap";
 import { dealCapHit, dealOf, dealYearsLeft, lastYear, leagueYear } from "../../engine/contracts";
@@ -150,16 +151,31 @@ function Builder({ game, changed, start, counterOf, endCounter }: {
       <div className="panel stack tight">
         <div className="split">
           <div className="stack tight">
-            <span className="label">We send</span>
+            <span className="label gx-row"><TeamBadge team={us} size={20} /> We send <Icon name="swap" size={14} /></span>
             <strong>{give.length ? describe(game, give, us) : "Nothing yet"}</strong>
           </div>
           <div className="stack tight">
-            <span className="label">We get</span>
+            <span className="label gx-row"><TeamBadge team={partner} size={20} /> We get</span>
             <strong>{get.length ? describe(game, get, partner) : "Nothing yet"}</strong>
           </div>
         </div>
         {(give.length > 0 || get.length > 0) && (
           <>
+            <div className="split">
+              {([0, 1] as const).map((side) => {
+                const c = check.cap[side];
+                const top = Math.max(Math.abs(c.before), Math.abs(c.space), 1);
+                return (
+                  <div key={side} className="stack tight">
+                    <span className="gx-row"><TeamBadge team={side ? partner : us} size={20} /><span className="gx-kicker">{year} cap space</span></span>
+                    <Bars max={top} rows={[
+                      { key: "b", label: "Before", value: Math.max(0, c.before), text: money(c.before), tone: undefined },
+                      { key: "a", label: "After", value: Math.max(0, c.space), text: money(c.space), tone: c.space < 0 ? "bad" : c.space >= c.before ? "good" : "warn" },
+                    ]} />
+                  </div>
+                );
+              })}
+            </div>
             <dl className="kv">
               <dt>Our {year} cap space</dt>
               <dd>{money(check.cap[0].before)} → <span className={check.cap[0].space < 0 ? "bad" : undefined}>{money(check.cap[0].space)}</span></dd>
@@ -405,21 +421,20 @@ function Picks({ game }: { game: GameState }) {
   return (
     <div className="stack tight">
       <p className="muted">Picks in the next three drafts can be traded. The projection for the next draft follows the standings and how teams look; later drafts are anyone's guess.</p>
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Pick</th><th>Projected</th></tr></thead>
-          <tbody>
-            {mine.map((pick) => {
-              const { year, round, from } = parsePick(pick);
-              return (
-                <tr key={pick}>
-                  <td>{pickLabel(game, pick, us)}</td>
-                  <td className="muted">{year === PICK_YEARS[0] ? `about #${(round - 1) * 32 + projectedSlot(game, from, year)} overall` : "mid-round"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="gx-grid rb-picks">
+        {mine.map((pick) => {
+          const { year, round, from } = parsePick(pick);
+          return (
+            <div key={pick} className="gx-tile sunk gx-row">
+              <span className={`rb-round r${round}`}>R{round}</span>
+              <span style={{ display: "grid", lineHeight: 1.25, minWidth: 0 }}>
+                <strong>{pickLabel(game, pick, us)}</strong>
+                <span className="muted" style={{ fontSize: "0.78rem" }}>{year === PICK_YEARS[0] ? `about #${(round - 1) * 32 + projectedSlot(game, from, year)} overall` : "mid-round"}</span>
+              </span>
+              {from !== us && <TeamBadge team={from} size={22} />}
+            </div>
+          );
+        })}
       </div>
       <h3>Picks that have changed hands</h3>
       <div className="table-wrap" style={{ maxHeight: "24rem", overflowY: "auto" }}>
@@ -427,7 +442,7 @@ function Picks({ game }: { game: GameState }) {
           <thead><tr><th>Pick</th><th>Original team</th><th>Now owned by</th></tr></thead>
           <tbody>
             {moved.map(([id]) => (
-              <tr key={id}><td>{pickLabel(game, id, parsePick(id).from)}</td><td>{parsePick(id).from}</td><td>{pickOwner(game, id)}</td></tr>
+              <tr key={id}><td>{pickLabel(game, id, parsePick(id).from)}</td><td><TeamBadge team={parsePick(id).from} size={20} /></td><td><span className="gx-row"><Icon name="swap" size={13} /><TeamBadge team={pickOwner(game, id)} size={20} /></span></td></tr>
             ))}
           </tbody>
         </table>
@@ -447,13 +462,13 @@ function LeagueTrades({ game }: { game: GameState }) {
       {rows.map((t) => (
         <div key={t.id} className={`panel stack tight rb-ticket${t.blockbuster ? " big" : ""}`}>
           <span className="muted">{shortDate(t.date)}{t.blockbuster ? " · Blockbuster" : ""}{t.status === "agreed" ? " · Official at the new league year" : t.status === "voided" ? " · Fell through" : ""}</span>
-          <strong>{headline(game, t)}</strong>
+          <div className="gx-row">{t.teams.map((team, i) => <span key={team} className="gx-row">{i > 0 && <Icon name="swap" />}<TeamBadge team={team} size={30} /></span>)}<strong>{headline(game, t)}</strong></div>
           {t.grades && (
             <div className="split">
               {t.teams.map((team) => (
                 <div key={team} className="stack tight">
                   <span className="label" {...tip("team", team)}>{TEAM_BY_ID[team].name}</span>
-                  {t.grades![team].map((g) => <span key={g.outlet}><strong>{g.grade}</strong> <span className="muted">{g.outlet}: {g.take}</span></span>)}
+                  {t.grades![team].map((g) => <span key={g.outlet}><Grade g={g.grade} /> <span className="muted">{g.outlet}: {g.take}</span></span>)}
                 </div>
               ))}
             </div>
