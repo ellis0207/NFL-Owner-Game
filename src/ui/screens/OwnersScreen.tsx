@@ -14,6 +14,7 @@ import { LeagueOffice, ProposalExtras } from "./LeagueOfficePanel";
 import { ClubProfiles, Realignment } from "./OwnersClubs";
 import { ExpansionPanel } from "./OwnersExpansion";
 import { tip } from "../tip";
+import { Chip, TeamBadge } from "../gfx";
 
 const COMMITTEE = { for: "Recommends it", against: "Recommends against", neutral: "No position" };
 
@@ -77,33 +78,27 @@ export function OwnersScreen({ game, changed }: { game: GameState; changed: () =
       <section className="panel stack tight">
         <h3>The other owners</h3>
         <span className="muted">Votes, trades and hiring away their coaches all change how they feel about us. Allies back our side in the room and their front offices deal a little easier; rivals do the opposite.</span>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Club</th><th>Relationship</th><th></th></tr></thead>
-            <tbody>
-              {others.map((t) => {
-                const r = o.relations[t.id];
-                const word = relationWord(r);
-                return (
-                  <tr key={t.id}>
-                    <td><span {...tip("team", t.id)}>{teamLabel(t.id)}</span></td>
-                    <td className={word === "Ally" || word === "Close" ? "good" : word === "Rival" || word === "Hostile" ? "bad" : ""}>{word}</td>
-                    <td>
-                      {r.ally ? <button className="btn small" onClick={() => say(endAlliance(game, t.id))}>End alliance</button>
-                        : !r.rival && r.rapport >= 30 ? <button className="btn small" onClick={() => say(proposeAlliance(game, t.id))}>Propose an alliance</button> : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="lg-owners">
+          {others.map((t) => {
+            const r = o.relations[t.id];
+            const word = relationWord(r);
+            const tone = word === "Ally" || word === "Close" ? "good" : word === "Rival" || word === "Hostile" ? "bad" : undefined;
+            return (
+              <div key={t.id} className="gx-tile lg-owner">
+                <div className="gx-tile-top"><TeamBadge team={t.id} size={30} /><span {...tip("team", t.id)} className="gx-kicker">{teamLabel(t.id)}</span></div>
+                <Chip icon={r.ally ? "handshake" : r.rival ? "flame" : "users"} tone={tone}>{word}</Chip>
+                {r.ally ? <button className="btn small" onClick={() => say(endAlliance(game, t.id))}>End alliance</button>
+                  : !r.rival && r.rapport >= 30 ? <button className="btn small" onClick={() => say(proposeAlliance(game, t.id))}>Propose an alliance</button> : null}
+              </div>
+            );
+          })}
         </div>
       </section>
 
       <section className="panel stack tight">
         <h3>The rulebook</h3>
         {o.rules.length === 0 ? <span className="muted">No changes since 2026.</span> : o.rules.map((r) => (
-          <span key={r.rule + r.year}>{r.year}{r.until ? " (trial season)" : ""}: {RULE_BY_ID[r.rule].title} <span className="muted">({sponsorName(r.sponsor)}, {r.yes}-{TEAMS.length - r.yes})</span></span>
+          <span key={r.rule + r.year} className="gx-row"><Chip icon="gavel" tone="good">{r.year}{r.until ? " trial" : ""}</Chip>{RULE_BY_ID[r.rule].title} <span className="lg-tally" title={`${r.yes}-${TEAMS.length - r.yes}`}><span style={{ width: `${(r.yes / TEAMS.length) * 100}%` }} /></span><span className="muted">{sponsorName(r.sponsor)}, {r.yes}-{TEAMS.length - r.yes}</span></span>
         ))}
         {o.history.filter((h) => !h.passed).length > 0 && (
           <>

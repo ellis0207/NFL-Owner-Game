@@ -5,6 +5,7 @@ import { proposeRealign, relocation } from "../../engine/relocation";
 import { profile, rivals } from "../../engine/rivals";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Avatar, Bars, TeamBadge } from "../gfx";
 
 /** Club profiles: how each rival club is owned, run and regarded. */
 export function ClubProfiles({ game }: { game: GameState }) {
@@ -22,6 +23,13 @@ export function ClubProfiles({ game }: { game: GameState }) {
             {others.map((t) => <option key={t.id} value={t.id}>{teamLabel(t.id)}</option>)}
           </select>
         </label>
+        <div className="gx-row"><TeamBadge team={team} size={56} /><Avatar name={p.owner} size={44} /><div className="stack tight"><strong>{p.owner}</strong><span className="muted">{p.style}</span></div></div>
+        <Bars rows={[
+          { label: "Player budget", value: p.budget.salary, text: money(p.budget.salary) },
+          { label: "Staff budget", value: p.budget.staff, text: money(p.budget.staff) },
+          { label: "Stadium upkeep", value: p.budget.stadium, text: money(p.budget.stadium) },
+          { label: "Projects", value: p.budget.capital, text: money(p.budget.capital) },
+        ]} />
         <dl className="kv">
           <dt>Controlled by</dt><dd>{p.owner}</dd>
           <dt>Owner's approach</dt><dd>{p.style}</dd>
@@ -29,10 +37,7 @@ export function ClubProfiles({ game }: { game: GameState }) {
           <dt>Management reputation</dt><dd>{p.rep}</dd>
           <dt>With candidates</dt><dd>{p.hiring}</dd>
           <dt>Money</dt><dd>{p.money}</dd>
-          <dt>Player budget</dt><dd>{money(p.budget.salary)}</dd>
-          <dt>Staff budget</dt><dd>{money(p.budget.staff)}</dd>
-          <dt>Stadium and capital</dt><dd>{money(p.budget.stadium)} upkeep, {money(p.budget.capital)} projects</dd>
-        </dl>
+                  </dl>
         {p.meddles.length > 0 && <><h4>Owner interference</h4><ul className="plain">{p.meddles.map((m, i) => <li key={i}>{m}</li>)}</ul></>}
         {p.memory.length > 0 && <><h4>What the club remembers</h4><ul className="plain muted">{p.memory.map((m, i) => <li key={i}>{m}</li>)}</ul></>}
         <h4>Ownership</h4>

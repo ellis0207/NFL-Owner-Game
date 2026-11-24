@@ -28,3 +28,7 @@
 .ut-chapter > summary strong { font-family: var(--font-serif); font-size: 1.12rem; font-weight: 600; }
 .ut-text { max-width: 72ch; font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.6; }
 [data-room="game"] .panel > h3:first-child { padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
+
+/* An achievement medal: a locked slot until it's earned, then a gold coin. */
+.ut-medal { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
+.ut-medal.on { background: radial-gradient(circle at 35% 30%, #f6dd8a, #c9952b 70%); color: #3b2a06; border-color: #a77a1f; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }

@@ -5,6 +5,7 @@ import { PlaySettings } from "./PlaySettings";
 import { SettingsLeague } from "./SettingsLeague";
 import { applyDifficulty, DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../../engine/difficulty";
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
+import { IconHead } from "../gfx";
 
 export const TODAY_PANELS = ["Decision queue", "Open problems", "Staff", "Business", "Media", "Inbox"] as const;
 
@@ -23,7 +24,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
     <section className="stack">
       <div className="split">
         <div className="panel stack tight">
-          <h3>Realism</h3>
+          <IconHead icon="scales">Realism</IconHead>
           <dl className="kv">
             <dt>Salary cap</dt><dd>{game.settings.capRules === "real" ? "Real NFL rules" : "Off"}</dd>
             <dt>Owner finances</dt><dd>{game.settings.finances === "relaxed" ? "Relaxed: the team's cash is topped up" : "Real: you cover shortfalls"}</dd>
@@ -55,7 +56,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           </div>
         </div>
         <div className="panel stack tight">
-          <h3>Simulation</h3>
+          <IconHead icon="clock">Simulation</IconHead>
           <label className="field"><span className="label">When simming several days</span>
             <select value={game.settings.pause ?? "never"} onChange={(e) => set({ pause: e.target.value as Settings["pause"] })}>
               <option value="never">Keep going: the staff handles what comes up</option>
@@ -76,7 +77,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
       </div>
       <div className="split">
         <div className="panel stack tight">
-          <h3>Display</h3>
+          <IconHead icon="eye">Display</IconHead>
           <label className="field"><span className="label">Text size</span>
             <select value={prefs.textSize} onChange={(e) => save({ ...prefs, textSize: Number(e.target.value) })}>
               {[0.9, 1, 1.15, 1.3, 1.5].map((v) => <option key={v} value={v}>{Math.round(v * 100)}%</option>)}
@@ -96,7 +97,7 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
           <span className="muted">Display settings are kept in this browser. Everything can be reached with the keyboard: Tab moves between controls, and the search box finds any player, coach, executive or team.</span>
         </div>
         <div className="panel stack tight">
-          <h3>Today page</h3>
+          <IconHead icon="calendar">Today page</IconHead>
           <span className="muted">Choose the panels you want on the Today page.</span>
           {TODAY_PANELS.map((p) => (
             <label key={p} className="toggle">
