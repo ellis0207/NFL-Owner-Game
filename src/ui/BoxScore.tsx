@@ -96,7 +96,7 @@ export function PlayerTables({ players }: { players: Record<string, number[]> })
 
 type View = "box" | "plays" | "drives" | "gameday";
 
-export function BoxScore({ game, id, onClose, follow, changed }: { game: GameState; id: string; onClose: () => void; follow?: boolean; changed: () => void }) {
+export function BoxScore({ game, id, onClose, follow, changed, onClock }: { game: GameState; id: string; onClose: () => void; follow?: boolean; changed: () => void; onClock?: (hours: number) => void }) {
   const log = game.pbp?.[id];
   // A game under way opens on the field, as far as the clock has run; its box score and full feed wait for the final.
   const live = liveGame(game, id);
@@ -125,7 +125,7 @@ export function BoxScore({ game, id, onClose, follow, changed }: { game: GameSta
           <span className="label">{sched.label ?? gameTypeLabel(sched)} · {longDate(sched.date)} · {kickoff(sched.timeET)}</span>
           <button className="btn small" onClick={onClose}>Close</button>
         </div>
-        {following && log && r && live && <FollowGame r={r} log={log} limit={liveAt} start={follow ? 0 : liveAt} onDone={onClose} />}
+        {following && log && r && live && <FollowGame r={r} log={log} limit={liveAt} start={follow ? 0 : liveAt} onDone={onClose} onClock={onClock} />}
         {following && log && r && !live && <FollowGame r={r} log={log} box={box} onDone={() => setFollowing(false)} />}
         {!following && live && log && <p className="muted">Live: {(() => { const c = castAt(log, liveAt ?? 0); return `${r.away} ${c.away}, ${r.home} ${c.home}`; })()}.</p>}
         {!following && !live && <>

@@ -412,7 +412,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           </PageBoundary>
         </main>
       </div>
-      {box && <BoxScore key={`${box}-${follow}`} game={game} id={box} follow={follow} changed={changed} onClose={() => setBox(null)} />}
+      {box && <BoxScore key={`${box}-${follow}`} game={game} id={box} follow={follow} changed={changed} onClock={(h) => step((s) => advanceHours(s, h))} onClose={() => setBox(null)} />}
       {player && <PlayerPanel game={game} id={player} onClose={() => setPlayer(null)} changed={changed} />}
       {prospect && <ProspectPanel game={game} id={prospect} onClose={() => setProspect(null)} changed={changed} />}
       {school && <SchoolPanel game={game} id={school} onClose={() => setSchool(null)} />}
