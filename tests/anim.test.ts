@@ -8,6 +8,7 @@ import type { GameLog } from "../src/engine/types";
 import { ACT, type PlayBook, type Track } from "../src/ui/anim/book";
 import { buildTrack } from "../src/ui/anim/build";
 import { readCall } from "../src/ui/anim/read";
+import { plan } from "../src/ui/anim/Players3D";
 import { animReport, topSpeed, type AnimReport } from "./anim-report";
 
 const book = JSON.parse(readFileSync("assets/anim/plays.json", "utf8")) as PlayBook;
@@ -253,5 +254,40 @@ describe("acting out the play-by-play", () => {
       if (t) { built++; for (const p of t.pos) expect(Number.isFinite(p[p.length - 1])).toBe(true); }
     });
     expect(built).toBeGreaterThan(120);
+  });
+});
+
+/** The moves in the 3D player model (assets/anim/player.glb), read from its JSON chunk. */
+function glbMoves(): string[] {
+  const b = readFileSync("assets/anim/player.glb");
+  const len = b.readUInt32LE(12);
+  return (JSON.parse(b.subarray(20, 20 + len).toString("utf8")).animations as { name: string }[]).map((a) => a.name);
+}
+
+describe("the 3D players", () => {
+  it("ships a model under its budget with every move the field view asks for", () => {
+    expect(statSync("assets/anim/player.glb").size).toBeLessThan(2_000_000);
+    const moves = new Set(glbMoves());
+    const asked = new Set<string>();
+    for (let n = 0; n < log.plays.length; n++) {
+      if (log.plays[n][8] & (F.note | F.story)) continue;
+      let t: Track | null = buildTrack(book, log, n, players);
+      while (t) {
+        for (let i = 0; i < t.pos.length; i++) for (const s of plan(t, i, n).segs) asked.add(s.clip);
+        t = t.then ?? null;
+      }
+    }
+    for (const m of asked) expect(moves.has(m), m).toBe(true);
+    // A real game uses most of them: stances, runs, blocks, throws, catches, tackles and the kicks.
+    for (const m of ["stance3", "gun", "run", "carry", "block", "throw", "catch", "tackle", "tackled", "kick", "punt"]) expect(asked.has(m), m).toBe(true);
+  });
+
+  it("turns every player smoothly and keeps a lineman in his stance before the snap", () => {
+    const { t } = play(/ runs /);
+    for (let i = 0; i < t.pos.length; i++) {
+      const p = plan(t, i, 1);
+      for (let f = 1; f < p.heading.length; f++) expect(Math.abs(p.heading[f] - p.heading[f - 1])).toBeLessThanOrEqual(0.5 + 1e-6);
+      if (t.group?.[i] === "OL") expect(p.segs[0].clip).toBe("stance3");
+    }
   });
 });

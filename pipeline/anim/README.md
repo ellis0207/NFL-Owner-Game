@@ -8,8 +8,26 @@ pip install bpy pillow                      # Blender as a Python module (or use
 python3 pipeline/anim/render_sprites.py /tmp/frames skill line
 python3 pipeline/anim/pack_atlas.py /tmp/frames assets/anim skill line
 python3 pipeline/anim/export_plays.py assets/anim [--save plays.blend]
+python3 pipeline/anim/export_glb.py assets/anim [--save player.blend] [--preview /tmp/prev run tackle]
 npx vitest run tests/anim.test.ts           # size budget and that every play has what it needs
 ```
+
+The field view draws 3D players when the browser has WebGL, and falls back to
+the sprites below when it doesn't:
+
+- `player3d.py` builds the 3D player: a body grown with the skin modifier
+  from a stick figure and weighted to an 18-bone skeleton, a helmet with a
+  facemask and stripe, shoulder pads, number patches (back, chest and the
+  shoulders), an official's cap, and the football with its laces. Each
+  surface has its own material name, which the game colors per club.
+- `moves3d.py` holds about 50 moves as joint angles (runs, backpedal,
+  shuffle, stances, pass sets, blocks, rush moves, the snap, handoffs,
+  throws, catches, tackles, falls, getting up, jukes, spins, stiff arms,
+  kicks, punts, celebrations, officials' signals). Each pose is set down so
+  its lowest part touches the grass.
+- `export_glb.py` keys every move into a Blender action and writes
+  `player.glb`; `--preview` renders frames of chosen moves to check them by
+  eye (`PREVIEW_ELEV=8` for a side view).
 
 - `rig.py` builds the figure from code (two bodies: `skill` and `line`). Its
   materials are masks: red is the jersey, green the helmet and pants, blue the

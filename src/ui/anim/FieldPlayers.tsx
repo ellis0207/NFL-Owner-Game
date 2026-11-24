@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TEAM_COLORS } from "../../engine/teamColors";
 import { teamSheet, type AnimAssets } from "./assets";
 import { ACT, type Track } from "./book";
+import { Stage3D, type Model3D } from "./Players3D";
 
 // The field drawing's own measure (GameCast.tsx): ten units to the yard, end zones included.
 const W = 1200, H = 533, MID = H / 2;
@@ -12,6 +13,8 @@ const SCALE = 1.7;
 
 interface Props {
   assets: AnimAssets;
+  /** The 3D players, when the browser can draw them; otherwise the sprites. */
+  model?: Model3D | null;
   /** The club that snaps or kicks the ball and the club across from it, and whether the first is the home team. */
   teams: [string, string];
   offenseHome: boolean;
@@ -75,8 +78,18 @@ function figureAt(a: AnimAssets, t: Track, i: number, f: number): Figure {
  * moving through a play. It draws on a canvas laid exactly over the field's
  * drawing and tells the game view when the play is over.
  */
-export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, track, playing, speed, onEnd }: Props) {
+export function FieldPlayers({ assets, model, teams, offenseHome, view, follow, home, track, playing, speed, onEnd }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const gl = useRef<HTMLCanvasElement>(null);
+  const stage = useRef<Stage3D | null>(null);
+  const [ready, setReady] = useState(0);
+  // One WebGL view for as long as the field is open; each play is dressed onto it.
+  useEffect(() => {
+    if (!model || !gl.current) return;
+    try { stage.current = new Stage3D(gl.current, model); } catch { stage.current = null; }
+    setReady((n) => n + 1);
+    return () => { stage.current?.dispose(); stage.current = null; };
+  }, [model]);
   const done = useRef(onEnd);
   done.current = onEnd;
   const rate = useRef(speed);
@@ -94,37 +107,55 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
       : teamSheet(assets, body(i), colors(teams[track.team[i] as 0 | 1]), track.team[i] === 0 ? offenseHome : !offenseHome));
     const size = index.span * 10 * SCALE;
     const frames = track.pos[0].length / 2;
-    // The camera on a long play: it keeps the ball in the picture, smoothed both ways in time so it neither lurches nor lags.
-    let cam: Float32Array | null = null;
+    const st = stage.current;
+    // The camera. With the 3D players it comes in closer, like a broadcast's, and travels with the ball both ways;
+    // with the sprites it shows the field's whole width and travels only on a play too long for the close-up.
+    // Either way it is smoothed both ways in time so it neither lurches nor lags.
+    const zoom = st ? 0.56 : 1;
+    const vw = view[1] * zoom, vh = H * zoom;
+    let camX: Float32Array | null = null, camY: Float32Array | null = null;
     const field = canvas.parentElement?.querySelector("svg.gridiron") ?? null;
-    if (follow && playing) {
-      cam = new Float32Array(frames);
-      const want = (f: number) => Math.max(0, Math.min(W - view[1], X(track.ball[f * 3]) - view[1] / 2));
-      cam[0] = want(0);
-      for (let f = 1; f < frames; f++) cam[f] = cam[f - 1] + (want(f) - cam[f - 1]) * 0.12;
-      for (let f = frames - 2; f >= 0; f--) cam[f] = cam[f + 1] + (cam[f] - cam[f + 1]) * 0.88;
+    const smooth = (want: (f: number) => number, at: (f: number) => number, room: number, margin: number, lo: number, hi: number) => {
+      const c = new Float32Array(frames);
+      c[0] = want(0);
+      for (let f = 1; f < frames; f++) c[f] = c[f - 1] + (want(f) - c[f - 1]) * 0.12;
+      for (let f = frames - 2; f >= 0; f--) c[f] = c[f + 1] + (c[f] - c[f + 1]) * 0.88;
       // It never moves so fast that the ball leaves the picture.
-      for (let f = 0; f < frames; f++) cam[f] = Math.max(X(track.ball[f * 3]) - view[1] + 90, Math.min(X(track.ball[f * 3]) - 90, cam[f]));
-      for (let f = 0; f < frames; f++) cam[f] = Math.max(0, Math.min(W - view[1], cam[f]));
+      for (let f = 0; f < frames; f++) c[f] = Math.max(lo, Math.min(hi, Math.max(at(f) - room + margin, Math.min(at(f) - margin, c[f]))));
+      return c;
+    };
+    const ballX = (f: number) => X(track.ball[f * 3]), ballY = (f: number) => Y(track.ball[f * 3 + 1]);
+    if (st || (follow && playing)) {
+      const centre = view[0] + view[1] / 2;
+      camX = smooth((f) => Math.max(0, Math.min(W - vw, (follow || !st ? ballX(f) : (ballX(f) * 2 + centre) / 3) - vw / 2)), ballX, vw, 90 * zoom, 0, W - vw);
     }
+    if (st) camY = smooth((f) => Math.max(0, Math.min(H - vh, ballY(f) - vh / 2)), ballY, vh, 60, 0, H - vh);
+    const restore = () => { if ((camX || camY) && field) field.setAttribute("viewBox", `${home.current[0]} 0 ${home.current[1]} ${H}`); };
 
-    const draw = (f: number) => {
+    if (st) st.setTrack(track, teams, offenseHome, Math.round(track.dur * 977 + track.pos.length * 31 + track.pos[0][0] * 13));
+
+    const draw = (f: number, sec = f / track.rate) => {
       const dpr = window.devicePixelRatio || 1;
       const cw = Math.round(canvas.clientWidth * dpr), ch = Math.round(canvas.clientHeight * dpr);
       if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, cw, ch);
       // The same fit the field drawing uses: the stretch on show, whole and centered.
-      const left = cam ? cam[f] : view[0];
-      if (cam && field) field.setAttribute("viewBox", `${left} 0 ${view[1]} ${H}`);
-      const k = Math.min(cw / view[1], ch / H);
-      g.setTransform(k, 0, 0, k, (cw - view[1] * k) / 2 - left * k, (ch - H * k) / 2);
+      const left = camX ? camX[f] : view[0], top = camY ? camY[f] : 0;
+      if ((camX || camY) && field) field.setAttribute("viewBox", `${left} ${top} ${vw} ${vh}`);
+      const k = Math.min(cw / vw, ch / vh);
+      g.setTransform(k, 0, 0, k, (cw - vw * k) / 2 - left * k, (ch - vh * k) / 2 - top * k);
       g.imageSmoothingQuality = "high";
-      const figs = track.pos.map((_, i) => figureAt(assets, track, i, f));
+      if (st) st.draw(sec, [left, top, vw, vh], canvas.clientWidth, canvas.clientHeight, dpr);
+      const figs = track.pos.map((_, i) => {
+        if (!st) return figureAt(assets, track, i, f);
+        const p = track.pos[i];
+        return { x: p[f * 2], y: p[f * 2 + 1], d: 0, action: "idle", frame: 0, down: st.down(i, sec) };
+      });
       // Men on the ground first, then far players before near ones, so the nearer overlap.
       const order = figs.map((_, i) => i).sort((a, b) => Number(figs[b].down) - Number(figs[a].down) || figs[b].y - figs[a].y);
       const s = size / index.size;
-      for (const i of order) {
+      if (!st) for (const i of order) {
         const fig = figs[i];
         const [c0] = index.actions[fig.action];
         g.fillStyle = "rgb(0 0 0 / 0.22)";
@@ -139,12 +170,14 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
       }
       // The ball, lifted off its shadow while it is in the air.
       const bx = X(track.ball[f * 3]), by = Y(track.ball[f * 3 + 1]), bh = track.ball[f * 3 + 2];
-      if (track.holder[f] < 0 && bh > 0.6) {
+      if (!st && track.holder[f] < 0 && bh > 0.6) {
         g.fillStyle = "rgb(0 0 0 / 0.25)";
         g.beginPath(); g.ellipse(bx, by, 3.6, 2, 0, 0, Math.PI * 2); g.fill();
       }
-      g.fillStyle = "#7a4521"; g.strokeStyle = "#fff"; g.lineWidth = 1;
-      g.beginPath(); g.ellipse(bx, by - size * 0.12 - bh * 6, 4.2, 2.8, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      if (!st) {
+        g.fillStyle = "#7a4521"; g.strokeStyle = "#fff"; g.lineWidth = 1;
+        g.beginPath(); g.ellipse(bx, by - size * 0.12 - bh * 6, 4.2, 2.8, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      }
       // Numbers ride above each helmet; the men on the ball get their names.
       g.textAlign = "center"; g.lineJoin = "round";
       const names: [number, number, number][] = [];
@@ -155,17 +188,20 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
         const named = !!slot.name && track.named.some((n) => n.who === i && f >= n.from && f <= n.to);
         if (named !== pass) continue;
         const text = named ? `${slot.number ?? ""} ${slot.name}`.trim() : slot.number === null ? "" : String(slot.number);
-        if (!text) continue;
+        // The 3D players wear their numbers; only the men on the ball are labelled.
+        if (!text || (st && !named)) continue;
         g.font = `${named ? 700 : 600} ${named ? 13 : 10.5}px system-ui, sans-serif`;
         g.lineWidth = 3; g.strokeStyle = "rgb(0 0 0 / 0.75)"; g.fillStyle = named ? "#ffe680" : "#fff";
-        let ty = Y(fig.y) - size * (fig.down ? 0.3 : 0.52) - (named ? 4 : 0);
+        const head = st?.headAt(i);
+        const tx = head ? head[0] : X(fig.x);
+        let ty = head ? head[1] - (fig.down ? 6 : 9) - (named ? 4 : 0) : Y(fig.y) - size * (fig.down ? 0.3 : 0.52) - (named ? 4 : 0);
         if (named) {
           // Two names on the same pile: the second goes underneath.
           const w = g.measureText(text).width;
-          while (names.some(([x, y, w2]) => Math.abs(x - X(fig.x)) < (w + w2) / 2 + 2 && Math.abs(y - ty) < 13)) ty += 14;
-          names.push([X(fig.x), ty, w]);
+          while (names.some(([x, y, w2]) => Math.abs(x - tx) < (w + w2) / 2 + 2 && Math.abs(y - ty) < 13)) ty += 14;
+          names.push([tx, ty, w]);
         }
-        g.strokeText(text, X(fig.x), ty); g.fillText(text, X(fig.x), ty);
+        g.strokeText(text, tx, ty); g.fillText(text, tx, ty);
       }
       // Words over the top of the field: the call once the flag is down, or what became of a kick.
       if (track.caption && f >= track.caption[0]) {
@@ -186,7 +222,7 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
       const tick = (now: number) => {
         s += Math.min(0.1, (now - last) / 1000) * rate.current;
         last = now;
-        draw(Math.min(frames - 1, Math.round(s * track.rate)));
+        draw(Math.min(frames - 1, Math.round(s * track.rate)), Math.min(track.dur, s));
         if (s >= track.dur) { if (!ended) { ended = true; done.current(); } return; }
         raf = requestAnimationFrame(tick);
       };
@@ -194,14 +230,19 @@ export function FieldPlayers({ assets, teams, offenseHome, view, follow, home, t
       // The field drawing gets its view back when the play is over or skipped: the view the game wants now, which
       // has usually moved on to where the play ended. Putting back the one from before the play left the yard lines
       // under the players in the wrong place.
-      return () => { cancelAnimationFrame(raf); if (cam && field) field.setAttribute("viewBox", `${home.current[0]} 0 ${home.current[1]} ${H}`); };
+      return () => { cancelAnimationFrame(raf); restore(); };
     }
     const paint = () => draw(0);
     paint();
     const watch = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(paint);
     watch?.observe(canvas);
-    return () => watch?.disconnect();
-  }, [assets, teams[0], teams[1], offenseHome, view[0], view[1], follow, track, playing]);
+    return () => { watch?.disconnect(); restore(); };
+  }, [assets, ready, teams[0], teams[1], offenseHome, view[0], view[1], follow, track, playing]);
 
-  return <canvas ref={ref} className="gridiron-players" aria-hidden="true" />;
+  return (
+    <>
+      {model && <canvas ref={gl} className="gridiron-players" aria-hidden="true" />}
+      <canvas ref={ref} className="gridiron-players" aria-hidden="true" />
+    </>
+  );
 }

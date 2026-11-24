@@ -339,7 +339,7 @@ function seat(groups: string[][], g: number, id: string | undefined): void {
 
 // ---- The plays ----
 
-interface Built { sc: Scene; take: Take; flagAt?: number; carrier?: number; end?: number; /** Words for the banner, and when they go up. */ note?: [number, string] }
+interface Built { sc: Scene; take: Take; flagAt?: number; /** Seconds a kicked ball is in the air, end over end. */ tumble?: [number, number]; carrier?: number; end?: number; /** Words for the banner, and when they go up. */ note?: [number, string] }
 
 /** Lengthens a finished take: everyone holds where he was. */
 function extend(t: Take, frames: number): void {
@@ -855,7 +855,7 @@ function kickoff(call: Call, n: number, endX: number): Built {
     if (call.score) mark(take, deep, end + 0.6, 99, ACT.cheer);
     else tackle(sc, take, deep, end, cover, call.ids.tackler);
   }
-  return { sc, take, carrier: tb ? -1 : deep, end };
+  return { sc, take, carrier: tb ? -1 : deep, end, tumble: [kickAt, caught] };
 }
 
 function punt(call: Call, n: number, ydl: number, hash: number): Built {
@@ -1009,12 +1009,13 @@ function fieldGoal(call: Call, ydl: number, hash: number, n = 0): Built {
     return { sc, take, note: [hit, `Field goal blocked: ${call.recoverer ?? "the defense"} recovers`] };
   }
   const take = sc.run(kickAt + hang + 0.9);
+  const tumble: [number, number] = [kickAt, kickAt + hang];
   for (const i of [...wall, ...rushers]) { mark(take, i, 0, 0.15, ACT.set); mark(take, i, 0.15, 99, ACT.block); }
   mark(take, holder, 0, kickAt + 0.3, ACT.kneel);
   mark(take, k, kickAt - 0.2, kickAt + 0.3, ACT.kick);
   if (call.style === "good") { mark(take, k, kickAt + hang * 0.75, 99, ACT.cheer); mark(take, holder, kickAt + hang * 0.75, 99, ACT.cheer); }
   take.named.push({ who: k, from: 0, to: take.frames });
-  return { sc, take };
+  return { sc, take, tumble };
 }
 
 /** Where on the field the ball is spotted across its width, as the offense sees it: on a hash after a play to that side. */
@@ -1142,5 +1143,7 @@ function onField(built: Built, los: number, dir: 1 | -1, hash: number, note?: [n
     flag: flagF === null ? null : [flagF, X(1.5), Y(4)],
     caption: note ? [Math.min(take.frames - 1, fr(note[0])), note[1]] : null,
     span: [Math.max(-10, lo), Math.min(110, hi)], dir,
+    group: sc.men.map((m) => m.group),
+    tumble: built.tumble ? [fr(built.tumble[0]), fr(built.tumble[1])] : undefined,
   };
 }
