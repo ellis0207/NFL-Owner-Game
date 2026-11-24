@@ -5,6 +5,7 @@ import type { GameState } from "../../engine/types";
 import { parseSaveFile } from "../../save/codec";
 import { connectCloud, connectDownloads, exportFileName, exportText, SLOTS, type Cloud, type Slot, type SlotInfo } from "../../save/cloud";
 import { listRecovery, readRecovery, writeAutosave, writeRecoveryCopy, type RecoveryInfo } from "../../save/local";
+import { IconHead } from "../gfx";
 
 export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: (s: GameState) => void; onQuit: () => void }) {
   const [cloud, setCloud] = useState<Cloud | null>(null);
@@ -43,7 +44,7 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
       {message && <p className={`notice ${message.error ? "error" : ""}`}>{message.text}</p>}
       <div className="split">
         <div className="panel stack">
-          <h3>This browser</h3>
+          <IconHead icon="save">This browser</IconHead>
           <p className="muted">The game autosaves here after every day. Clearing site data or a private window loses it.</p>
           <div className="btn-row">
             <button className="btn" disabled={busy} onClick={() => act(async () => ((await writeAutosave(game)) ? "Saved in this browser." : "This browser blocked saving. Use a cloud save or export a file."))}>Save now</button>
@@ -68,7 +69,7 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
           )}
         </div>
         <div className="panel stack">
-          <h3>Save file</h3>
+          <IconHead icon="book">Save file</IconHead>
           <p className="muted">Download your game as a file you can keep, back up or open on another device.</p>
           {canExport ? (
             <div className="btn-row">
@@ -92,7 +93,7 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
         </div>
       </div>
       {!game.settings.ironman && <div className="panel stack">
-        <h3>Cloud slots</h3>
+        <IconHead icon="globe">Cloud slots</IconHead>
         {!cloud && <p className="muted">Cloud saves need you to be signed in on claude.ai.</p>}
         {cloud && SLOTS.map((s, i) => {
           const info = slots[s];

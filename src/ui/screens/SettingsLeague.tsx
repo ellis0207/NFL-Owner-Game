@@ -4,6 +4,7 @@ import { applySeason } from "../../engine/seasons";
 import { RULES } from "../../engine/league";
 import type { GameState } from "../../engine/types";
 import { download } from "../NewGame";
+import { IconHead } from "../gfx";
 
 /** Settings: the save's history (a historical start and alternate history) and its custom league pack. */
 export function SettingsLeague({ game, changed }: { game: GameState; changed: () => void }) {
@@ -12,7 +13,7 @@ export function SettingsLeague({ game, changed }: { game: GameState; changed: ()
   const rebind = () => { applySeason(game); bindCustomLeague(game); changed(); };
   return (
     <div className="panel stack tight">
-      <h3>League and history</h3>
+      <IconHead icon="trophy">League and history</IconHead>
       <dl className="kv">
         <dt>Started</dt><dd>{e ? `${e.start} season (historical start)` : "2026 season"}</dd>
         {game.customLeague && <><dt>League pack</dt><dd>{game.customLeague.name} ({Object.keys(game.customLeague.teams).length} clubs renamed)</dd></>}

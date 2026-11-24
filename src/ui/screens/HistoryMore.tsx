@@ -9,6 +9,7 @@ import { PLAYER_BY_ID, TEAM_BY_ID, teamLabel } from "../../engine/league";
 import { execBios, ownerEras, ruleEras } from "../../engine/records";
 import type { GameState } from "../../engine/types";
 import { money } from "../format";
+import { Grade, Icon, TeamTag } from "../gfx";
 import { useUi } from "../ui";
 import { tip } from "../tip";
 
@@ -34,7 +35,7 @@ export function CareersTab({ game }: { game: GameState }) {
       <p className="muted">Each season against a Pro Bowl season at the position, with passing scaled to its era. Peak is the best five seasons.</p>
       <div className="table-wrap"><table>
         <thead><tr><th>Player</th><th>Pos</th><th>Years</th><th className="num">Seasons</th><th className="num">Peak</th><th className="num">Career</th></tr></thead>
-        <tbody>{ranks.map((r) => <tr key={r.id}><td className="name"><Who id={r.id} /></td><td>{r.pos}</td><td>{r.from}-{r.to}</td><td className="num">{r.seasons}</td><td className="num">{r.peak.toFixed(1)}</td><td className="num">{r.career.toFixed(1)}</td></tr>)}</tbody>
+        <tbody>{ranks.map((r) => <tr key={r.id}><td className="name"><Who id={r.id} /></td><td><span className="gx-pos">{r.pos}</span></td><td>{r.from}-{r.to}</td><td className="num">{r.seasons}</td><td className="num">{r.peak.toFixed(1)}</td><td className="num">{r.career.toFixed(1)}</td></tr>)}</tbody>
       </table></div>
     </div>
   );
@@ -71,7 +72,12 @@ export function HindsightTab({ game }: { game: GameState }) {
       <p className="muted">Two and four seasons after each draft and free agency period, the staff grades them again on what the players actually did.</p>
       {h.coaching.length > 0 && <>
         <h3>Coaching grades</h3>
-        <ul>{h.coaching.map((c) => <li key={c.season}>{c.season} ({c.hc}; {c.oc}, {c.dc}): {c.wins} wins with talent that usually wins {c.expectedWins.toFixed(1)}, points for and against worth {c.pythagWins.toFixed(1)}. {c.note}</li>)}</ul>
+        <div className="gx-grid">{h.coaching.map((c) => (
+          <div key={c.season} className="gx-tile">
+            <div className="gx-tile-top"><Icon name="whistle" size={18} /><span className="gx-kicker">{c.season}: {c.hc}</span></div>
+            <span className="gx-big" style={{ color: c.wins - c.expectedWins >= 1 ? "var(--good)" : c.wins - c.expectedWins <= -1 ? "var(--bad)" : undefined }}>{c.wins - c.expectedWins >= 0 ? "+" : ""}{(c.wins - c.expectedWins).toFixed(1)}</span>
+            <span className="muted">{c.wins} wins against {c.expectedWins.toFixed(1)} expected; points worth {c.pythagWins.toFixed(1)}. {c.oc}, {c.dc}. {c.note}</span>
+          </div>))}</div>
       </>}
       {h.drafts.map((d) => {
         const mine = d.picks.filter((p) => p.team === ours);
@@ -79,8 +85,8 @@ export function HindsightTab({ game }: { game: GameState }) {
         return (
           <div key={`${d.year}-${d.after}`} className="stack">
             <h3>{d.year} draft, {d.after} seasons later</h3>
-            <span>Best classes: {best.map((t) => `${teamLabel(t.team)} (${t.grade})`).join(", ")}. Ours: {d.teams.find((t) => t.team === ours)?.grade ?? "-"}.</span>
-            <ul>{mine.map((p) => <li key={p.player}>No. {p.overall} <Who id={p.player} />: {p.grade}{p.dayGrade ? ` (draft day: ${p.dayGrade})` : ""}</li>)}</ul>
+            <div className="gx-row"><span className="gx-kicker">Best classes</span>{best.map((t) => <span key={t.team} className="gx-row" style={{ flexWrap: "nowrap" }}><TeamTag team={t.team} name={teamLabel(t.team)} /><Grade g={t.grade} /></span>)}<span className="gx-kicker">Ours</span><Grade g={d.teams.find((t) => t.team === ours)?.grade ?? "-"} /></div>
+            <div className="stack tight">{mine.map((p) => <span key={p.player} className="gx-row"><span className="gx-pos">No. {p.overall}</span><Who id={p.player} /><Grade g={p.grade} />{p.dayGrade && <span className="muted">draft day {p.dayGrade}</span>}</span>)}</div>
           </div>
         );
       })}
@@ -89,7 +95,7 @@ export function HindsightTab({ game }: { game: GameState }) {
         return (
           <div key={`${s.year}-${s.after}`}>
             <h3>{s.year} free agency, {s.after} seasons later</h3>
-            {mine.length ? <ul>{mine.map((g) => <li key={g.player}><Who id={g.player} />, {money(g.apy)} a year: {g.grade}</li>)}</ul> : <span className="muted">No signings of ours to grade.</span>}
+            {mine.length ? <div className="stack tight">{mine.map((g) => <span key={g.player} className="gx-row"><Grade g={g.grade} /><Who id={g.player} /><span className="muted">{money(g.apy)} a year</span></span>)}</div> : <span className="muted">No signings of ours to grade.</span>}
           </div>
         );
       })}
@@ -121,7 +127,7 @@ export function OwnersTab({ game }: { game: GameState }) {
           <div className="table-wrap">
             <table>
               <thead><tr><th>Owner</th><th>Seasons</th><th className="num">Record</th><th className="num">Playoffs</th><th className="num">Titles</th></tr></thead>
-              <tbody>{eras.map((o) => <tr key={o.owner + o.from}><td>{o.owner}</td><td>{o.from === o.to ? o.from : `${o.from}-${o.to}`}</td><td className="num">{o.w}-{o.l}{o.t ? `-${o.t}` : ""}</td><td className="num">{o.playoffs}</td><td className="num">{o.titles}</td></tr>)}</tbody>
+              <tbody>{eras.map((o) => <tr key={o.owner + o.from}><td>{o.owner}</td><td>{o.from === o.to ? o.from : `${o.from}-${o.to}`}</td><td className="num">{o.w}-{o.l}{o.t ? `-${o.t}` : ""}</td><td className="num">{o.playoffs}</td><td className="num">{o.titles ? Array.from({ length: o.titles }, (_, k) => <Icon key={k} name="trophy" size={14} />) : 0}</td></tr>)}</tbody>
             </table>
           </div>
         )}

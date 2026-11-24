@@ -75,3 +75,10 @@
 .lg-diff.good { color: var(--good); }
 .lg-diff.bad { color: var(--bad); }
 .lg-seeds .gx-badge { margin-right: 0.4rem; }
+
+/* The other owners as a wall of club cards. */
+.lg-owners { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.lg-owner { justify-items: start; }
+/* A vote tally: the yes share of the room. */
+.lg-tally { display: inline-block; width: 70px; height: 6px; border-radius: 3px; background: var(--bad); overflow: hidden; vertical-align: middle; opacity: 0.85; }
+.lg-tally > span { display: block; height: 100%; background: var(--good); }

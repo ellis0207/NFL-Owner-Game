@@ -14,6 +14,7 @@ import { HallTab } from "./HistoryHall";
 import { GroupedTabs } from "../Tabs";
 import { useUi } from "../ui";
 import { tip } from "../tip";
+import { Avatar, Chip, Icon, Spark, TeamBadge, TeamTag } from "../gfx";
 
 type Tab = "Honors" | "Hall of Fame" | "Records" | "Careers" | "Rivalries" | "Trades" | "Eras" | "Owners" | "People" | "Hindsight" | "Timeline" | "Rules";
 // Players first, then the club's own story, then how judgments held up.
@@ -65,10 +66,13 @@ function Honors({ game }: { game: GameState }) {
       <div className="panel stack tight">
         <h3>Awards</h3>
         {(h.awards[y] ?? []).length ? (
-          <table><tbody>{h.awards[y].map((a) => (
-            <tr key={a.award}><td>{AWARD_NAME[a.award]}</td><td className="name"><Name id={a.winner} game={game} /> <span className="muted">{teamLabel(a.team)}</span></td>
-              <td className="muted">{a.finalists.length ? <>Also: {a.finalists.map((f, i) => <span key={f}>{i ? ", " : ""}<Name id={f} game={game} /></span>)}</> : ""}</td></tr>
-          ))}</tbody></table>
+          <div className="gx-grid">{h.awards[y].map((a) => (
+            <div key={a.award} className="gx-tile lg-award">
+              <div className="gx-tile-top"><Icon name="trophy" size={20} /><span className="gx-kicker">{AWARD_NAME[a.award]}</span></div>
+              <span className="gx-row" style={{ flexWrap: "nowrap" }}><TeamBadge team={a.team} size={30} /><strong className="name"><Name id={a.winner} game={game} /></strong></span>
+              {a.finalists.length > 0 && <span className="muted">Also: {a.finalists.map((f, i) => <span key={f}>{i ? ", " : ""}<Name id={f} game={game} /></span>)}</span>}
+            </div>
+          ))}</div>
         ) : <span className="muted">Handed out at NFL Honors, three days before the Super Bowl.</span>}
       </div>
       {ap && (
@@ -76,14 +80,14 @@ function Honors({ game }: { game: GameState }) {
           {(["first", "second"] as const).map((k) => (
             <div key={k} className="panel stack tight">
               <h3>All-Pro {k} team</h3>
-              {ap[k].map((id) => <span key={id}><span className="muted">{game.players[id]?.pos ?? PLAYER_BY_ID[id].position}</span> <Name id={id} /></span>)}
+              {ap[k].map((id) => <span key={id} className="gx-row" style={{ flexWrap: "nowrap" }}><span className="gx-pos">{game.players[id]?.pos ?? PLAYER_BY_ID[id].position}</span>{game.players[id]?.team && <TeamBadge team={game.players[id].team!} size={18} />}<Name id={id} /></span>)}
             </div>
           ))}
         </div>
       )}
       <div className="panel stack tight">
         <h3>Our Pro Bowlers</h3>
-        {ours.length ? ours.map((id) => <span key={id}><Name id={id} /> <span className="muted">{game.players[id]?.pos ?? PLAYER_BY_ID[id].position}</span></span>) : <span className="muted">{h.proBowl[y] ? "None." : "Not named yet."}</span>}
+        {ours.length ? ours.map((id) => <span key={id} className="gx-row"><Icon name="star" size={14} /><span className="gx-pos">{game.players[id]?.pos ?? PLAYER_BY_ID[id].position}</span><Name id={id} /></span>) : <span className="muted">{h.proBowl[y] ? "None." : "Not named yet."}</span>}
         {h.proBowl[y] && <span className="muted">{h.proBowl[y].length} players were named across both conferences.</span>}
       </div>
     </div>
@@ -100,7 +104,7 @@ function Records({ game }: { game: GameState }) {
   );
   return (
     <div className="stack">
-      {r.broken.length > 0 && <div className="panel stack tight"><h3>Records broken</h3>{r.broken.map((b, i) => <span key={i}>{shortDate(b.date)}: {b.text}</span>)}</div>}
+      {r.broken.length > 0 && <div className="panel stack tight"><h3>Records broken</h3>{r.broken.map((b, i) => <span key={i} className="gx-row"><Chip icon="bolt" tone="good">{shortDate(b.date)}</Chip>{b.text}</span>)}</div>}
       {([["Single season", NFL_SEASON, r.season], ["Single game", NFL_GAME, r.game]] as const).map(([title, nfl, best]) => (
         <div key={title} className="panel stack tight">
           <h3>{title}</h3>
@@ -123,7 +127,7 @@ function Rivalries({ game }: { game: GameState }) {
       <table>
         <thead><tr><th>Team</th><th>Rivalry</th><th className="num">Series</th><th className="num">Playoff meetings</th></tr></thead>
         <tbody>{list.map((r) => (
-          <tr key={r.team}><td className="name">{TEAM_BY_ID[r.team].city} {TEAM_BY_ID[r.team].name}</td><td>{r.word}</td><td className="num">{r.games ? `${r.w}-${r.l}${r.games - r.w - r.l ? `-${r.games - r.w - r.l}` : ""}` : "—"}</td><td className="num">{r.playoff}</td></tr>
+          <tr key={r.team}><td className="name"><TeamTag team={r.team} name={`${TEAM_BY_ID[r.team].city} ${TEAM_BY_ID[r.team].name}`} /></td><td><Chip icon="flame" tone={r.playoff > 0 ? "bad" : undefined}>{r.word}</Chip></td><td className="num">{r.games ? <span className="gx-row" style={{ flexWrap: "nowrap", justifyContent: "flex-end" }}><span className="lg-tally"><span style={{ width: `${(r.w / r.games) * 100}%` }} /></span>{`${r.w}-${r.l}${r.games - r.w - r.l ? `-${r.games - r.w - r.l}` : ""}`}</span> : "—"}</td><td className="num">{r.playoff}</td></tr>
         ))}</tbody>
       </table>
     </div>
@@ -141,7 +145,8 @@ function Trades({ game }: { game: GameState }) {
       {!list.length && <span className="muted">No trades yet.</span>}
       {list.map(({ trade: t, detail, verdict }) => (
         <div key={t.id} className="stack tight">
-          <span><strong>{shortDate(t.date)} {t.date.slice(0, 4)}</strong>: {teamLabel(t.teams[0])} got {detail[0].join(", ") || "nothing"}; {teamLabel(t.teams[1])} got {detail[1].join(", ") || "nothing"}.</span>
+          <span className="muted">{shortDate(t.date)} {t.date.slice(0, 4)}</span>
+          <div className="split lg-trade">{[0, 1].map((i) => <span key={i} className="gx-row" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}><TeamBadge team={t.teams[i]} size={30} /><span><strong>{teamLabel(t.teams[i])}</strong> got {detail[i].join(", ") || "nothing"}</span></span>)}</div>
           <span className="muted">{verdict}</span>
         </div>
       ))}
@@ -161,8 +166,8 @@ function Eras({ game }: { game: GameState }) {
           <table>
             <thead><tr><th>Role</th><th>Name</th><th>Seasons</th><th className="num">Record</th><th className="num">Playoff wins</th><th className="num">Titles</th></tr></thead>
             <tbody>{list.map((e, i) => (
-              <tr key={i}><td>{e.role === "HC" ? "Head coach" : "GM"}</td><td className="name">{e.name}</td><td>{e.from === e.to ? e.from : `${e.from}-${e.to}`}</td>
-                <td className="num">{e.w}-{e.l}{e.t ? `-${e.t}` : ""}</td><td className="num">{e.playoffWins}</td><td className="num">{e.titles}</td></tr>
+              <tr key={i}><td><Chip icon={e.role === "HC" ? "whistle" : "briefcase"}>{e.role === "HC" ? "Head coach" : "GM"}</Chip></td><td className="name"><span className="gx-row" style={{ flexWrap: "nowrap" }}><Avatar name={e.name} size={28} />{e.name}</span></td><td>{e.from === e.to ? e.from : `${e.from}-${e.to}`}</td>
+                <td className="num">{e.w}-{e.l}{e.t ? `-${e.t}` : ""}</td><td className="num">{e.playoffWins}</td><td className="num">{e.titles ? Array.from({ length: e.titles }, (_, k) => <Icon key={k} name="trophy" size={14} />) : 0}</td></tr>
             ))}</tbody>
           </table>
         )}
@@ -180,7 +185,7 @@ function Milestones({ game }: { game: GameState }) {
       <h3>Contract milestones</h3>
       <span className="muted">Deals that set a new high at their position, by average per year.</span>
       {!list.length && <span className="muted">No position's top deal has been topped yet.</span>}
-      {list.map((m, i) => <span key={i}>{shortDate(m.date)} {m.date.slice(0, 4)}: <Name id={m.player} /> ({m.pos}, {m.team}), {m.years} years at {money(m.apy)} a year, past {money(m.prior)}.</span>)}
+      {list.map((m, i) => <span key={i} className="gx-row"><Chip icon="money" tone="good">{shortDate(m.date)} {m.date.slice(0, 4)}</Chip><span className="gx-pos">{m.pos}</span><TeamBadge team={m.team} size={18} /><Name id={m.player} /> {m.years} years at {money(m.apy)} a year, past {money(m.prior)}.</span>)}
     </div>
   );
 }
@@ -195,6 +200,8 @@ function Timeline({ game }: { game: GameState }) {
       <div className="panel stack tight">
         <h3>The club by year</h3>
         {!closed.length && !Object.keys(values).length && <span className="muted">Each year is added when the books close and the valuations come out.</span>}
+        {Object.keys(values).length > 1 && <div className="gx-row"><span className="gx-kicker">Valuation</span><Spark width={220} height={44} values={Object.keys(values).map(Number).sort((a, b) => a - b).map((y) => values[y]?.[us] ?? NaN)} tone="good" /></div>}
+        {closed.length > 1 && <div className="gx-row"><span className="gx-kicker">Operating income</span><Spark width={220} height={44} values={[...closed].sort((a, b) => a.year - b.year).map((c) => c.operating)} /></div>}
         {(closed.length > 0 || Object.keys(values).length > 0) && (
           <table>
             <thead><tr><th>Year</th><th className="num">Revenue</th><th className="num">Operating income</th><th className="num">Net</th><th className="num">Debt</th><th className="num">Valuation</th></tr></thead>
@@ -208,7 +215,7 @@ function Timeline({ game }: { game: GameState }) {
       <div className="panel stack tight">
         <h3>Our home</h3>
         {!t.length && <span className="muted">Building projects and lease changes show up here.</span>}
-        {t.map((x, i) => <span key={i}>{shortDate(x.date)} {x.date.slice(0, 4)}: {x.text}</span>)}
+        {t.map((x, i) => <span key={i} className="gx-row"><Chip icon="stadium">{shortDate(x.date)} {x.date.slice(0, 4)}</Chip>{x.text}</span>)}
       </div>
     </div>
   );
