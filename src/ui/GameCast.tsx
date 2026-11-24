@@ -230,7 +230,7 @@ export function RunningBoxScore({ r, box, final, period, injuries }: { r: GameRe
  * now on the clock: the view can't run past it, and the rest arrives as the
  * clock moves on.
  */
-export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void; limit?: number; start?: number }) {
+export function FollowGame({ r, log, box, onDone, limit, start, onClock }: { r: GameResult; log: GameLog; box?: FinalBox; onDone: () => void; limit?: number; start?: number; onClock?: (hours: number) => void }) {
   const total = log.plays.length;
   const live = limit !== undefined && limit < total;
   const avail = live ? limit : total;
@@ -365,7 +365,7 @@ export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResul
               {last.row[11] && <span className="muted small">{last.row[11]}</span>}
               {alerts.map((a, i) => <span key={i} className="cast-alert">{a}</span>)}
             </>
-          ) : <span className="muted">{r.away} at {r.home}. Press Next play for the opening kickoff.</span>}
+          ) : <span className="muted">{r.away} at {r.home}. {done && live ? "Kickoff: move the clock on to watch the game as it happens." : "Press Next play for the opening kickoff."}</span>}
         </div>
         <div className="btn-row cast-controls">
           {(!done || play) && <button className="btn primary" onClick={step}>{play ? "Skip to the result" : "Next play"}</button>}
@@ -374,10 +374,14 @@ export function FollowGame({ r, log, box, onDone, limit, start }: { r: GameResul
           {!done && <button className="btn" onClick={() => jump(avail)}>{live ? "To now" : "To the end"}</button>}
           {!done && <button className="btn" aria-pressed={auto} onClick={() => setAuto(!auto)}>{auto ? "Pause" : "Auto"}</button>}
           {at > 0 && <button className="btn" onClick={() => { setAuto(false); jump(at - 1); }}>Back a play</button>}
+          {done && live && !play && onClock && <>
+            <button className="btn primary" onClick={() => onClock(0.25)} title="Moves the clock 15 minutes: about a dozen plays.">Watch 15 minutes</button>
+            <button className="btn" onClick={() => onClock(1)} title="Moves the clock an hour: about a quarter.">Watch an hour</button>
+          </>}
           {assets && <button className="btn" onClick={() => setSpeed(speed === 1 ? 2 : speed === 2 ? 4 : 1)} aria-label={`Animation speed ${speed}x; press to change`}>Speed {speed}x</button>}
           {over && !play && <button className="btn primary" onClick={onDone}>Box score</button>}
         </div>
-        {done && live && !play && <p className="muted small">You're caught up: this game is live. Move the clock on to see more of it.</p>}
+        {done && live && !play && <p className="muted small">You're caught up: this game is live. {onClock ? "Watch on to see more of it." : "Move the clock on to see more of it."}</p>}
         <span className="muted small">{live ? `Play ${seen}, live.` : `Play ${seen} of ${total}.`} The right and left arrow keys step forward and back.</span>
       </div>
       <RunningBoxScore r={r} box={running} final={over} period={Math.min(cast.q, 5)} injuries={hurt} />
