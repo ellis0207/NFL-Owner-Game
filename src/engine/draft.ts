@@ -14,6 +14,7 @@
 // positional value, team needs and scheme fit.
 import { invalidateRosters } from "./cap";
 import { mediaBoard, mediaRank } from "./college";
+import { settleDraftClass } from "./classpick";
 import { schoolName } from "./collegeData";
 import { minimumSalary, rookieScale } from "./contracts";
 import { compFormula } from "./contractextras";
@@ -952,7 +953,8 @@ function declarations(state: GameState, quiet = false): void {
   const returned: string[] = [];
   let declared = 0;
   for (const p of draftClass(state.seed).prospects) {
-    if (!["JR", "RS JR", "RS SO"].includes(p.classYear) || p.back) continue;
+    // Real underclassmen came out: they were drafted (or signed) that spring.
+    if (!["JR", "RS JR", "RS SO"].includes(p.classYear) || p.back || p.real) continue;
     const rank = mediaRank(state, p.id);
     const stay = rank <= 50 ? 0.02 : rank <= 120 ? 0.12 : rank <= 250 ? 0.35 : 0.6;
     if (rngFor(state.seed, `declare:${p.id}`)() < stay) returned.push(p.id);
@@ -1014,6 +1016,7 @@ function combine(state: GameState, quiet = false): void {
 export function draftDaily(state: GameState): void {
   const d = draftState(state);
   const date = state.date;
+  settleDraftClass(state);
   if (date === DECLARE_DEADLINE) declarations(state);
   if (date === COMBINE_DATE) combine(state);
   if (date === OFFSEASON_START) d.order = buildOrder(state);

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { COLLEGE_SEASON, collegeGames, collegeRecords, mediaRank, prospectLine, prospectTotals, rankOf, recordLabel } from "../engine/college";
-import { COLLEGE_TEAM, conferenceName, DEFENSE_NAMES, distanceTo, OFFENSE_NAMES, schoolName } from "../engine/collegeData";
+import { COLLEGE_TEAM, conferenceName, DEFENSE_NAMES, distanceTo, OFFENSE_NAMES, schoolName, smallSchool } from "../engine/collegeData";
 import { shortDate } from "../engine/dates";
 import { draftClass } from "../engine/prospects";
 import { knowledgeLabel, knowledge, scoutReport, tripCost } from "../engine/scouting";
@@ -13,6 +13,8 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
   const ui = useUi();
   const t = COLLEGE_TEAM[id];
   const c = game.college!;
+  // A school outside FBS (a real class's small-school prospects): no schedule, coach or program here.
+  const small = smallSchool(id);
   const rec = collegeRecords(game)[id];
   const rank = rankOf(game, id);
   const hc = headCoach(game, id);
@@ -33,14 +35,16 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
         <header>
           <div>
             <h2>{rank ? `No. ${rank} ` : ""}{t.school} {t.nickname}</h2>
-            <span className="muted">{conferenceName(t.conference)} · {recordLabel(rec)}{t.conference !== "IND" ? ` (${rec.cw}-${rec.cl} conference)` : ""}</span>
+            <span className="muted">{small ? "FCS, Division II or another school outside FBS" : <>{conferenceName(t.conference)} · {recordLabel(rec)}{t.conference !== "IND" ? ` (${rec.cw}-${rec.cl} conference)` : ""}</>}</span>
           </div>
         </header>
         <dl className="kv">
-          <dt>Head coach</dt><dd>{hc ? `${hc.name} (since ${hc.hiredYear})` : game.cfb ? `Open job${game.cfb.openings[id] ? ` since ${shortDate(game.cfb.openings[id])}` : ""}` : `${t.coach} (since ${t.coachSince})`}</dd>
-          <dt>Campus</dt><dd>{t.city}, {t.state} · {t.region}</dd>
-          <dt>Offense</dt><dd>{OFFENSE_NAMES[t.offense]}</dd>
-          <dt>Defense</dt><dd>{DEFENSE_NAMES[t.defense]}</dd>
+          {!small && <><dt>Head coach</dt><dd>{hc ? `${hc.name} (since ${hc.hiredYear})` : game.cfb ? `Open job${game.cfb.openings[id] ? ` since ${shortDate(game.cfb.openings[id])}` : ""}` : `${t.coach} (since ${t.coachSince})`}</dd></>}
+          <dt>Campus</dt><dd>{small ? t.state === "??" ? "Location not listed" : t.state : `${t.city}, ${t.state}`} · {t.region}</dd>
+          {small
+            ? <><dt>Film</dt><dd>No games in our college database: scouts have to go see his players in person.</dd></>
+            : <><dt>Offense</dt><dd>{OFFENSE_NAMES[t.offense]}</dd>
+              <dt>Defense</dt><dd>{DEFENSE_NAMES[t.defense]}</dd></>}
           <dt>From our building</dt><dd>{Math.round(distanceTo(game.userTeam, id)).toLocaleString("en-US")} miles · about ${tripCost(game.userTeam, id).toLocaleString("en-US")} per scout trip</dd>
         </dl>
 
@@ -68,7 +72,7 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
           )}
         </section>
 
-        <SchoolProgram game={game} id={id} />
+        {!small && <SchoolProgram game={game} id={id} />}
 
         <section className="stack tight">
           <h3>Schedule</h3>

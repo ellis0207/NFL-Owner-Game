@@ -315,7 +315,10 @@ function errorSd(state: GameState, team: string, k: number, id?: string): number
 export function perceivedValue(state: GameState, id: string, team = state.userTeam): number {
   const h = draftClass(state.seed).hidden[id];
   const k = knowledge(state, id, team);
-  return h.value + noise(state, team, id, "value") * errorSd(state, team, k, id) * 1.4 + (team === state.userTeam ? leanBias(state, id) : 0);
+  // A real prospect's career shows the better our scouts know him (prospects.ts `REAL_EDGE`). Other clubs
+  // read him as the real league did, so the real draft order holds and a gem is ours to find.
+  const edge = team === state.userTeam ? (h.edge ?? 0) * Math.min(1, k / 85) : 0;
+  return h.value + edge + noise(state, team, id, "value") * errorSd(state, team, k, id) * 1.4 + (team === state.userTeam ? leanBias(state, id) : 0);
 }
 
 function roundOf(cuts: number[], v: number): number {

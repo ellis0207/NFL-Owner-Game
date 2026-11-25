@@ -30,6 +30,9 @@ import { budgetLeft } from "./scouting";
 import { openDecisions } from "./discipline";
 import { ourCases } from "./compliance";
 import { franchise } from "./franchisemarket";
+import { openClassYear } from "./classpick";
+import { collegeKickoff } from "./college";
+import { classLabel, sourceFor } from "./realclasses";
 import type { DecisionArea, GameState, Memo, Voice } from "./types";
 
 const M = 1_000_000;
@@ -237,6 +240,19 @@ function deadlineItems(state: GameState): QueueItem[] {
   const soon = (d: string | undefined, days = 14) => !!d && d >= state.date && daysLeft(state, d) <= days;
   const real = state.settings.capRules === "real";
   const counts = rosterCount(state, us);
+  // The coming draft class, still open after the draft before it (classpick.ts).
+  const classYear = openClassYear(state);
+  if (classYear !== null && state.draftClasses!.picks[classYear] === undefined) {
+    const kick = collegeKickoff();
+    out.push({
+      id: "deadline:draftclass", kind: "deadline", side: "football",
+      title: `Choose the ${classYear} draft class`,
+      why: `Scouts start on the class when college football kicks off ${shortDate(kick)}. It can be that year's real class, a generated one, or another year's real class.`,
+      expires: kick, recommends: `The ${classLabel(sourceFor(state.seed, classYear), classYear).replace(/^R/, "r")}.`,
+      ifNothing: `The ${classLabel(sourceFor(state.seed, classYear), classYear).replace(/^R/, "r")} it is.`,
+      link: { screen: "Draft" }, major: false, score: urgency(state, kick),
+    });
+  }
   if (soon(k.rosterCutdown) && counts.roster > 53) {
     out.push({
       id: "deadline:cutdown", kind: "deadline", side: "football",

@@ -286,8 +286,25 @@ at their neutral sites, and Army-Navy on its own Saturday; conference title
 games; the AP poll every Sunday and the playoff committee's ranking every
 Tuesday from November 3; bowl season; and the 12-team College Football Playoff
 on its real 2026-27 dates and sites. Teams are simulated at the score level.
-The only players are the 2027 NFL draft prospects (about 640, generated for
-each save), and each has season totals and a game log. Award watch lists turn
+The only players are the coming draft's prospects (about 640), and each has
+season totals and a game log.
+
+Draft classes can be real. At the start and after every draft you pick the
+next class: that year's real class, a randomly generated one, or another
+year's real class played out of order (each real class once per save). Every
+real class from 2011 to 2026 has every drafted player and the undrafted ones
+who were at the combine or made a club (about 460 to 560 a class, small
+schools included), and the 2027 class is PFF's early top-150 board with a
+made-up class behind it. Everyone reads a real prospect about where he was
+really drafted, so the media boards, mocks and other clubs' drafts follow the
+real order (a draft played in the game lands within about 17 picks of the real
+one at the median). What he turns into is his real career, measured on the
+game's own ratings from the seasons after his draft; part of the gap between
+the two shows on tape, in his makeup and in his production, and only our own
+scouts' full files see it, so a club that scouts deeply can find Dak Prescott
+in the fourth round. The 2026 class and the 2027 board have no careers yet and
+turn out like any class. Check one with
+`ERA=2015 npx vite-node tests/realclass-report.ts [seed] [class year]`. Award watch lists turn
 into semifinalists, finalists and winners on the real award calendar.
 
 The college world carries from season to season. Each year's high school
@@ -1274,6 +1291,15 @@ stays hidden; it is the 2026 starting point, and programs move from there.
 Check a season with `npx vite-node tests/college-report.ts [seed]`, and how
 programs, recruiting and the carousel move over several seasons with
 `npx vite-node tests/cfb-report.ts [seasons] [seed]`.
+
+## Draft class data
+
+`data/draft-classes/` is written by `pipeline/draft_classes.py` from the open
+nflverse draft picks, combine and players files and the game's own season
+packs: `classes.json` (each real class, 2011-2027) and `schools.json` (about
+260 schools outside FBS, placed at their state's center). Name variants are
+matched to programs in `pipeline/draft/schools.py` and `small_schools.py`; the
+2027 board is `pipeline/draft/board_2027.csv`.
 
 ## League data
 
