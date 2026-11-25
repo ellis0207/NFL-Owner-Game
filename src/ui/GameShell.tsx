@@ -8,6 +8,8 @@ import { advanceHours, draftWaiting, isGameOver, isSeasonOver, isSummer, pending
 import { runSim, warmSimWorker } from "../sim/runner";
 import { clockLabel, nowMinute } from "../engine/clock";
 import { SimOverlay } from "./SimOverlay";
+import { SeasonRecap, Toasts, useFeedback } from "./Feedback";
+import { SoundSwitch } from "./SoundSwitch";
 import { draftDayOf, onTheClock } from "../engine/draft";
 import { DraftScreen } from "./screens/DraftScreen";
 import { standings } from "../engine/standings";
@@ -264,8 +266,12 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
     });
   }
 
+  const feedback = useFeedback(game);
+
   return (
     <UiContext.Provider value={ui}>
+    <Toasts toasts={feedback.toasts} dismiss={feedback.dismiss} go={go} />
+    {feedback.recap && !sim && <SeasonRecap game={game} onClose={feedback.closeRecap} go={go} />}
     {sim && <SimOverlay kind={sim.kind} date={sim.date} days={sim.days} stopping={sim.stopping} onStop={sim.stop} />}
     <div className="shell">
       <aside className={`side${menuOpen ? " open" : ""}`}>
@@ -332,6 +338,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
             </div>
           </div>
           <SaveIndicator game={game} />
+          <SoundSwitch />
           <div className="btn-row">
             <span className="label sim-label">Sim</span>
             {([1, 4, 8] as const).map((h) => (

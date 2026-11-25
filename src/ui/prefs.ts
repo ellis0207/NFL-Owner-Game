@@ -16,10 +16,14 @@ export interface Prefs {
   rosterView: "board" | "table";
   /** Pages pinned to the top of the sidebar, in the order they were pinned. */
   pinned: string[];
+  /** Sound cues (results, achievements, the crowd on the field view): off, low or full. */
+  sound: "off" | "low" | "full";
+  /** Season recaps already shown, as "seed:season", so each one opens once. */
+  recaps: string[];
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board", pinned: [] };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board", pinned: [], sound: "low", recaps: [] };
 
 export function readPrefs(): Prefs {
   try {
@@ -37,6 +41,12 @@ export function writePrefs(p: Prefs): void {
     // Storage blocked: the preference lasts for this visit only.
   }
   applyPrefs(p);
+  // Controls that show a preference elsewhere on the page (the header's mute button) follow along.
+  try {
+    window.dispatchEvent(new Event("nfl-prefs"));
+  } catch {
+    // No window: nothing else to tell.
+  }
 }
 
 export function applyPrefs(p: Prefs = readPrefs()): void {

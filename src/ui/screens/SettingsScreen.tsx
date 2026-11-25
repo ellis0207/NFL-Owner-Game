@@ -78,6 +78,13 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
       <div className="split">
         <div className="panel stack tight">
           <IconHead icon="eye">Display</IconHead>
+          <label className="field"><span className="label">Sound</span>
+            <select value={prefs.sound} onChange={(e) => save({ ...prefs, sound: e.target.value as typeof prefs.sound })}>
+              <option value="off">Off</option>
+              <option value="low">Low: a cue for results and achievements, the crowd on the field view</option>
+              <option value="full">Full</option>
+            </select>
+          </label>
           <label className="field"><span className="label">Text size</span>
             <select value={prefs.textSize} onChange={(e) => save({ ...prefs, textSize: Number(e.target.value) })}>
               {[0.9, 1, 1.15, 1.3, 1.5].map((v) => <option key={v} value={v}>{Math.round(v * 100)}%</option>)}
