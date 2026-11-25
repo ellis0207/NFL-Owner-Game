@@ -11,7 +11,7 @@ import { COLLEGE_TEAMS } from "./collegeData";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { RULES } from "./league";
 import { gaussian, makeRng, type Rng } from "./rng";
-import { modelApplies, nflOutcome, onModelBind } from "./outcomes";
+import { modelApplies, nflOutcome, onModelBind, tierApplies } from "./outcomes";
 export { bindDraftModel } from "./outcomes";
 import type { CollegeTeam, Position } from "./types";
 
@@ -228,7 +228,7 @@ export function draftClass(seed: number, year = RULES.season + 1): DraftClass {
     // A returner carries last year's outcome and its trace in his production; both are drawn again.
     if (h.nfl) h.college -= h.nfl.prod;
     if (modelApplies(seed, year)) {
-      h.nfl = nflOutcome(seed, p, h);
+      h.nfl = nflOutcome(seed, p, h, tierApplies(seed, year));
       h.college += h.nfl.prod;
     } else delete h.nfl;
   }

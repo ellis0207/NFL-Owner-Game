@@ -168,7 +168,7 @@ fifteen players catch passes for a team, and coaches go for it on fourth and
 short about as often as today's do. Each receiver catches the ball at his own
 depth (the speed threat sees the deep shots and averages 17 or more a catch,
 the slot and the backs work underneath), and coaches lean on an elite
-quarterback inside the twenty, so the best passers throw 40-plus touchdowns. Open-air games have weather
+quarterback inside the twenty, so the best passers throw 40-plus touchdowns. The spread holds over long careers too (`tests/longstats-report.ts` plays ten-plus seasons and checks every one): drafted players scatter the way real classes do (first-rounders settle around 85, second- and third-rounders around 76 but widely, day-three picks rarely grow, and busts fade out over a few seasons), each position is kept on the league's own rating scale year to year, and the league's lean toward the pass or the run fades instead of building up. Open-air games have weather
 from each city's climate: wind takes away deep passes and long field goals,
 cold and rain make the ball harder to hold, snow does both, and kicks carry in
 Denver. Domes and retractable roofs play indoors. Teams on a short week, on a
@@ -1243,6 +1243,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The living college world (programs, the rollover, binding recruits to the draft classes) is `cfbworld.ts`, high school recruiting `recruiting.ts`, college head coaches and their carousel `cfbcoaches.ts`, the transfer portal `portal.ts`, and the college desk's facts `cfbmedia.ts` (words in `media/content/college.ts`).
   Pro Bowl, All-Pro, awards and the Hall of Fame are `honors.ts`; records, rivalries, trade outcomes, eras, contract milestones, anniversaries and yearly valuations `records.ts`.
   Expected points, EPA and win probability are `analytics.ts`; the analytics department, game plans, fourth-down advice and league trends `strategy.ts`; season attribution and the roster outlook `outlook.ts`.
+  Each position's talent is held on the starting season's rating scale year to year by `talent.ts`; what drafted players turn into is `outcomes.ts`.
   Career stats, milestones and era rankings are `careerstats.ts`; roster and option bonuses, partial guarantees, the cap planner, the comp formula and our offer sheets `contractextras.ts`; tendencies, protection, poise, return plans and new ideas in the sim `simtactics.ts`; the coach's room `coachroom.ts`; the scouting budget, pro scouts, draft boards and the undrafted race `scoutops.ts`; draft, signing and coaching re-grades `hindsight.ts`; playbook learning, load, training response, retirement thinking, the owner's standing and the doctors `playercare.ts`; analysts, data feeds, models and experiments `analysts.ts`; position assessments `assess.ts`.
   The season's games and bye weeks are `format.ts`; league revenue pools, the spring audit, revenue sharing and the TV deals `leaguemoney.ts`; the commissioner, committees, coalitions, briefings, technology trials and schedule moves `leagueoffice.ts`.
   The union, labor talks, lockouts, ratification and grievances are `labor.ts`, and the terms in force for each league year `cbaterms.ts`.
@@ -1361,7 +1362,8 @@ rosters on the same scale, without changing anyone else's rating.
 - Hidden ratings come from snaps, production, contract value and draft slot;
   traits add combine results and per-skill stats. The engine is calibrated to
   real league averages (`npx vite-node tests/calibrate.ts 4`), and the split
-  of stats among players to real seasons (`npx vite-node tests/stats-report.ts 3`).
+  of stats among players to real seasons (`npx vite-node tests/stats-report.ts 3`,
+  and over ten-plus seasons `npx vite-node tests/longstats-report.ts 11 7`).
 - Staff (`pipeline/staff_2026.py`) is hand-entered: real HCs, OCs, DCs, STCs and
   GMs with their schemes and play callers. Some birth years are estimates.
   Trainers and scouting directors are generated. Position coaches

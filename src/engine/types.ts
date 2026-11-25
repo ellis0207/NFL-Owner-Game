@@ -1084,6 +1084,8 @@ export interface GameState {
   league?: LeagueState;
   /** The first draft class whose players' NFL outcomes are drawn apart from what scouts can see (outcomes.ts); set on load for older saves. */
   draftModelFrom?: number;
+  /** The first draft class whose growth goes by how good its tape was (outcomes.ts `TIER_SHIFT`); set on load for older saves. */
+  draftTierFrom?: number;
   /** The season the league is in (2026 when absent): it moves forward the day after each draft. */
   season?: number;
   /** This season's schedule, for seasons after 2026 (2026 is the real one from the data). */

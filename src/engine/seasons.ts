@@ -19,6 +19,7 @@ import { recordOwnerSeason } from "./ownership";
 import { buildSchedule, keyDatesFor, superBowlName } from "./calendar";
 import { capSummary, invalidateRosters } from "./cap";
 import { progressPlayers, retireUnsigned } from "./careers";
+import { holdTalentScale } from "./talent";
 import { newCollege } from "./college";
 import { bindCfb, cfbRollover, closeCfbSeason } from "./cfbworld";
 import { bindDraftModel } from "./outcomes";
@@ -256,6 +257,7 @@ export function startNewSeason(state: GameState): void {
   creditSeasons(state);
   const retired = retireUnsigned(state);
   progressPlayers(state, next);
+  holdTalentScale(state);
   ageStaff(state, next);
   archiveDraft(state);
   const firstRound = state.offseason?.draftOrder ?? TEAMS.map((t) => t.id);

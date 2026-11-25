@@ -167,6 +167,7 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     draft: { made: [], mocks: [], daysDone: [], nextMock: FIRST_MOCK },
     season: BASE_SEASON,
     draftModelFrom: BASE_SEASON + 1,
+    draftTierFrom: BASE_SEASON + 1,
     league: { caps: {} },
     history: { seasons: [], drafts: [], stats: {}, snaps: {}, retired: {} },
     // A historical start (eras.ts): the season it began, and whether history is left to the save.

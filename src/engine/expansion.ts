@@ -137,6 +137,11 @@ function marketOf(state: GameState, id: string): MarketData | undefined {
 const MARKET_CACHE: Record<string, MarketData> = {};
 function rememberMarkets(state: GameState): void {
   for (const m of markets(state)) MARKET_CACHE[m.id] ??= m;
+  // markets() leaves out a city once an expansion club has it, so a save loaded after the clubs were
+  // awarded finds their markets only in the list as it was before them.
+  if (state.expansion?.clubs.some((c) => !MARKET_CACHE[c.market])) {
+    for (const m of markets({ ...state, expansion: { ...state.expansion, clubs: [] } })) MARKET_CACHE[m.id] ??= m;
+  }
 }
 
 function addClub(state: GameState, c: ExpansionClub): void {
