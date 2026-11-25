@@ -1,4 +1,4 @@
-// Historical starts (2002-2025). A save that starts from a season's data pack
+// Historical starts (1999-2025). A save that starts from a season's data pack
 // (pack.ts) carries `state.era`: the season it started in, and whether history
 // runs as it really did or is left to the save (the alternate-history setting).
 //
@@ -91,9 +91,60 @@ export const HOMES: { team: string; until: number; market: string; city: string;
 
 /** Temporary homes after a real move, until the new stadium opened. */
 export const TEMP_HOMES: { team: string; from: number; until: number; stadium: string }[] = [
+  // Seattle played at the University of Washington between the Kingdome and its new stadium; Chicago in Champaign while Soldier Field was rebuilt.
+  { team: "SEA", from: 2000, until: 2002, stadium: "Husky Stadium" },
+  { team: "CHI", from: 2002, until: 2003, stadium: "Memorial Stadium (Champaign)" },
   { team: "LA", from: 2016, until: 2020, stadium: "Los Angeles Memorial Coliseum" },
   { team: "LAC", from: 2017, until: 2020, stadium: "Dignity Health Sports Park" },
 ];
+
+/**
+ * Earlier names of buildings still in use in 2026, by the last season each
+ * name held (real; the first match whose season it is applies).
+ */
+export const STADIUM_NAMES: Record<string, [through: number, name: string][]> = {
+  ARI: [[2017, "University of Phoenix Stadium"]],
+  BAL: [[2001, "PSINet Stadium"], [2002, "Ravens Stadium"]],
+  BUF: [[2015, "Ralph Wilson Stadium"], [2019, "New Era Field"], [2020, "Bills Stadium"]],
+  CAR: [[2003, "Ericsson Stadium"]],
+  CIN: [[2021, "Paul Brown Stadium"]],
+  CLE: [[2013, "Cleveland Browns Stadium"], [2022, "FirstEnergy Stadium"]],
+  DEN: [[2010, "Invesco Field at Mile High"], [2017, "Sports Authority Field at Mile High"], [2018, "Broncos Stadium at Mile High"]],
+  HOU: [[2013, "Reliant Stadium"]],
+  JAX: [[2006, "Alltel Stadium"], [2009, "Jacksonville Municipal Stadium"], [2017, "EverBank Field"], [2022, "TIAA Bank Field"]],
+  KC: [[2020, "Arrowhead Stadium"]],
+  MIA: [[2004, "Pro Player Stadium"], [2006, "Dolphins Stadium"], [2009, "Dolphin Stadium"], [2015, "Sun Life Stadium"]],
+  NO: [[2010, "Louisiana Superdome"], [2020, "Mercedes-Benz Superdome"]],
+  PIT: [[2021, "Heinz Field"]],
+  SEA: [[2003, "Seahawks Stadium"], [2010, "Qwest Field"], [2019, "CenturyLink Field"]],
+  TEN: [[2001, "Adelphia Coliseum"], [2005, "The Coliseum"], [2014, "LP Field"]],
+  WAS: [[2024, "FedExField"]],
+};
+
+/** The season the league realigned into eight divisions of four (real). */
+export const REALIGNED = 2002;
+/** The eight divisions of four from 2002 (as in the 2026 data). */
+export const ALIGN_2002: Record<string, ["AFC" | "NFC", "East" | "North" | "South" | "West"]> = {
+  BUF: ["AFC", "East"], MIA: ["AFC", "East"], NE: ["AFC", "East"], NYJ: ["AFC", "East"],
+  BAL: ["AFC", "North"], CIN: ["AFC", "North"], CLE: ["AFC", "North"], PIT: ["AFC", "North"],
+  HOU: ["AFC", "South"], IND: ["AFC", "South"], JAX: ["AFC", "South"], TEN: ["AFC", "South"],
+  DEN: ["AFC", "West"], KC: ["AFC", "West"], LV: ["AFC", "West"], LAC: ["AFC", "West"],
+  DAL: ["NFC", "East"], NYG: ["NFC", "East"], PHI: ["NFC", "East"], WAS: ["NFC", "East"],
+  CHI: ["NFC", "North"], DET: ["NFC", "North"], GB: ["NFC", "North"], MIN: ["NFC", "North"],
+  ATL: ["NFC", "South"], CAR: ["NFC", "South"], NO: ["NFC", "South"], TB: ["NFC", "South"],
+  ARI: ["NFC", "West"], LA: ["NFC", "West"], SF: ["NFC", "West"], SEA: ["NFC", "West"],
+};
+
+/**
+ * The Houston Texans (real): awarded to Bob McNair in October 1999 for $700
+ * million, opened in February 2002 with Charley Casserly as general manager
+ * and Dom Capers as head coach, then the expansion draft and the first pick of
+ * every round of the 2002 draft.
+ */
+export const HOUSTON_2002 = {
+  id: "HOU", market: "HOU", city: "Houston", name: "Texans", group: "Bob McNair", conference: "AFC" as const, division: "South" as const,
+  joins: 2002, fee: 700_000_000, place: [29.68, -95.41] as [number, number], staff: { HC: "Dom Capers", GM: "Charley Casserly" },
+};
 
 /** Washington's names (real). */
 export function washingtonName(season: number): string {
@@ -115,7 +166,7 @@ export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   BAL: [[2003, "Art Modell"]],
   BUF: [[2013, "Ralph Wilson"]],
   CAR: [[2017, "Jerry Richardson"]],
-  CLE: [[2011, "Randy Lerner"]],
+  CLE: [[2002, "Al Lerner"], [2011, "Randy Lerner"]],
   DEN: [[2013, "Pat Bowlen"], [2021, "the Pat Bowlen trust"]],
   DET: [[2013, "William Clay Ford"], [2019, "Martha Firestone Ford"]],
   HOU: [[2018, "Bob McNair"]],
@@ -126,6 +177,7 @@ export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   MIA: [[2008, "Wayne Huizenga"]],
   MIN: [[2004, "Red McCombs"]],
   NO: [[2017, "Tom Benson"]],
+  NYJ: [[1999, "the Leon Hess estate"]],
   SEA: [[2018, "Paul Allen"]],
   TEN: [[2013, "Bud Adams"], [2014, "the Adams family trust"]],
   WAS: [[2022, "Dan Snyder"]],
@@ -155,6 +207,9 @@ export const HISTORICAL = !!PACK;
 
 /** The real rule archive: changes that shaped the game, by the first season they applied (approximate wording). */
 export const RULE_ARCHIVE: [season: number, text: string][] = [
+  [1999, "Instant replay returns, now with coaches' challenges: two a game, a timeout lost if the call stands"],
+  [1999, "The Browns return to Cleveland as an expansion club: 31 clubs in six divisions"],
+  [1999, "Houston is awarded the 32nd club, to play from 2002"],
   [2002, "The league grows to 32 clubs with the Houston Texans and realigns into eight divisions of four"],
   [2004, "Defensive holding and illegal contact are points of emphasis: passing climbs"],
   [2004, "Practice squads grow from five players to eight"],

@@ -4,7 +4,8 @@
 // Under alternate history none of it happens. The 2020 labor deal is in
 // labor.ts, the caps in setCap (offseason.ts), the rules in rulesFor.
 
-import { eraOwner, HOMES, washingtonName } from "./eras";
+import { eraOwner, HOMES, HOUSTON_2002, REALIGNED, washingtonName } from "./eras";
+import { awardRealClub } from "./expansion";
 import { franchise, REAL_SALES } from "./franchisemarket";
 import { news } from "./inbox";
 import { CONTROL } from "./investors";
@@ -18,6 +19,10 @@ export function eraStartControl(state: GameState): void {
   for (const t of TEAMS) {
     const o = eraOwner(t.id, state.era.start);
     if (o) f.control[t.id] = o;
+  }
+  // Houston was already awarded when a 1999-2001 season began: it opens for 2002 on the league's usual schedule.
+  if (!state.era.alt && state.era.start < HOUSTON_2002.joins && !TEAM_BY_ID.HOU) {
+    awardRealClub(state, { ...HOUSTON_2002, staff: { ...HOUSTON_2002.staff } }, HOUSTON_2002.joins - state.era.start);
   }
 }
 
@@ -40,6 +45,7 @@ export function eraNewSeason(state: GameState): void {
   for (const h of HOMES) if (season === h.until && e.start < h.until && !state.relocation?.moves.some((m) => m.team === h.team)) {
     news(state, "ownership", `The ${TEAM_BY_ID[h.team].name} play their first season in ${TEAM_BY_ID[h.team].city} after leaving ${h.city}`);
   }
+  if (season === REALIGNED && e.start < REALIGNED) news(state, "league", "The league plays its first season in eight divisions of four, with the Texans in the new AFC South");
   if (washingtonName(season) !== washingtonName(season - 1)) news(state, "ownership", `Washington's club plays this season as the ${washingtonName(season)}`);
 }
 

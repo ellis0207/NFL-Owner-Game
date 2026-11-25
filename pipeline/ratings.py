@@ -21,8 +21,12 @@ import random
 import numpy as np
 
 from constants import SEASON
+from sources import HISTORY_SEASONS, RATING_SEASONS
 
-SEASON_WEIGHTS = {SEASON - 1: 0.6, SEASON - 2: 0.3, SEASON - 3: 0.1}
+# The latest season counts most. Before 2002 the window runs on past the start
+# (see RATING_SEASONS): the seasons before it first, then the start season.
+_ORDER = sorted(HISTORY_SEASONS, reverse=True) + [y for y in RATING_SEASONS if y >= SEASON]
+SEASON_WEIGHTS = dict(zip(_ORDER, (0.6, 0.3, 0.1)))
 SIDE = {
     "QB": "off", "RB": "off", "FB": "off", "WR": "off", "TE": "off", "OT": "off", "OG": "off", "C": "off",
     "EDGE": "def", "IDL": "def", "LB": "def", "CB": "def", "S": "def",
@@ -42,7 +46,41 @@ def _age(birth_date: str | None) -> float:
     return (SEASON - y) + (9 - m) / 12 - d / 365  # age on Sept 1 of the season
 
 
-def _usage(player: dict, snaps: dict) -> float | None:
+# Before snap counts (2012), how much a player was used is read from his
+# volume per game instead: a full-time starter's usual load at the position.
+STARTER_LOAD = {"QB": 34, "RB": 17, "FB": 4, "WR": 7, "TE": 5, "EDGE": 3.2, "IDL": 2.6, "LB": 6, "CB": 4.2, "S": 5, "K": 1.6, "P": 4.5}
+
+
+def _load(pos: str, e: dict) -> float:
+    if pos == "QB":
+        return e.get("att", 0) + e.get("sacked", 0) + e.get("car", 0)
+    if pos in ("RB", "FB"):
+        return e.get("car", 0) + e.get("tgt", 0)
+    if pos in ("WR", "TE"):
+        return e.get("tgt", 0)
+    if pos == "K":
+        return e.get("fga", 0) + e.get("xpa", 0) / 3
+    if pos == "P":
+        return e.get("punts", 0)
+    return e.get("tklSolo", 0) + 0.5 * e.get("tklAst", 0) + e.get("sacks", 0) + e.get("pd", 0)
+
+
+def _stat_usage(player: dict, history: list) -> float | None:
+    pos = player["position"]
+    if pos not in STARTER_LOAD:
+        return None  # linemen and long snappers keep no stats to read
+    total, weight = 0.0, 0.0
+    for e in history:
+        w = SEASON_WEIGHTS.get(e["season"], 0)
+        if w and e.get("g", 0) >= 4:
+            total += w * min(1.0, _load(pos, e) / e["g"] / STARTER_LOAD[pos])
+            weight += w
+    return total / weight if weight else None
+
+
+def _usage(player: dict, snaps: dict, history: list | None = None) -> float | None:
+    if not snaps:
+        return _stat_usage(player, history or [])
     seasons = snaps.get(player["ids"]["pfr"]) or {}
     key = {"off": "offShare", "def": "defShare", "st": "stShare"}[SIDE.get(player["position"], "off")]
     total, weight = 0.0, 0.0
@@ -134,7 +172,7 @@ def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozen
         signals = {"usage": {}, "production": {}, "market": {}, "draft": {}}
         for p in group:
             for name, value in (
-                ("usage", _usage(p, snaps)),
+                ("usage", _usage(p, snaps, stats.get(p["id"], []))),
                 ("production", _production(p, stats.get(p["id"], []))),
                 ("market", _market(p)),
                 ("draft", _draft(p)),
@@ -178,7 +216,8 @@ def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozen
             num = sum(w * pct[s][pid] for s, w in weights.items() if pid in pct[s])
             den = sum(w for s, w in weights.items() if pid in pct[s])
             # Missing usage for a veteran is itself a signal: he was not playing.
-            if exp > 0 and pid not in pct["usage"]:
+            # Before snap counts, linemen and long snappers have no usage to read.
+            if exp > 0 and pid not in pct["usage"] and (snaps or pos in STARTER_LOAD):
                 num += 0.30 * 0.05
                 den += 0.30
             blended[pid] = num / den if den else 0.1

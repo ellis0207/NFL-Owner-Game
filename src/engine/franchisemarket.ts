@@ -39,6 +39,7 @@ const M = 1_000_000;
 
 /** Real changes of control, approximately: headline price, buyer. */
 export const REAL_SALES = [
+  { team: "NYJ", date: "2000-01-18", price: 635 * M, pct: 1, buyer: "Woody Johnson", real: true },
   { team: "BAL", date: "2004-04-09", price: 600 * M, pct: 0.51, buyer: "Steve Bisciotti", real: true },
   { team: "MIN", date: "2005-05-25", price: 600 * M, pct: 1, buyer: "Zygi Wilf", real: true },
   { team: "MIA", date: "2009-01-20", price: 1_100 * M, pct: 0.45, buyer: "Stephen Ross", real: true },

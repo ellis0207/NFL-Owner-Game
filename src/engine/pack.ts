@@ -21,7 +21,7 @@ export interface LeaguePack {
 export const ERA_KEY = "nfl-era";
 
 /** The first and last seasons with a data pack. */
-export const FIRST_PACK = 2002;
+export const FIRST_PACK = 1999;
 export const LAST_PACK = 2025;
 
 function requested(): number | null {
@@ -67,6 +67,7 @@ export function yearsFromMoneyYear(year: number, base = MONEY_YEAR): number {
 
 /** The real salary caps by league year (OverTheCap). */
 export const REAL_CAPS: Record<number, number> = {
+  1999: 57_288_000, 2000: 62_172_000, 2001: 67_405_000,
   2002: 71_101_000, 2003: 75_007_000, 2004: 80_582_000, 2005: 85_500_000, 2006: 102_000_000, 2007: 109_000_000,
   2008: 116_000_000, 2009: 123_000_000,
   // 2010 had no cap. The game keeps a ceiling about 6% over 2009's: the owners'

@@ -1,4 +1,4 @@
-"""Builds the data pack for a historical start (2002-2025): the league as it
+"""Builds the data pack for a historical start (1999-2025): the league as it
 stood when that season's camps opened, from the same open nflverse files as
 the 2026 build.
 
@@ -23,6 +23,11 @@ team), and team dead money (none: the archive has no per-team figure), and befor
 2011 most contracts (contract_model.py: the archive covers only part of each
 roster, so the rest are priced from the player's standing, draft slot and the
 cap, and labeled "modeled").
+Before 2002 there is no weekly roster: the camp roster is rebuilt from the
+season roster (sources.season_roster), the league is 31 clubs in the old six
+divisions (Houston joins in 2002), the hidden ratings also read the start
+season (sources.RATING_SEASONS) and the waiver order for 1999 comes from
+FiveThirtyEight's 1998 results.
 Camp rosters run short of 90 before 2020 because the Week 1 snapshot then
 listed no one released at cutdown; clubs fill camp from the free agent pool.
 """
@@ -42,6 +47,7 @@ OUT = HERE.parent / "data" / "packs"
 
 # Real salary caps by league year (OverTheCap).
 CAPS = {
+    1999: 57_288_000, 2000: 62_172_000, 2001: 67_405_000,
     2002: 71_101_000, 2003: 75_007_000, 2004: 80_582_000, 2005: 85_500_000, 2006: 102_000_000,
     2007: 109_000_000, 2008: 116_000_000, 2009: 123_000_000,
     # 2010 had no cap at all (the owners opted out of the 2006 extension). The
@@ -67,6 +73,9 @@ MINIMUMS = {
 }
 # The 1993 agreement as extended in 2006: rookie minimum $225,000 in 2002 and
 # $320,000 in 2010; the steps between are approximate (about +3% a year).
+# Rookie minimums $175,000 in 1999, $193,000 in 2000 and $209,000 in 2001.
+for _y, _r in ((1999, 175_000), (2000, 193_000), (2001, 209_000)):
+    MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
 for _y in range(2002, 2011):
     _r = 225_000 + round((_y - 2002) * 95_000 / 8, -4)
     MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
@@ -75,7 +84,7 @@ for _y in range(2011, 2020):
     MINIMUMS[_y] = (375_000 + _k, 450_000 + _k, 525_000 + _k, 600_000 + _k, 685_000 + _k, 810_000 + _k)
 
 # Practice squad: weekly pay (standard) and size by season.
-PS_WEEKLY = {2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
+PS_WEEKLY = {1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
              2009: 5_200, 2010: 5_200, 2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
              2018: 7_600, 2019: 8_000, 2020: 8_400, 2021: 9_200, 2022: 11_500, 2023: 12_000, 2024: 12_500,
              2025: 13_000}
@@ -104,6 +113,51 @@ def identity(season: int) -> dict:
         out["LV"] = ("Oakland", "Raiders")
     out["WAS"] = ("Washington", "Redskins" if season <= 2019 else "Football Team" if season <= 2021 else "Commanders")
     return out
+
+
+# Before the 2002 realignment: 31 clubs in three divisions a conference (ids
+# are the current ones: LA is St. Louis, LAC San Diego, LV Oakland).
+OLD_ALIGNMENT = {
+    "AFC": {"East": ["BUF", "IND", "MIA", "NE", "NYJ"], "Central": ["BAL", "CIN", "CLE", "JAX", "PIT", "TEN"],
+            "West": ["DEN", "KC", "LAC", "LV", "SEA"]},
+    "NFC": {"East": ["ARI", "DAL", "NYG", "PHI", "WAS"], "Central": ["CHI", "DET", "GB", "MIN", "TB"],
+            "West": ["ATL", "CAR", "LA", "NO", "SF"]},
+}
+
+
+def alignment(season: int, teams: list) -> list:
+    """(abbr, city, name, conference, division) for the clubs that played that season."""
+    if season >= 2002:
+        return teams
+    where = {t: (conf, div) for conf, divs in OLD_ALIGNMENT.items() for div, ids in divs.items() for t in ids}
+    return [(a, city, name, *where[a]) for a, city, name, _, _ in teams if a in where]
+
+
+WEST = {"DEN", "LV", "LAC", "SF", "SEA", "ARI"}
+
+
+def fill_times(games, season: int):
+    """nflverse has no kickoff times for 1999: the usual slots of the day
+    (Sunday 1 PM, 4:05 PM at western clubs, Monday 9 PM, Thursday 8:30 PM,
+    late-season Saturdays 12:30 and 4 PM, the Super Bowl at 6:25 PM). Approximate."""
+    rows = (games.season == season) & games.gametime.isna()
+    if not rows.any():
+        return games
+    games = games.copy()
+
+    def slot(r):
+        day = dt.date.fromisoformat(r.gameday).weekday()
+        if r.game_type == "SB":
+            return "18:25"
+        if day == 0:
+            return "21:00"
+        if day == 3:
+            return "20:30"
+        if day == 5:
+            return "16:00" if r.home_team in WEST else "12:30"
+        return "16:05" if r.home_team in WEST else "13:00"
+    games.loc[rows, "gametime"] = [slot(r) for r in games[rows].itertuples(index=False)]
+    return games
 
 
 def _rng(key: str) -> random.Random:
@@ -203,7 +257,8 @@ def preseason(season: int, keys: dict, teams: list) -> tuple[dict, list]:
         order = teams[:]
         rng.shuffle(order)
         thursday = k - dt.timedelta(days=14 + 7 * (weeks - w))
-        for i in range(0, 32, 2):
+        # With an odd number of clubs one sits the week out.
+        for i in range(0, len(order) - 1, 2):
             day = thursday + dt.timedelta(days=(i // 2) % 4)
             away, home = (order[i], order[i + 1]) if rng.random() < 0.5 else (order[i + 1], order[i])
             games.append((w, _iso(day), "19:00" if day.weekday() != 6 else "13:00", away, home))
@@ -299,7 +354,7 @@ def price_contracts(season: int, players: list, ratings: dict) -> None:
                           "workoutBonus": 0, "otherBonus": 0, "capHit": pay})
     # Clubs spent close to the cap (most ended a season within a few million of
     # it), so each club's modeled veteran deals are scaled toward a payroll of
-    # 90-98% of the cap, never past it and never below the minimum.
+    # 90-98% of the cap, up or down, never below the minimum.
     by_team = {}
     for p in players:
         by_team.setdefault(p["team"], []).append(p)
@@ -309,15 +364,17 @@ def price_contracts(season: int, players: list, ratings: dict) -> None:
         target = cap * _rng(f"payroll:{season}:{team}").uniform(0.90, 0.98)
         flex = [p for p in mine if p["contract"]["source"] == "modeled" and p["contract"]["type"] == "UFA"]
         room = sum(hit(p) for p in flex)
-        if not room or total >= target:
+        if not room:
             continue
-        k = min(2.2, 1 + (target - total) / room)
+        # A club already past the target (a big camp roster, the deals on record) has its modeled deals cut back instead.
+        k = min(2.2, max(0.2, 1 + (target - total) / room))
         for p in flex:
             c = p["contract"]
             # The era's top deals ran about 12% of the cap for a quarterback, 9% for anyone else.
             top = cap * (0.12 if p["position"] == "QB" else 0.09)
             for s in c["seasons"]:
-                s["baseSalary"] = s["capHit"] = int(round(min(s["capHit"] * k, top * 1.03 ** (s["year"] - season)), -3))
+                floor = season_minimum((p.get("yearsExp") or 0) + s["year"] - season, s["year"])
+                s["baseSalary"] = s["capHit"] = int(max(floor, round(min(s["capHit"] * k, top * 1.03 ** (s["year"] - season)), -3)))
             c["apy"] = c["seasons"][0]["baseSalary"]
             c["totalValue"] = sum(s["baseSalary"] for s in c["seasons"])
             c["apyCapPct"] = round(c["apy"] / cap, 4)
@@ -340,27 +397,35 @@ def build(season: int) -> Path:
 
     data = load_all(False)
     games = data["games"]
+    if season - 1 < 1999:
+        # nflverse games begin in 1999: last season's results (waiver order, playoff clubs) from FiveThirtyEight.
+        import pandas as pd
+        from sources import fte_games
+        games = pd.concat([games, fte_games(season - 1)], ignore_index=True)
+    games = fill_times(games, season)
     rules = rules_for(season, games)
     stats = season_stats(data["stats"])
     snaps = season_snaps(data["snaps"])
+    rating_stats = season_stats(data["rating_stats"])
+    rush = pass_rush_rates(data["rating_stats"])
     camp = build_camp_rosters(data["weekly_rosters"])
-    players, coverage = build_players(camp, data["contracts"], data["players"], pass_rush_rates(data["stats"]))
+    players, coverage = build_players(camp, data["contracts"], data["players"], rush)
     players = [p for p in players if isinstance(p["id"], str)]
     for p in players:
         p["stats"] = stats.get(p["id"], [])
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
-    ratings = rate_players(players, stats, snaps)
-    free_agents = build_free_agents(data["weekly_rosters"], camp, data["players"], stats, snaps, pass_rush_rates(data["stats"]))
+    ratings = rate_players(players, rating_stats, snaps)
+    free_agents = build_free_agents(data["weekly_rosters"], camp, data["players"], stats, snaps, rush)
     # A few old rows have no player id at all: they can't be tracked, so they're left out.
     rostered = {p["id"] for p in players}
     free_agents = [p for p in free_agents if isinstance(p["id"], str) and p["id"] not in rostered]
     for p in free_agents:
         p["stats"] = stats.get(p["id"], [])
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
-    combined = rate_players(players + free_agents, stats, snaps, unsigned={p["id"] for p in free_agents})
+    combined = rate_players(players + free_agents, rating_stats, snaps, unsigned={p["id"] for p in free_agents})
     for p in free_agents:
         ratings[p["id"]] = combined[p["id"]]
-    traits = build_traits(players + free_agents, ratings, data["stats"], data["combine"])
+    traits = build_traits(players + free_agents, ratings, data["rating_stats"], data["combine"])
     price_contracts(season, players, ratings)
 
     # Some Week 1 snapshots (2016-2019) still list everyone released at the
@@ -376,7 +441,9 @@ def build(season: int) -> Path:
     players = [p for p in players if p["team"] is not None]
     free_agents = released + free_agents
 
-    team_ids = [t[0] for t in TEAMS]
+    league = alignment(season, TEAMS)
+    team_ids = [t[0] for t in league]
+    sch.DIVISION = {t[0]: (t[3], t[4]) for t in league}
     sch.HALL_OF_FAME_GAME, sch.PRESEASON_GAMES = preseason(season, rules["keyDates"], team_ids)
     sch.PLAYOFF_SLOTS, sch.SUPER_BOWL_SITE = playoff_slots(season, games)
     stadiums = sch.home_stadiums(games)
@@ -386,7 +453,7 @@ def build(season: int) -> Path:
         "id": abbr, "city": names.get(abbr, (city, name))[0], "name": names.get(abbr, (city, name))[1],
         "conference": conf, "division": div, **stadiums[abbr],
         "cap2026": {"adjustedCap": CAPS[season], "deadMoney": 0},
-    } for abbr, city, name, conf, div in TEAMS]
+    } for abbr, city, name, conf, div in league]
     staff, staff_hidden, schemes = build_staff_for(season, games, team_ids)
 
     pack = {

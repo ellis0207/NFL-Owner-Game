@@ -17,7 +17,7 @@ import { FileButton } from "./kit";
 import { classLabel, REAL_YEARS } from "../engine/realclasses";
 import { chooseDraftClass } from "../engine/classpick";
 
-/** The seasons a game can start in: the 2026 default and every season with a data pack (2002 on). */
+/** The seasons a game can start in: the 2026 default and every season with a data pack (1999 on). */
 const ERAS = [2026, ...Array.from({ length: LAST_PACK - FIRST_PACK + 1 }, (_, i) => LAST_PACK - i)];
 
 /** Saves a text file through the browser. */
@@ -112,7 +112,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
         {step(2, "Pick your club")}
         <div className="fd-picks">
           {(["AFC", "NFC"] as const).flatMap((conf) =>
-            (["East", "North", "South", "West"] as const).map((div) => (
+            (["East", "North", "Central", "South", "West"] as const).filter((div) => TEAMS.some((t) => t.conference === conf && t.division === div)).map((div) => (
               <div key={conf + div} className="division">
                 <h3>{conf} {div}</h3>
                 {TEAMS.filter((t) => t.conference === conf && t.division === div).map((t) => {

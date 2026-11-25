@@ -292,7 +292,7 @@ season totals and a game log.
 Draft classes can be real. At the start and after every draft you pick the
 next class: that year's real class, a randomly generated one, or another
 year's real class played out of order (each real class once per save). Every
-real class from 2002 to 2026 has every drafted player and the undrafted ones
+real class from 2000 to 2026 has every drafted player and the undrafted ones
 who were at the combine or made a club (about 460 to 560 a class, small
 schools included), and the 2027 class is PFF's early top-150 board with a
 made-up class behind it. Everyone reads a real prospect about where he was
@@ -1218,7 +1218,7 @@ its revenue. Saves from every earlier version still load, including ones
 that stopped on the day after the old final draft. Check a long career with
 `npx vite-node tests/longrun-report.ts [seasons] [seed]`.
 
-Start in any season from 2002 to 2025 as well as 2026. Each season's data
+Start in any season from 1999 to 2025 as well as 2026. Each season's data
 (that year's rosters and contracts, schedule, stadiums, salary cap and minimum
 salaries, and each player's real career back to 1999) is a separate file the
 page loads only when that season is chosen. Before about 2011 the open
@@ -1229,7 +1229,12 @@ play by their own rules: 16 games before 2021, a 12-team playoff field before
 2012), 45 active on game day before 2011, smaller practice squads, rookie deals
 with no wage scale before 2011, the 1993 labor deal as extended in 2006, the
 uncapped 2010 year (free agency after six seasons), the 2011 lockout from March
-12 to July 25, and the 2011 deal until the 2020 one. Records stand as they did
+12 to July 25, and the 2011 deal until the 2020 one. A 1999-2001 start is the
+league before Houston: 31 clubs in six divisions (East, Central and West), the
+Browns back in Cleveland and Seattle in the AFC West; with real history the
+Texans open in February 2002 (Dom Capers, Charley Casserly, an expansion draft,
+the first pick of every round) and the league realigns into eight divisions of
+four. Stadiums go by the names they had that season. Records stand as they did
 before the start. With real history the league then follows the real timeline
 (the caps each year, the labor deals, the Rams', Chargers' and Raiders' moves,
 Washington's names, the clubs' sales from the Ravens in 2004 on). Alternate history,
@@ -1303,7 +1308,7 @@ programs, recruiting and the carousel move over several seasons with
 
 `data/draft-classes/` is written by `pipeline/draft_classes.py` from the open
 nflverse draft picks, combine and players files and the game's own season
-packs: `classes.json` (each real class, 2002-2027) and `schools.json` (about
+packs: `classes.json` (each real class, 2000-2027) and `schools.json` (about
 260 schools outside FBS, placed at their state's center). Name variants are
 matched to programs in `pipeline/draft/schools.py` and `small_schools.py`; the
 2027 board is `pipeline/draft/board_2027.csv`.
@@ -1332,8 +1337,8 @@ python pipeline/build_league.py --refresh  # re-downloads everything
 
 ### Historical packs
 
-`data/packs/<year>.json.gz` (2002-2025, 400-740 KB each) are built by
-`python pipeline/history_pack.py 2002 2025`, which reruns the league pipeline
+`data/packs/<year>.json.gz` (1999-2025, 270-740 KB each) are built by
+`python pipeline/history_pack.py 1999 2025`, which reruns the league pipeline
 with `NFL_SEASON` set: rosters and contracts as signed by that season (deals
 the archive lacks are priced by `pipeline/contract_model.py`), stats from the
 three seasons before it, the real schedule and playoff field, the cap and
@@ -1341,6 +1346,11 @@ minimum salaries, real head coaches with generated assistants.
 `python pipeline/pack_careers.py [year]` adds each player's earlier real
 seasons (from 1999) to a pack without touching its rosters; the 2011-2025
 packs were built before the contract model and keep their original rosters.
+Before 2002 nflverse has no weekly roster, so the camp roster comes from the
+season roster (`sources.season_roster`), the hidden ratings also read the start
+season (`RATING_SEASONS`), and the 1999 waiver order comes from FiveThirtyEight's
+1998 results. Before snap counts (2012) the ratings read each player's usage
+from his stat volume per game.
 
 ### How the camp rosters are rebuilt
 

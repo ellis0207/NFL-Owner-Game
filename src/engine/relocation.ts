@@ -28,8 +28,8 @@ import { owners, VOTES_TO_PASS } from "./owners";
 import { gaussian, rngFor } from "./rng";
 import { MARKETS, STADIUM_BY_TEAM, type Stadium } from "./stadiums";
 import { reserved } from "./investors";
-import type { GameState } from "./types";
-import { oldHome, ruleSeason, TEMP_HOMES, washingtonName } from "./eras";
+import type { GameState, TeamData } from "./types";
+import { ALIGN_2002, oldHome, REALIGNED, ruleSeason, STADIUM_NAMES, TEMP_HOMES, washingtonName } from "./eras";
 import { PACK } from "./pack";
 
 const M = 1_000_000;
@@ -65,6 +65,8 @@ export interface MarketData {
 
 /** Cities without a team that keep coming up (approximate figures). */
 const OPEN_MARKETS: MarketData[] = [
+  // Houston between the Oilers' move (1997) and the Texans (2002): only in play while it has no club.
+  { id: "HOU", city: "Houston", region: "Texas", country: "US", pop: 7.5, wide: 9.5, growth: 0.02, income: 1.0, rivals: 3, corp: 24, media: 8, attachment: 0.6, place: [29.68, -95.41], climate: { temp: [94, 88, 78, 68, 63], wind: 9, wet: 0.3, snow: 0 }, venue: { name: "the Astrodome", capacity: 62_000, roof: "dome", ready: false }, publicLean: 0.5 },
   { id: "SAT", city: "San Antonio", region: "Texas", country: "US", pop: 2.7, wide: 3.3, growth: 0.017, income: 0.92, rivals: 1, corp: 4, media: 31, attachment: 0.5, place: [29.42, -98.49], climate: { temp: [89, 82, 72, 64, 62], wind: 8, wet: 0.2, snow: 0 }, venue: { name: "the Alamodome", capacity: 64_000, roof: "dome", ready: true }, publicLean: 0.4 },
   { id: "STL", city: "St. Louis", region: "Missouri", country: "US", pop: 2.8, wide: 3.5, growth: 0.0, income: 1.0, rivals: 3, corp: 8, media: 24, attachment: 0.6, place: [38.63, -90.19], climate: { temp: [81, 69, 57, 45, 40], wind: 9, wet: 0.28, snow: 0.2 }, venue: { name: "The Dome at America's Center", capacity: 67_000, roof: "dome", ready: true }, publicLean: 0.3 },
   { id: "SD", city: "San Diego", region: "California", country: "US", pop: 3.3, wide: 3.3, growth: 0.004, income: 1.18, rivals: 2, corp: 3, media: 29, attachment: 0.6, place: [32.78, -117.12], climate: { temp: [78, 74, 70, 66, 66], wind: 7, wet: 0.08, snow: 0 }, venue: { name: "Snapdragon Stadium", capacity: 35_000, roof: "open", ready: false }, publicLean: 0.15 },
@@ -143,7 +145,8 @@ function note(state: GameState, text: string): void {
 export function markets(state: GameState): MarketData[] {
   const season = state.season ?? RULES.season;
   const taken = new Set([...relocation(state).moves.map((m) => m.market), ...(state.expansion?.clubs ?? []).map((c) => c.market), ...TEAMS.map((t) => oldHome(state, t.id, season)?.market).filter((x): x is string => !!x)]);
-  const out = OPEN_MARKETS.filter((m) => !taken.has(m.id));
+  const cities = new Set(TEAMS.map((t) => TEAM_BY_ID[t.id].city));
+  const out = OPEN_MARKETS.filter((m) => !taken.has(m.id) && !cities.has(m.city));
   const year = Number(state.date.slice(0, 4));
   const count: Record<string, number> = {};
   for (const t of TEAMS) count[TEAM_BY_ID[t.id].city] = (count[TEAM_BY_ID[t.id].city] ?? 0) + 1;
@@ -471,12 +474,21 @@ interface Originals {
   market: Record<string, (typeof MARKETS)[string]>;
   climate: Record<string, Climate>;
   place: Record<string, [number, number]>;
-  team: Record<string, { city: string; conference: "AFC" | "NFC"; division: "East" | "North" | "South" | "West" }>;
+  team: Record<string, { city: string; conference: "AFC" | "NFC"; division: TeamData["division"] }>;
 }
 let ORIG: Originals | undefined;
 /** Takes the 2026 snapshot now, before expansion clubs are laid on (expansion.ts). */
 export function primeOriginals(): void {
   original();
+}
+/**
+ * The 2026 tables for a club the league data knows but the season's league
+ * doesn't have yet (Houston before 2002): its building, market, climate and place.
+ */
+export function baseClub(id: string): { stadium: Stadium; metro: (typeof METRO)[string]; market: (typeof MARKETS)[string]; climate: Climate; place: [number, number] } | undefined {
+  const o = original();
+  if (!o.stadium[id] || !o.metro[id] || !o.market[id] || !o.climate[id] || !o.place[id]) return undefined;
+  return { stadium: o.stadium[id], metro: o.metro[id], market: o.market[id], climate: o.climate[id], place: o.place[id] };
 }
 /** The 2026 cities of the clubs a historical pack places elsewhere. */
 const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas" };
@@ -545,6 +557,13 @@ export function bindRelocation(state: GameState, season = state.season ?? RULES.
  */
 function eraHomes(state: GameState, season: number): void {
   const s = ruleSeason(state, season);
+  // A start before 2002 opens in the old six divisions (the pack's); the 2002 realignment lays on the eight.
+  if (state.era!.start < REALIGNED && s >= REALIGNED) {
+    for (const t of TEAMS) {
+      const a = ALIGN_2002[t.id];
+      if (a) Object.assign(TEAM_BY_ID[t.id], { conference: a[0], division: a[1] });
+    }
+  }
   for (const t of TEAMS) {
     if (moveOf(state, t.id)) continue;
     const st = STADIUM_BY_TEAM[t.id];
@@ -567,8 +586,10 @@ function eraHomes(state: GameState, season: number): void {
       st.name = name;
       TEAM_BY_ID[t.id].stadium = name;
     } else {
-      // In its 2026 building now.
-      Object.assign(TEAM_BY_ID[t.id], { stadium: st.name, roof: st.roof === "open" ? "outdoors" : st.roof === "retractable" ? "closed" : "dome" });
+      // In its 2026 building now, shown by the name it had that season (the building keeps its
+      // 2026 name underneath: renovations and the Stadium Lab know it by that).
+      const was = STADIUM_NAMES[t.id]?.find(([through]) => s <= through)?.[1];
+      Object.assign(TEAM_BY_ID[t.id], { stadium: was ?? st.name, roof: st.roof === "open" ? "outdoors" : st.roof === "retractable" ? "closed" : "dome" });
     }
   }
   if (TEAM_BY_ID.WAS) TEAM_BY_ID.WAS.name = washingtonName(s);
