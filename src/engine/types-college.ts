@@ -3,7 +3,7 @@ import type { Position } from "./types";
 
 // ---- College football (see engine/college.ts, prospects.ts, scouting.ts) ----
 
-export type CollegeConference = "SEC" | "B1G" | "B12" | "ACC" | "P12" | "AAC" | "MW" | "SBC" | "CUSA" | "MAC" | "IND";
+export type CollegeConference = "SEC" | "B1G" | "B12" | "ACC" | "P12" | "AAC" | "MW" | "SBC" | "CUSA" | "MAC" | "IND" | "SMALL";
 export type CollegeOffense = "airRaid" | "spreadRpo" | "proStyle" | "spreadOption" | "flexbone";
 export type CollegeDefense = "43" | "34" | "425" | "335" | "multiple";
 export type Region = "West" | "Southwest" | "Midwest" | "Southeast" | "Northeast";

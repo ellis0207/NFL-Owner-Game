@@ -114,9 +114,27 @@ function youthGap(h: { overall: number; potential: number }): number {
   return 3 + Math.max(0, h.potential - h.overall) * 0.3;
 }
 
+/** The media's preseason read of the coming class: right about the best players, noisy below them. */
+export function classHype(state: GameState): Record<string, number> {
+  const dc = prospectsOf(state);
+  const hype: Record<string, number> = {};
+  for (const p of dc.prospects) {
+    const h = dc.hidden[p.id];
+    // A real class's read is where he really went, give or take; an early board's a little looser.
+    hype[p.id] = p.real || p.board
+      ? Math.round((h.value + gaussian(rngFor(state.seed, `hype:${p.id}`)) * (p.real ? 1.2 : 2.5)) * 10) / 10
+      : Math.round((h.value + gaussian(rngFor(state.seed, `hype:${p.id}`)) * 5 + (CONFERENCES[COLLEGE_TEAM[p.school].conference].power ? 1.5 : -1.5)) * 10) / 10;
+  }
+  return hype;
+}
+
+/** The first Saturday of this college season: the coming class's choice is settled by then (classpick.ts). */
+export function collegeKickoff(): string {
+  return COLLEGE_SCHEDULE.reduce((d, g) => (g.date < d ? g.date : d), "9999-12-31");
+}
+
 /** Starts the college universe for a save. */
 export function newCollege(state: GameState): CollegeState {
-  const dc = prospectsOf(state);
   const rating: Record<string, number> = {};
   // The preseason read leans on the brand: a program on the rise is underrated, a fading one still gets votes.
   const seen = (id: string, base: number) => {
@@ -124,12 +142,7 @@ export function newCollege(state: GameState): CollegeState {
     return p ? 0.6 * p.strength + 0.4 * p.prestige : base;
   };
   for (const t of COLLEGE_TEAMS) rating[t.id] = Math.round((seen(t.id, t.strength) + gaussian(rngFor(state.seed, seasonKey(`cfb-view:${t.id}`))) * 3) * 10) / 10;
-  const hype: Record<string, number> = {};
-  for (const p of dc.prospects) {
-    const h = dc.hidden[p.id];
-    // The media's preseason read: right about the best players, noisy below them.
-    hype[p.id] = Math.round((h.value + gaussian(rngFor(state.seed, `hype:${p.id}`)) * 5 + (CONFERENCES[COLLEGE_TEAM[p.school].conference].power ? 1.5 : -1.5)) * 10) / 10;
-  }
+  const hype = classHype(state);
   return {
     season: COLLEGE_SEASON, results: {}, post: [], ap: [], cfp: [], rating, logs: {}, injuries: {}, hype,
     awards: {}, scouting: newScouting(),
@@ -615,7 +628,7 @@ function scheduleChampionships(state: GameState): void {
   const c = state.college!;
   if (c.post.some((g) => g.kind === "ccg")) return;
   for (const conf of Object.keys(CONFERENCES) as CollegeConference[]) {
-    if (conf === "IND") continue;
+    if (conf === "IND" || conf === "SMALL") continue;
     const [one, two] = conferenceStandings(state, conf);
     const site = CCG_SITES[conf];
     c.post.push({
@@ -843,7 +856,8 @@ export function awardScore(state: GameState, id: string, award: AwardDef): numbe
   const p = dc.byId[id];
   const t = prospectTotals(state, id);
   const v = (k: string) => t[k] ?? 0;
-  const rec = collegeRecords(state)[p.school];
+  // Small schools have no schedule here: their records don't count.
+  const rec = collegeRecords(state)[p.school] ?? { w: 0, l: 0 };
   const rank = rankOf(state, p.school);
   const team = rec.w * 2 - rec.l * 2 + (rank ? (26 - rank) * 0.8 : 0);
   const hype = state.college!.hype[id] ?? 0;

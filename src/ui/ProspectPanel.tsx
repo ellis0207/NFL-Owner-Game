@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { COLLEGE_STATS, injuryNote, mediaRank, prospectLog, prospectTotals, rankedName, STAT_LABEL } from "../engine/college";
-import { COLLEGE_TEAM, conferenceName, schoolName } from "../engine/collegeData";
+import { COLLEGE_TEAM, conferenceName, schoolName, smallSchool } from "../engine/collegeData";
 import { shortDate } from "../engine/dates";
 import { CLASS_LABEL, draftClass, prospectAge } from "../engine/prospects";
 import { DEPTHS, onScoutList, scoutPlayer, scoutReport, unscoutPlayer } from "../engine/scouting";
@@ -63,7 +63,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           <div>
             <h2>{p.name}</h2>
             <span className="muted">
-              {p.position} · <button className="link" onClick={() => ui.openSchool(p.school)}>{schoolName(p.school)} {school.nickname}</button> · {conferenceName(school.conference)}
+              {p.position} · <button className="link" onClick={() => ui.openSchool(p.school)}>{schoolName(p.school)}{school.nickname ? ` ${school.nickname}` : ""}</button> · {smallSchool(p.school) ? "Small school" : conferenceName(school.conference)}
             </span>
           </div>
           <span className="jersey" style={{ marginLeft: "auto" }}>{p.jersey}</span>
@@ -83,6 +83,7 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
           {picked && <><dt>Drafted</dt><dd>Round {picked.pick.split("-")[1]}, No. {picked.overall}, {teamLabel(picked.team)}{picked.grade ? ` (our GM: ${picked.grade})` : ""}</dd></>}
           {udfa && <><dt>Signed</dt><dd>Undrafted free agent, {teamLabel(udfa)}</dd></>}
           {back && <><dt>Draft</dt><dd>Went back to school for another year</dd></>}
+          {p.real && (picked || udfa) && <><dt>In real life</dt><dd>{p.real.pick ? `No. ${p.real.pick} in the ${p.real.year} draft, ${teamLabel(p.real.team)}` : `Went undrafted in ${p.real.year}`}</dd></>}
           {!picked && !udfa && !back && mock && <><dt>Latest mock</dt><dd>No. {mock.overall} to {teamLabel(mock.team)} ({mock.mock.analyst}, {shortDate(mock.mock.date)})</dd></>}
         </dl>
         {combine && (
@@ -219,7 +220,9 @@ export function ProspectPanel({ game, id, onClose, changed }: { game: GameState;
             </div>
           </section>
         )}
-        <p className="muted">{rankedName(game, p.school)} is {coachName(game, p.school)}'s team ({school.city}, {school.state}).</p>
+        {smallSchool(p.school)
+          ? <p className="muted">{schoolName(p.school)} plays outside FBS: there's no game film of him in our college database, so what we know comes from scouts who go see him.</p>
+          : <p className="muted">{rankedName(game, p.school)} is {coachName(game, p.school)}'s team ({school.city}, {school.state}).</p>}
       </aside>
     </div>
   );

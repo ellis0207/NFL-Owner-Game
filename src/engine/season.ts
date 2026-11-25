@@ -168,6 +168,8 @@ export function newGame(userTeam: string, ownerName: string, settings: Settings,
     season: BASE_SEASON,
     draftModelFrom: BASE_SEASON + 1,
     draftTierFrom: BASE_SEASON + 1,
+    // The first draft plays its own year's real class unless the owner picks another (classpick.ts).
+    draftClasses: { from: BASE_SEASON + 1, picks: {} },
     league: { caps: {} },
     history: { seasons: [], drafts: [], stats: {}, snaps: {}, retired: {} },
     // A historical start (eras.ts): the season it began, and whether history is left to the save.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bindDraftModel, modelApplies, tierApplies } from "../src/engine/outcomes";
 import { draftClass } from "../src/engine/prospects";
 import { newGame } from "../src/engine/season";
+import { chooseDraftClass } from "../src/engine/classpick";
 import type { GameState } from "../src/engine/types";
 
 /** Spearman rank correlation. */
@@ -16,6 +17,8 @@ function rankCorr(a: number[], b: number[]): number {
 describe("draft outcomes nobody can see", () => {
   it("draws every prospect's NFL outcome in a new game, loosely tied to the tape", () => {
     const state = newGame("NYG", "Test", { capRules: "real" }, 5);
+    // The generator's own class (a new game drafts the real 2027 board unless told otherwise).
+    chooseDraftClass(state, 0);
     expect(state.draftModelFrom).toBe(2027);
     const dc = draftClass(state.seed, 2027);
     const top = dc.prospects.map((p) => p.id).sort((a, b) => dc.hidden[b].value - dc.hidden[a].value).slice(0, 257);

@@ -1086,6 +1086,11 @@ export interface GameState {
   draftModelFrom?: number;
   /** The first draft class whose growth goes by how good its tape was (outcomes.ts `TIER_SHIFT`); set on load for older saves. */
   draftTierFrom?: number;
+  /**
+   * Which class each draft uses (realclasses.ts): `picks` by draft year, the real class's year or 0 for a
+   * generated one; years from `from` on with no pick play their own real class when there is one.
+   */
+  draftClasses?: { from: number; picks: Record<string, number> };
   /** The season the league is in (2026 when absent): it moves forward the day after each draft. */
   season?: number;
   /** This season's schedule, for seasons after 2026 (2026 is the real one from the data). */

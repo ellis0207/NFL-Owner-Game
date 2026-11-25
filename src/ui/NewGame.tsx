@@ -14,6 +14,8 @@ import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../engine/difficul
 import { money, onColor } from "./format";
 import { TeamBadge } from "./gfx";
 import { FileButton } from "./kit";
+import { classLabel, REAL_YEARS } from "../engine/realclasses";
+import { chooseDraftClass } from "../engine/classpick";
 
 /** The seasons a game can start in: the 2026 default and every season from 2011. */
 const ERAS = [2026, ...Array.from({ length: 15 }, (_, i) => 2025 - i)];
@@ -44,6 +46,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const [level, setLevel] = useState<Difficulty>("standard");
   const [ironman, setIronman] = useState(false);
   const [altHistory, setAltHistory] = useState(false);
+  // The first draft's class: its own year's real class, a generated one, or another year's (realclasses.ts).
+  const firstDraft = BASE_SEASON + 1;
+  const [draftSrc, setDraftSrc] = useState<number>(REAL_YEARS.includes(firstDraft) ? firstDraft : 0);
   const [league, setLeague] = useState<{ name: string; pack?: ReturnType<typeof checkPack>["pack"]; note: string } | null>(null);
   const custom = profile.custom ?? DEFAULT_CUSTOM;
   const setCustom = (c: Partial<CustomStart>) => setProfile({ ...profile, custom: { ...custom, ...c } });
@@ -82,6 +87,16 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <span><strong>Alternate history</strong><br /><span className="muted">Off: the real timeline plays out after {BASE_SEASON} (rule changes, the 2020 labor deal, the caps, the Rams', Chargers' and Raiders' moves, club sales). On: none of it happens on its own; only your league's votes, moves and sales change things.</span></span>
             </label>
           )}
+          <label className="field"><span className="label">First draft class ({firstDraft} draft)</span>
+            <select value={draftSrc} onChange={(e) => setDraftSrc(Number(e.target.value))}>
+              {REAL_YEARS.includes(firstDraft) && <option value={firstDraft}>{classLabel(firstDraft, firstDraft)}</option>}
+              <option value={0}>{classLabel(0, firstDraft)}</option>
+              {REAL_YEARS.filter((y) => y !== firstDraft).map((y) => <option key={y} value={y}>{classLabel(y, firstDraft)}</option>)}
+            </select>
+          </label>
+          <span className="muted">{draftSrc
+            ? `Every real prospect${draftSrc > 2026 ? " on the early board" : ""}, seen by everyone about where ${draftSrc > 2026 ? "the board has him" : "he was really drafted"}. What he becomes ${draftSrc > 2026 ? "is unknown, like any class's" : "follows his real career, so deep scouting can find the late-round stars"}.${draftSrc <= BASE_SEASON ? " Players from it already in the league appear twice." : ""} After each draft you pick the next class.`
+            : "A made-up class, different in every game. After each draft you pick the next class."}</span>
           <div className="field"><span className="label">Custom league pack (optional)</span>
             <div className="btn-row">
               <FileButton label={league ? `Pack: ${league.name}` : "Choose a league pack"} onFile={async (f) => {
@@ -239,7 +254,11 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="ironman" type="checkbox" checked={ironman} onChange={(e) => setIronman(e.target.checked)} />
               <span><strong>Ironman</strong><br /><span className="muted">One continuing save: no loading an earlier save to undo a decision.</span></span>
             </label>
-            <button className="fd-start" style={{ background: TEAM_COLORS[team][0], color: onColor(TEAM_COLORS[team][0]) }} onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, difficulty: level, economy: DIFFICULTY[level].economy, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
+            <button className="fd-start" style={{ background: TEAM_COLORS[team][0], color: onColor(TEAM_COLORS[team][0]) }} onClick={() => {
+              const s = withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, difficulty: level, economy: DIFFICULTY[level].economy, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack);
+              chooseDraftClass(s, draftSrc);
+              onStart(s);
+            }}>
               Take over the {selected.name}
             </button>
           </div>

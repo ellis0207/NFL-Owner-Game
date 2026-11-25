@@ -30,6 +30,8 @@ import { updateTrends } from "./strategy";
 import { BASE_SCHEDULE, BASE_SEASON, bindCaps, GAME_BY_ID, PLAYER_BY_ID, PLAYERS, RULES, setLeagueSeason, TEAMS, teamLabel } from "./league";
 import { invalidateMarket } from "./market";
 import { setCarry } from "./prospects";
+import { bindClassChoices, ensureDraftClasses } from "./realclasses";
+import { askForClass } from "./classpick";
 import { rosterCount } from "./roster";
 import { divisionStandings, standings } from "./standings";
 import { teamStaff } from "./staff";
@@ -89,6 +91,10 @@ export function applySeason(state: GameState): void {
   bindCustomLeague(state);
   for (const a of state.history?.drafts ?? []) setCarry(state.seed, a.year, a.returned);
   bindDraftModel(state);
+  if (state.seed !== undefined) {
+    ensureDraftClasses(state);
+    bindClassChoices(state);
+  }
   bindCfb(state);
   patchPlayers(state);
 }
@@ -317,6 +323,7 @@ export function startNewSeason(state: GameState): void {
   news(state, "league", `The league turns to the ${next} season${champ ? `, with the ${teamLabel(champ)} as defending champions` : ""}`);
   if (retired) news(state, "league", `${retired} free agents who went unsigned through the spring have moved on from the game`);
   letter(state, record);
+  askForClass(state);
 }
 
 /** Old records the save no longer needs. */

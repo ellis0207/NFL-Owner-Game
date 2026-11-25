@@ -17,9 +17,41 @@ import type { GameState, Position, TradeDeal } from "../../engine/types";
 import { money } from "../format";
 import { useUi } from "../ui";
 import { DraftBoards } from "./DraftBoards";
+import { Callout } from "../kit";
+import { chooseDraftClass, classSource, openClassYear } from "../../engine/classpick";
+import { classLabel, classOptions } from "../../engine/realclasses";
+import { collegeKickoff } from "../../engine/college";
+import { RULES } from "../../engine/league";
 
 type Tab = "room" | "boards" | "order" | "mocks" | "grades" | "class";
 const TABS: [Tab, string][] = [["room", "Draft room"], ["boards", "Boards"], ["order", "Draft order"], ["mocks", "Mock drafts"], ["grades", "GM grades"], ["class", "Our class"]];
+
+/** Which class the coming draft uses, and the choice while it's still open (classpick.ts). */
+function ClassChoice({ game, changed }: { game: GameState; changed: () => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!game.draftClasses || game.tutorial) return null;
+  const year = RULES.season + 1;
+  const src = classSource(game, year);
+  const open = openClassYear(game);
+  if (open === null) return <p className="muted">The {year} class: {classLabel(src, year).replace(/^R/, "r")}.</p>;
+  const options = classOptions(game, year);
+  return (
+    <Callout title={`Choose the ${year} draft class`}>
+      <label className="field"><span className="label">Class</span>
+        <select value={src} onChange={(e) => { setMsg(chooseDraftClass(game, Number(e.target.value))); changed(); }}>
+          {options.includes(year) && <option value={year}>{classLabel(year, year)}</option>}
+          <option value={0}>{classLabel(0, year)}</option>
+          {options.filter((y) => y !== year).map((y) => <option key={y} value={y}>{classLabel(y, year)}</option>)}
+        </select>
+      </label>
+      <span className="muted">
+        A real class has every real prospect, read by everyone about where he really went; what each one becomes follows his real career, so deep scouting can find the late-round stars.
+        {src && src <= RULES.season ? " Players from this class already in the league appear twice." : ""} Open until college football kicks off {shortDate(collegeKickoff())}.
+      </span>
+      {msg && <span className="bad">{msg}</span>}
+    </Callout>
+  );
+}
 
 export function DraftScreen({ game, changed }: { game: GameState; changed: () => void }) {
   const live = draftDayOf(game.date) > 0;
@@ -30,6 +62,7 @@ export function DraftScreen({ game, changed }: { game: GameState; changed: () =>
         Three days at the end of April: the first round on Thursday, rounds two and three on Friday, rounds four through seven on Saturday.
         There's no clock: the draft moves only when you move it. Any pick of ours you skip, the GM makes.
       </p>
+      <ClassChoice game={game} changed={changed} />
       <div className="tabs" role="group" aria-label="View">
         {TABS.map(([k, label]) => <button key={k} aria-pressed={tab === k} onClick={() => setTab(k)}>{label}</button>)}
       </div>

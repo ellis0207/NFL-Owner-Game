@@ -3,6 +3,7 @@
 // away swapped every other year.
 import teamsJson from "../../data/college-2026/teams.json";
 import scheduleJson from "../../data/college-2026/schedule.json";
+import smallJson from "../../data/draft-classes/schools.json";
 import { addDays } from "./dates";
 import { onSeasonChange, RULES } from "./league";
 import type { CollegeConference, CollegeDefense, CollegeGame, CollegeOffense, CollegeTeam, Region } from "./types";
@@ -31,6 +32,25 @@ export const CONFERENCES = DATA.conferences;
 export const CONFERENCE_IDS = Object.keys(DATA.conferences) as CollegeConference[];
 export const NFL_HQ = DATA.nflHQ;
 export const REGIONS = DATA.regions;
+
+/**
+ * Schools outside FBS that real draft classes come from (pipeline/draft_classes.py): North Dakota
+ * State's neighbors, the HBCUs, Division II, Canada. They have no schedule here, so their players
+ * have no game logs, and they sit at their state's center for scouting trips. They're in the lookup
+ * (`COLLEGE_TEAM`) but not the FBS list or the conference list the college season walks.
+ */
+CONFERENCES.SMALL = { name: "Small schools", full: "FCS, Division II and other schools", games: 0, power: false };
+for (const [id, [school, state, lat, lon, region]] of Object.entries(smallJson as unknown as Record<string, [string, string, number, number, Region]>)) {
+  COLLEGE_TEAM[id] ??= {
+    id, school, nickname: "", conference: "SMALL", coach: "", coachSince: 0, city: "", state, lat, lon, region,
+    strength: 45, offense: "proStyle", defense: "43",
+  };
+}
+
+/** A school outside the FBS list (no schedule, no polls). */
+export function smallSchool(id: string): boolean {
+  return COLLEGE_TEAM[id]?.conference === "SMALL";
+}
 const BASE_SCHEDULE = scheduleJson as unknown as CollegeGame[];
 
 /** Days from a 2026 college date to the same week of another season (whole weeks, so Saturdays stay Saturdays). */
