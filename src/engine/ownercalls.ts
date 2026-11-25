@@ -12,15 +12,22 @@
 // community, and the football side for the training room and the building.
 // The staff proposes changes; the forecast goes in the decisions log and is
 // checked a season later (causes.ts).
+//
+// Free agency: when the owner keeps every signing, the GM asks each
+// February how the owner wants to run the market. A real GM never sits out a
+// free agency, so an owner who never answers gets the GM working within the
+// owner's limits; otherwise an absent owner's club lets every contract run out
+// and plays the season with a roster of minimum deals.
 import { business, cashBalance, deptCost, DEPTS, gateForecast, inflation, pnl, setBudget, BUDGET_LEVELS } from "./business";
 import { cause, revenueNow } from "./causes";
 import { localIncome } from "./commerce";
 import { leagueYear } from "./contracts";
 import { addDays, shortDate } from "./dates";
-import { addMemo, mode, openMemos } from "./delegation";
+import { addMemo, mode, openMemos, setMode } from "./delegation";
 import { signer } from "./executives";
 import { money } from "./inbox";
 import { RULES, SCHEDULE, teamLabel } from "./league";
+import { gmOf, pendingFreeAgents, plannedSpace } from "./offseason";
 import { tix } from "./ticketing";
 import type { Dept, GameState, Memo, ScheduledGame } from "./types";
 
@@ -272,4 +279,37 @@ export function ownerCallsDaily(state: GameState): void {
   gameCall(state);
   // Spring, two weeks into the league year: the books are closed and the season's numbers are in.
   if (state.date === addDays(RULES.keyDates.newLeagueYear, 14)) budgetReview(state);
+  if (state.date === RULES.keyDates.franchiseTagWindowOpens) freeAgencyPlan(state);
+}
+
+/** The GM's February question to an owner who keeps every signing: who runs free agency this year? */
+function freeAgencyPlan(state: GameState): Memo | undefined {
+  if (state.tutorial || mode(state, "signings") !== "owner") return;
+  const team = state.userTeam;
+  const pending = pendingFreeAgents(state, team);
+  const space = plannedSpace(state, team);
+  const year = RULES.season + 1;
+  return addMemo(state, {
+    kind: "general", area: "signings", from: gmOf(team), title: `How we run ${year} free agency`,
+    problem: `${pending.length} of our players come off contract when the league year opens on ${shortDate(RULES.keyDates.newLeagueYear)}, ` +
+      `and we project ${money(space)} of ${year} cap space before re-signings and the draft class. Right now every offer has to come from you.`,
+    proposal: "Let me work the market within your limits and report each signing.",
+    options: [
+      { label: "I'll handle it myself", effect: "Nothing goes out unless you make the offer. Players we don't re-sign leave when the league year opens.", evidence: "confirmed" },
+      { label: "Bring me each offer", effect: "The GM builds offers and each one waits on your desk; an offer you leave goes nowhere.", evidence: "confirmed" },
+      { label: "Run it within my limits", effect: "The GM re-signs and signs players within your contract and guarantee limits and reports each deal. You can take it back in the Front office.", evidence: "confirmed" },
+    ],
+    budget: `${money(space)} of projected ${year} cap space.`,
+    risks: ["A club that sits out free agency loses its own free agents and fills the roster with minimum deals.", "The GM spends to the team's needs, not to your taste in players."],
+    recommend: 2, deadline: addDays(RULES.keyDates.negotiatingWindowOpens, -1),
+    ifLate: "The GM runs free agency within your limits.",
+    payload: { faPlan: year },
+  });
+}
+
+/** The owner's answer on free agency, or the GM's default when none came. */
+export function resolveFaPlan(state: GameState, _m: Memo, choice: number): string | null {
+  if (choice === 1) setMode(state, "signings", "approve");
+  if (choice === 2) setMode(state, "signings", "delegate");
+  return null;
 }

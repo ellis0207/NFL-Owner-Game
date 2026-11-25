@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { business } from "../src/engine/business";
 import { addDays } from "../src/engine/dates";
-import { openMemos } from "../src/engine/delegation";
+import { mode, openMemos } from "../src/engine/delegation";
 import { projectPayback } from "../src/engine/facilities";
 import { BASE_SCHEDULE, BASE_KEY_DATES } from "../src/engine/league";
 import { decideMemo } from "../src/engine/memos";
@@ -58,5 +58,17 @@ describe("owner calls that pay back", () => {
     expect(decideMemo(s, m!.id, lean)).toBeNull();
     expect(business(s).budget.marketing).toBe(Math.max(0, before.marketing - 1));
     expect(s.causes?.find((c) => c.system === "budgets")?.forecast?.measure).toBe("revenue");
+  });
+
+  it("has the GM ask how to run free agency, and run it when the owner never answers", () => {
+    const s = stateAt(TEAM, 5, BASE_KEY_DATES.franchiseTagWindowOpens);
+    expect(mode(s, "signings")).toBe("owner");
+    advanceDay(s);
+    const m = openMemos(s).find((x) => x.payload?.faPlan);
+    expect(m).toBeDefined();
+    expect(m!.recommend).toBe(2);
+    while (s.date <= addDays(m!.deadline, 1)) advanceDay(s);
+    expect(m!.status).toBe("lapsed");
+    expect(mode(s, "signings")).toBe("delegate");
   });
 });
