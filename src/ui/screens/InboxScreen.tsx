@@ -44,8 +44,8 @@ export function InboxScreen({ game, changed }: { game: GameState; changed: () =>
           })}
         </div>
       )}
-      {game.inbox.length > 0 && !filtered.length && <p className="muted">Nothing here.</p>}
-      {game.inbox.length === 0 && <p className="muted">No messages yet.</p>}
+      {game.inbox.length > 0 && !filtered.length && <p className="muted kit-none">Nothing here.</p>}
+      {game.inbox.length === 0 && <p className="muted kit-none">No messages yet.</p>}
       {game.inbox.length > 0 && (
         // A mail tray: the list on the left, the open letter on the right. On a phone the letter opens under its line.
         <div className="dk-mail">

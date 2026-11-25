@@ -298,7 +298,7 @@ function Investors({ game, say }: { game: GameState; say: Say }) {
         </label>
         <span className="muted">Partners trust what they're shown. Investor-friendly terms promise full information, and a bare report breaks that promise.</span>
       </div>
-      {s.partners.length === 0 && <p className="muted">No partners yet. Partners arrive when you sell a stake (Stakes tab).</p>}
+      {s.partners.length === 0 && <p className="muted kit-none">No partners yet. Partners arrive when you sell a stake (Stakes tab).</p>}
       <div className="split">
         {s.partners.map((p) => {
           const r = partnerReturn(game, p);

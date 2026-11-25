@@ -160,7 +160,7 @@ export function BoxScore({ game, id, onClose, follow, changed, onClock }: { game
 
             <section className="stack">
               <h3>Scoring</h3>
-              {box.scoring.length === 0 && <p className="muted">No points scored.</p>}
+              {box.scoring.length === 0 && <p className="muted kit-none">No points scored.</p>}
               <ol className="plays">
                 {box.scoring.map((p, i) => (
                   <li key={i}>

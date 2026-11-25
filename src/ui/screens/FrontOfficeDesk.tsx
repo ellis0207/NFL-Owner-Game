@@ -20,7 +20,7 @@ export function Desk({ game, changed }: { game: GameState; changed: () => void }
   const closed = o.memos.filter((m) => m.status === "decided" || m.status === "lapsed").slice(0, 15);
   return (
     <div className="stack">
-      {open.length === 0 && <p className="muted">Nothing waiting on you. Memos arrive when the staff needs a decision you've kept for yourself.</p>}
+      {open.length === 0 && <p className="muted kit-none">Nothing waiting on you. Memos arrive when the staff needs a decision you've kept for yourself.</p>}
       {open.map((m) => <MemoCard key={m.id} memo={m} game={game} changed={changed} />)}
       {closed.length > 0 && (
         <div className="panel stack tight">

@@ -241,7 +241,7 @@ function Stadium({ game, changed }: { game: GameState; changed: () => void }) {
       {ctrl.booking !== "none" && (
         <div className="panel stack tight">
           <h3>Booking requests</h3>
-          {offers.length === 0 && <p className="muted">No open requests. Promoters call every week or two; fewer in winter for an open-air stadium.</p>}
+          {offers.length === 0 && <p className="muted kit-none">No open requests. Promoters call every week or two; fewer in winter for an open-air stadium.</p>}
           {offers.map((e) => (
             <div key={e.id} className="stack tight">
               <div><strong>{e.name}</strong> <span className="muted">· {weekday(e.date)}, {shortDate(e.date)} · {e.promoter}</span></div>
@@ -258,14 +258,14 @@ function Stadium({ game, changed }: { game: GameState; changed: () => void }) {
       <div className="split">
         <div className="panel stack tight">
           <h3>Coming up</h3>
-          {upcoming.length === 0 && <p className="muted">Nothing else on the calendar.</p>}
+          {upcoming.length === 0 && <p className="muted kit-none">Nothing else on the calendar.</p>}
           {upcoming.slice(0, 20).map((e) => (
             <div key={e.id}><strong>{shortDate(e.date)}</strong> {e.name} <span className="muted">· {BY_LABEL[e.by]}</span></div>
           ))}
         </div>
         <div className="panel stack tight">
           <h3>Held</h3>
-          {past.length === 0 && <p className="muted">No events yet.</p>}
+          {past.length === 0 && <p className="muted kit-none">No events yet.</p>}
           {past.slice(0, 20).map((e) => (
             <div key={e.id}>
               <strong>{shortDate(e.date)}</strong> {e.name}{" "}

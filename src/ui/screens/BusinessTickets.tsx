@@ -183,7 +183,7 @@ export function Tickets({ game, changed }: { game: GameState; changed: () => voi
       <div className="panel stack tight">
         <h3>The gate</h3>
         {b.gates.length > 1 && <Columns values={[...b.gates].reverse().map((g) => g.revenue)} labels={[...b.gates].reverse().map((g) => g.opp)} format={money} />}
-        {b.gates.length === 0 ? <p className="muted">No home games yet.</p> : (
+        {b.gates.length === 0 ? <p className="muted kit-none">No home games yet.</p> : (
           <div className="table-wrap">
             <table>
               <thead><tr><th>Date</th><th>Game</th><th className="num">Sold</th><th className="num">In the building</th><th className="num">Single-game sold</th><th className="num">Price</th><th>Resale</th><th className="num">Suites used</th><th className="num">Our take</th></tr></thead>

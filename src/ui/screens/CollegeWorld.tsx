@@ -193,7 +193,7 @@ export function Programs({ game }: { game: GameState }) {
           <option value="name">School</option>
         </select>
       </div>
-      {!seasons.length && <p className="muted">No seasons finished in this save yet: records fill in after the national championship.</p>}
+      {!seasons.length && <p className="muted kit-none">No seasons finished in this save yet: records fill in after the national championship.</p>}
       <div className="table-wrap">
         <table>
           <thead>
@@ -258,7 +258,7 @@ export function Coaching({ game }: { game: GameState }) {
       </section>
       <section className="stack tight">
         <h3>Coaching changes</h3>
-        {!moves.length && <p className="muted">No changes yet. Firings come the week after rivalry weekend; NFL teams call in January.</p>}
+        {!moves.length && <p className="muted kit-none">No changes yet. Firings come the week after rivalry weekend; NFL teams call in January.</p>}
         {moves.map((m, i) => <div key={i}><span className="muted">{shortDate(m.date)}</span> {m.text}</div>)}
       </section>
     </div>
@@ -303,7 +303,7 @@ export function SchoolProgram({ game, id }: { game: GameState; id: string }) {
       )}
       <section className="stack tight">
         <h3>Class of {year}{rank && commits.length ? ` · No. ${rank} nationally` : ""}</h3>
-        {!commits.length && <p className="muted">No commitments from the nation's top recruits yet.</p>}
+        {!commits.length && <p className="muted kit-none">No commitments from the nation's top recruits yet.</p>}
         {commits.map(([r, c]) => (
           <div key={r.id}>{r.name} <span className="muted">{stars(r.stars)} {r.position}, {r.home} · No. {r.rank}{c.signed ? " · signed" : ""}</span></div>
         ))}

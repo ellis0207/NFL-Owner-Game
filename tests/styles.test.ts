@@ -24,6 +24,7 @@ const PREFIX: Record<string, string[]> = {
   "rooms/league.css": ["lg-"],
   "rooms/game.css": ["ut-"],
   "lab.css": ["sl-", "district-labels"],
+  "frontdoor.css": ["fd-"],
 };
 
 /**

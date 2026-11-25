@@ -105,7 +105,7 @@ function Plan({ game, changed }: { game: GameState; changed: () => void }) {
     <div className="stack">
       <div className="stack tight">
         <h3>This week's assignments ({s.plan.length} of {MAX_ASSIGNMENTS})</h3>
-        {s.plan.length === 0 && <p className="muted">Nothing assigned yet. Build an assignment below, or add specific players from the Prospects tab or a prospect's page.</p>}
+        {s.plan.length === 0 && <p className="muted kit-none">Nothing assigned yet. Build an assignment below, or add specific players from the Prospects tab or a prospect's page.</p>}
         {s.plan.length > 0 && (
           <div className="table-wrap">
             <table>
@@ -278,7 +278,7 @@ function Reports({ game }: { game: GameState }) {
   const ui = useUi();
   const dc = draftClass(game.seed);
   const weeks = game.college!.scouting.weeks;
-  if (!weeks.length) return <p className="muted">No reports yet. The scouts file every Sunday once they have assignments.</p>;
+  if (!weeks.length) return <p className="muted kit-none">No reports yet. The scouts file every Sunday once they have assignments.</p>;
   return (
     <div className="stack">
       {weeks.map((w) => (

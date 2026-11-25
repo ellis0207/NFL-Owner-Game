@@ -50,7 +50,7 @@ export function PeopleTab({ game }: { game: GameState }) {
       <h3>Owners</h3>
       <ul>{owners.map((o) => <li key={o.owner + o.from}>{o.owner}, {o.from}-{o.to}: {o.w}-{o.l}{o.t ? `-${o.t}` : ""}, {o.playoffs} playoff trips, {o.titles} titles</li>)}</ul>
       <h3>Front office and coaches</h3>
-      {bios.length === 0 && <p className="muted">No seasons finished yet.</p>}
+      {bios.length === 0 && <p className="muted kit-none">No seasons finished yet.</p>}
       {bios.map((b) => (
         <div key={b.name + b.role + b.from}>
           <strong>{b.name}</strong>, {b.role} ({b.from}-{b.to ?? "now"}): {b.record}.
@@ -99,7 +99,7 @@ export function HindsightTab({ game }: { game: GameState }) {
           </div>
         );
       })}
-      {!h.drafts.length && !h.signings.length && !h.coaching.length && <p className="muted">Nothing to grade yet. The first coaching grade comes after this season's Super Bowl, and draft re-grades two seasons after each draft.</p>}
+      {!h.drafts.length && !h.signings.length && !h.coaching.length && <p className="muted kit-none">Nothing to grade yet. The first coaching grade comes after this season's Super Bowl, and draft re-grades two seasons after each draft.</p>}
     </div>
   );
 }

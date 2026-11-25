@@ -32,7 +32,7 @@ export function GamePlan({ game }: { game: GameState }) {
           <span className="muted">The coaches make the plan; you see it, you don't call it. Better coaches, a stronger analytics staff and a full week make better plans.</span>
         </div>
       )}
-      {!plan && <p className="muted">No game coming up.</p>}
+      {!plan && <p className="muted kit-none">No game coming up.</p>}
       <div className="panel stack tight">
         <h3>Fourth downs this season</h3>
         <div className="gx-row" style={{ gap: "1.2rem" }}>

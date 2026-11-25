@@ -60,7 +60,7 @@
 
 /* Word scales */
 .gx-scale { display: grid; grid-template-columns: minmax(0, auto) minmax(90px, 1fr) auto; align-items: center; gap: 0.25rem 0.6rem; }
-.gx-scale.compact { grid-template-columns: minmax(70px, 1fr) auto; }
+.gx-scale.compact { grid-template-columns: minmax(48px, 1fr) auto; }
 .gx-scale.compact .gx-scale-label { grid-column: 1 / -1; }
 .gx-scale-label { font-size: 0.8rem; color: var(--muted); }
 .gx-scale-bar { position: relative; display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: visible; }
@@ -69,7 +69,7 @@
 .gx-scale-step { flex: 1; position: relative; z-index: 1; background: transparent; border-right: 2px solid var(--panel); }
 .gx-scale-step:last-child { border-right: 0; }
 .gx-scale-mark { position: absolute; z-index: 2; top: -4px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--panel); }
-.gx-scale-word { font-weight: 600; font-size: 0.82rem; white-space: nowrap; overflow-wrap: normal; }
+.gx-scale-word { font-weight: 600; font-size: 0.82rem; overflow-wrap: normal; min-width: min-content; }
 
 /* Pips */
 .gx-pips { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; }
@@ -168,7 +168,9 @@
 td .gx-form > span { width: 12px; height: 15px; font-size: 0.55rem; border-radius: 2px; }
 td .gx-form { gap: 1px; }
 .gx-row > .gx-scale { flex: 1 1 180px; min-width: 0; max-width: 420px; }
-.gx-hud-sub .gx-scale { min-width: 120px; }
+.gx-hud-sub .gx-scale { min-width: 0; }
+/* In a narrow tile the word sits under the bar rather than beside it. */
+.gx-hud-sub .gx-scale.compact { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); }
 /* Timelines */
 .gx-line { list-style: none; margin: 0; padding: 0.4rem 0 0; display: flex; overflow-x: auto; }
 .gx-line li { position: relative; flex: 1 0 90px; display: grid; justify-items: center; text-align: center; gap: 0.15rem; padding: 0 0.25rem; }

@@ -157,3 +157,19 @@ export function Crossroads({ voices, options, stakes }: { voices: Voice[]; optio
     </div>
   );
 }
+
+/** A file picker drawn as an ordinary button, with the browser's own input hidden inside it. */
+export function FileButton({ label, onFile, disabled, id, accept = ".json,application/json" }: { label: ReactNode; onFile: (f: File) => void; disabled?: boolean; id?: string; accept?: string }) {
+  return (
+    <label className={`btn kit-file${disabled ? " kit-file-off" : ""}`}>
+      {label}
+      <input id={id} type="file" accept={accept} disabled={disabled}
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onFile(f); }} />
+    </label>
+  );
+}
+
+/** One saved game in a list: what it is on the left, what you can do with it on the right. */
+export function SaveRow({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+  return <div className="kit-saverow"><div className="kit-saverow-what">{children}</div>{actions && <div className="btn-row">{actions}</div>}</div>;
+}

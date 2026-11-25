@@ -130,7 +130,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
           <button className="btn small" onClick={() => go("Calendar")}>Open calendar</button>
         </div>
         <div className="agenda">
-          {items.length === 0 && <p className="muted">Nothing on the calendar.</p>}
+          {items.length === 0 && <p className="muted kit-none">Nothing on the calendar.</p>}
           {items.map((a) => {
             const outcome = eventOutcome(game, a.id);
             const done = outcome !== undefined;

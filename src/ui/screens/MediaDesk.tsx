@@ -107,7 +107,7 @@ export function OwnerDeskPanel({ game, changed }: { game: GameState; changed: ()
         </section>
         <section className="panel stack tight">
           <h3>Reports about us</h3>
-          {reports.length === 0 ? <p className="muted">No fresh reports about the club to answer.</p> : reports.map((r) => (
+          {reports.length === 0 ? <p className="muted kit-none">No fresh reports about the club to answer.</p> : reports.map((r) => (
             <div key={r.id} className="stack tight">
               <div><span className="muted">{shortDate(r.date)}</span> {r.headline ?? "A report"} <span className="muted">· {people.get(r.reporter)?.name}</span></div>
               <div className="btn-row">

@@ -145,7 +145,7 @@ export function CampScreen({ game, changed }: { game: GameState; changed: () => 
 
       <section className="panel stack tight">
         <h3>Discipline</h3>
-        {ours.length === 0 ? <p className="muted">Nothing on our side this year.</p> : ours.map((i, n) => (
+        {ours.length === 0 ? <p className="muted kit-none">Nothing on our side this year.</p> : ours.map((i, n) => (
           <span key={n}>{shortDate(i.date)} · {link(i.player)}: {i.text}.</span>
         ))}
         {suspended.length > 0 && (

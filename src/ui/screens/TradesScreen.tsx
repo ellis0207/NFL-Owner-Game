@@ -326,7 +326,7 @@ function Offers({ game, changed, counter }: { game: GameState; changed: () => vo
     <div className="stack tight">
       <p className="muted">Teams call when they want one of our players, or have one to move. Put players on the trade block to get more calls.</p>
       {msg && <div className="notice">{msg}</div>}
-      {open.length === 0 && <p className="muted">No offers on the table.</p>}
+      {open.length === 0 && <p className="muted kit-none">No offers on the table.</p>}
       {open.map((o) => {
         const check = checkTrade(game, o);
         return (
@@ -458,7 +458,7 @@ function LeagueTrades({ game }: { game: GameState }) {
   return (
     <div className="stack tight">
       <label><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Only our trades</label>
-      {rows.length === 0 && <p className="muted">No trades yet.</p>}
+      {rows.length === 0 && <p className="muted kit-none">No trades yet.</p>}
       {rows.map((t) => (
         <div key={t.id} className={`panel stack tight rb-ticket${t.blockbuster ? " big" : ""}`}>
           <span className="muted">{shortDate(t.date)}{t.blockbuster ? " · Blockbuster" : ""}{t.status === "agreed" ? " · Official at the new league year" : t.status === "voided" ? " · Fell through" : ""}</span>

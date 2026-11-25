@@ -72,7 +72,7 @@ export function StatsScreen({ game }: { game: GameState }) {
           ))}
         </div>
       </div>
-      {entries.length === 0 && <p className="muted">No games played yet in this part of the season.</p>}
+      {entries.length === 0 && <p className="muted kit-none">No games played yet in this part of the season.</p>}
 
       {entries.length > 0 && view === "leaders" && (
         <div className="split">

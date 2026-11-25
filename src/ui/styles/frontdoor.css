@@ -1,0 +1,56 @@
+/* The front door: the title menu and the new-game setup, over the stadium at
+   night. Tokens come from .title-page in base.css (always dark). Classes use
+   the fd- prefix. */
+.fd-title { gap: 1.75rem; }
+.fd-menu { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.fd-tile {
+  display: flex; align-items: center; gap: 0.85rem; min-height: 76px; padding: 0.85rem 1rem; text-align: left;
+  color: var(--ink); font: inherit; cursor: pointer; position: relative;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+  transition: transform 140ms, border-color 140ms, background-color 140ms;
+}
+.fd-tile:hover:not(:disabled):not(.disabled) { transform: translateY(-2px); border-color: var(--gold); }
+.fd-tile:focus-within, .fd-tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.fd-tile:disabled, .fd-tile.disabled { opacity: 0.55; cursor: not-allowed; }
+.fd-tile-icon { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 50%; color: var(--gold); background: rgb(242 193 78 / 0.12); border: 1px solid rgb(242 193 78 / 0.35); }
+.fd-tile-text { display: grid; gap: 0.15rem; min-width: 0; }
+.fd-tile-text b { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.05; }
+.fd-tile-text small { color: var(--muted); font-size: 0.82rem; line-height: 1.3; }
+.fd-primary { background: linear-gradient(135deg, #f2c14e, #d99a1e); border-color: #f2c14e; color: #1a1406; }
+.fd-primary .fd-tile-text small { color: rgb(26 20 6 / 0.75); }
+.fd-primary .fd-tile-icon { color: #1a1406; background: rgb(255 255 255 / 0.3); border-color: rgb(26 20 6 / 0.25); }
+.fd-primary:hover:not(:disabled) { border-color: #fff; }
+.fd-continue { border-color: rgb(242 193 78 / 0.5); }
+.fd-hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.fd-heading { font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin: 0 0 0.6rem; }
+.fd-note { color: var(--muted); margin: 0 0 0.5rem; }
+.fd-cloud { display: grid; }
+
+/* New game: numbered steps, club shields, a big start button in the club's colors. */
+.fd-step { display: flex; align-items: center; gap: 0.6rem; margin: 0; }
+.fd-step-num { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; flex: none; border-radius: 50%; font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: #1a1406; background: var(--gold); }
+.fd-picks { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.fd-pick {
+  width: 100%; display: flex; align-items: center; gap: 0.6rem; text-align: left; font: inherit; cursor: pointer;
+  color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 0.4rem 0.55rem; margin-bottom: 0.35rem; backdrop-filter: blur(8px);
+  transition: border-color 120ms, background-color 120ms;
+}
+.fd-pick:hover { border-color: rgb(255 255 255 / 0.4); }
+.fd-pick[aria-pressed="true"] { border-color: var(--gold); background: rgb(242 193 78 / 0.14); box-shadow: inset 0 0 0 1px var(--gold); }
+.fd-club { display: grid; gap: 0.9rem; align-content: start; overflow: hidden; position: relative; }
+.fd-club-band { position: absolute; inset: 0 0 auto 0; height: 6px; }
+.fd-club-head { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.3rem; }
+.fd-club-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.7rem; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; }
+.fd-club-head small { display: block; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.2rem; }
+.fd-start {
+  width: 100%; padding: 0.95rem 1rem; border-radius: 10px; border: 0; cursor: pointer; font-family: var(--font-display);
+  font-size: 1.35rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.35); transition: filter 120ms, transform 120ms;
+}
+.fd-start:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.fd-scale { display: inline-flex; gap: 4px; }
+.fd-scale button { width: 2rem; height: 2rem; border-radius: 50%; font: inherit; font-weight: 600; cursor: pointer; color: var(--muted); background: var(--sunk); border: 1px solid var(--rule); }
+.fd-scale button[aria-pressed="true"] { color: #1a1406; background: var(--gold); border-color: var(--gold); }
+.fd-goal { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 0.8rem; }

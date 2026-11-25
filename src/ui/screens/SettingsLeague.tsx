@@ -5,6 +5,7 @@ import { RULES } from "../../engine/league";
 import type { GameState } from "../../engine/types";
 import { download } from "../NewGame";
 import { IconHead } from "../gfx";
+import { FileButton } from "../kit";
 
 /** Settings: the save's history (a historical start and alternate history) and its custom league pack. */
 export function SettingsLeague({ game, changed }: { game: GameState; changed: () => void }) {
@@ -29,17 +30,15 @@ export function SettingsLeague({ game, changed }: { game: GameState; changed: ()
           <span><strong>Alternate history</strong><br /><span className="muted">On: the real timeline stops here (no more real rule changes, caps, moves, renames or club sales); only your league's own votes, moves and sales change things. Off: real history plays out from the season you're in.</span></span>
         </label>
       )}
-      <label className="field"><span className="label">Custom league pack</span>
-        <input type="file" accept=".json,application/json" onChange={async (x) => {
-          const f = x.target.files?.[0];
-          if (!f) return;
+      <div className="field"><span className="label">Custom league pack</span>
+        <div className="btn-row"><FileButton label="Choose a league pack" onFile={async (f) => {
           const c = checkPack(await f.text());
           if (!c.ok) return setNote(`Not applied: ${c.errors.join(" ")}`);
           setCustomLeague(game, c.pack!);
           rebind();
           setNote(`Applied "${c.pack!.name}".${c.warnings.length ? " " + c.warnings.join(" ") : ""}`);
-        }} />
-      </label>
+        }} /></div>
+      </div>
       {note && <span className={note.startsWith("Not") ? "bad" : "muted"}>{note}</span>}
       <div className="btn-row">
         <button className="btn small" onClick={() => download("league-pack.json", packTemplate())}>Download a template</button>

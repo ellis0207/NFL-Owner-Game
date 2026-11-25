@@ -46,7 +46,7 @@ export function SchoolPanel({ game, id, onClose }: { game: GameState; id: string
 
         <section className="stack tight">
           <h3>NFL prospects ({prospects.length})</h3>
-          {prospects.length === 0 && <p className="muted">No draft prospects on this roster.</p>}
+          {prospects.length === 0 && <p className="muted kit-none">No draft prospects on this roster.</p>}
           {prospects.length > 0 && (
             <div className="table-wrap">
               <table>
