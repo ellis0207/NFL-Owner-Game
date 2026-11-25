@@ -9,6 +9,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "The sidebar groups every page by part of the job: your Desk (today, the calendar, inbox and media), the Team, Roster building, the Draft, the Owner's office (including the Business page), the League, and the Game itself. Fold away a group you rarely use by clicking its name; a folded group still shows how many things in it are waiting on you.",
       "The search box finds pages as well as people: type \"cap\", \"tickets\" or a player's name. On a phone, the Menu button opens the same list, and the other pages in the section you're in sit just under the date.",
       "Rest the mouse on almost anything to see its card: a player (contract, injury, the coaches' read), a team (record, next game, coach, owner, cap space), a coach or executive, a game, the cap space in the header, or any money line (the payments behind it and how it stands against the budget). Move into a card and rest on a name there for that name's card. On a phone, press and hold; tap anywhere else to close.",
+      "The clock runs by the hour. The buttons at the top move it 1, 4 or 8 hours, a day, a week, or to your next kickoff. Games start at their real Eastern times: follow one live on the field view as the clock runs, or skip ahead and read the box score. Deadlines such as the cutdown and the trade deadline close at 4 PM.",
     ],
   },
   {
@@ -76,6 +77,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Veterans look after young players at their position, who then develop a little faster. The coaches build trust in players who play well and show up, and that trust tips close depth chart calls; a new head coach starts everyone over. Players who were paid or drafted to start notice when they sit.",
       "On the Development tab you set the practice load (heavier work grows young players faster and hurts more of them), rest days for veterans and the strength staff, and see the development plans you've set from players' pages. A position change takes weeks to learn and some players suit the new spot better than others.",
       "Medical: the first estimate of an injury is firmed up by tests a few days later. Long rehabs can hit setbacks. The doctors decide when a player is cleared; you can ask, they answer. Concussions are an independent consultant's call. Insurance on a big salary pays back most of it once a player has missed more than three straight weeks.",
+      "Every player's mood drifts each week toward what his situation earns: winning, his role, his pay and the coaches' trust. An unhappy starter plays below himself, and two or three of them split a room. When one of ours checks out, the head coach brings it to you: meet him yourself, back the coaches, or put him on the block.",
     ],
   },
   {
@@ -93,6 +95,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Season-ticket holders renew by how long they've had their seats, how the season went, the price change and how they feel about the club; the waiting list refills what they leave. If you don't set next season's prices, the business staff does. Suites and club seats renew when companies used them. Seat licenses raise cash once, cost trust that lasts for years, and some holders walk away.",
       "The Fans tab shows the market (its population, incomes and the other teams competing for the same money), where fans live, trust in the club, generational loyalty, post-game surveys and what each kind of customer is worth over the years. The economy moves demand, price sensitivity and what sponsors spend.",
       "Sponsors can buy exclusivity in their category for about a fifth more, where rights allow: league rules keep sportsbooks from being exclusive, and a stadium operator's pouring rights limit beer and soft-drink deals. Where the club controls the stadium, it negotiates the naming rights. After each season partners get a report of what they received; short of the deal, the club owes make-goods. Partners can fail to pay, and one in the news can be dropped.",
+      "Five days before each home game the revenue chief brings that game's price to your desk: cut it to fill the building, keep it, or raise it for a big draw. After the game the memo shows what sold against the forecast. Two weeks into each league year the spring budget review reruns last season at each department level, so you can see what marketing and game day really earned before you set this year's budget.",
     ],
   },
   {
@@ -164,6 +167,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Business > New stadium starts with feasibility studies: three sites, a demand forecast and a cost range. Pick a site, roof, seats, an ownership model and community benefits, then ask the public side for money (or pay for it all yourself and skip the vote).",
       "Voters weigh the tax per resident, the team's winning, fans' trust, the officials and the economy. Your own impact study, lobbying and commitments help; the city's budget office may debunk your numbers. A council votes, and a tax district goes to a referendum in November.",
       "If the vote fails: try again with a smaller ask, go private, renovate, or say other markets are on the table. Financing needs your share plus 5%. Fixed-price contracts cost more up front but leave most overruns with the builder. Building on the current site means a temporary home until opening day.",
+      "Stadium Lab draws any club's building in 3D. Change seats, the roof, suites, the outside or the parking and it prices only what changes, in today's dollars for your city, with the payback and the work schedule. Renovations are built in the offseason. Business > Grounds shows your lots and garages in 3D; build a garage or lease a lot and see what it would earn on a sold-out day before you commit.",
     ],
   },
   {
@@ -215,6 +219,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
       "Clubs change course after seasons that argue with their plan, new owners bring new approaches, and a club whose money runs short cuts spending, borrows and may look for a buyer. A few times a season an owner steps into football decisions. Scouts get hired away into bigger jobs, and coaches sometimes leave without warning.",
       "Owners > Realignment asks the owners to swap our division with another club's. After a move geography usually carries it; otherwise tradition makes it a hard vote.",
       "Reports shows cause and effect: big decisions, what followed right away and what they led to in later seasons, plus each league year's contracts, cap, books and rules as they closed. Signing memos carry the coaches' estimate of what a player adds in wins and playoff chances.",
+      "Every so often the commissioner floats expansion: two new clubs at once. Open markets bid, you take a stance or put in your own bid, and three quarters of the owners must agree. The new clubs join the nearest divisions, pick players in an expansion draft (you protect most of your roster), and draft first in their first year. Owners > Expansion follows it.",
     ],
   },
   {
