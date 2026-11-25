@@ -299,6 +299,17 @@ export function checkOffer(state: GameState, neg: Negotiation, t: OfferTerms): O
   if (state.settings.capRules === "real" && capChange > 0 && capChange > space) {
     return { ok: false, reason: `Not enough cap space: this adds ${money(capChange)} to the ${year} cap and we have ${money(Math.max(0, space))}.`, capChange, cashNow: t.signingBonus };
   }
+  // A CPU front office signs an extension only if the next two years' books still leave a way under the cap:
+  // talks opened weeks apart each passed the check when they started, and together they could leave a club
+  // tens of millions over with nothing left to cut on the day the league year opens.
+  if (state.settings.capRules === "real" && neg.kind === "extension" && neg.team !== state.userTeam) {
+    for (const y of [year + 1, year + 2]) {
+      const added = dealCapHit(deal, y) - dealCapHit(current, y);
+      if (added > 0 && added > lockedSpace(state, neg.team, y) + 0.03 * salaryCap(state, y)) {
+        return { ok: false, reason: `It doesn't fit the ${y} books.`, capChange, cashNow: t.signingBonus };
+      }
+    }
+  }
   return { ok: true, capChange, cashNow: t.signingBonus };
 }
 

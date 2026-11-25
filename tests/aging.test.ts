@@ -15,12 +15,12 @@ describe("skills age separately", () => {
     const state = fake();
     const before = { speed: trait(state, wr.id, "speed"), hands: trait(state, wr.id, "hands"), all: ability(state, wr.id) };
     tiltTraits(state, wr.id, yearTilt(34, 30, 0, 4));
-    expect(trait(state, wr.id, "speed")).toBeLessThan(before.speed - 2);
-    expect(trait(state, wr.id, "hands")).toBeGreaterThan(before.hands + 2);
+    expect(trait(state, wr.id, "speed")).toBeLessThan(before.speed - 0.5);
+    expect(trait(state, wr.id, "hands")).toBeGreaterThan(before.hands + 0.5);
     expect(ability(state, wr.id)).toBe(before.all);
     const offsets = Object.values(state.players[wr.id].tdev!);
     expect(Math.abs(offsets.reduce((s, v) => s + v, 0) / offsets.length)).toBeLessThan(0.02);
-    expect(bodyVsCraft(state, wr.id)).toBeGreaterThan(3);
+    expect(bodyVsCraft(state, wr.id)).toBeGreaterThan(0.8);
   });
 
   it("tilts harder with age and decline", () => {

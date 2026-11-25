@@ -57,8 +57,20 @@ export function yearTilt(age: number, line: number, growth: number, decline: num
   // Speed starts slipping a few years before the player as a whole does.
   const fade = 0.45 * Math.max(0, age - (line - 3));
   // When age does take its toll, the body takes most of it.
-  return learn + fade + 1.4 * Math.max(0, decline);
+  return TILT_SCALE * (learn + fade + 1.4 * Math.max(0, decline));
 }
+
+/**
+ * How hard the tilt runs, set against the real ratings the game starts from:
+ * across the 2026 league, players over 30 carry about 2 to 5 points more
+ * craft than body compared with players under 24 at the skill positions, and
+ * none at all on the lines. At full strength the tilt built 10 to 40 points
+ * over a career, so within a few seasons every veteran quarterback read
+ * defenses better than anyone in 2026 and every lineman blocked on technique
+ * alone: sacks and interceptions thinned out and ten-sack seasons all but
+ * disappeared. A quarter of it keeps the shape and matches the data.
+ */
+export const TILT_SCALE = 0.25;
 
 /**
  * Moves each trait's offset by the tilt: physical traits down, skill traits up,

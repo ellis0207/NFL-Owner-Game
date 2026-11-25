@@ -12,7 +12,7 @@ import { TEAM_BY_ID } from "./league";
 import { growthFactor } from "./training";
 import type { GameState } from "./types";
 import { liveIds } from "./live";
-import { tiltTraits } from "./aging";
+import { TILT_SCALE, tiltTraits } from "./aging";
 import { clearFitCache } from "./staff";
 import { topDrag } from "./careers";
 
@@ -47,7 +47,7 @@ export function weeklyDevelopment(state: GameState, played: Set<string>): void {
     change += gaussian(rng) * 0.07;
     p.dev = Math.round((dev + change) * 100) / 100;
     // A week's reps sharpen technique more than the body; the weekly toll of age falls on the legs (aging.ts).
-    const tilt = 0.35 * growth + 1.6 * decline;
+    const tilt = TILT_SCALE * (0.35 * growth + 1.6 * decline);
     if (tilt >= 0.01) tiltTraits(state, id, tilt);
   }
   clearFitCache();

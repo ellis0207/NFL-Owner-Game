@@ -41,7 +41,7 @@ import { consulting, invested } from "./treasury";
 import { agendaOrder, mandateScore, micromanagement, remember } from "./people";
 import { resolveStandingMemo } from "./standing";
 import { resolveLockerMemo } from "./lockerroom";
-import { resolveBudgetMemo, resolveGameCall } from "./ownercalls";
+import { resolveBudgetMemo, resolveFaPlan, resolveGameCall } from "./ownercalls";
 import { resolveExpansionMemo } from "./expansion";
 import { lapseInvestorMemo, resolveInvestorMemo } from "./investors";
 import { resolveWealthMemo } from "./wealth";
@@ -164,6 +164,7 @@ function carryOut(state: GameState, m: Memo, choice: number): string | null {
       if (p.locker) return resolveLockerMemo(state, m, choice);
       if (p.expansion) return resolveExpansionMemo(state, m, choice);
       if (p.gamePrice) return resolveGameCall(state, m, choice);
+      if (p.faPlan) return resolveFaPlan(state, m, choice);
       if (p.budget) return resolveBudgetMemo(state, m, choice);
       if (p.board) return resolveBoardMemo(state, m, choice);
       if (p.franchise) return resolveFranchiseMemo(state, m, choice);
@@ -758,6 +759,7 @@ function lapse(state: GameState, m: Memo): void {
   if (m.kind === "general" && m.payload?.crossroads) lapseCrossroads(state, m);
   if (m.kind === "general" && m.payload?.board) lapseBoardMemo(state, m);
   if (m.kind === "general" && m.payload?.franchise) carryOut(state, m, 1);
+  if (m.kind === "general" && m.payload?.faPlan) carryOut(state, m, 2);
   // Succession memos left unanswered: the heir goes on, a sale comes off the market, a family fight goes to court.
   const sp = m.kind === "general" ? m.payload?.succession : undefined;
   if (sp === "tenure") carryOut(state, m, 0);

@@ -106,8 +106,8 @@ export function playerReport(state: GameState, id: string): PlayerReport {
     // Age shows in the legs first; the craft can keep getting better (aging.ts).
     const gap = bodyVsCraft(state, id) + gaussian(rng) * sd * 0.5;
     const craft = CRAFT_WORDS[p.position] ?? "his technique";
-    if (gap >= 6) notes.push(`Has lost a step or two, but ${craft} is as good as it has ever been.`);
-    else if (gap >= 3) notes.push(`Not quite as quick as he was; ${craft} makes up for some of it.`);
+    if (gap >= 4) notes.push(`Has lost a step or two, but ${craft} is as good as it has ever been.`);
+    else if (gap >= 2) notes.push(`Not quite as quick as he was; ${craft} makes up for some of it.`);
     else if (age >= 31) notes.push("Starting to show some age.");
   }
   const durability = r.durability + gaussian(rng) * sd * 1.5;
