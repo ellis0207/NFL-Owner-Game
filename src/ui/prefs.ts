@@ -20,10 +20,12 @@ export interface Prefs {
   sound: "off" | "low" | "full";
   /** Season recaps already shown, as "seed:season", so each one opens once. */
   recaps: string[];
+  /** The last version whose "what's new" notice this viewer has seen. */
+  seenVersion: string;
 }
 
 const KEY = "nfl-owner-prefs";
-const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board", pinned: [], sound: "low", recaps: [] };
+const DEFAULTS: Prefs = { textSize: 1, contrast: "normal", hidden: [], followGames: true, animate: true, navClosed: [], theme: "auto", rosterView: "board", pinned: [], sound: "low", recaps: [], seenVersion: "" };
 
 export function readPrefs(): Prefs {
   try {

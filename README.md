@@ -11,6 +11,11 @@ decides how accurate those reports are.
 
 ## Status
 
+Version 1.0 (November 25, 2026). The Game section's About page has what's new,
+the data sources, what's made up and the credits; a notice points to it once
+after each update, and the title screen shows the version. It's an unofficial
+fan game, not affiliated with the NFL, the NFL Players Association or any club.
+
 Playable: pick a team, run camp and the cut to 53, play the full 2026
 season hour by hour through Super Bowl LXI, then run the 2027 offseason and the
 2027 draft. The clock moves 1, 4 or 8 hours, a day, a week or to your next

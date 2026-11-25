@@ -43,6 +43,7 @@ import { GameWeekScreen } from "./screens/GameWeekScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { GuideScreen } from "./screens/GuideScreen";
 import { AchievementsScreen } from "./screens/AchievementsScreen";
+import { AboutScreen } from "./screens/AboutScreen";
 import { SearchBox } from "./Search";
 import { CountUp } from "./kit";
 import { applyPrefs, readPrefs, writePrefs } from "./prefs";
@@ -414,6 +415,7 @@ export function GameShell({ game, changed, onLoad, onQuit }: Props) {
           {screen === "Settings" && <SettingsScreen game={game} changed={changed} />}
           {screen === "Guide" && <GuideScreen />}
           {screen === "Achievements" && <AchievementsScreen game={game} />}
+          {screen === "About" && <AboutScreen />}
           {screen === "Save" && <SaveScreen game={game} onLoad={onLoad} onQuit={onQuit} />}
           </div>
           </PageBoundary>

@@ -8,7 +8,7 @@ export const NAV = [
   { id: "draft", label: "Draft", pages: ["College", "Scouting", "Draft"] },
   { id: "office", label: "Owner's office", pages: ["Owner", "Ownership", "Front office", "Business", "Stadium Lab", "Reports", "Agreements", "Legal"] },
   { id: "league", label: "League", pages: ["Standings", "League", "Owners", "History"] },
-  { id: "game", label: "Game", pages: ["Settings", "Guide", "Achievements", "Save"] },
+  { id: "game", label: "Game", pages: ["Settings", "Guide", "Achievements", "Save", "About"] },
 ] as const;
 
 export type Screen = (typeof NAV)[number]["pages"][number];
@@ -59,6 +59,7 @@ export const PAGE_HINT: Record<Screen, string> = {
   Settings: "Play and display settings, alternate history and league packs",
   Guide: "How the rules and the money work",
   Achievements: "Milestones earned in this save",
+  About: "Version, what's new, credits and data sources",
   Save: "Save, load and quit",
 };
 
@@ -118,4 +119,5 @@ export const PAGE_TITLE: Partial<Record<Screen, string>> = {
   Legal: "Compliance and legal",
   League: "League scoreboard",
   Guide: "Owner's guide",
+  About: "About the game",
 };

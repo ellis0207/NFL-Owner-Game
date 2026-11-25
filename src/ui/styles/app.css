@@ -78,3 +78,5 @@
 @keyframes fb-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fb-rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .fb-toast, .fb-recap, .fb-recap-veil { animation: none; } }
+.fb-toast.fb-news { border-left-color: var(--team); }
+.fb-news .fb-toast-mark { font-family: var(--font-serif); font-style: italic; color: var(--team-ink); background: var(--team); }

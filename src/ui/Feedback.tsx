@@ -11,11 +11,12 @@ import type { GameState } from "../engine/types";
 import { CountUp } from "./kit";
 import { readPrefs, writePrefs } from "./prefs";
 import { cue } from "./sound";
+import { VERSION } from "./release";
 import type { Screen } from "./nav";
 
 export interface Toast {
   id: number;
-  kind: "win" | "loss" | "tie" | "achievement";
+  kind: "win" | "loss" | "tie" | "achievement" | "news";
   title: string;
   body: string;
   go?: Screen;
@@ -41,6 +42,15 @@ export function useFeedback(game: GameState) {
   const [recap, setRecap] = useState(false);
   const seen = useRef<Seen | null>(null);
   const next = useRef(1);
+
+  // Once per version, a notice pointing at what's new (not in a tutorial game, which is about the basics).
+  useEffect(() => {
+    const p = readPrefs();
+    if (p.seenVersion === VERSION || game.tutorial) return;
+    writePrefs({ ...p, seenVersion: VERSION });
+    setToasts((t) => [...t, { id: next.current++, kind: "news", go: "About", title: `What's new in version ${VERSION}`, body: "A quieter inbox, a fuller tutorial, sound and a lighter page. Click for the notes and credits." }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const key = `${game.seed}:${game.userTeam}`;
@@ -99,7 +109,7 @@ export function Toasts({ toasts, dismiss, go }: { toasts: Toast[]; dismiss: (id:
       {toasts.map((t) => (
         <div key={t.id} className={`fb-toast fb-${t.kind}`}>
           <button className="fb-toast-main" onClick={() => { if (t.go) go(t.go); dismiss(t.id); }}>
-            <span className="fb-toast-mark" aria-hidden="true">{t.kind === "achievement" ? "★" : t.kind === "win" ? "W" : t.kind === "loss" ? "L" : "T"}</span>
+            <span className="fb-toast-mark" aria-hidden="true">{t.kind === "achievement" ? "★" : t.kind === "news" ? "i" : t.kind === "win" ? "W" : t.kind === "loss" ? "L" : "T"}</span>
             <span className="fb-toast-text"><b>{t.title}</b><small>{t.body}</small></span>
           </button>
           <button className="fb-toast-close" aria-label="Dismiss" onClick={() => dismiss(t.id)}>×</button>
