@@ -297,7 +297,8 @@ export interface TeamData {
   city: string;
   name: string;
   conference: "AFC" | "NFC";
-  division: "East" | "North" | "South" | "West";
+  /** Central: the three-division conferences before the 2002 realignment. */
+  division: "East" | "North" | "South" | "West" | "Central";
   stadiumId: string;
   stadium: string;
   roof: string;

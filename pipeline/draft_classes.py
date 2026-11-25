@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE / "draft"))
 from schools import norm, slug  # noqa: E402
 from small_schools import CENTER, SMALL  # noqa: E402
 
-FIRST, LAST = 2002, 2026
+FIRST, LAST = 2000, 2026
 # Pro Football Reference club codes to the game's.
 TEAM_FIX = {"KAN": "KC", "SFO": "SF", "GNB": "GB", "NWE": "NE", "NOR": "NO", "TAM": "TB", "SDG": "LAC", "STL": "LA", "RAM": "LA",
             "LAR": "LA", "OAK": "LV", "RAI": "LV", "LVR": "LV", "SD": "LAC"}
@@ -63,7 +63,7 @@ def rating_history() -> dict:
             if r:
                 hist.setdefault(x["id"], {})[season] = (r["overall"], x["position"], r["traits"])
 
-    for y in range(2002, 2026):
+    for y in range(1999, 2026):
         p = json.load(gzip.open(ROOT / "data" / "packs" / f"{y}.json.gz"))
         add(y, p["players"], p["ratings"])
     add(2026, json.load(open(ROOT / "data/league-2026/players.json")), json.load(open(ROOT / "data/league-2026/hidden-ratings.json")))

@@ -194,6 +194,21 @@ interface Pairing { away: string; home: string; division: boolean }
  * Every team's 17 opponents for a season. `place` is each team's finish in its
  * division last season (1-4), which sets the same-place games.
  */
+/**
+ * Last season's finish, one to four in each division as it stands now. After a
+ * realignment (2002, or one the owners vote) or with a new club, the old places
+ * repeat or skip, so the clubs are ranked again by them, a new club last.
+ */
+function divisionPlaces(place: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const conf of ["AFC", "NFC"] as const) {
+    for (const div of DIVS) {
+      divTeams(conf, div).sort((a, b) => (place[a] ?? 99) - (place[b] ?? 99) || a.localeCompare(b)).forEach((t, i) => { out[t] = i + 1; });
+    }
+  }
+  return out;
+}
+
 export function seasonPairings(season: number, place: Record<string, number>, games = 17): Pairing[] {
   const out: Pairing[] = [];
   const add = (home: string, away: string, division = false) => out.push({ home, away, division });
@@ -282,6 +297,33 @@ function shuffle<T>(rng: Rng, xs: T[]): T[] {
  * end: an even number every week so everyone else can be paired. The real
  * 17-game pattern is kept as the league uses it.
  */
+/**
+ * The weeks clubs are off, one entry per open date. With an odd number of
+ * clubs (31 from 1999 to 2001) someone sits out every week, so each week takes
+ * an odd number of open dates and the rest go to the usual bye weeks.
+ */
+function byeSlots(rng: Rng, f: SeasonFormat): number[] {
+  const slots: number[] = [];
+  if (TEAMS.length % 2) {
+    const last = weeksOf(f);
+    const counts = Array.from({ length: last + 1 }, (_, w) => (w ? 1 : 0));
+    let left = TEAMS.length * f.byes - last;
+    const middle = Array.from({ length: Math.max(1, last - 8) }, (_, i) => 5 + i);
+    for (let k = 0; left > 1; k++) {
+      const order = shuffle(rng, middle);
+      for (const w of order) {
+        if (left <= 1) break;
+        counts[w] += 2;
+        left -= 2;
+      }
+    }
+    counts.forEach((n, w) => { for (let j = 0; j < n; j++) slots.push(w); });
+    return slots;
+  }
+  byeCountsFor(rng, f).forEach((n, i) => { for (let j = 0; j < n; j++) slots.push(5 + i); });
+  return slots;
+}
+
 function byeCountsFor(rng: Rng, f: SeasonFormat): number[] {
   const span = weeksOf(f) - 8;
   if (f.byes === 1 && span === 10 && TEAMS.length === 32) return shuffle(rng, [2, 4, 4, 2, 4, 4, 2, 4, 4, 2]);
@@ -305,13 +347,11 @@ function byeCountsFor(rng: Rng, f: SeasonFormat): number[] {
 function assignWeeks(rng: Rng, games: Pairing[], mustHome: Record<number, string[]>, f: SeasonFormat = { games: 17, byes: 1 }, apart = false): number[][] | null {
   const teams = TEAMS.map((t) => t.id);
   const last = weeksOf(f);
-  const byeCounts = byeCountsFor(rng, f);
   const bye: Record<string, number[]> = {};
   // Teams with a home game they have to play in a given week don't get that week off.
   const blocked = (t: string, w: number) => (mustHome[w] ?? []).includes(t);
   const order = shuffle(rng, teams);
-  const slots: number[] = [];
-  byeCounts.forEach((n, i) => { for (let j = 0; j < n; j++) slots.push(5 + i); });
+  const slots = byeSlots(rng, f);
   for (let round = 0; round < f.byes; round++) {
     for (const t of round ? shuffle(rng, teams) : order) {
       const mine = bye[t] ?? [];
@@ -327,7 +367,7 @@ function assignWeeks(rng: Rng, games: Pairing[], mustHome: Record<number, string
   // five-club divisions plays as many division games as it can that week.
   const standard = standardLeague();
   if (!standard) {
-    const w = matchWeek(rng, games, left, teams, last, new Set(), false, lastPlayed, true);
+    const w = matchWeek(rng, games, left, teams.filter((t) => !bye[t].includes(last)), last, new Set(), false, lastPlayed, true);
     if (!w) return null;
     for (const i of w) left.delete(i);
     weeks[last] = w;
@@ -485,7 +525,7 @@ export function buildSchedule(season: number, seed: number, place: Record<string
   const rng = makeRng(seed ^ (season * 7919));
   const format = opts.format ?? formatFor(season);
   const last = weeksOf(format);
-  const pairs = standardLeague() ? seasonPairings(season, place, format.games) : flexPairings(rng, format.games);
+  const pairs = standardLeague() ? seasonPairings(season, divisionPlaces(place), format.games) : flexPairings(rng, format.games);
   const kickoff = kickoffDate(season);
   const sunday1 = addDays(kickoff, 3);
   const turkey = thanksgiving(season);
@@ -651,6 +691,8 @@ function preseason(season: number, rng: Rng): ScheduledGame[] {
     const pairs: [string, string][] = [];
     while (pool.length) {
       const a = pool.shift()!;
+      // With an odd number of clubs the last one left sits the week out.
+      if (!pool.length) break;
       const ranked = pool.map((b, i) => ({ i, d: (met.has(key(a, b)) ? 5000 : 0) + miles(NFL_HQ[a], NFL_HQ[b]) * (0.5 + rng()) }))
         .sort((x, y) => x.d - y.d);
       pairs.push([a, pool.splice(ranked[0].i, 1)[0]]);

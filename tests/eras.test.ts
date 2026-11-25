@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Historical starts: each season's data pack (data/packs/<year>.json.gz, built
 // by pipeline/history_pack.py) replaces the 2026 files. The engine reads the
 // pack when its modules load, so every start gets fresh modules.
-const YEARS = Array.from({ length: 24 }, (_, i) => 2002 + i);
+const YEARS = Array.from({ length: 27 }, (_, i) => 1999 + i);
 const pack = (year: number) => JSON.parse(gunzipSync(readFileSync(new URL(`../data/packs/${year}.json.gz`, import.meta.url))).toString());
 
 async function engineFor(year: number | null) {
@@ -65,7 +65,9 @@ describe("historical starts", () => {
       expect(e.rulesFor(s).games).toBe(games);
       expect(e.rulesFor(s).playoffTeams).toBe(year < 2020 ? 12 : 14);
       // The 2022 Bills-Bengals game was never finished and isn't in the schedule.
-      expect(e.SCHEDULE.filter((g) => g.type === "REG").length).toBe(games * 16 - (year === 2022 ? 1 : 0));
+      // 31 clubs from 1999 to 2001, 32 after.
+      expect(e.TEAMS.length).toBe(year < 2002 ? 31 : 32);
+      expect(e.SCHEDULE.filter((g) => g.type === "REG").length).toBe(games * e.TEAMS.length / 2 - (year === 2022 ? 1 : 0));
       // The clubs were where they really were.
       expect(e.TEAM_BY_ID.LA.city).toBe(year < 2016 ? "St. Louis" : "Los Angeles");
       expect(e.TEAM_BY_ID.LAC.city).toBe(year < 2017 ? "San Diego" : "Los Angeles");
@@ -90,6 +92,39 @@ describe("historical starts", () => {
     expect(e.TEAM_BY_ID.LA.stadium).toBe("Los Angeles Memorial Coliseum");
     const last = e.history(s).seasons.at(-1)!;
     expect(Object.values(last.records).every((r) => r[0] + r[1] + (r[2] ?? 0) === 16)).toBe(true);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
+  it("a 2001 start: 31 clubs in six divisions, then Houston opens and the league realigns for 2002", async () => {
+    const e = await engineFor(2001);
+    const standings = await import("../src/engine/standings");
+    const coaches = await import("../src/engine/coaches");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(e.TEAMS.length).toBe(31);
+    expect(e.TEAM_BY_ID.HOU).toBeUndefined();
+    expect(standings.divisionStandings(s).map((d) => d.rows.length)).toEqual([5, 6, 5, 5, 5, 5]);
+    expect(s.expansion).toMatchObject({ stage: "approved", clubs: [{ id: "HOU", joins: 2002 }] });
+    expect(e.TEAM_BY_ID.SEA.stadium).toBe("Husky Stadium");
+    let guard = 0;
+    let seeds = s.seeds;
+    while (s.season === 2001 && guard++ < 400) {
+      e.advanceDay(s);
+      seeds = s.seeds ?? seeds;
+    }
+    // Three division winners and three wild cards a conference.
+    expect(seeds?.AFC.length).toBe(6);
+    expect(seeds?.NFC.length).toBe(6);
+    expect(s.season).toBe(2002);
+    expect(e.TEAMS.length).toBe(32);
+    expect(e.TEAM_BY_ID.HOU).toMatchObject({ city: "Houston", name: "Texans", conference: "AFC", division: "South", stadium: "Reliant Stadium" });
+    expect(standings.divisionStandings(s).map((d) => d.rows.length)).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
+    expect(e.TEAM_BY_ID.SEA).toMatchObject({ conference: "NFC", division: "West", stadium: "Seahawks Stadium" });
+    const hou = Object.values(coaches.staff(s).people).filter((p) => p.team === "HOU").map((p) => `${p.role} ${p.name}`);
+    expect(hou).toContain("HC Dom Capers");
+    expect(hou).toContain("GM Charley Casserly");
+    expect(s.expansion!.picks.filter((x) => x.club === "HOU").length).toBeGreaterThan(10);
+    expect(e.SCHEDULE.length).toBeGreaterThan(0);
+    expect(s.schedule!.filter((g) => g.type === "REG").length).toBe(256);
     expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
   }, 600_000);
 

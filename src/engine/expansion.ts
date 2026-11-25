@@ -32,7 +32,7 @@ import { off } from "./offseason";
 import { owner } from "./ownership";
 import { owners, setVotesToPass } from "./owners";
 import { staffRooms } from "./positionCoaches";
-import { distance, marketEconomics, markets, primeOriginals, type MarketData } from "./relocation";
+import { baseClub, distance, marketEconomics, markets, primeOriginals, type MarketData } from "./relocation";
 import { gaussian, rngFor } from "./rng";
 import { club } from "./rivals";
 import { logMove } from "./roster";
@@ -69,6 +69,8 @@ export interface ExpansionClub {
   /** The day it opened for business (staff hired, expansion draft). */
   activated?: string;
   place: [number, number];
+  /** Real people hired at the opening, by role (a real expansion: Houston in 2002). */
+  staff?: Partial<Record<StaffRole, string>>;
 }
 
 export interface ExpansionState {
@@ -145,6 +147,24 @@ function rememberMarkets(state: GameState): void {
 }
 
 function addClub(state: GameState, c: ExpansionClub): void {
+  // A club the 2026 data already knows (Houston, before 2002) comes in with its own building and market.
+  const base = baseClub(c.id);
+  if (base) {
+    const team: TeamData = {
+      id: c.id, city: c.city, name: c.name, conference: c.conference, division: c.division,
+      stadiumId: `${c.id}00`, stadium: base.stadium.name, roof: base.stadium.roof === "open" ? "outdoors" : base.stadium.roof === "retractable" ? "closed" : "dome",
+      surface: "grass", cap2026: { adjustedCap: salaryCap(state, 2026), deadMoney: 0 },
+    };
+    if (!TEAM_BY_ID[c.id]) TEAMS.push(team);
+    TEAM_BY_ID[c.id] = team;
+    METRO[c.id] = { ...base.metro };
+    MARKETS[c.id] = { ...base.market };
+    CLIMATE[c.id] = { ...base.climate };
+    PLACE[c.id] = [...base.place] as [number, number];
+    NFL_HQ[c.id] = [...base.place] as [number, number];
+    STADIUM_BY_TEAM[c.id] = { ...base.stadium, fixed: [...base.stadium.fixed], blackout: [...(base.stadium.blackout ?? [])] };
+    return;
+  }
   rememberMarkets(state);
   const m = MARKET_CACHE[c.market];
   if (!m) return;
@@ -388,7 +408,7 @@ function payShare(state: GameState): void {
   const x = expansion(state);
   if (x.shareYears <= 0 || x.shareLeft <= 0) return;
   const pay = Math.round(x.shareLeft / x.shareYears);
-  post(state, "expansion", pay, `Expansion fees: our share (installment ${FEE_YEARS + 1 - x.shareYears} of ${FEE_YEARS})`);
+  post(state, "expansion", pay, `Expansion fees: our share${x.shareYears > 1 ? ` (${x.shareYears - 1} more to come)` : " (the last installment)"}`);
   x.shareLeft -= pay;
   x.shareYears--;
 }
@@ -439,7 +459,7 @@ function protectMemo(state: GameState, c: ExpansionClub): void {
   const gm = Object.values(staff(state).people).find((p) => p.team === state.userTeam && p.role === "GM");
   addMemo(state, {
     kind: "general", area: "trades", from: gm ? `${gm.name}, general manager` : "General Manager", title: "Our protected list for the expansion draft",
-    problem: `On ${shortDate(activationDate(c))} the ${c.city} and the other new club pick from the players every club leaves exposed. We have to leave ${EXPOSE} of our players under contract next season unprotected; we can lose at most ${MAX_LOST}.`,
+    problem: `On ${shortDate(activationDate(c))} ${expansion(state).clubs.length > 1 ? `the ${c.city} and the other new club pick` : `the new ${c.city} club picks`} from the players every club leaves exposed. We have to leave ${EXPOSE} of our players under contract next season unprotected; we can lose at most ${MAX_LOST}.`,
     proposal: `Expose ${describe(state, l.staff)}.`,
     options: [
       { label: "The staff's list", effect: `Expose ${describe(state, l.staff)}: the players we'd miss least for what they cost.` },
@@ -458,17 +478,17 @@ function activationDate(c: ExpansionClub): string {
   return addDays(RULES.season === c.joins - 1 ? RULES.keyDates.newLeagueYear : `${c.joins}-03-11`, -14);
 }
 
-function hire(state: GameState, team: string, role: StaffRole, mean: number): void {
+function hire(state: GameState, team: string, role: StaffRole, mean: number, name?: string): void {
   const s = staff(state);
   const free = Object.values(s.people).filter((p) => !p.retired && !p.team && !p.role && (!p.job || p.job.kind === "assistant") && canHold(p, role))
     .sort((a, b) => reputation(state, b) - reputation(state, a));
-  let pick = (role === "HC" || role === "GM") ? free[0] : undefined;
+  let pick = name ? free.find((p) => p.name === name) : (role === "HC" || role === "GM") ? free[0] : undefined;
   if (!pick) {
     const r = rngFor(state.seed, `exp-staff:${team}:${role}`);
     const taken = new Set(Object.values(s.people).map((p) => p.name));
     const side = role === "OC" ? "offense" : role === "DC" ? "defense" : role === "HC" ? (r() < 0.5 ? "offense" : "defense") : null;
     const track = role === "GM" || role === "PRO" || role === "COL" ? "exec" : role === "TRN" ? "trainer" : role === "STC" ? "st" : "coach";
-    pick = newPerson(state, r, taken, { track, side, age: 38 + Math.floor(r() * 16), salt: `x${team}${role}`, mean, sd: 6, background: `Hired by the expansion ${TEAM_BY_ID[team].name}` });
+    pick = newPerson(state, r, taken, { track, side, age: 38 + Math.floor(r() * 16), salt: `x${team}${role}`, mean, sd: 6, background: `Hired by the expansion ${TEAM_BY_ID[team].name}`, ...(name ? { name } : {}) });
     s.people[pick.id] = pick;
   }
   install(state, pick.id, team, role, role === "HC" || role === "GM" ? 5 : 3, salaryFor(role, reputation(state, pick)));
@@ -480,7 +500,9 @@ function openClub(state: GameState, c: ExpansionClub): void {
   setVotesToPass(TEAMS.length);
   bindNationalShare(TEAMS.length);
   const s = staff(state);
-  for (const [role, mean] of [["GM", 68], ["HC", 68], ["OC", 64], ["DC", 64], ["STC", 63], ["TRN", 63], ["PRO", 63], ["COL", 63]] as [StaffRole, number][]) hire(state, c.id, role, mean);
+  // It opens after the season it didn't play: no year-end review of a staff that just arrived.
+  (s.ended ??= {})[c.id] = RULES.season;
+  for (const [role, mean] of [["GM", 68], ["HC", 68], ["OC", 64], ["DC", 64], ["STC", 63], ["TRN", 63], ["PRO", 63], ["COL", 63]] as [StaffRole, number][]) hire(state, c.id, role, mean, c.staff?.[role]);
   const hc = Object.values(s.people).find((p) => p.team === c.id && p.role === "HC")!;
   const oc = Object.values(s.people).find((p) => p.team === c.id && p.role === "OC");
   const dc = Object.values(s.people).find((p) => p.team === c.id && p.role === "DC");
@@ -654,6 +676,23 @@ export function expansionDaily(state: GameState): void {
   const day = activationDate(c);
   if (state.date === addDays(day, -21)) protectMemo(state, c);
   if (state.date >= day && !c.activated) open(state);
+}
+
+/**
+ * Real history: a club the league had already awarded at the start (Houston,
+ * October 1999, for 2002). It opens on the usual schedule, two weeks before
+ * the new league year, with its expansion draft; the fee is split among the
+ * clubs over the league years until then.
+ */
+export function awardRealClub(state: GameState, c: ExpansionClub, feeYears: number): void {
+  const x = expansion(state);
+  if (x.clubs.some((k) => k.id === c.id)) return;
+  x.clubs = [c];
+  x.stage = "approved";
+  x.fee = c.fee;
+  x.shareLeft = Math.round(c.fee / TEAMS.length);
+  x.shareYears = feeYears;
+  x.nextLook = c.joins + 8;
 }
 
 /** Test helper: float, award and approve expansion now, optionally with the owner's bid. */

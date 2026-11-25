@@ -75,11 +75,14 @@ function compare(a: Record_, b: Record_, division: boolean): number {
   return 0;
 }
 
+const DIVISION_ORDER = ["East", "North", "Central", "South", "West"] as const;
+
 export function divisionStandings(state: GameState): { conference: string; division: string; rows: Record_[] }[] {
   const table = standings(state);
   const out = [];
   for (const conference of ["AFC", "NFC"] as const) {
-    for (const division of ["East", "North", "South", "West"] as const) {
+    // Four divisions a conference since 2002; East, Central and West before.
+    for (const division of DIVISION_ORDER.filter((d) => TEAMS.some((t) => t.conference === conference && t.division === d))) {
       const rows = TEAMS.filter((t) => t.conference === conference && t.division === division)
         .map((t) => table[t.id])
         .sort((a, b) => compare(a, b, true));
@@ -97,7 +100,7 @@ export function seedConference(state: GameState, conference: "AFC" | "NFC"): str
   const wildcards = TEAMS.filter((t) => t.conference === conference && !winnerIds.has(t.id))
     .map((t) => table[t.id])
     .sort((a, b) => compare(a, b, false))
-    .slice(0, LEAGUE_RULES.playoffTeams / 2 - 4);
+    .slice(0, LEAGUE_RULES.playoffTeams / 2 - winners.length);
   // Under seeding by record, division winners are still in but a better wild card can pass them.
   if (LEAGUE_RULES.seedByRecord) return [...winners, ...wildcards].sort((a, b) => compare(a, b, false)).map((r) => r.team);
   return [...winners, ...wildcards].map((r) => r.team);
