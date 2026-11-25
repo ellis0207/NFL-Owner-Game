@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { addDays, shortDate } from "../../engine/dates";
 import { GAMES_BY_DATE, RULES, SCHEDULE, teamLabel } from "../../engine/league";
 import { injuryStatus } from "../../engine/injuries";
@@ -14,7 +15,8 @@ import { Score } from "../Score";
 import { gamesOn, latestPoll } from "../../engine/college";
 import { budgetLeft, weeklyCost } from "../../engine/scouting";
 import { money } from "../format";
-import { readPrefs } from "../prefs";
+import { readPrefs, writePrefs } from "../prefs";
+import { FirstSteps, showFirstSteps } from "../FirstSteps";
 import { CollegeScore } from "./CollegeScreen";
 import { openQuestions } from "../../engine/press";
 import { MEDIA_BY_ID } from "../../engine/outlets";
@@ -47,6 +49,7 @@ interface Props {
 
 export function TodayScreen({ game, go, changed, busy, play }: Props) {
   const ui = useUi();
+  const [, setTick] = useState(0);
   const hidden = readPrefs().hidden;
   const items = agenda(game);
   const yesterday = addDays(game.date, -1);
@@ -94,6 +97,9 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
         <HudStat icon="mail" label="Inbox" value={`${unreadCount} new`} tone={unreadCount > 12 ? "warn" : undefined} sub={unread[0]?.title} />
         <HudStat icon="money" label="Cash" value={money(cashBalance(game))} tone={cashBalance(game) < 0 ? "bad" : undefined} sub={<WordScale steps={FAN_STEPS} at={fanStep(game.pressure.fans)} label="Fans" compact />} />
       </Hud>
+      {!hidden.includes("First steps") && showFirstSteps(game) && (
+        <FirstSteps game={game} go={go} dismiss={() => { writePrefs({ ...readPrefs(), hidden: [...hidden, "First steps"] }); setTick((n) => n + 1); }} />
+      )}
       {isSeasonOver(game) && game.champion && (
         <section className="panel champion">
           <span className="label">{superBowlName(RULES.season)} champion</span>

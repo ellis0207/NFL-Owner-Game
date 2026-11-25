@@ -11,6 +11,9 @@ import { newGame } from "./season";
 import { DEFAULT_SETUP } from "./ownership";
 import { forceCrossroads } from "./crossroads";
 import { forceBoardMeeting } from "./boardroom";
+import { forceGameCall } from "./ownercalls";
+import { forceLockerMemo } from "./lockerroom";
+import { STADIUM_BY_TEAM } from "./stadiums";
 import { forceSale, investors, moodWord } from "./investors";
 import { culture, gmTrustWord } from "./culture";
 import { fanBase } from "./fans";
@@ -79,6 +82,7 @@ export const METRICS: Record<string, Metric> = {
   liquid: { label: "Your own cash (outside the club)", read: (s) => s.owner?.liquid ?? 0, show: money },
   value: { label: "What the club is worth", read: (s) => valuation(s, s.userTeam), show: money },
   emphasis: { label: "This week's practice emphasis", read: (s) => EMPH.indexOf(emphasis(s)), show: (n) => ["Balanced", "Game plan", "Fundamentals", "Recovery"][n] ?? "Balanced" },
+  labDesign: { label: "A renovation design on file", read: (s) => (s.stadiumLab?.drafts[STADIUM_BY_TEAM[s.userTeam].name] ? 1 : 0), show: (n) => (n ? "Yes" : "No") },
   would: { label: "Achievements a real save would have earned", read: (s) => wouldEarn(s).length, show: count },
 };
 
@@ -106,7 +110,7 @@ const decided = (s: GameState, _b: Record<string, number>, ref?: string) => !!re
 export const LESSONS: Lesson[] = [
   {
     id: "calendar", title: "The calendar", page: "Today",
-    how: "The clock runs by the hour. Each day Today lists what needs you: decisions, deadlines and problems. What you leave alone, your staff handles in their own way, and the clock moves on.",
+    how: "The clock runs by the hour: the buttons at the top move it 1, 4 or 8 hours, a day, a week, or to your next kickoff. Each day Today lists what needs you: decisions, deadlines and problems. What you leave alone, your staff handles in their own way, and the clock moves on.",
     task: "Press 1 day at the top of the page. Anything still waiting today is handled by your staff at midnight.",
     watch: "The date moves and Today refills. Anything you ignored was decided by your staff; the Inbox says how.",
     metrics: ["day", "cash"], done: moved("day"),
@@ -146,6 +150,14 @@ export const LESSONS: Lesson[] = [
     task: "Change the single-game price and save it.",
     watch: "The forecast for the next home game moves at once. After the game, the books show what really sold, and fans' trust shows whether they felt gouged.",
     metrics: ["price", "sold", "gate", "fans"], done: moved("price"),
+  },
+  {
+    id: "homeprice", title: "Pricing one game", page: "Today",
+    how: "Five days before each home game the revenue chief brings you that game's price: cut it to fill the building, keep it, or raise it for a big draw. Season tickets are already sold, so only single-game buyers see it. Hand pricing to the staff under Front office > Decision rights and they make this call for you.",
+    task: "The price call for your next home game is on the desk. Pick one of the options.",
+    watch: "The forecast moves now. After the game the memo shows what really sold against the forecast.",
+    metrics: ["sold", "gate", "fans"],
+    begin: (s) => forceGameCall(s), done: decided,
   },
   {
     id: "budget", title: "Department budgets", page: "Business", tab: "Budget",
@@ -213,6 +225,13 @@ export const LESSONS: Lesson[] = [
     metrics: ["parking", "cash"], done: moved("parking"),
   },
   {
+    id: "lab", title: "Stadium Lab", page: "Stadium Lab",
+    how: "Stadium Lab draws your building in 3D. Change seats, the roof, suites, the outside or the parking, and it prices only what changes, in today's dollars for your city. A renovation is built in the offseason and earns through the gate, premium seats and sponsors.",
+    task: "Change something in the renovation plan (seats, roof or suites) and look at the price and what it would earn. You don't have to build it.",
+    watch: "Your design is kept on file; the quote shows the cost, the years it takes to pay back and the work schedule.",
+    metrics: ["labDesign", "cash"], done: moved("labDesign"),
+  },
+  {
     id: "gameweek", title: "Game week practice", page: "Game week",
     how: "Each week the coaches practice with an emphasis: the game plan, fundamentals, recovery or a balance. Game plan helps Sunday, fundamentals helps growth, recovery cuts practice injuries.",
     task: "Pick an emphasis for the week.",
@@ -220,8 +239,16 @@ export const LESSONS: Lesson[] = [
     metrics: ["emphasis", "morale"], done: moved("emphasis"),
   },
   {
+    id: "locker", title: "The locker room", page: "Today",
+    how: "Every player's mood drifts each week toward what his situation earns: winning, his role, his pay, the coaches' trust. An unhappy starter plays below himself, and two or three of them split a room. When a starter checks out, the head coach brings it to you.",
+    task: "A starter is unhappy and the head coach has written it up. Meet him yourself, back the coaches, or put him on the block.",
+    watch: "His mood and the room's move now. If you went over the coaches' heads, the GM and coach notice.",
+    metrics: ["morale", "gmTrust"],
+    begin: (s) => forceLockerMemo(s), done: decided,
+  },
+  {
     id: "league", title: "The other owners", page: "Owners",
-    how: "Rules, schedules and money are voted on by the owners. Relationships decide votes: back a fellow owner's rule and he'll remember. The March meeting is when most of it happens.",
+    how: "Rules, schedules and money are voted on by the owners. Relationships decide votes: back a fellow owner's rule and he'll remember. The March meeting is when most of it happens. The Expansion tab follows any bid to add two clubs, and Realignment any vote to swap divisions.",
     task: "Read through the Owners page: your relations, the rules on the table and the clubs' profiles. Mark it done when you're ready.",
     watch: "Votes you lobby for later depend on the relations you see here.",
     metrics: ["value"],

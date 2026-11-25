@@ -141,11 +141,19 @@ function speakUp(state: GameState): void {
   }
 }
 
-function lockerMemo(state: GameState, id: string, why: MoodReason): void {
+/** The tutorial's locker-room call: the best-paid active starter has something on his mind. */
+export function forceLockerMemo(state: GameState): string | undefined {
+  const us = state.userTeam;
+  const id = Object.keys(state.players).filter((x) => state.players[x].team === us && (state.players[x].status === "active" || state.players[x].status === "camp"))
+    .sort((a, b) => (state.contracts[b]?.apy ?? 0) - (state.contracts[a]?.apy ?? 0))[0];
+  return id ? lockerMemo(state, id, worstReason(moodPull(state, id, us))).id : undefined;
+}
+
+function lockerMemo(state: GameState, id: string, why: MoodReason): Memo {
   const p = PLAYER_BY_ID[id];
   const hc = teamStaff(state.userTeam).HC?.name ?? "The head coach";
   const coachSide = why === "role" || why === "trust";
-  addMemo(state, {
+  return addMemo(state, {
     kind: "general", area: "coaching", from: `${hc}, head coach`, title: `${p.name} is unhappy`,
     problem: `${p.name} has gone quiet in meetings and his agent, ${agentFor(id).name}, has called twice. It's about ${REASON_TEXT[why]}. ` +
       "Players notice when a starter checks out, and it spreads if nobody deals with it.",

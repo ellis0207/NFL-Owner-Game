@@ -32,6 +32,13 @@ describe("tutorial", () => {
         expect(t.ready).toBe(true);
         expect(t.rows.find((r) => r.label.startsWith("Single-game"))!.dir).toBe("up");
       }
+      if (id === "homeprice" || id === "locker") {
+        // The price call and the unhappy starter are put on the desk; deciding them finishes the lesson.
+        const m = s.tutorial!.marks[id].ref!;
+        expect(s.office!.memos.find((x) => x.id === m)?.status).toBe("open");
+        expect(decideMemo(s, m, 0)).toBeNull();
+        expect(lessonView(s, i).ready).toBe(true);
+      }
       if (id === "coach") { expect(backCoach(s)).toBeNull(); expect(lessonView(s, i).ready).toBe(true); }
       if (id === "board") {
         const m = s.tutorial!.marks.board.ref!;

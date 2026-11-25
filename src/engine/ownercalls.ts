@@ -64,11 +64,10 @@ function nextGameToPrice(state: GameState): ScheduledGame | undefined {
   return SCHEDULE.find((g) => g.home === state.userTeam && !g.neutral && (g.type === "PRE" || g.type === "REG") && g.date === day && !state.results[g.id]);
 }
 
-function gameCall(state: GameState): void {
-  const g = nextGameToPrice(state);
+function gameCall(state: GameState, g = nextGameToPrice(state), force = false): Memo | undefined {
   if (!g) return;
   if (openMemos(state).some((m) => m.payload?.gamePrice === g.id)) return;
-  const how = mode(state, "pricing");
+  const how = force ? "decide" : mode(state, "pricing");
   const opts = gameChoices(state, g);
   const t = tix(state);
   if (how === "delegate") {
@@ -82,7 +81,7 @@ function gameCall(state: GameState): void {
   const label = (o: (typeof opts)[number]) => (o.mult === round(now) ? "Keep today's price" : `${o.mult > now ? "Raise" : "Cut"} this game ${pct(o.mult / now)}`);
   const effect = (o: (typeof opts)[number]) => `Forecast: about ${o.sold.toLocaleString("en-US")} of ${o.capacity.toLocaleString("en-US")} seats sold and ${money(o.tickets)} in ticket money` +
     (o.mult > 1.2 ? ". Fans notice prices this high." : o.sold < o.capacity * 0.9 ? ". Empty seats show on TV." : ".");
-  addMemo(state, {
+  return addMemo(state, {
     kind: "general", area: "pricing", from: signer(state, "CRO"), title: `Tickets for ${opp} on ${shortDate(g.date)}`,
     problem: `${g.type === "PRE" ? "A preseason game" : "A regular-season home game"} against the ${opp}. ` +
       `At today's prices single-game demand runs about ${Math.round(f.heat * 100)}% of the seats we have left for sale${singles ? ` (about ${singles.toLocaleString("en-US")} after season tickets)` : ""}.`,
@@ -93,6 +92,12 @@ function gameCall(state: GameState): void {
     recommend: 0, deadline: addDays(state.date, LEAD - 1), ifLate: "Today's single-game price stays.",
     payload: { gamePrice: g.id, mults: opts.map((o) => o.mult), forecasts: opts.map((o) => o.tickets) },
   });
+}
+
+/** The tutorial's price call: the next home game still to play, on the desk now whatever the delegation. */
+export function forceGameCall(state: GameState): string | undefined {
+  const g = SCHEDULE.find((x) => x.home === state.userTeam && !x.neutral && (x.type === "PRE" || x.type === "REG") && x.date > state.date && !state.results[x.id]);
+  return gameCall(state, g, true)?.id;
 }
 
 /** The owner's answer to a home-game price call (memos.ts hands it here). */

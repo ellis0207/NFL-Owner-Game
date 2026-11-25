@@ -7,7 +7,7 @@ import { applyDifficulty, DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from ".
 import { readPrefs, writePrefs, type Prefs } from "../prefs";
 import { IconHead } from "../gfx";
 
-export const TODAY_PANELS = ["Decision queue", "Open problems", "Staff", "Business", "Media", "Inbox"] as const;
+export const TODAY_PANELS = ["First steps", "Decision queue", "Open problems", "Staff", "Business", "Media", "Inbox"] as const;
 
 const SCOUTING: Record<NonNullable<Settings["scouting"]>, string> = {
   sharp: "Sharper reads: your scouts and coaches miss by less. Easier.",

@@ -108,13 +108,17 @@ forecast and range when set to confirmed facts only, and in a sandbox set to
 everything shows reporters' real accuracy and sources.
 
 The tutorial (title screen) is a practice game that walks through the job in
-19 lessons: the calendar, a crossroads call, the roster and cap, contracts,
-trades, ticket prices, budgets, game day, backing the coach, scouting, the
-press, the board, executive bonuses, your own money, parking, practice
-emphasis, the other owners, settings and pins. Each lesson asks for one
+22 lessons: the calendar and the hourly clock, a crossroads call, the roster
+and cap, contracts, trades, ticket prices, a home game's price call, budgets,
+game day and the live game, backing the coach, a player's complaint from the
+locker room, scouting, the press, the board, executive bonuses, your own
+money, parking, a Stadium Lab design, practice emphasis, the other owners and
+expansion, settings and pins. Each lesson asks for one
 decision and shows what it moved, before, when you finished and now, so the
 effects that take days show up as you play on. It isn't saved and earns no
-achievements.
+achievements. A new game's Today also carries a "Your first season" card
+with five first steps (decide a memo, set practice, price a home game, talk to
+the press, watch the opener), hidden once they're done or from Settings.
 
 Difficulty (new game or Settings) runs from Rookie owner to Hall of Fame owner.
 The football and the money stay real at every level; harder levels make other
