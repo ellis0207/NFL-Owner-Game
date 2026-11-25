@@ -54,3 +54,9 @@
 .fd-scale button { width: 2rem; height: 2rem; border-radius: 50%; font: inherit; font-weight: 600; cursor: pointer; color: var(--muted); background: var(--sunk); border: 1px solid var(--rule); }
 .fd-scale button[aria-pressed="true"] { color: #1a1406; background: var(--gold); border-color: var(--gold); }
 .fd-goal { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.4rem 0.8rem; }
+
+/* The title screen's foot: what's new in this version, folded, and where the data comes from. */
+.fd-news { margin-top: 1.25rem; border-top: 1px solid var(--rule); padding-top: 0.85rem; }
+.fd-news summary { cursor: pointer; font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.fd-news ul { margin: 0.7rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.45rem; color: var(--ink); line-height: 1.45; font-size: 0.92rem; }
+.fd-credit { margin: 0.9rem 0 0; color: var(--muted); font-size: 0.8rem; line-height: 1.4; }

@@ -6,6 +6,7 @@ import type { GameState } from "../engine/types";
 import { parseSaveFile } from "../save/codec";
 import { connectCloud, SLOTS, type Cloud, type SlotInfo, type Slot } from "../save/cloud";
 import { peekAutosave, readAutosave, type AutosaveInfo } from "../save/local";
+import { SOURCES, VERSION, WHATS_NEW } from "./release";
 
 export function TitleScreen({ onNew, onLoad, onTutorial }: { onNew: () => void; onLoad: (s: GameState) => void; onTutorial: () => void }) {
   const [auto, setAuto] = useState<AutosaveInfo | null>(null);
@@ -91,6 +92,11 @@ export function TitleScreen({ onNew, onLoad, onTutorial }: { onNew: () => void; 
             </div>
           </section>
         )}
+        <details className="fd-news">
+          <summary>What's new in version {VERSION}</summary>
+          <ul>{WHATS_NEW.map((n) => <li key={n.title}><b>{n.title}.</b> {n.text}</li>)}</ul>
+        </details>
+        <p className="fd-credit">Version {VERSION}. Real data from {SOURCES.slice(0, 3).map((s) => s.name).join(", ")} and more; the About page in the Game section lists them all. An unofficial fan game, not affiliated with the NFL.</p>
       </div>
     </div>
   );

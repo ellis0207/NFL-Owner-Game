@@ -267,3 +267,6 @@ Calibration targets (what "healthy" looked like when each system shipped):
    memory) with its existing capabilities and the `anim/`, `art/`, `lab/` and `packs/` files in its files map. Don't print or Read the 5 MB page. The build drops player and contract fields the game never reads (`slimPlayers` in `vite.config.ts`) and ships data JSON over 40 KB gzipped (`packedJson`, inflated at load by `src/data/inflate.ts` with top-level await).
 4. Update README.md (Status and Code layout) only for what changed, and the
    project memory for anything a later step needs.
+5. For a release worth announcing, bump `VERSION` and rewrite `WHATS_NEW` in
+   `src/ui/release.ts` (the About page, the title screen and a one-time notice
+   read it; `SOURCES`/`MADE_UP` there are the credits, so add a new data source).
