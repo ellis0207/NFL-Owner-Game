@@ -5,9 +5,9 @@ import { cancelGame, lockedOut } from "./labor";
 import { businessGame } from "./business";
 import { superBowlName } from "./calendar";
 import { DAY, gameLength, minuteOf } from "./clock";
-import { addDays, daysBetween } from "./dates";
+import { addDays, daysBetween, shortDate } from "./dates";
 import { gameDayOps } from "./gameops";
-import { news, send } from "./inbox";
+import { digest, news, send } from "./inbox";
 import { PLAYER_BY_ID, TEAM_BY_ID } from "./league";
 import { knownReturn } from "./medical";
 import { depthChart, gameDayElevations } from "./roster";
@@ -39,8 +39,7 @@ export function kickoffGame(state: GameState, g: ScheduledGame): boolean {
     for (const team of [m.away, m.home]) {
       const up = gameDayElevations(state, team);
       if (team === state.userTeam && up.length) {
-        send(state, "staff", `${teamStaff(team).HC?.name ?? "Head Coach"}, head coach`, "Practice squad elevations",
-          `We're thin, so I elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for today's game.`);
+        digest(state, "roster", `Elevated ${up.map((id) => `${PLAYER_BY_ID[id].position} ${PLAYER_BY_ID[id].name}`).join(" and ")} from the practice squad for the ${shortDate(state.date)} game.`);
       }
     }
   }

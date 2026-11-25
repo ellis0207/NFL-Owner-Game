@@ -62,7 +62,9 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
   })());
 
   const waitingOnUs = decisionQueue(game).length;
-  const unreadCount = game.inbox.filter((i) => !i.read).length;
+  // Like the sidebar badge, the tile counts the past week's unread mail: older routine letters aren't news.
+  const weekAgo = addDays(game.date, -7);
+  const unreadCount = game.inbox.filter((i) => !i.read && i.date >= weekAgo).length;
   const nextLine = next && (() => {
     const m = matchup(game, next)!;
     const opp = m.home === game.userTeam ? `${teamLabel(m.away)} at home` : `at ${teamLabel(m.home)}`;
@@ -89,7 +91,7 @@ export function TodayScreen({ game, go, changed, busy, play }: Props) {
             </span>
           </div>
         )}
-        <HudStat icon="mail" label="Inbox" value={`${unreadCount} unread`} tone={unreadCount > 20 ? "warn" : undefined} sub={unread[0]?.title} />
+        <HudStat icon="mail" label="Inbox" value={`${unreadCount} new`} tone={unreadCount > 12 ? "warn" : undefined} sub={unread[0]?.title} />
         <HudStat icon="money" label="Cash" value={money(cashBalance(game))} tone={cashBalance(game) < 0 ? "bad" : undefined} sub={<WordScale steps={FAN_STEPS} at={fanStep(game.pressure.fans)} label="Fans" compact />} />
       </Hud>
       {isSeasonOver(game) && game.champion && (

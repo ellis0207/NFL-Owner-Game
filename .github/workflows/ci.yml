@@ -29,3 +29,6 @@ jobs:
       # fails on a page error, a broken panel or a page wider than the screen.
       - run: npm install --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
       - run: npx vite-node tests/ui-tour.ts ui-tour --quick
+      # A save five seasons in and a historical start, where long careers and old leagues show up.
+      - run: npx vite-node tests/ui-tour.ts ui-tour-late pr127-2030-11-17 --quick
+      - run: npx vite-node tests/ui-tour.ts ui-tour-2011 pr55-2011-07-31 --quick

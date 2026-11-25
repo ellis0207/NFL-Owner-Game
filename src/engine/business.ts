@@ -26,7 +26,7 @@ import { hostBlackout, hostEffects } from "./hosting";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { dealOf, dealYear, leagueYear, leagueYearStart, salaryCap } from "./contracts";
 import { cfbDate, COLLEGE_SCHEDULE, COLLEGE_TEAM, COLLEGE_TEAMS } from "./collegeData";
-import { money, news, send } from "./inbox";
+import { money, news, send, sendFiled } from "./inbox";
 import { BASE_SEASON, onSeasonChange, RULES, SCHEDULE, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { FIRST_NAMES, LAST_NAMES } from "./names";
 import { addStory, mediaState } from "./outlets";
@@ -920,7 +920,7 @@ function offerEvents(state: GameState): void {
   b.events.push(ev);
   b.events.sort((a, c) => a.date.localeCompare(c.date));
   const share = s.eventShare;
-  send(state, "business", businessChief(state), `Booking request: ${KINDS[k]!.label.toLowerCase()}`,
+  sendFiled(state, "business", businessChief(state), `Booking request: ${KINDS[k]!.label.toLowerCase()}`,
     `${promoter} wants ${s.name} on ${weekday(date)}, ${shortDate(date)} for ${name}. They estimate the stadium nets ${money(low)} to ${money(high)} after costs` +
     (share < 1 ? `, and under our ${s.structure === "coowned" ? "partnership" : "lease"} we keep ${Math.round(share * 100)}% of that` : "") + ". " +
     (s.structure === "coowned" ? `The ${TEAM_BY_ID[s.partner!].name} have to sign off too. ` : s.structure === "publicTeam" ? `${s.owner} has to approve the date. ` : "") +

@@ -1234,6 +1234,8 @@ export interface GameState {
   /** Game-day operations checks at the owner's home games, and officiating questions put to the league (gameops.ts). */
   gameOps?: GameOpsState;
   inbox: InboxItem[];
+  /** Routine staff notes (roster moves, medical follow-ups) held for the next weekly report instead of a letter each (inbox.ts `digest`). */
+  digest?: { date: string; desk: "roster" | "medical"; line: string }[];
   /** Short league news feed, newest first. */
   /** The league wire; `topic` (engine/inbox.ts NewsTopic) is absent on lines from older saves. */
   news: { date: string; text: string; topic?: string }[];

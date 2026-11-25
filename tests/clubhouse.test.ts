@@ -109,11 +109,11 @@ describe("the medical side", () => {
       if (days < 6 || injury.seasonEnding) continue;
       expect(injury.est && injury.testsOn).toBeTruthy();
       expect(knownReturn(s, injury)).toBe(injury.est);
-      const inbox = s.inbox.length;
+      s.digest = [];
       s.date = injury.testsOn!;
       medicalDaily(s);
-      expect(s.inbox.length).toBeGreaterThan(inbox);
-      expect(s.inbox.some((m) => m.title.endsWith("test results"))).toBe(true);
+      // The result waits for the GM's weekly report as a medical note.
+      expect(s.digest.some((d) => d.desk === "medical" && d.line.startsWith("Follow-up tests"))).toBe(true);
       expect(knownReturn(s, injury)).toBe(injury.returnDate);
       found = true;
       break;

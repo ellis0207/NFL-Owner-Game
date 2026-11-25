@@ -12,7 +12,7 @@ import { draftClass } from "./prospects";
 import { schoolName } from "./collegeData";
 import { addDays, daysBetween, shortDate, weekday } from "./dates";
 import { DAY_ROUNDS, draftDayOf } from "./draft";
-import { money, news, send } from "./inbox";
+import { money, news, send, sendFiled } from "./inbox";
 import { GAMES_BY_DATE, HIDDEN_STAFF, PLAYER_BY_ID, RULES, TEAM_BY_ID, TEAMS, teamLabel } from "./league";
 import { marketView } from "./market";
 import { pick, surname } from "./media";
@@ -1082,5 +1082,5 @@ export function pressDaily(state: GameState): void {
   };
   // Older history drops off the end.
   m.questions.unshift(q);
-  send(state, "media", `${q.by}, ${outlet.name}`, "Request for comment", `${a.context}\n\n"${q.question}"\n\nAnswer on the Media page by ${shortDate(q.expires)}, or the team will decline to comment.`);
+  sendFiled(state, "media", `${q.by}, ${outlet.name}`, "Request for comment", `${a.context}\n\n"${q.question}"\n\nAnswer on the Media page by ${shortDate(q.expires)}, or the team will decline to comment.`);
 }
