@@ -58,12 +58,20 @@ export interface SeasonLine {
   line: StatLine;
 }
 
-let cache: { key: string; byType: Partial<Record<GameType, Record<string, SeasonLine>>> } | null = null;
+let cache: { box: object; n: number; byType: Partial<Record<GameType, Record<string, SeasonLine>>> } | null = null;
+// Box scores added to each season's set (gametime.ts calls `noteBox` at every whistle). Counting the keys
+// on every call was most of the cost of the market's production reads.
+const added = new WeakMap<object, number>();
+
+/** A game's box score was just booked. */
+export function noteBox(state: GameState): void {
+  added.set(state.box, (added.get(state.box) ?? 0) + 1);
+}
 
 /** Season totals for every player, for one part of the season. */
 export function seasonTotals(state: GameState, type: GameType): Record<string, SeasonLine> {
-  const key = `${state.id}:${Object.keys(state.box).length}`;
-  if (cache?.key !== key) cache = { key, byType: {} };
+  const n = added.get(state.box) ?? 0;
+  if (cache?.box !== state.box || cache.n !== n) cache = { box: state.box, n, byType: {} };
   const hit = cache.byType[type];
   if (hit) return hit;
   const out: Record<string, SeasonLine> = {};

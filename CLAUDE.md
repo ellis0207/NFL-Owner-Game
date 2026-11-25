@@ -23,7 +23,7 @@ parts a task touches. README.md is the player-facing description of features.
 ```
 npm test                    # all tests, dot output (~90 s with warm fixtures, ~3 min cold)
 npx vitest run tests/<file> # one area while iterating
-npm run build               # tsc + dist/index.html + dist/game.html (the claude.ai page, ~8 MB)
+npm run build               # tsc + dist/index.html + dist/game.html (the claude.ai page, ~5 MB)
 npx vite-node tests/<x>-report.ts [args]   # calibration reports (run from the repo root)
 ```
 
@@ -264,6 +264,6 @@ Calibration targets (what "healthy" looked like when each system shipped):
 1. Branch, build, iterate with targeted tests and quick reports.
 2. `npm test` and `npm run build` once, then open the PR, merge it yourself.
 3. Republish `dist/game.html` to the same artifact URL (kept in project
-   memory) with its existing capabilities and the `anim/`, `art/`, `lab/` and `packs/` files in its files map. Don't print or Read the 8 MB page. The build drops player fields the game never reads (`slimPlayers` in `vite.config.ts`).
+   memory) with its existing capabilities and the `anim/`, `art/`, `lab/` and `packs/` files in its files map. Don't print or Read the 5 MB page. The build drops player and contract fields the game never reads (`slimPlayers` in `vite.config.ts`) and ships data JSON over 40 KB gzipped (`packedJson`, inflated at load by `src/data/inflate.ts` with top-level await).
 4. Update README.md (Status and Code layout) only for what changed, and the
    project memory for anything a later step needs.

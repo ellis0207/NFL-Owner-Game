@@ -268,6 +268,10 @@ export function startNewSeason(state: GameState): void {
   state.results = {};
   state.box = {};
   state.pbp = {};
+  // Talks that ended more than a year ago are history nobody reads again; the save stops carrying them.
+  for (const [id, n] of Object.entries(state.negotiations)) {
+    if (n.status !== "open" && n.opened < addDays(state.date, -365)) delete state.negotiations[id];
+  }
   state.playoffTeams = {};
   delete state.seeds;
   delete state.champion;

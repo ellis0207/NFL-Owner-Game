@@ -533,7 +533,8 @@ export function signReplacement(state: GameState, team: string, pos: Position): 
   const ps = practiceSquad(state, team);
   const budget = state.settings.capRules === "real" ? capSummary(state, team).space - 500_000 : Infinity;
   const fromPs = bestAvailable(state, team, pos, ps);
-  const street = bestAvailable(state, team, pos, freeAgents(state).filter((id) => freeAgentPrice(state, id) <= budget));
+  // Price only the players at the position: pricing every free agent was most of a season's roster upkeep.
+  const street = bestAvailable(state, team, pos, freeAgents(state).filter((id) => PLAYER_BY_ID[id].position === pos && freeAgentPrice(state, id) <= budget));
   const other = bestAvailable(state, team, pos, poachable(state, team));
   const gm = staffEffects(team).gmEval;
   const view = (id: string | undefined) => (id ? perceivedAbility(state, id, `gm:${team}`, gm) : -Infinity);
