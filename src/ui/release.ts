@@ -1,11 +1,12 @@
 // The game's version, what changed in it, and where its facts come from. The
 // About page, the title screen and the one-time "what's new" notice read this.
 
-export const VERSION = "1.0";
+export const VERSION = "1.0.1";
 export const RELEASED = "2026-11-25";
 
 /** What changed in this version, in the words the About page and the title screen show. */
 export const WHATS_NEW: { title: string; text: string }[] = [
+  { title: "Stats that hold for a decade", text: "Draft classes now turn out like real ones: first-rounders mostly become starters, day-three picks rarely do, and busts fade. Each position stays on the league's own scale, so 1,000-yard seasons, big sack years and league leaders look like NFL ones ten seasons in. Expanded leagues also schedule and reload reliably." },
   { title: "A quieter inbox", text: "Routine roster moves, practice-squad calls and medical follow-ups now come in the GM's weekly report and the Monday staff notes, so the inbox holds what needs you." },
   { title: "One look, front to back", text: "The title screen, new-game setup, owner's guide and sim overlay match the rest of the game, and phone layouts no longer break words." },
   { title: "A first hour that teaches itself", text: "The tutorial runs 22 lessons, now covering the hourly clock, live games, home-game prices, the locker room and the Stadium Lab. A new game gets a \"Your first season\" card on Today." },

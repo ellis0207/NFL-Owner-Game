@@ -257,6 +257,9 @@ export function fourthDownAdvice(state: GameState, gameId: string, dist: number,
 // ---- Trends ----
 
 /** At season's end the league moves toward what worked, and defenses answer. */
+/** The league's usual gap in EPA a play between passing and rushing (see updateTrends). */
+export const USUAL_EPA_GAP = 0.07;
+
 export function updateTrends(state: GameState): void {
   const a = analytics(state);
   const all = emptyAdv();
@@ -265,10 +268,15 @@ export function updateTrends(state: GameState): void {
   const passEpa = perPlay(all.pe, all.pn);
   const rushEpa = perPlay(all.re, all.rn);
   const prev = a.trends.at(-1) ?? { pass: 0, twoHigh: 0 };
-  // Real passing has beaten rushing by about 0.15 EPA a play for years; a bigger gap pulls teams toward the pass.
-  const shift = Math.max(-0.012, Math.min(0.012, (passEpa - rushEpa - 0.15) * 0.08));
-  const pass = Math.max(-0.05, Math.min(0.05, prev.pass + shift));
-  const twoHigh = Math.max(-0.06, Math.min(0.06, prev.twoHigh + shift * 0.8));
+  // A bigger gap than usual between passing and rushing pulls teams toward the pass, a smaller one toward
+  // the run. "Usual" is this league's own gap when it calls plays like the real one (about 0.07 EPA a
+  // play; real tracking data shows more, but the sim's EP table is fitted to its own drives), so the
+  // trend has nothing to chase in a normal year. Fads fade too: a fifth of last year's lean wears off
+  // each season. Measured against the real 0.15 it leaned to the run every year, and by the sixth
+  // season the league threw about 5% less, which thinned out every passing and receiving mark.
+  const shift = Math.max(-0.012, Math.min(0.012, (passEpa - rushEpa - USUAL_EPA_GAP) * 0.08));
+  const pass = Math.max(-0.05, Math.min(0.05, prev.pass * 0.8 + shift));
+  const twoHigh = Math.max(-0.06, Math.min(0.06, prev.twoHigh * 0.8 + shift * 0.8));
   a.trends.push({ season: RULES.season, pass, twoHigh, passEpa: Math.round(passEpa * 1000) / 1000, rushEpa: Math.round(rushEpa * 1000) / 1000 });
   a.advice = { advised: 0, followed: 0, lost: 0 };
   a.plans = {};

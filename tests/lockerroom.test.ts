@@ -6,6 +6,7 @@ import { openMemos } from "../src/engine/delegation";
 import { TEAM_BY_ID } from "../src/engine/league";
 import { moodPull, moodTarget, resolveLockerMemo } from "../src/engine/lockerroom";
 import { standings } from "../src/engine/standings";
+import { marketView } from "../src/engine/market";
 import { trades } from "../src/engine/trades";
 import type { GameState, Memo } from "../src/engine/types";
 import { stateAt } from "./fixtures";
@@ -54,7 +55,8 @@ describe("the locker room on the field", () => {
   it("puts an unhappy starter of ours on the owner's desk", async () => {
     const s = stateAt(TEAM, 5, LATE_SEASON);
     const { advanceDay } = await import("../src/engine/season");
-    const id = starters(s, TEAM).find((x) => s.players[x].status === "active")!;
+    // Only a starter the league thinks well of speaks up (lockerroom.ts).
+    const id = starters(s, TEAM).find((x) => s.players[x].status === "active" && marketView(s, x) >= 75)!;
     s.players[id].morale = 20;
     for (let i = 0; i < 8 && !openMemos(s).some((m) => m.payload?.locker === id); i++) {
       s.players[id].morale = 20;

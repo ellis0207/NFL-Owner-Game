@@ -1013,8 +1013,10 @@ class GameSim extends SimPass {
     const weights = tacklers.map((id) => {
       const pos = PLAYER_BY_ID[id].position;
       if (long) return pos === "S" ? 1.5 : pos === "CB" ? 1.2 : pos === "LB" ? 1.3 : 0.3;
-      // The middle linebacker, first in the list, is the one who fills the hole most.
-      return pos === "LB" ? (id === def.lb[0] ? 2.1 : 1.4) : pos === "IDL" ? 1.3 : pos === "EDGE" ? 1.45 : pos === "S" ? 0.95 : 0.75;
+      // The middle linebacker, first in the list, is the one who fills the hole most, and a linebacker
+      // who reads the run well gets there first: the league's tackle leaders are its best run-stoppers.
+      if (pos === "LB") return (id === def.lb[0] ? 2.1 : 1.4) * clamp(1 + (tr(id, "runStop") - 80) * 0.025, 0.7, 1.5);
+      return pos === "IDL" ? 1.3 : pos === "EDGE" ? 1.45 : pos === "S" ? 0.95 : 0.75;
     });
     const tk = this.tackle(d, tacklers, yards, weights);
     this.rec.say(`${runText}${tk ? ` (${this.name(tk)})` : ""}.${fumbleNote}`, yards >= 20 ? F.big : 0);

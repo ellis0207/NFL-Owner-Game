@@ -459,11 +459,15 @@ export abstract class SimTeams {
   // ---- Injuries ----
 
   maybeInjure(o: Team, d: Team, involved: (string | undefined)[], onField: (string | undefined)[]): void {
-    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.073 : 0.075)) return;
+    if (this.rng() > (LEAGUE_RULES.hipDropBan ? 0.075 : 0.077)) return;
     // About half the time it's someone in on the ball; otherwise anyone in the trenches or on the field.
-    const pool = this.rng() < 0.5 ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
+    const onBall = this.rng() < 0.5;
+    const pool = onBall ? involved.filter(Boolean) as string[] : onField.filter(Boolean) as string[];
     if (!pool.length) return;
     const id = pool[Math.floor(this.rng() * pool.length)];
+    // A lead back is in on the ball twenty times a game, but most of those hits are glancing: real
+    // workhorses miss about two games a season, not four.
+    if (onBall && PLAYER_BY_ID[id]?.position === "RB" && this.rng() < 0.4) return;
     // Quarterbacks are protected by the rules and mostly throw from a clean pocket: starters miss far fewer
     // games than the men around them.
     if (PLAYER_BY_ID[id]?.position === "QB" && this.rng() < 0.45) return;

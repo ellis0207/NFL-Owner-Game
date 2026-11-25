@@ -17,11 +17,12 @@ const index = JSON.parse(readFileSync("assets/anim/sprites.json", "utf8"));
 let log: GameLog, players: never, report: AnimReport;
 beforeAll(() => {
   const s = newGame("DET", "Owner", { capRules: "real" } as never, 7);
-  // The first game of the season that has a sack in it (nearly every game does).
+  // The first game of the season with a sack, a false start and a play called back by a flag.
   let out = null as unknown as ReturnType<typeof simulateGame>;
-  for (const g of SCHEDULE.filter((x) => x.type === "REG").slice(0, 6)) {
+  const wants = [/ sacked by /, /^Penalty on \w+: False start/, /but there is a flag down and it comes back/];
+  for (const g of SCHEDULE.filter((x) => x.type === "REG").slice(0, 16)) {
     out = simulateGame(s, g, g.away, g.home);
-    if (out.log.plays.some((p) => / sacked by /.test(p[7]))) break;
+    if (wants.every((re) => out.log.plays.some((p) => re.test(p[7]) && !(p[8] & F.note)))) break;
   }
   log = out.log; players = out.box.players as never;
   report = animReport(6, 11);

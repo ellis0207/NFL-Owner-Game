@@ -43,6 +43,30 @@ function attempt(rng: Rng, games: number): FlexPairing[] | null {
   if (Object.values(need).some((n) => n < 0)) return null;
   // The rest: the club with the most games left picks first, conference rivals a little more often.
   const edges: [string, string][] = [];
+  const swapIn = (a: string, b: string | null): boolean => {
+    for (let n = 0; n < 60; n++) {
+      const i = Math.floor(rng() * edges.length);
+      if (i >= edges.length) return false;
+      const [c, d] = edges[i];
+      if (c === a || d === a || c === b || d === b) continue;
+      if (need[a] >= 2 && !met.has(key(a, c)) && !met.has(key(a, d))) {
+        met.delete(key(c, d));
+        edges.splice(i, 1, [a, c], [a, d]);
+        met.add(key(a, c)); met.add(key(a, d));
+        need[a] -= 2;
+        return true;
+      }
+      if (b && (!met.has(key(a, c)) && !met.has(key(b, d)) || !met.has(key(a, d)) && !met.has(key(b, c)))) {
+        const [x, y] = !met.has(key(a, c)) && !met.has(key(b, d)) ? [c, d] : [d, c];
+        met.delete(key(c, d));
+        edges.splice(i, 1, [a, x], [b, y]);
+        met.add(key(a, x)); met.add(key(b, y));
+        need[a]--; need[b]--;
+        return true;
+      }
+    }
+    return false;
+  };
   for (;;) {
     const open = ids.filter((t) => need[t] > 0);
     if (!open.length) break;
@@ -50,7 +74,12 @@ function attempt(rng: Rng, games: number): FlexPairing[] | null {
     const firsts = open.filter((t) => need[t] === top);
     const a = firsts[Math.floor(rng() * firsts.length)];
     const cands = open.filter((b) => b !== a && !met.has(key(a, b)));
-    if (!cands.length) return null;
+    if (!cands.length) {
+      // Everyone left has already met him: break up a game between two clubs he hasn't played and
+      // give him both (or one, with another club still short taking the other).
+      if (!swapIn(a, open.find((b) => b !== a) ?? null)) return null;
+      continue;
+    }
     const w = cands.map((b) => (conf[b] === conf[a] ? 1.6 : 1) * (need[b] + 0.5));
     let r = rng() * w.reduce((s, x) => s + x, 0);
     let i = 0;
@@ -61,36 +90,47 @@ function attempt(rng: Rng, games: number): FlexPairing[] | null {
     need[a]--;
     need[b]--;
   }
-  // Home and away: each game goes to the club with fewer home games so far, then a few flips even it out.
-  const home: Record<string, number> = Object.fromEntries(ids.map((t) => [t, ids.filter((b) => b !== t && div[b] === div[t]).length]));
-  const order = edges.map((_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  const host: string[] = new Array(edges.length);
-  for (const i of order) {
-    const [a, b] = edges[i];
-    const h = home[a] < home[b] || (home[a] === home[b] && rng() < 0.5) ? a : b;
-    host[i] = h;
-    home[h]++;
-  }
-  const hi = Math.ceil(games / 2);
-  const lo = Math.floor(games / 2);
-  for (let pass = 0; pass < 6; pass++) {
-    let fixed = true;
-    for (let i = 0; i < edges.length; i++) {
-      const h = host[i];
-      const a = edges[i][0] === h ? edges[i][1] : edges[i][0];
-      if (home[h] > hi && home[a] < hi) { host[i] = a; home[h]--; home[a]++; }
-      else if (home[a] < lo && home[h] > lo) { host[i] = a; home[h]--; home[a]++; }
-    }
-    for (const t of ids) if (home[t] > hi || home[t] < lo) fixed = false;
-    if (fixed) break;
-  }
-  if (ids.some((t) => home[t] > hi || home[t] < lo)) return null;
+  // Home and away: walk the games as closed trails (each trail enters a club as often as it leaves), so
+  // every club hosts exactly half its games. With an odd count, a stand-in club joins the clubs left odd
+  // and its games are dropped afterwards, so they end one game from even.
+  const host = orient(rng, ids, edges);
+  if (!host) return null;
   edges.forEach(([a, b], i) => out.push({ home: host[i], away: host[i] === a ? b : a, division: false }));
   return out;
+}
+
+/** Picks a host for each game so every club hosts half its games (within one when its count is odd). */
+function orient(rng: Rng, ids: string[], edges: [string, string][]): string[] | null {
+  const ghost = "\u0000";
+  const all: [string, string][] = [...edges];
+  const deg: Record<string, number> = {};
+  for (const [a, b] of edges) { deg[a] = (deg[a] ?? 0) + 1; deg[b] = (deg[b] ?? 0) + 1; }
+  for (const t of ids) if ((deg[t] ?? 0) % 2) all.push([t, ghost]);
+  const adj: Record<string, number[]> = {};
+  all.forEach(([a, b], i) => { (adj[a] ??= []).push(i); (adj[b] ??= []).push(i); });
+  for (const list of Object.values(adj)) for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  const used = new Array(all.length).fill(false);
+  const from: string[] = new Array(all.length);
+  // Hierholzer's walk from every club with games left: each step leaves the current club by an unused game.
+  for (const start of [...ids, ghost]) {
+    const stack = [start];
+    while (stack.length) {
+      const v = stack[stack.length - 1];
+      const list = adj[v] ?? [];
+      while (list.length && used[list[list.length - 1]]) list.pop();
+      if (!list.length) { stack.pop(); continue; }
+      const e = list.pop()!;
+      used[e] = true;
+      from[e] = v;
+      stack.push(all[e][0] === v ? all[e][1] : all[e][0]);
+    }
+  }
+  if (used.some((u) => !u)) return null;
+  // The club a trail leaves is the visitor, so the one it reaches is the host.
+  return edges.map(([a, b], i) => (from[i] === a ? b : a));
 }
 
 /** Every club's opponents for the season in a league of any shape. */

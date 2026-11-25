@@ -84,6 +84,9 @@ export function progressPlayers(state: GameState, season: number): void {
     const age = ageOn(data.birthDate, asOf) ?? 27;
     const line = DECLINE_AGE[data.position] ?? 30;
     const now = r.overall + (p.dev ?? 0);
+    // A young player whose ceiling is below where he plays never took to the league (outcomes.ts): he
+    // fades toward it over two or three offseasons instead of growing.
+    const sink = age <= 29 ? Math.max(0, now - (r.potential + (p.pot ?? 0))) : 0;
     let ceiling = Math.max(now, r.potential + (p.pot ?? 0));
     const fx = p.team ? staffEffects(p.team) : null;
     const side = SIDE[data.position];
@@ -125,11 +128,15 @@ export function progressPlayers(state: GameState, season: number): void {
       decline = rng() * 0.7;
     }
     change -= decline;
+    const fade = sink > 0 ? sink * (0.35 + 0.25 * rng()) : 0;
+    change -= fade;
 
     const next = Math.max(25, Math.min(99, now + change));
     // By the late twenties a player is about who he'll be.
     if (age >= 28) ceiling = next + Math.max(0, ceiling - next) * 0.35;
     ceiling = Math.max(next, Math.min(99, ceiling));
+    // The rest of the fade waits for next year, unless a breakout lifted his ceiling meanwhile.
+    if (sink - fade > 0 && ceiling <= next + 0.01) ceiling = next - (sink - fade);
     p.dev = round2(next - r.overall);
     p.pot = round2(ceiling - r.potential);
     // Which skills carried the year: learning lifts technique, age takes the legs (aging.ts).

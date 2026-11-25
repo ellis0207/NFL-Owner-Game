@@ -316,7 +316,7 @@ export abstract class SimPass extends SimTeams {
    */
   pickPass(o: Team, d: Team, lu: Lineup): { target: string; depth: Depth } {
     const tr = (id: string, k: string) => this.tr(id, k);
-    const q = (id: string, keys: string[]) => Math.max(0.4, 1 + (keys.reduce((s, k) => s + tr(id, k), 0) / keys.length - 80) * 0.017);
+    const q = (id: string, keys: string[]) => Math.max(0.4, 1 + (keys.reduce((s, k) => s + tr(id, k), 0) / keys.length - 80) * 0.024);
     const cands: string[] = [];
     const weights: number[] = [];
     const fits: Record<Depth, number>[] = [];
