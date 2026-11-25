@@ -427,4 +427,16 @@ describe("saves from older versions", () => {
     for (let i = 0; i < 5; i++) advanceDay(state);
     expect(state.date).toBe("2027-05-07");
   }, 60_000);
+  it("offers already past their last day lapse when an old save loads", () => {
+    const state = load("pr89-2026-12-08");
+    expect(state.business!.events.some((e) => e.status === "offered" && e.expires! < state.date)).toBe(false);
+    expect(state.trades!.offers.some((o) => o.status === "open" && o.expires < state.date)).toBe(false);
+  }, 60_000);
+
+  it("a save five seasons in keeps playing", () => {
+    const state = load("pr127-2030-11-17");
+    expect(state.season).toBe(2030);
+    for (let i = 0; i < 3; i++) advanceDay(state);
+    expect(state.date).toBe("2030-11-20");
+  }, 120_000);
 });

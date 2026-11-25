@@ -19,6 +19,9 @@ kickoff: games start at their real Eastern times and can be followed live
 and the 4 PM deadlines (cutdown, trades, tags, the new league year) close at
 4 PM. Saves autosave in the browser,
 go to the cloud on claude.ai, and export to a file.
+The inbox keeps to what the owner needs: roster moves and medical follow-ups
+ride in the GM's weekly report, and letters whose ask is already on the
+decision queue (press requests, bookings, trade calls) arrive filed.
 
 The pages are grouped in the sidebar by part of the job (Desk, Team, Roster
 building, Draft, Owner's office, League, Game); groups fold away and still
