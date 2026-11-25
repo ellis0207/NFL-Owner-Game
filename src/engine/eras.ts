@@ -1,4 +1,4 @@
-// Historical starts (2011-2025). A save that starts from a season's data pack
+// Historical starts (2002-2025). A save that starts from a season's data pack
 // (pack.ts) carries `state.era`: the season it started in, and whether history
 // runs as it really did or is left to the save (the alternate-history setting).
 //
@@ -41,6 +41,7 @@ export interface EraRuleOverlay {
   otMinutes?: number;
   hipDropBan?: boolean;
   playoffTeams?: number;
+  otRule?: "sudden" | "modified" | "both";
 }
 
 /** What each change replaced, by the first season it applied (real). */
@@ -58,12 +59,17 @@ export function eraRules(season: number): EraRuleOverlay {
     ...(season < 2017 ? { otMinutes: 15 } : {}),
     // The hip-drop tackle was banned in 2024.
     ...(season < 2024 ? { hipDropBan: false } : {}),
+    // Overtime: pure sudden death until 2012 in the regular season; then a
+    // touchdown on the first possession won, a field goal gave the other side a
+    // chance; both teams get the ball from 2025.
+    otRule: season < 2012 ? "sudden" : season < 2025 ? "modified" : "both",
   };
 }
 
 /** Practice-squad places each season (the base before any extra the owners vote). */
 export function practiceSquadBase(state: GameState | undefined, season: number): number {
   const s = ruleSeason(state, season);
+  if (s <= 2003) return 5;
   if (s <= 2013) return 8;
   if (s <= 2019) return 10;
   if (s <= 2021) return 16;
@@ -105,12 +111,20 @@ export function oldHome(state: GameState | undefined, team: string, season: numb
 
 /** Who controlled each club before its 2026 owner, with the last season they did (real, approximate). */
 export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
-  BUF: [[2013, "the Ralph Wilson estate"]],
+  ATL: [[2001, "Taylor Smith"]],
+  BAL: [[2003, "Art Modell"]],
+  BUF: [[2013, "Ralph Wilson"]],
   CAR: [[2017, "Jerry Richardson"]],
   CLE: [[2011, "Randy Lerner"]],
-  DEN: [[2021, "the Pat Bowlen trust"]],
+  DEN: [[2013, "Pat Bowlen"], [2021, "the Pat Bowlen trust"]],
   DET: [[2013, "William Clay Ford"], [2019, "Martha Firestone Ford"]],
+  HOU: [[2018, "Bob McNair"]],
   JAX: [[2011, "Wayne Weaver"]],
+  KC: [[2006, "Lamar Hunt"]],
+  LA: [[2007, "Georgia Frontiere"], [2009, "Chip Rosenbloom and Lucia Rodriguez"]],
+  LV: [[2011, "Al Davis"]],
+  MIA: [[2008, "Wayne Huizenga"]],
+  MIN: [[2004, "Red McCombs"]],
   NO: [[2017, "Tom Benson"]],
   SEA: [[2018, "Paul Allen"]],
   TEN: [[2013, "Bud Adams"], [2014, "the Adams family trust"]],
@@ -123,6 +137,16 @@ export function eraOwner(team: string, season: number): string | undefined {
   return ERA_OWNERS[team]?.find(([through]) => season <= through)?.[1];
 }
 
+/**
+ * The 1993 agreement as last extended in 2006: about 59.5% of a narrower
+ * revenue pool (close to half of all revenue), no rookie wage scale, two-a-day
+ * camps, a cap floor but no cash floor, free agency after four seasons.
+ */
+export const CBA_2006 = { share: 0.5, minScale: 1, rookieScale: 1, benefits: 0.75, practice: 24, games: 16 as const, safety: 0, cashFloor: 0, noWageScale: true };
+
+/** 2010, the year the owners' 2008 opt-out left without a cap: free agency only after six seasons. */
+export const UNCAPPED_2010 = { ...CBA_2006, uncapped: true, ufaSeasons: 6 };
+
 /** The 2011 labor agreement: a lower players' share, 16 games, 14 padded camp practices, the 89% cash floor. */
 export const CBA_2011 = { share: 0.47, minScale: 1, rookieScale: 1, benefits: 0.85, practice: 14, games: 16 as const, safety: 0, cashFloor: 0.89 };
 
@@ -131,6 +155,17 @@ export const HISTORICAL = !!PACK;
 
 /** The real rule archive: changes that shaped the game, by the first season they applied (approximate wording). */
 export const RULE_ARCHIVE: [season: number, text: string][] = [
+  [2002, "The league grows to 32 clubs with the Houston Texans and realigns into eight divisions of four"],
+  [2004, "Defensive holding and illegal contact are points of emphasis: passing climbs"],
+  [2004, "Practice squads grow from five players to eight"],
+  [2005, "The horse-collar tackle is banned"],
+  [2006, "The labor agreement is extended through 2012"],
+  [2007, "Instant replay is made a permanent part of the rules"],
+  [2008, "The force-out rule on catches is removed; defenses get one player with a helmet radio"],
+  [2008, "The owners opt out of the labor agreement, leaving 2010 without a cap"],
+  [2009, "Blindside blocks to the head and four-man wedges on kickoffs are banned"],
+  [2010, "Playoff overtime: a field goal on the first possession no longer wins"],
+  [2010, "The uncapped year: no cap, no floor, free agency only after six seasons"],
   [2011, "Kickoffs move up to the 35-yard line; touchbacks soar"],
   [2011, "Every scoring play is reviewed by the replay booth"],
   [2011, "A new labor deal: rookie wage scale, fewer padded practices, a salary cap tied to all revenue"],

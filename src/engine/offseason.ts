@@ -25,6 +25,7 @@ import { seasonTotals } from "./stats";
 import { standings, winPct } from "./standings";
 import type { Deal, GameState, OffseasonState } from "./types";
 import { realCap } from "./eras";
+import { termsFor } from "./cbaterms";
 
 const KEY = RULES.keyDates;
 /** The league year the offseason builds toward. */
@@ -67,7 +68,8 @@ export type FaClass = "UFA" | "RFA" | "ERFA";
 /** Accrued seasons after this one decide the kind of free agent: 4+ unrestricted, 3 restricted, fewer exclusive rights. */
 export function faClass(id: string): FaClass {
   const accrued = PLAYER_BY_ID[id].yearsExp + 1;
-  return accrued >= 4 ? "UFA" : accrued === 3 ? "RFA" : "ERFA";
+  // In the uncapped 2010 year, unrestricted free agency took six seasons.
+  return accrued >= (termsFor(NEXT).ufaSeasons ?? 4) ? "UFA" : accrued >= 3 ? "RFA" : "ERFA";
 }
 
 /** Under contract now, with nothing past this league year. */

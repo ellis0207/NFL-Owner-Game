@@ -1,4 +1,4 @@
-// A historical start's data pack (2011-2025), built by pipeline/history_pack.py
+// A historical start's data pack (2002-2025), built by pipeline/history_pack.py
 // and published as its own file. The page loads the chosen pack before the
 // engine and leaves it on globalThis.__NFL_PACK__; league.ts reads it in place
 // of the 2026 files. With no pack the game is the 2026 start, unchanged.
@@ -13,15 +13,21 @@ export interface LeaguePack {
   staff: unknown;
   hiddenStaff: Record<string, unknown>;
   rules: Record<string, unknown> & { minimumByYear?: Record<string, Record<string, number>>; lastPlayoffs?: string[] };
+  /** Real seasons before the pack's three stat seasons, back to 1999 (the career.json column table). */
+  career?: unknown;
 }
 
 /** The start season the page was asked to load (set by the New game screen or a save from another era, then the page reloads). */
 export const ERA_KEY = "nfl-era";
 
+/** The first and last seasons with a data pack. */
+export const FIRST_PACK = 2002;
+export const LAST_PACK = 2025;
+
 function requested(): number | null {
   try {
     const v = Number(globalThis.sessionStorage?.getItem(ERA_KEY));
-    return v >= 2011 && v <= 2025 ? v : null;
+    return v >= FIRST_PACK && v <= LAST_PACK ? v : null;
   } catch {
     return null;
   }
@@ -61,6 +67,12 @@ export function yearsFromMoneyYear(year: number, base = MONEY_YEAR): number {
 
 /** The real salary caps by league year (OverTheCap). */
 export const REAL_CAPS: Record<number, number> = {
+  2002: 71_101_000, 2003: 75_007_000, 2004: 80_582_000, 2005: 85_500_000, 2006: 102_000_000, 2007: 109_000_000,
+  2008: 116_000_000, 2009: 123_000_000,
+  // 2010 had no cap. The game keeps a ceiling about 6% over 2009's: the owners'
+  // unwritten limits (later punished in the Cowboys' and Washington's cases)
+  // kept payrolls near it, and there was no floor.
+  2010: 130_000_000,
   2011: 120_000_000, 2012: 120_600_000, 2013: 123_000_000, 2014: 133_000_000, 2015: 143_280_000,
   2016: 155_270_000, 2017: 167_000_000, 2018: 177_200_000, 2019: 188_200_000, 2020: 198_200_000,
   2021: 182_500_000, 2022: 208_200_000, 2023: 224_800_000, 2024: 255_400_000, 2025: 279_200_000, 2026: 301_200_000,

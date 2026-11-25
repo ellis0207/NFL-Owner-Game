@@ -22,6 +22,12 @@ export interface CbaTerms {
   safety: number;
   /** The share of the caps each club must pay in cash over a four-year period. */
   cashFloor: number;
+  /** Before 2011: rookie deals were bargained freely (longer and far richer at the top), with no fifth-year option. */
+  noWageScale?: boolean;
+  /** A league year with no salary cap (2010). */
+  uncapped?: boolean;
+  /** Accrued seasons for unrestricted free agency when not four (six in 2010). */
+  ufaSeasons?: number;
 }
 
 /** The 2020 agreement: 48.5% with the 17th game, 16 padded practices in camp, the 89% cash floor. */

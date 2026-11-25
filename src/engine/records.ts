@@ -25,8 +25,37 @@ export function records(state: GameState): RecordsState {
   return (state.records ??= { game: {}, season: {}, broken: [], h2h: {}, values: {} });
 }
 
+/**
+ * Records a historical start must see as they stood: each mark's earlier
+ * holders, oldest first (real). A start reads the last one set before it.
+ */
+const SEASON_BEFORE: Record<string, [number, string, number][]> = {
+  passYds: [[5084, "Dan Marino", 1984], [5476, "Drew Brees", 2011]],
+  passTd: [[48, "Dan Marino", 1984], [49, "Peyton Manning", 2004], [50, "Tom Brady", 2007]],
+  rushTd: [[25, "Emmitt Smith", 1995], [27, "Priest Holmes", 2003]],
+  rec: [[123, "Herman Moore", 1995], [143, "Marvin Harrison", 2002]],
+  recYds: [[1848, "Jerry Rice", 1995]],
+  recTd: [[22, "Jerry Rice", 1987]],
+  sacks: [[22.5, "Michael Strahan", 2001]],
+};
+const GAME_BEFORE: Record<string, [number, string, number][]> = {
+  passTd: [[7, "five players, most recently Joe Kapp", 1969]],
+  rushYds: [[275, "Walter Payton", 1977], [278, "Corey Dillon", 2000], [295, "Jamal Lewis", 2003]],
+  rec: [[18, "Tom Fears", 1950], [20, "Terrell Owens", 2000]],
+};
+
+/** The marks as they stood when this league started (BASE_SEASON). */
+function asOfStart(now: Record<string, [number, string, number, string]>, before: Record<string, [number, string, number][]>) {
+  const out: Record<string, [number, string, number, string]> = {};
+  for (const [k, v] of Object.entries(now)) {
+    const old = v[2] >= BASE_SEASON ? (before[k] ?? []).filter((x) => x[2] < BASE_SEASON).at(-1) : undefined;
+    out[k] = old ? [old[0], old[1], old[2], v[3]] : v;
+  }
+  return out;
+}
+
 /** The real NFL records through 2025: [value, holder, year]. */
-export const NFL_SEASON: Record<string, [number, string, number, string]> = {
+const NFL_SEASON_2025: Record<string, [number, string, number, string]> = {
   passYds: [5477, "Peyton Manning", 2013, "passing yards"],
   passTd: [55, "Peyton Manning", 2013, "touchdown passes"],
   rushYds: [2105, "Eric Dickerson", 1984, "rushing yards"],
@@ -37,7 +66,7 @@ export const NFL_SEASON: Record<string, [number, string, number, string]> = {
   sacks: [22.5, "Michael Strahan and T.J. Watt", 2021, "sacks"],
   defInt: [14, "Dick \"Night Train\" Lane", 1952, "interceptions"],
 };
-export const NFL_GAME: Record<string, [number, string, number, string]> = {
+const NFL_GAME_2025: Record<string, [number, string, number, string]> = {
   passYds: [554, "Norm Van Brocklin", 1951, "passing yards"],
   passTd: [7, "seven players, most recently Peyton Manning", 2013, "touchdown passes"],
   rushYds: [296, "Adrian Peterson", 2007, "rushing yards"],
@@ -45,6 +74,10 @@ export const NFL_GAME: Record<string, [number, string, number, string]> = {
   recYds: [336, "Willie \"Flipper\" Anderson", 1989, "receiving yards"],
   sacks: [7, "Derrick Thomas", 1990, "sacks"],
 };
+
+/** The real records as they stood at this league's start. */
+export const NFL_SEASON = asOfStart(NFL_SEASON_2025, SEASON_BEFORE);
+export const NFL_GAME = asOfStart(NFL_GAME_2025, GAME_BEFORE);
 
 function better(cur: Mark | undefined, value: number): boolean {
   return value > 0 && (!cur || value > cur.value);

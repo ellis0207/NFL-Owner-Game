@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Historical starts: each season's data pack (data/packs/<year>.json.gz, built
 // by pipeline/history_pack.py) replaces the 2026 files. The engine reads the
 // pack when its modules load, so every start gets fresh modules.
-const YEARS = Array.from({ length: 15 }, (_, i) => 2011 + i);
+const YEARS = Array.from({ length: 24 }, (_, i) => 2002 + i);
 const pack = (year: number) => JSON.parse(gunzipSync(readFileSync(new URL(`../data/packs/${year}.json.gz`, import.meta.url))).toString());
 
 async function engineFor(year: number | null) {
@@ -93,6 +93,26 @@ describe("historical starts", () => {
     expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
   }, 600_000);
 
+  it("a 2010 start is uncapped, then the 2011 lockout runs March 12 to July 25", async () => {
+    const e = await engineFor(2010);
+    const cba = await import("../src/engine/cbaterms");
+    const labor = await import("../src/engine/labor");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(labor.labor(s).agreements.at(-1)).toMatchObject({ from: 2010, through: 2010 });
+    expect(cba.termsFor(2010)).toMatchObject({ uncapped: true, ufaSeasons: 6, noWageScale: true });
+    // A first-round pick before the wage scale: five years, no option, far richer at the top.
+    const { rookieScale } = await import("../src/engine/contracts");
+    expect(rookieScale(1, 2010)).toMatchObject({ years: 5, option: false });
+    expect(rookieScale(1, 2010).total).toBeGreaterThan(0.4 * e.REAL_CAPS[2010]);
+    while (s.date < "2011-03-13") e.advanceDay(s);
+    expect(labor.lockedOut(s)).toBe(true);
+    while (s.date < "2011-07-26") e.advanceDay(s);
+    expect(labor.lockedOut(s)).toBe(false);
+    expect(labor.currentAgreement(s)).toMatchObject({ from: 2011, through: 2020 });
+    expect(s.league?.caps[2011]).toBe(e.REAL_CAPS[2011]);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
   it("alternate history keeps the start's rules, cities and names", async () => {
     const e = await engineFor(2015);
     const s = e.newGame("NE", "Test", { capRules: "real", altHistory: true }, 5);
@@ -115,9 +135,13 @@ describe("historical starts", () => {
     expect(eraRules(2014)).toMatchObject({ games: 16, playoffTeams: 12, touchback: 20, xpLine: 2, otMinutes: 15, hipDropBan: false });
     expect(eraRules(2020)).toMatchObject({ games: 16, touchback: 25 });
     expect(eraRules(2020).playoffTeams).toBeUndefined();
-    expect(eraRules(2024)).toEqual({ touchback: 30 });
+    expect(eraRules(2024)).toEqual({ touchback: 30, otRule: "modified" });
+    expect(eraRules(2008)).toMatchObject({ otRule: "sudden", playoffTeams: 12, xpLine: 2 });
+    expect(eraRules(2025)).toEqual({ touchback: 35, otRule: "both" });
     expect(eraRules(2026)).toEqual({});
     const st = (start: number) => ({ era: { start, alt: false } }) as never;
+    expect(practiceSquadBase(st(2002), 2002)).toBe(5);
+    expect(practiceSquadBase(st(2002), 2004)).toBe(8);
     expect(practiceSquadBase(st(2011), 2011)).toBe(8);
     expect(practiceSquadBase(st(2011), 2020)).toBe(16);
   });

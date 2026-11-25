@@ -10,8 +10,8 @@ import { collegeKickoff } from "../src/engine/college";
 
 // Real draft classes (realclasses.ts, built by pipeline/draft_classes.py).
 describe("real draft classes", () => {
-  it("has every real class from 2011 to 2026 and the 2027 board", () => {
-    expect(REAL_YEARS[0]).toBe(2011);
+  it("has every real class from 2002 to 2026 and the 2027 board", () => {
+    expect(REAL_YEARS[0]).toBe(2002);
     expect(REAL_YEARS.at(-1)).toBe(2027);
     for (const y of REAL_YEARS.filter((y) => y <= 2026)) {
       const rows = realRows(y);

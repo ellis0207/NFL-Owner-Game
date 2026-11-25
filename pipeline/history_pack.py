@@ -1,4 +1,4 @@
-"""Builds the data pack for a historical start (2011-2025): the league as it
+"""Builds the data pack for a historical start (2002-2025): the league as it
 stood when that season's camps opened, from the same open nflverse files as
 the 2026 build.
 
@@ -19,7 +19,10 @@ What is made up or derived, and labeled as such: the preseason schedule
 (generated: nflverse carries only regular-season games), the other key dates
 (the league's usual rules applied to that season's kickoff), coordinators,
 general managers and other staff (generated names), team schemes (drawn per
-team), and team dead money (none: the archive has no per-team figure).
+team), and team dead money (none: the archive has no per-team figure), and before about
+2011 most contracts (contract_model.py: the archive covers only part of each
+roster, so the rest are priced from the player's standing, draft slot and the
+cap, and labeled "modeled").
 Camp rosters run short of 90 before 2020 because the Week 1 snapshot then
 listed no one released at cutdown; clubs fill camp from the free agent pool.
 """
@@ -39,6 +42,11 @@ OUT = HERE.parent / "data" / "packs"
 
 # Real salary caps by league year (OverTheCap).
 CAPS = {
+    2002: 71_101_000, 2003: 75_007_000, 2004: 80_582_000, 2005: 85_500_000, 2006: 102_000_000,
+    2007: 109_000_000, 2008: 116_000_000, 2009: 123_000_000,
+    # 2010 had no cap at all (the owners opted out of the 2006 extension). The
+    # game keeps 2009's figure as the yardstick and marks the year uncapped.
+    2010: 123_000_000,
     2011: 120_000_000, 2012: 120_600_000, 2013: 123_000_000, 2014: 133_000_000, 2015: 143_280_000,
     2016: 155_270_000, 2017: 167_000_000, 2018: 177_200_000, 2019: 188_200_000, 2020: 198_200_000,
     2021: 182_500_000, 2022: 208_200_000, 2023: 224_800_000, 2024: 255_400_000, 2025: 279_200_000,
@@ -57,17 +65,25 @@ MINIMUMS = {
     2026: (885_000, 1_005_000, 1_075_000, 1_145_000, 1_215_000, 1_300_000),
     2027: (930_000, 1_050_000, 1_120_000, 1_190_000, 1_260_000, 1_345_000),
 }
+# The 1993 agreement as extended in 2006: rookie minimum $225,000 in 2002 and
+# $320,000 in 2010; the steps between are approximate (about +3% a year).
+for _y in range(2002, 2011):
+    _r = 225_000 + round((_y - 2002) * 95_000 / 8, -4)
+    MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
 for _y in range(2011, 2020):
     _k = (_y - 2011) * 15_000
     MINIMUMS[_y] = (375_000 + _k, 450_000 + _k, 525_000 + _k, 600_000 + _k, 685_000 + _k, 810_000 + _k)
 
 # Practice squad: weekly pay (standard) and size by season.
-PS_WEEKLY = {2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
+PS_WEEKLY = {2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
+             2009: 5_200, 2010: 5_200, 2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
              2018: 7_600, 2019: 8_000, 2020: 8_400, 2021: 9_200, 2022: 11_500, 2023: 12_000, 2024: 12_500,
              2025: 13_000}
 
 
 def ps_size(season: int) -> int:
+    if season <= 2003:
+        return 5
     if season <= 2013:
         return 8
     if season <= 2019:
@@ -150,11 +166,13 @@ def rules_for(season: int, games) -> dict:
     weekly = PS_WEEKLY[season]
     return {
         "season": season,
-        "salaryCap": CAPS[season],
+        # 2010 had no cap: the game's ceiling sits about 6% over 2009's (pack.ts REAL_CAPS).
+        "salaryCap": 130_000_000 if season == 2010 else CAPS[season],
+        **({"uncapped": True} if season == 2010 else {}),
         "minimumSalary": table(m),
         "minimumSalaryNextYear": table(n),
         "practiceSquadWeekly": {"standard": weekly, "veteranMin": round(weekly * 1.33, -1), "veteranMax": round(weekly * 1.66, -1)},
-        "rosterLimits": {"offseason": 90, "regularSeason": 53, "practiceSquad": ps_size(season), "gameDayActive": 46 if season < 2020 else 48},
+        "rosterLimits": {"offseason": 90, "regularSeason": 53, "practiceSquad": ps_size(season), "gameDayActive": 45 if season < 2011 else 46 if season < 2020 else 48},
         "veteranReportDaysBeforeOpener": 47,
         "veteranReportDaysBeforeMondayOpener": 48,
         "rookieEarlyReportDays": 7,
@@ -242,6 +260,70 @@ def build_staff_for(season: int, games, teams: list):
     return people, hidden, schemes
 
 
+def season_minimum(years_exp: int, year: int) -> int:
+    """That league year's minimum salary for a player's credited seasons (real tables to 2027, +4% a year after)."""
+    t = MINIMUMS[min(year, 2027)]
+    step = 5 if years_exp >= 7 else 4 if years_exp >= 4 else max(0, years_exp)
+    return round(t[step] * 1.04 ** max(0, year - 2027), -3)
+
+
+def price_contracts(season: int, players: list, ratings: dict) -> None:
+    """Players with no deal on record: a modeled deal (contract_model.py) or that
+    season's minimum. The estimated minimums the roster step wrote used the 2026
+    table, so they are redone at the season's own figures."""
+    from contract_model import model_contract
+    cap = CAPS[season]
+    modeled = 0
+    for p in players:
+        c = p["contract"]
+        if c.get("source") != "estimated-minimum":
+            continue
+        deal = model_contract(p, ratings[p["id"]]["overall"], season, cap, season_minimum)
+        if deal:
+            modeled += 1
+            p["contract"] = deal
+            continue
+        for s in c["seasons"]:
+            pay = season_minimum((p.get("yearsExp") or 0) + s["year"] - season, s["year"])
+            s.update({"baseSalary": pay, "capHit": pay})
+        c["apy"] = c["seasons"][0]["baseSalary"]
+        c["totalValue"] = sum(s["baseSalary"] for s in c["seasons"])
+    # A few archive rows carry a cap hit off by a factor of 100 (Haynesworth's
+    # 2006 reads $174.5M): any season over 30% of the cap falls back to the APY.
+    for p in players:
+        c = p["contract"]
+        for s in c["seasons"]:
+            if s["capHit"] > 0.3 * cap:
+                pay = int(c.get("apy") or 0) if (c.get("apy") or 0) < 0.3 * cap else season_minimum(p.get("yearsExp") or 0, s["year"])
+                s.update({"baseSalary": pay, "proratedBonus": 0, "rosterBonus": 0, "optionBonus": 0,
+                          "workoutBonus": 0, "otherBonus": 0, "capHit": pay})
+    # Clubs spent close to the cap (most ended a season within a few million of
+    # it), so each club's modeled veteran deals are scaled toward a payroll of
+    # 90-98% of the cap, never past it and never below the minimum.
+    by_team = {}
+    for p in players:
+        by_team.setdefault(p["team"], []).append(p)
+    for team, mine in by_team.items():
+        hit = lambda p: next((s["capHit"] for s in p["contract"]["seasons"] if s["year"] == season), 0)
+        total = sum(hit(p) for p in mine)
+        target = cap * _rng(f"payroll:{season}:{team}").uniform(0.90, 0.98)
+        flex = [p for p in mine if p["contract"]["source"] == "modeled" and p["contract"]["type"] == "UFA"]
+        room = sum(hit(p) for p in flex)
+        if not room or total >= target:
+            continue
+        k = min(2.2, 1 + (target - total) / room)
+        for p in flex:
+            c = p["contract"]
+            # The era's top deals ran about 12% of the cap for a quarterback, 9% for anyone else.
+            top = cap * (0.12 if p["position"] == "QB" else 0.09)
+            for s in c["seasons"]:
+                s["baseSalary"] = s["capHit"] = int(round(min(s["capHit"] * k, top * 1.03 ** (s["year"] - season)), -3))
+            c["apy"] = c["seasons"][0]["baseSalary"]
+            c["totalValue"] = sum(s["baseSalary"] for s in c["seasons"])
+            c["apyCapPct"] = round(c["apy"] / cap, 4)
+    print(f"  {modeled} modeled contracts")
+
+
 def build(season: int) -> Path:
     os.environ["NFL_SEASON"] = str(season)
     sys.path.insert(0, str(HERE))
@@ -279,6 +361,7 @@ def build(season: int) -> Path:
     for p in free_agents:
         ratings[p["id"]] = combined[p["id"]]
     traits = build_traits(players + free_agents, ratings, data["stats"], data["combine"])
+    price_contracts(season, players, ratings)
 
     # Some Week 1 snapshots (2016-2019) still list everyone released at the
     # cutdown, past a 90-man camp. The weakest of those go back to the pool.
@@ -322,6 +405,8 @@ def build(season: int) -> Path:
     path = OUT / f"{season}.json.gz"
     raw = json.dumps(pack, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
     path.write_bytes(gzip.compress(raw, 9, mtime=0))
+    from pack_careers import add as add_careers
+    add_careers(season)
     reg = [g for g in schedule if g["type"] == "REG"]
     by_team = {}
     for p in players:
