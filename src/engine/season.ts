@@ -95,7 +95,7 @@ import { incentivesDaily } from "./incentives";
 import { hostingDaily } from "./hosting";
 import { faDaily, stillPlaying } from "./freeagency";
 import { isOffseason, offseasonDaily, CAP_SET_DATE } from "./offseason";
-import { money, news, send } from "./inbox";
+import { digest, money, news, send, takeDigest } from "./inbox";
 import { tradesDaily } from "./trades";
 import { mediaDaily } from "./media";
 import { pressDaily } from "./press";
@@ -711,6 +711,7 @@ function endDay(state: GameState): void {
   }
   const briefed = state.day?.done["meeting:weekly"] === BRIEFED;
   if (weekday(date) === "Monday" && date >= KEY.regularSeasonStart && date <= KEY.regularSeasonEnd && !briefed) weeklyReport(state);
+  if (weekday(date) === "Monday") weeklyNotes(state);
   economyDaily(state);
   businessDaily(state);
   shocksDaily(state);
@@ -853,11 +854,8 @@ function rosterUpkeep(state: GameState): void {
   for (const team of Object.keys(TEAM_BY_ID)) {
     const moves: RosterMove[] = [...manageInjuredReserve(state, team), ...fillEmergencies(state, team)];
     if (!moves.length) continue;
-    if (team === state.userTeam) {
-      const gm = teamStaff(team).GM?.name ?? "General Manager";
-      send(state, "transaction", `${gm}, general manager`, moves.length === 1 ? "Roster move" : "Roster moves",
-        `We ${moves.map((m) => m.text).join("; ")}.`);
-    }
+    // Our moves go into the GM's weekly report rather than a letter each.
+    if (team === state.userTeam) for (const m of moves) digest(state, "roster", `${shortDate(state.date)}: we ${m.text}.`);
   }
 }
 
@@ -893,7 +891,15 @@ function briefing(state: GameState): void {
     (m ? `Next up: ${gameTypeLabel(next!)} ${m.home === us ? "against" : "at"} ${teamLabel(m.home === us ? m.away : m.home)} on ${weekday(next!.date)}, ${shortDate(next!.date)}. ` : "") +
     `${hurt ? `${hurt} player${hurt === 1 ? " is" : "s are"} on the injury report.` : "Nobody is on the injury report."} ` +
     (talks ? `We have ${talks} contract talk${talks === 1 ? "" : "s"} open. ` : "") +
-    (state.date < KEY.tradeDeadline ? `Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : "The trade deadline has passed."));
+    (state.date < KEY.tradeDeadline ? `Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : "The trade deadline has passed.") +
+    takeDigest(state).map((l) => `\n\n${l}`).join(""));
+}
+
+/** Out of the regular season there's no Monday report, so the week's held staff notes go out on their own. */
+function weeklyNotes(state: GameState): void {
+  const lines = takeDigest(state);
+  if (!lines.length) return;
+  send(state, "staff", `${teamStaff(state.userTeam).GM?.name ?? "General Manager"}, general manager`, "Staff notes for the week", lines.join("\n\n"));
 }
 
 /** The GM's Monday digest in season: where we stand, last week, who's hurt, what's next. */
@@ -930,6 +936,7 @@ function weeklyReport(state: GameState): void {
     lines.push(`Next: ${m.home === us ? "the" : "at the"} ${teamLabel(opp)} (${o.w}-${o.l}${o.t ? `-${o.t}` : ""}) on ${weekday(next!.date)}, ${shortDate(next!.date)}.`);
   }
   lines.push(`Cap space: ${money(cap.space)}.${state.date < KEY.tradeDeadline ? ` Trade deadline: ${shortDate(KEY.tradeDeadline)}.` : ""}`);
+  lines.push(...takeDigest(state).map((l) => `\n${l}`));
   send(state, "staff", `${teamStaff(us).GM?.name ?? "General Manager"}, general manager`, "Weekly front office report", lines.join("\n"));
 }
 

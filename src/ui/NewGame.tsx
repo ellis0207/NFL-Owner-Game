@@ -12,6 +12,7 @@ import { BACKGROUNDS, DEFAULT_SETUP, GOAL_KEYS, GOALS, SCENARIOS, SPENDING, STYL
 import { switchEra } from "./App";
 import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../engine/difficulty";
 import { money, onColor } from "./format";
+import { TeamBadge } from "./gfx";
 
 /** The seasons a game can start in: the 2026 default and every season from 2011. */
 const ERAS = [2026, ...Array.from({ length: 15 }, (_, i) => 2025 - i)];
@@ -190,8 +191,8 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           </div>
         </div>
         <div className="split">
-          <div className="panel stack">
-            <h2>{selected.city} {selected.name}</h2>
+          <div className="panel stack" style={{ alignContent: "start" }}>
+            <h2 style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}><TeamBadge team={team} size={34} noTip /> {selected.city} {selected.name}</h2>
             <dl className="kv">
               <dt>Stadium</dt><dd>{selected.stadium}</dd>
               <dt>Stadium control</dt><dd>{STRUCTURE_LABEL[STADIUM_BY_TEAM[team].structure]}</dd>

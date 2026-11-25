@@ -38,7 +38,7 @@ import { dealCapHit, dealOf, lastYear, leagueYear, salaryCap, tradeCharges, trad
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
 import { gradeLean } from "./outlets";
-import { money, news, send } from "./inbox";
+import { money, news, send, sendFiled } from "./inbox";
 import { HIDDEN_RATINGS, onSeasonChange, PLAYER_BY_ID, RULES, TEAMS, teamLabel } from "./league";
 import { ageFactor, marketView, productionBump, shareFor } from "./market";
 import { STARTERS } from "./negotiation";
@@ -1337,7 +1337,7 @@ function callsToOwner(state: GameState): void {
     ts.offers.unshift(offer);
     if (ts.offers.length > 60) ts.offers.length = 60;
     const cpuTeam = deal.teams[0];
-    send(state, "transaction", gmOf(us), `Trade call: ${teamLabel(cpuTeam)}`,
+    sendFiled(state, "transaction", gmOf(us), `Trade call: ${teamLabel(cpuTeam)}`,
       `${note} They'd send ${describe(state, deal.send[0], cpuTeam)} for ${describe(state, deal.send[1], us)}. ` +
       `The offer is good until ${shortDate(expires)}; it's on the Trades page under Offers. My read: ${gmRead(state, deal)}`);
   };

@@ -24,12 +24,11 @@ import { post } from "./business";
 import { clubhouse, clubNote } from "./clubhouse";
 import { dealOf } from "./contracts";
 import { addDays, ageOn, daysBetween, weekday } from "./dates";
-import { send } from "./inbox";
+import { digest, send } from "./inbox";
 import { PLAYER_BY_ID, RULES } from "./league";
 import { capScale } from "./market";
 import { projectEffects } from "./projects";
 import { gaussian, rngFor } from "./rng";
-import { teamStaff } from "./staff";
 import type { GameState, Injury } from "./types";
 import { liveIds } from "./live";
 
@@ -46,10 +45,6 @@ export interface Policy {
 /** Our medical staff level, 0 to 3, with any facility projects. Other clubs are average. */
 export function medicalLevel(state: GameState, team: string): number {
   return team === state.userTeam ? Math.min(3, (state.business?.budget.medical ?? 1) + projectEffects(state).medical) : 1;
-}
-
-function trainer(state: GameState): string {
-  return `${teamStaff(state.userTeam).TRN?.name ?? "Our head athletic trainer"}, head athletic trainer`;
 }
 
 /** The return date the club has to go on today: the first estimate until the follow-up tests are back. */
@@ -91,9 +86,7 @@ function injuriesDaily(state: GameState): void {
       const was = daysBetween(state.date, inj.est);
       const now = daysBetween(state.date, inj.returnDate);
       const news = Math.abs(now - was) < 4 ? "confirm the first read" : now > was ? "show more damage than we first thought" : "are better than we feared";
-      send(state, "staff", trainer(state), `${name}: test results`,
-        `The follow-up tests on ${name}'s ${inj.type.toLowerCase()} ${news}. ` +
-        `We now expect him back in ${weeksText(state.date, inj.returnDate)}.`);
+      digest(state, "medical", `Follow-up tests on ${name}'s ${inj.type.toLowerCase()} ${news}: back in ${weeksText(state.date, inj.returnDate)}.`);
       clubNote(state, `${name}: tests ${news}.`);
     }
     // Halfway through a long rehab.
@@ -121,7 +114,7 @@ function injuriesDaily(state: GameState): void {
       }
       inj.seasonEnding = inj.returnDate > RULES.keyDates.superBowl;
       if (mine) {
-        send(state, "staff", trainer(state), `${name}: rehab update`, text);
+        digest(state, "medical", text);
         clubNote(state, text);
       }
     }
@@ -130,9 +123,7 @@ function injuriesDaily(state: GameState): void {
       const rng = rngFor(state.seed, `clear:${id}:${inj.date}`);
       if (rng() < 0.18) {
         inj.returnDate = addDays(inj.returnDate, 5 + Math.floor(rng() * 3));
-        if (mine) send(state, "staff", trainer(state), `${name} not yet cleared`,
-          `${name} has not been cleared by the independent neurological consultant and stays in the concussion protocol. ` +
-          "Under the league's rules that decision is theirs alone. We'll know more after his next evaluation.");
+        if (mine) digest(state, "medical", `${name} was not cleared by the independent neurological consultant and stays in the concussion protocol.`);
       }
     }
   }

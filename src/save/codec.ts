@@ -120,6 +120,9 @@ export function migrate(state: GameState): GameState {
   ensureBooks(state);
   // Older saves numbered decisions by list length, so capped lists can hold repeated ids.
   ensureUniqueIds(state);
+  // Saves made before an expiry fix can hold offers already past their last day: they lapse on load.
+  for (const ev of state.business?.events ?? []) if (ev.status === "offered" && ev.expires && ev.expires < state.date) ev.status = "expired";
+  for (const o of state.trades?.offers ?? []) if (o.status === "open" && o.expires < state.date) o.status = "expired";
   // Saves from when the game ended with the draft sit on the day after it, where the next season now starts.
   if (state.date >= DRAFT_OVER && (state.season ?? BASE_SEASON) === RULES.season) startNewSeason(state);
   return state;
