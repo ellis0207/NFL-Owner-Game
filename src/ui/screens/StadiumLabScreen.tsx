@@ -336,7 +336,7 @@ function ParkingControls({ view, d, edit }: { view: LabView; d: LabConfig; edit:
 
 function LandControls({ view, d, edit }: { view: LabView; d: LabConfig; edit: (p: Partial<LabConfig>) => void }) {
   const p = parcelPlan(view.venue, d);
-  if (!p.all.length) return <p className="muted">No expansion zones here: the building's land is all in use, or it's a site Stadium Lab hasn't surveyed.</p>;
+  if (!p.all.length) return <p className="muted kit-none">No expansion zones here: the building's land is all in use, or it's a site Stadium Lab hasn't surveyed.</p>;
   const ids = new Set(String(d.parcelIds).split(",").filter(Boolean));
   const toggle = (id: string) => { ids.has(id) ? ids.delete(id) : ids.add(id); edit({ parcelMode: ids.size > 0, parcelIds: [...ids].join(",") }); };
   return <>

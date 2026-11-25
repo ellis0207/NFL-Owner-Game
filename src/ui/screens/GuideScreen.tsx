@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Icon } from "../gfx";
 // The owner's handbook: plain explanations of the rules and the money, for
 // anyone new to the cap, club finance or how a league is governed.
 const SECTIONS: { title: string; body: string[] }[] = [
@@ -165,7 +167,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     ],
   },
   {
-    title: "Your own money",
+    title: "Your wealth outside the club",
     body: [
       "Owner > Money holds everything outside the club: cash, stocks, bonds, real estate and your own businesses. They move month by month with the economy; recessions hit stocks and businesses hardest. Stocks and bonds sell in a day, property takes about three months and a business about six, at a discount.",
       "You can borrow against your holdings at the market rate plus two points, but a deep fall in prices brings a margin call. Watch how much of your net worth is the team: a stake sale on the Ownership page spreads it out. The Money tab also compares your stake with what the same money would have earned in stocks.",
@@ -256,15 +258,78 @@ const SECTIONS: { title: string; body: string[] }[] = [
   },
 ];
 
+/** Where each chapter sits in the manual's contents, and its icon. */
+const PARTS: { part: string; chapters: [string, string][] }[] = [
+  { part: "The basics", chapters: [["Getting around", "flag"], ["What you see and what you don't", "eye"], ["Running the organization", "briefcase"], ["Running the office", "clipboard"]] },
+  { part: "Football", chapters: [["Games and the play-by-play", "football"], ["The clubhouse", "users"], ["Game week, scouts and bonuses", "whistle"], ["Analytics and game plans", "chart"], ["Contracts, camp and the draft room", "pen"], ["History and honors", "trophy"]] },
+  { part: "Money", chapters: [["The salary cap", "cap"], ["The club's money", "money"], ["Borrowing", "bank"], ["Your own money", "key"], ["Your wealth outside the club", "trend"], ["Partners and the board", "handshake"], ["Buying and selling clubs", "swap"], ["Succession and the end of your tenure", "clock"], ["The economy and risk", "alert"]] },
+  { part: "The business", chapters: [["Tickets, fans and sponsors", "ticket"], ["Store, media and game day", "store"], ["Buildings, community and support departments", "building"], ["A new stadium", "stadium"], ["Moving the club", "flag"], ["Growing abroad", "globe"]] },
+  { part: "The league", chapters: [["The league", "shield"], ["The other clubs", "users"], ["Labor and the CBA", "scales"], ["Compliance, crises and legal", "gavel"], ["Starting in another season", "calendar"]] },
+];
+const BY_TITLE = Object.fromEntries(SECTIONS.map((s) => [s.title, s]));
+const ORDER = PARTS.flatMap((p) => p.chapters.map(([t]) => t)).filter((t) => BY_TITLE[t]);
+// Any chapter not placed above still shows, under the last part.
+for (const s of SECTIONS) if (!ORDER.includes(s.title)) { ORDER.push(s.title); PARTS.at(-1)!.chapters.push([s.title, "book"]); }
+const ICON = Object.fromEntries(PARTS.flatMap((p) => p.chapters));
+
+/** The first sentence of a chapter, for its card in the contents. */
+function gist(title: string): string {
+  const first = BY_TITLE[title]?.body[0] ?? "";
+  const end = first.search(/\.(\s|$)/);
+  const line = end > 0 ? first.slice(0, end + 1) : first;
+  if (line.length <= 120) return line;
+  return `${line.slice(0, line.lastIndexOf(" ", 115)).replace(/[,;:]$/, "")}…`;
+}
+
 export function GuideScreen() {
+  const [open, setOpen] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+  const hits = (t: string) => !query || t.toLowerCase().includes(query) || BY_TITLE[t].body.some((b) => b.toLowerCase().includes(query));
+
+  if (open && BY_TITLE[open]) {
+    const at = ORDER.indexOf(open);
+    const prev = ORDER[at - 1];
+    const next = ORDER[at + 1];
+    return (
+      <section className="stack ut-manual">
+        <div className="btn-row"><button className="btn small" onClick={() => setOpen(null)}>Contents</button></div>
+        <article className="panel ut-page">
+          <header className="ut-page-head">
+            <span className="ut-page-icon"><Icon name={ICON[open] ?? "book"} size={26} /></span>
+            <div><span className="ut-page-num">Chapter {String(at + 1).padStart(2, "0")}</span><h2>{open}</h2></div>
+          </header>
+          <div className="stack tight ut-text">{BY_TITLE[open].body.map((p, i) => <p key={i}>{p}</p>)}</div>
+        </article>
+        <div className="ut-turn">
+          {prev ? <button className="btn" onClick={() => setOpen(prev)}>{"\u2190"} {prev}</button> : <span />}
+          {next && <button className="btn" onClick={() => setOpen(next)}>{next} {"\u2192"}</button>}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="stack ut-manual">
-      {SECTIONS.map((s) => (
-        <details key={s.title} className="panel ut-chapter">
-          <summary><strong>{s.title}</strong></summary>
-          <div className="stack tight ut-text" style={{ marginTop: 8 }}>{s.body.map((p, i) => <p key={i}>{p}</p>)}</div>
-        </details>
-      ))}
+      <input className="ut-find" type="search" placeholder="Find in the manual: cap, loans, tickets..." value={q} onChange={(e) => setQ(e.target.value)} aria-label="Find in the manual" />
+      {PARTS.map((p) => {
+        const shown = p.chapters.filter(([t]) => BY_TITLE[t] && hits(t));
+        if (!shown.length) return null;
+        return (
+          <div key={p.part} className="stack tight">
+            <h3 className="ut-part">{p.part}</h3>
+            <div className="ut-contents">
+              {shown.map(([t, icon]) => (
+                <button key={t} className="ut-card" onClick={() => setOpen(t)}>
+                  <span className="ut-card-icon"><Icon name={icon} size={20} /></span>
+                  <span className="ut-card-text"><b><span className="ut-page-num">{String(ORDER.indexOf(t) + 1).padStart(2, "0")}</span> {t}</b><small>{gist(t)}</small></span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {PARTS.every((p) => !p.chapters.some(([t]) => BY_TITLE[t] && hits(t))) && <p className="muted kit-none">Nothing in the manual mentions "{q}".</p>}
     </section>
   );
 }

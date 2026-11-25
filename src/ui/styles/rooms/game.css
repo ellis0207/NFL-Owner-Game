@@ -10,25 +10,29 @@
   --room-title-spacing: -0.01em;
 }
 
-/* The manual: numbered chapters with a serif body at a reading measure, and
-   the settings and save pages as plain spec sheets with a thin rule. */
-.ut-manual { counter-reset: chapter; }
-.ut-chapter { counter-increment: chapter; border-left: 3px solid color-mix(in srgb, var(--team) 70%, var(--ink)); border-radius: 2px var(--radius) var(--radius) 2px; }
-.ut-chapter > summary { cursor: pointer; display: flex; align-items: baseline; gap: 0.7rem; list-style: none; }
-.ut-chapter > summary::-webkit-details-marker { display: none; }
-.ut-chapter > summary::before {
-  content: counter(chapter, decimal-leading-zero);
-  font-family: var(--font-broadcast);
-  font-size: 1.35rem;
-  color: color-mix(in srgb, var(--team) 55%, var(--ink));
-  min-width: 2ch;
-}
-.ut-chapter > summary::after { content: "+"; margin-left: auto; font-family: var(--font-mono); color: var(--muted); }
-.ut-chapter[open] > summary::after { content: "\2212"; }
-.ut-chapter > summary strong { font-family: var(--font-serif); font-size: 1.12rem; font-weight: 600; }
+/* The manual: a contents page of chapter cards by part, and a reading page
+   with a serif body at a reading measure and arrows to turn the page. */
+.ut-manual { min-width: 0; }
+.ut-find { width: 100%; max-width: 520px; padding: 0.6rem 0.8rem; font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; }
+.ut-part { margin: 0.4rem 0 0; font-family: var(--font-display); font-size: 0.85rem; letter-spacing: 0.16em; text-transform: uppercase; color: color-mix(in srgb, var(--team) 60%, var(--ink)); }
+.ut-contents { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.ut-card { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem 0.9rem; text-align: left; font: inherit; color: var(--ink); cursor: pointer; background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid color-mix(in srgb, var(--team) 70%, var(--ink)); border-radius: 2px var(--radius) var(--radius) 2px; box-shadow: var(--shadow); transition: transform 120ms, box-shadow 120ms; }
+.ut-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
+.ut-card-icon, .ut-page-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; color: #fff; background: color-mix(in srgb, var(--team) 80%, #000); }
+.ut-page-icon { width: 52px; height: 52px; }
+.ut-card-text { display: grid; gap: 0.2rem; min-width: 0; }
+.ut-card-text b { font-family: var(--font-serif); font-size: 1.02rem; font-weight: 600; line-height: 1.25; }
+.ut-card-text small { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+.ut-page-num { font-family: var(--font-broadcast); color: color-mix(in srgb, var(--team) 55%, var(--ink)); letter-spacing: 0.06em; }
+.ut-page { display: grid; gap: 1rem; }
+.ut-page-head { display: flex; align-items: center; gap: 0.9rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--rule); }
+.ut-page-head h2 { margin: 0.1rem 0 0; font-family: var(--font-serif); font-size: 1.6rem; }
+.ut-turn { display: flex; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .ut-text { max-width: 72ch; font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.6; }
 [data-room="game"] .panel > h3:first-child { padding-bottom: 0.35rem; border-bottom: 1px solid var(--rule); }
 
 /* An achievement medal: a locked slot until it's earned, then a gold coin. */
 .ut-medal { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--sunk); color: var(--muted); border: 1px solid var(--rule); }
 .ut-medal.on { background: radial-gradient(circle at 35% 30%, #f6dd8a, #c9952b 70%); color: #3b2a06; border-color: #a77a1f; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+/* Spec sheets keep their content at the top of a tall neighbor's row. */
+[data-room="game"] .split > .panel { align-content: start; }

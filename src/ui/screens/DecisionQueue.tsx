@@ -79,7 +79,7 @@ export function DecisionQueue({ game, changed, go }: { game: GameState; changed:
         </label>
       </div>
       {msg && <p className="notice">{msg}</p>}
-      {items.length === 0 && <p className="muted">Nothing is waiting on you today.{minor ? ` The staff are handling ${minor} routine item${minor > 1 ? "s" : ""}.` : ""}</p>}
+      {items.length === 0 && <p className="muted kit-none">Nothing is waiting on you today.{minor ? ` The staff are handling ${minor} routine item${minor > 1 ? "s" : ""}.` : ""}</p>}
       {items.map((i) => {
         const due = when(game, i.expires);
         const expanded = open === i.id || items.length <= 4;

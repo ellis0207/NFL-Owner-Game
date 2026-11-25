@@ -133,7 +133,7 @@ export function GameDay({ game, id, changed }: { game: GameState; id: string; ch
           {msg && <span className="warn">{msg}</span>}
         </div>
       )}
-      {!check && !calls.length && <p className="muted">Nothing to report from game day.</p>}
+      {!check && !calls.length && <p className="muted kit-none">Nothing to report from game day.</p>}
     </section>
   );
 }

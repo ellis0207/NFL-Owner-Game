@@ -19,7 +19,7 @@ export function AnalyticsStaffTab({ game, changed }: { game: GameState; changed:
     <div className="stack">
       {said && <p className="notice">{said}</p>}
       <h3>The analysts</h3>
-      {x.staff.length === 0 ? <p className="muted">No analysts at this staff level. Raise it on the Department tab.</p> : (
+      {x.staff.length === 0 ? <p className="muted kit-none">No analysts at this staff level. Raise it on the Department tab.</p> : (
         <ul>
           {x.staff.map((a, i) => (
             <li key={i}>
@@ -97,7 +97,7 @@ export function AssessmentsTab({ game }: { game: GameState }) {
         <h3>Special teams</h3>
         <ul>{a.st.map((s) => <li key={s.id + s.role}>{s.role}: {n(s.id)}, {s.line}</li>)}</ul>
       </>}
-      {!a.qb.length && !a.line.length && !a.def.length && <p className="muted">No regular-season games yet.</p>}
+      {!a.qb.length && !a.line.length && !a.def.length && <p className="muted kit-none">No regular-season games yet.</p>}
     </div>
   );
 }

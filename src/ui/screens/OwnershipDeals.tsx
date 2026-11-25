@@ -40,7 +40,7 @@ export function Deals({ game, say }: { game: GameState; say: Say }) {
       {deal && <DealPanel game={game} deal={deal} say={say} />}
       <div className="panel stack">
         <h3>Clubs for sale</h3>
-        {open.length === 0 && <p className="muted">No club is formally for sale. You can still make an offer for one; an owner who isn't selling needs a price well above what the club is worth.</p>}
+        {open.length === 0 && <p className="muted kit-none">No club is formally for sale. You can still make an offer for one; an owner who isn't selling needs a price well above what the club is worth.</p>}
         {open.length > 0 && (
           <div className="table-wrap">
             <table>

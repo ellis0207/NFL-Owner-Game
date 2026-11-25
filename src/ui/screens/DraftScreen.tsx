@@ -182,7 +182,7 @@ function Recommendations({ game, act }: { game: GameState; act: (fn: (s: GameSta
 
 function Calls({ game, changed, setMsg }: { game: GameState; changed: () => void; setMsg: (s: string) => void }) {
   const calls = draftCalls(game);
-  if (!calls.length) return <p className="muted">No calls about this pick. Nobody behind us is trying to move up right now.</p>;
+  if (!calls.length) return <p className="muted kit-none">No calls about this pick. Nobody behind us is trying to move up right now.</p>;
   return (
     <div className="panel stack tight">
       <h3 style={{ margin: 0 }}>The phones are ringing</h3>

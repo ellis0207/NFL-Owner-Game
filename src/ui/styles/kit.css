@@ -70,3 +70,16 @@ table.kit-ledger tr.total td { border-top: 3px double var(--ink); font-weight: 6
 .kit-tut-up { color: var(--good, #2e8b57); }
 .kit-tut-down { color: var(--bad, #b33); }
 .kit-tut-same { opacity: 0.5; }
+
+/* A file picker that looks like a button. */
+.kit-file { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.kit-file input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.kit-file-off { opacity: 0.5; cursor: not-allowed; }
+.kit-file:focus-within { outline: 2px solid var(--team); outline-offset: 2px; }
+/* A saved game in a list. */
+.kit-saverow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+.kit-saverow:last-child { border-bottom: 0; }
+.kit-saverow-what { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.kit-slot-empty { display: inline-grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px dashed var(--rule); color: var(--muted); font-weight: 600; }
+/* "Nothing here yet" inside a card: a quiet dashed slot, the same on every page. */
+.kit-none { margin: 0; padding: 0.55rem 0.75rem; border: 1px dashed var(--rule); border-radius: var(--radius); background: color-mix(in srgb, var(--sunk) 40%, transparent); }

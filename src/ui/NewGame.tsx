@@ -13,6 +13,7 @@ import { switchEra } from "./App";
 import { DIFFICULTY, DIFFICULTY_KEYS, type Difficulty } from "../engine/difficulty";
 import { money, onColor } from "./format";
 import { TeamBadge } from "./gfx";
+import { FileButton } from "./kit";
 
 /** The seasons a game can start in: the 2026 default and every season from 2011. */
 const ERAS = [2026, ...Array.from({ length: 15 }, (_, i) => 2025 - i)];
@@ -57,13 +58,15 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const selected = TEAMS.find((t) => t.id === team)!;
   const opp = preview.opener.home === team ? preview.opener.away : preview.opener.home;
 
+  const step = (n: number, text: string) => <h2 className="fd-step"><span className="fd-step-num">{n}</span>{text}</h2>;
+
   return (
     <div className="title-page">
       <div className="title-card">
         <div className="btn-row"><button className="btn small" onClick={onBack}>Back</button></div>
         <h1>Pick your franchise</h1>
         <div className="panel stack tight">
-          <h2>When you start</h2>
+          {step(1, "When you start")}
           <label className="field"><span className="label">Starting season</span>
             <select value={BASE_SEASON} onChange={(e) => void switchEra(Number(e.target.value), undefined, true)}>
               {ERAS.map((y) => <option key={y} value={y}>{y === 2026 ? "2026 (today)" : `${y} season`}</option>)}
@@ -79,27 +82,28 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <span><strong>Alternate history</strong><br /><span className="muted">Off: the real timeline plays out after {BASE_SEASON} (rule changes, the 2020 labor deal, the caps, the Rams', Chargers' and Raiders' moves, club sales). On: none of it happens on its own; only your league's votes, moves and sales change things.</span></span>
             </label>
           )}
-          <label className="field"><span className="label">Custom league pack (optional)</span>
-            <input type="file" accept=".json,application/json" onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return setLeague(null);
-              const c = checkPack(await f.text());
-              setLeague({ name: f.name, pack: c.pack, note: c.ok ? `"${c.pack!.name}" renames ${Object.keys(c.pack!.teams).length} clubs.${c.warnings.length ? " " + c.warnings.join(" ") : ""}` : c.errors.join(" ") });
-            }} />
-          </label>
+          <div className="field"><span className="label">Custom league pack (optional)</span>
+            <div className="btn-row">
+              <FileButton label={league ? `Pack: ${league.name}` : "Choose a league pack"} onFile={async (f) => {
+                const c = checkPack(await f.text());
+                setLeague({ name: f.name, pack: c.pack, note: c.ok ? `"${c.pack!.name}" renames ${Object.keys(c.pack!.teams).length} clubs.${c.warnings.length ? " " + c.warnings.join(" ") : ""}` : c.errors.join(" ") });
+              }} />
+              {league && <button className="btn" onClick={() => setLeague(null)}>Clear</button>}
+            </div>
+          </div>
           {league && <span className={league.pack ? "muted" : "bad"}>{league.note}</span>}
           <span className="muted">Rename and repaint the clubs: city, name and colors. <button className="btn small" onClick={() => download("league-pack.json", packTemplate())}>Download a template</button></span>
         </div>
-        <div className="divisions">
+        {step(2, "Pick your club")}
+        <div className="fd-picks">
           {(["AFC", "NFC"] as const).flatMap((conf) =>
             (["East", "North", "South", "West"] as const).map((div) => (
               <div key={conf + div} className="division">
                 <h3>{conf} {div}</h3>
                 {TEAMS.filter((t) => t.conference === conf && t.division === div).map((t) => {
-                  const [c] = TEAM_COLORS[t.id];
                   return (
-                    <button key={t.id} className="team-pick" aria-pressed={team === t.id} onClick={() => setTeam(t.id)}>
-                      <span className="chip" style={{ background: c, color: onColor(c) }}>{t.id}</span>
+                    <button key={t.id} className="fd-pick" aria-pressed={team === t.id} onClick={() => setTeam(t.id)}>
+                      <TeamBadge team={t.id} size={30} noTip />
                       <span>{t.city} {t.name}</span>
                     </button>
                   );
@@ -110,7 +114,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
         </div>
         <div className="split">
           <div className="panel stack">
-            <h2>Who you are</h2>
+            {step(3, "Who you are")}
             <label className="field"><span className="label">Background</span>
               <select value={profile.background} onChange={(e) => set({ background: e.target.value as OwnerSetup["background"] })}>
                 {Object.entries(BACKGROUNDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -178,12 +182,12 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             )}
           </div>
           <div className="panel stack">
-            <h2>What you want</h2>
+            {step(4, "What you want")}
             <span className="muted">How much each matters to you, 0 to 5. Every season is scored on all six; these weights make your overall grade. You can change them later.</span>
             {GOAL_KEYS.map((g) => (
-              <div key={g} className="btn-row" style={{ justifyContent: "space-between" }}>
+              <div key={g} className="fd-goal">
                 <span title={GOALS[g].what}>{GOALS[g].label}</span>
-                <div className="tabs" role="group" aria-label={GOALS[g].label}>
+                <div className="fd-scale" role="group" aria-label={GOALS[g].label}>
                   {[0, 1, 2, 3, 4, 5].map((v) => <button key={v} aria-pressed={profile.weights[g] === v} onClick={() => set({ weights: { ...profile.weights, [g]: v } })}>{v}</button>)}
                 </div>
               </div>
@@ -191,8 +195,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           </div>
         </div>
         <div className="split">
-          <div className="panel stack" style={{ alignContent: "start" }}>
-            <h2 style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}><TeamBadge team={team} size={34} noTip /> {selected.city} {selected.name}</h2>
+          <div className="panel fd-club">
+            <span className="fd-club-band" style={{ background: `linear-gradient(90deg, ${TEAM_COLORS[team][0]}, ${TEAM_COLORS[team][1] ?? TEAM_COLORS[team][0]})` }} />
+            <div className="fd-club-head"><TeamBadge team={team} size={56} noTip /><div><h2>{selected.city} {selected.name}</h2><small>{selected.conference} {selected.division}</small></div></div>
             <dl className="kv">
               <dt>Stadium</dt><dd>{selected.stadium}</dd>
               <dt>Stadium control</dt><dd>{STRUCTURE_LABEL[STADIUM_BY_TEAM[team].structure]}</dd>
@@ -204,6 +209,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             <span className="muted">{STADIUM_BY_TEAM[team].note}</span>
           </div>
           <div className="panel stack">
+            {step(5, "The rules")}
             <label className="field">
               <span className="label">Owner name</span>
               <input id="owner-name" type="text" value={owner} placeholder="Your name" maxLength={40} onChange={(e) => setOwner(e.target.value)} />
@@ -233,7 +239,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <input id="ironman" type="checkbox" checked={ironman} onChange={(e) => setIronman(e.target.checked)} />
               <span><strong>Ironman</strong><br /><span className="muted">One continuing save: no loading an earlier save to undo a decision.</span></span>
             </label>
-            <button className="btn primary" onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, difficulty: level, economy: DIFFICULTY[level].economy, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
+            <button className="fd-start" style={{ background: TEAM_COLORS[team][0], color: onColor(TEAM_COLORS[team][0]) }} onClick={() => onStart(withLeague(newGame(team, owner.trim() || "Owner", { capRules, finances, scouting, difficulty: level, economy: DIFFICULTY[level].economy, ...(ironman ? { ironman } : {}), ...(BASE_SEASON !== 2026 && altHistory ? { altHistory } : {}) }, undefined, profile), league?.pack))}>
               Take over the {selected.name}
             </button>
           </div>

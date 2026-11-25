@@ -387,7 +387,7 @@ export function FollowGame({ r, log, box, onDone, limit, start, onClock }: { r: 
       <RunningBoxScore r={r} box={running} final={over} period={Math.min(cast.q, 5)} injuries={hurt} />
       <div className="cast-feed stack tight">
         <h3>Plays so far</h3>
-        {shown.length === 0 && <p className="muted">Nothing yet.</p>}
+        {shown.length === 0 && <p className="muted kit-none">Nothing yet.</p>}
         <ol className="plays feed">{shown.map((p, i) => <PlayLine key={seen - i} r={r} p={p} alerts={stories[seen - i - 1]} />)}</ol>
       </div>
     </section>

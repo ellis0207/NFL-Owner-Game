@@ -95,7 +95,7 @@ export function StaffScreen({ game, changed }: { game: GameState; changed: () =>
       {view === "ours" && <OurStaff game={game} act={act} searches={searches} />}
       {view === "search" && (top.length
         ? top.map((s) => <Search key={s.role} game={game} search={s} act={act} />)
-        : <p className="muted">No open searches. If we let the head coach or general manager go, the search runs here: interviews, then an offer.</p>)}
+        : <p className="muted kit-none">No open searches. If we let the head coach or general manager go, the search runs here: interviews, then an offer.</p>)}
       {view === "league" && <League game={game} />}
     </section>
   );

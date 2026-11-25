@@ -188,7 +188,7 @@ const OUTCOME = { hit: "Confirmed", miss: "Wrong", quiet: "Went quiet" } as cons
 
 export function ReporterPage({ game, id, openStory, back, changed }: { game: GameState; id: string; openStory: (id: string) => void; back: () => void; changed: () => void }) {
   const r = corps(game).people.find((p) => p.id === id);
-  if (!r) return <div className="stack"><button className="btn" onClick={back}>Back</button><p className="muted">No such reporter.</p></div>;
+  if (!r) return <div className="stack"><button className="btn" onClick={back}>Back</button><p className="muted kit-none">No such reporter.</p></div>;
   const stories = (game.media?.stories ?? []).filter((s) => s.reporter === r.id || (!s.reporter && s.by === r.name)).slice(0, 25);
   const reports = corps(game).rumors.filter((x) => x.reporter === r.id && x.headline).slice(0, 20);
   return (
@@ -204,13 +204,13 @@ export function ReporterPage({ game, id, openStory, back, changed }: { game: Gam
       </section>
       <section className="panel stack tight">
         <h3>Reports</h3>
-        {reports.length === 0 ? <p className="muted">No sourced reports on the record.</p> : reports.map((x) => (
+        {reports.length === 0 ? <p className="muted kit-none">No sourced reports on the record.</p> : reports.map((x) => (
           <div key={x.id}><span className="muted small">{shortDate(x.date)}</span> {x.headline} <span className="pill">{x.outcome ? OUTCOME[x.outcome] : "Open"}</span></div>
         ))}
       </section>
       <section className="panel stack tight">
         <h3>Recent stories</h3>
-        {stories.length === 0 ? <p className="muted">Nothing in the archive.</p> : stories.map((s) => (
+        {stories.length === 0 ? <p className="muted kit-none">Nothing in the archive.</p> : stories.map((s) => (
           <div key={s.id}><span className="muted small">{shortDate(s.date)}</span> <button className="link" onClick={() => openStory(s.id)}>{s.headline}</button></div>
         ))}
       </section>

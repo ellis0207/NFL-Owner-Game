@@ -5,7 +5,8 @@ import type { GameState } from "../../engine/types";
 import { parseSaveFile } from "../../save/codec";
 import { connectCloud, connectDownloads, exportFileName, exportText, SLOTS, type Cloud, type Slot, type SlotInfo } from "../../save/cloud";
 import { listRecovery, readRecovery, writeAutosave, writeRecoveryCopy, type RecoveryInfo } from "../../save/local";
-import { IconHead } from "../gfx";
+import { IconHead, TeamBadge } from "../gfx";
+import { FileButton, SaveRow } from "../kit";
 
 export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: (s: GameState) => void; onQuit: () => void }) {
   const [cloud, setCloud] = useState<Cloud | null>(null);
@@ -52,18 +53,18 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
           </div>
           <h4>Recovery copies</h4>
           <p className="muted">The game keeps three older copies here, one about every week of game time, and opens the newest one if the autosave is ever unreadable.</p>
-          {recovery.length === 0 ? <p className="muted">None yet.</p> : (
+          {recovery.length === 0 ? <p className="muted kit-none">None yet.</p> : (
             <div className="stack">
               {recovery.map((r) => (
-                <div key={r.slot} className="agenda-item">
-                  <span>{teamLabel(r.team)}, {longDate(r.date)} <span className="muted">(saved {new Date(r.savedAt).toLocaleString()})</span></span>
-                  {!game.settings.ironman && <button className="btn small" disabled={busy} onClick={() => act(async () => {
+                <SaveRow key={r.slot} actions={!game.settings.ironman && <button className="btn small" disabled={busy} onClick={() => act(async () => {
                     const got = await readRecovery(r.slot);
                     if (!got) throw new Error("That recovery copy can't be opened.");
                     onLoad(got.state);
                     return "Recovery copy opened.";
-                  })}>Open</button>}
-                </div>
+                  })}>Open</button>}>
+                  <TeamBadge team={r.team} size={32} noTip />
+                  <span>{teamLabel(r.team)}, {longDate(r.date)}<br /><span className="muted">Saved {new Date(r.savedAt).toLocaleString()}</span></span>
+                </SaveRow>
               ))}
             </div>
           )}
@@ -81,15 +82,9 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
               })}>Export save file</button>
             </div>
           ) : <p className="muted">File export works when the game is opened on claude.ai.</p>}
-          {game.settings.ironman ? <p className="muted">Ironman: an exported file is a backup, not a way back. Opening saves from inside the game is off.</p> : <label className="field">
-            <span className="label">Open a save file</span>
-            <input id="import-in-game" type="file" accept=".json,application/json" disabled={busy} onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (!f) return;
-              act(async () => { onLoad(parseSaveFile(await f.text())); return "Save file loaded."; });
-            }} />
-          </label>}
+          {game.settings.ironman ? <p className="muted">Ironman: an exported file is a backup, not a way back. Opening saves from inside the game is off.</p> : <div className="btn-row">
+            <FileButton id="import-in-game" label="Open a save file" disabled={busy} onFile={(f) => act(async () => { onLoad(parseSaveFile(await f.text())); return "Save file loaded."; })} />
+          </div>}
         </div>
       </div>
       {!game.settings.ironman && <div className="panel stack">
@@ -98,27 +93,24 @@ export function SaveScreen({ game, onLoad, onQuit }: { game: GameState; onLoad: 
         {cloud && SLOTS.map((s, i) => {
           const info = slots[s];
           return (
-            <div key={s} className="agenda-item">
-              <span className="kind">Slot {i + 1}</span>
-              <div className="stack" style={{ gap: "0.4rem" }}>
-                <span>{info ? `${teamLabel(info.team)} · ${longDate(info.date)} · saved ${new Date(info.savedAt).toLocaleString()}` : "Empty"}</span>
-                <div className="btn-row">
-                  <button className="btn small" disabled={busy} onClick={() => act(async () => {
-                    await cloud.save(s, game);
-                    setSlots(await cloud.list());
-                    return `Saved to slot ${i + 1}.`;
-                  })}>{info ? "Overwrite" : "Save here"}</button>
-                  {info && confirmLoad !== s && <button className="btn small" disabled={busy} onClick={() => setConfirmLoad(s)}>Load</button>}
-                  {confirmLoad === s && (
-                    <>
-                      <span className="warn">Unsaved progress in this game will be lost.</span>
-                      <button className="btn small danger" onClick={() => act(async () => { onLoad(await cloud.load(s)); return "Loaded."; })}>Load slot {i + 1}</button>
-                      <button className="btn small" onClick={() => setConfirmLoad(null)}>Cancel</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            <SaveRow key={s} actions={<>
+              <button className="btn small" disabled={busy} onClick={() => act(async () => {
+                await cloud.save(s, game);
+                setSlots(await cloud.list());
+                return `Saved to slot ${i + 1}.`;
+              })}>{info ? "Overwrite" : "Save here"}</button>
+              {info && confirmLoad !== s && <button className="btn small" disabled={busy} onClick={() => setConfirmLoad(s)}>Load</button>}
+              {confirmLoad === s && (
+                <>
+                  <span className="warn">Unsaved progress in this game will be lost.</span>
+                  <button className="btn small danger" onClick={() => act(async () => { onLoad(await cloud.load(s)); return "Loaded."; })}>Load slot {i + 1}</button>
+                  <button className="btn small" onClick={() => setConfirmLoad(null)}>Cancel</button>
+                </>
+              )}
+            </>}>
+              {info ? <TeamBadge team={info.team} size={32} noTip /> : <span className="kit-slot-empty">{i + 1}</span>}
+              <span><strong>Slot {i + 1}</strong><br /><span className="muted">{info ? `${teamLabel(info.team)} · ${longDate(info.date)} · saved ${new Date(info.savedAt).toLocaleString()}` : "Empty"}</span></span>
+            </SaveRow>
           );
         })}
       </div>}

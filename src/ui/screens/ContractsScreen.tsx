@@ -44,7 +44,7 @@ export function ContractsScreen({ game, changed }: { game: GameState; changed: (
 
       {tab === "talks" && (
         talks.length === 0
-          ? <p className="muted">No contract talks yet. Open talks from a player's page or from Extension candidates.</p>
+          ? <p className="muted kit-none">No contract talks yet. Open talks from a player's page or from Extension candidates.</p>
           : (
             <div className="table-wrap">
               <table>
