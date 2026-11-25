@@ -36,6 +36,9 @@ recap of our season opens (record, finish, team leaders, achievements). The
 sounds are made in the browser (no files), on at a low volume by default, with
 a mute button in the header and Off/Low/Full in Settings.
 
+The page is about 5 MB: the league's data ships gzipped and unpacks in the
+browser as the game loads.
+
 Each sidebar group is a room with its own look: the owner's desk, the film
 room, the cap office, the draft war room, the boardroom, the stadium and the
 game manual. Every page opens under a header picture of its room, rendered in

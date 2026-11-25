@@ -9,6 +9,7 @@ import { FORMAT } from "./format";
 import { dealCapHit, dealOf, dealYearsLeft, leagueYear, practiceWeekly, releaseCharges, salaryCap, writeMinimumDeal } from "./contracts";
 import { BASE_SEASON, PLAYER_BY_ID, RULES, SEASON, TEAM_BY_ID } from "./league";
 import type { GameState } from "./types";
+import { liveIds } from "./live";
 
 export { minimumSalary } from "./contracts";
 
@@ -67,7 +68,8 @@ export function teamPlayerIds(state: GameState, team: string): string[] {
   let index = rosterIndex.get(state);
   if (!index) {
     index = {};
-    for (const id in state.players) {
+    // Retired players have no team; the live list skips them without looking.
+    for (const id of liveIds(state)) {
       const t = state.players[id].team;
       if (t) (index[t] ??= []).push(id);
     }

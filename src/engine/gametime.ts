@@ -14,7 +14,7 @@ import { depthChart, gameDayElevations } from "./roster";
 import { simulateGame } from "./sim";
 import { teamStaff } from "./staff";
 import { matchup, standings } from "./standings";
-import { stat } from "./stats";
+import { noteBox, stat } from "./stats";
 import type { BoxScore, GameResult, GameState, Position, ScheduledGame } from "./types";
 
 /** The schedule's name for a game: "Week 3", "Wild Card", the Super Bowl's numeral. */
@@ -59,6 +59,7 @@ export function finishGame(state: GameState, g: ScheduledGame): GameResult | und
   const { result, box } = live;
   state.results[g.id] = result;
   state.box[g.id] = box;
+  noteBox(state);
   gameDayOps(state, g, result);
   businessGame(state, g, result);
   reportGame(state, g, result, box);
