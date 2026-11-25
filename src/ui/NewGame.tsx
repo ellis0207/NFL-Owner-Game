@@ -3,7 +3,7 @@ import { capSummary } from "../engine/cap";
 import { longDate, shortDate } from "../engine/dates";
 import { bindCustomLeague, checkPack, packTemplate, setCustomLeague } from "../engine/custompack";
 import { BASE_SEASON, TEAMS } from "../engine/league";
-import { PACK_ERROR } from "../engine/pack";
+import { FIRST_PACK, LAST_PACK, PACK_ERROR } from "../engine/pack";
 import { newGame, openingGame, veteranReportDate } from "../engine/season";
 import { TEAM_COLORS } from "../engine/teamColors";
 import { STADIUM_BY_TEAM, STRUCTURE_LABEL } from "../engine/stadiums";
@@ -17,8 +17,8 @@ import { FileButton } from "./kit";
 import { classLabel, REAL_YEARS } from "../engine/realclasses";
 import { chooseDraftClass } from "../engine/classpick";
 
-/** The seasons a game can start in: the 2026 default and every season from 2011. */
-const ERAS = [2026, ...Array.from({ length: 15 }, (_, i) => 2025 - i)];
+/** The seasons a game can start in: the 2026 default and every season with a data pack (2002 on). */
+const ERAS = [2026, ...Array.from({ length: LAST_PACK - FIRST_PACK + 1 }, (_, i) => LAST_PACK - i)];
 
 /** Saves a text file through the browser. */
 export function download(name: string, text: string): void {

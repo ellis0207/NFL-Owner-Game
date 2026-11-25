@@ -1,5 +1,5 @@
 // Real draft classes (data/draft-classes, built by pipeline/draft_classes.py):
-// every player drafted from 2011 to 2026, the undrafted players who were at the
+// every player drafted from 2002 to 2026, the undrafted players who were at the
 // combine or made a club, and the early 2027 board. A save picks, for each
 // draft, the real class of that year, a generated one, or another year's real
 // class (played out of order). This module is a leaf: it holds the data and

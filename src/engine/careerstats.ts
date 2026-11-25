@@ -9,6 +9,7 @@
 // adjust passing numbers for the era they came in, using the league's passing
 // yards per team game each season (approximate real figures through 2025,
 // then the save's own).
+import { PACK } from "./pack";
 import careerJson from "../../data/league-2026/career.json";
 import { news, send } from "./inbox";
 import { BASE_SEASON, PLAYER_BY_ID, RULES } from "./league";
@@ -17,7 +18,8 @@ import { history } from "./seasons";
 import { seasonTotals } from "./stats";
 import type { GameState, Position, SeasonStats } from "./types";
 
-const CAREER = careerJson as unknown as { cols: string[]; players: Record<string, (number | string)[][]> };
+// A historical start's pack carries its own players' earlier seasons (pipeline/pack_careers.py).
+const CAREER = (PACK?.career ?? careerJson) as unknown as { cols: string[]; players: Record<string, (number | string)[][]> };
 
 const LINE = new Set<Position>(["OT", "OG", "C", "LS"]);
 
@@ -75,7 +77,7 @@ export function careerSpan(id: string): { from: number; seasons: number } {
 // ---- Career records and milestones ----
 
 /** Real NFL regular-season career records through 2025: [value, holder, what]. */
-export const NFL_CAREER: Record<string, [number, string, string]> = {
+const NFL_CAREER_2025: Record<string, [number, string, string]> = {
   passYds: [89214, "Tom Brady", "passing yards"],
   passTd: [649, "Tom Brady", "touchdown passes"],
   rushYds: [18355, "Emmitt Smith", "rushing yards"],
@@ -87,6 +89,30 @@ export const NFL_CAREER: Record<string, [number, string, string]> = {
   defInt: [81, "Paul Krause", "interceptions"],
   fgm: [599, "Adam Vinatieri", "field goals"],
 };
+
+/**
+ * The career marks as they stood after each season (real): a historical start
+ * reads the last line before it. A holder still playing then is in the save,
+ * so his own count goes on from there.
+ */
+const CAREER_BEFORE: Record<string, [number, string, number][]> = {
+  passYds: [[61361, "Dan Marino", 1999], [61655, "Brett Favre", 2007], [65127, "Brett Favre", 2008], [69329, "Brett Favre", 2009],
+    [71838, "Brett Favre", 2010], [71940, "Peyton Manning", 2015], [74437, "Drew Brees", 2018], [77416, "Drew Brees", 2019], [80358, "Drew Brees", 2020], [84520, "Tom Brady", 2021]],
+  passTd: [[420, "Dan Marino", 1999], [442, "Brett Favre", 2007], [464, "Brett Favre", 2008], [497, "Brett Favre", 2009], [508, "Brett Favre", 2010],
+    [530, "Peyton Manning", 2014], [539, "Peyton Manning", 2015], [547, "Drew Brees", 2019], [581, "Tom Brady", 2020], [624, "Tom Brady", 2021]],
+  rushYds: [[16726, "Walter Payton", 1987], [17162, "Emmitt Smith", 2002], [17418, "Emmitt Smith", 2003]],
+  sacks: [[198, "Reggie White", 2000]],
+  fgm: [[538, "Gary Anderson", 2004], [565, "Morten Andersen", 2007], [582, "Adam Vinatieri", 2018]],
+};
+
+/** The season each 2025 career mark was reached (its holder's last season, or the season it passed the old one). */
+const CAREER_SET: Record<string, number> = { passYds: 2022, passTd: 2022, rushYds: 2004, rushTd: 2004, rec: 2004, recYds: 2004, recTd: 2004, sacks: 2003, defInt: 1979, fgm: 2019 };
+
+export const NFL_CAREER: Record<string, [number, string, string]> = Object.fromEntries(Object.entries(NFL_CAREER_2025).map(([k, v]) => {
+  // A start sees the marks through the season before it.
+  const old = (CAREER_SET[k] ?? 0) >= BASE_SEASON ? (CAREER_BEFORE[k] ?? []).filter((x) => x[2] < BASE_SEASON).at(-1) : undefined;
+  return [k, old ? [old[0], old[1], v[2]] : v];
+}));
 
 /** Round numbers the league notices along the way. */
 export const MILESTONES: Record<string, number[]> = {
@@ -150,8 +176,9 @@ export function careerLeaders(state: GameState, key: string, count = 10): { id: 
 
 // ---- Cross-era rankings ----
 
-/** League passing yards per team game, approximately, 2005-2025 (real). */
+/** League passing yards per team game, approximately, 1999-2025 (real; before 2005 from nflverse totals net of sacks). */
 const PASS_PER_GAME: Record<number, number> = {
+  1999: 215, 2000: 208, 2001: 209, 2002: 215, 2003: 202, 2004: 213,
   2005: 206, 2006: 205, 2007: 213, 2008: 211, 2009: 221, 2010: 222, 2011: 229, 2012: 231, 2013: 235, 2014: 238,
   2015: 243, 2016: 239, 2017: 225, 2018: 239, 2019: 236, 2020: 241, 2021: 230, 2022: 217, 2023: 213, 2024: 214, 2025: 215,
 };

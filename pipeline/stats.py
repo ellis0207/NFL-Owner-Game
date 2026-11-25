@@ -26,7 +26,8 @@ KEEP = {
 
 
 def _num(v):
-    if v is None or (isinstance(v, float) and math.isnan(v)):
+    if v is None or (isinstance(v, float) and not math.isfinite(v)):
+        # A few old rows divide by zero (a target share with no team targets).
         return 0
     return round(float(v), 3) if isinstance(v, float) and not float(v).is_integer() else int(v)
 

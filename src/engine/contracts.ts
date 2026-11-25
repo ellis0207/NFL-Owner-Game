@@ -565,6 +565,15 @@ export function voidedProration(deal: Deal, year: number): number {
  */
 export function rookieScale(pick: number, year: number): { total: number; signingBonus: number; years: number; option: boolean } {
   const cap = projectedCap(year);
+  if (termsFor(year).noWageScale && year < 2011) {
+    // Before the 2011 wage scale: five years for a first-rounder (the first pick
+    // near 10% of the cap a year, the 32nd near 1.5%), four after, no option.
+    const years = pick <= 32 ? 5 : 4;
+    const perYear = pick <= 32 ? 0.1 * pick ** -0.55 : 0.0149 * 32 / pick;
+    const total = Math.round((cap * perYear * years) / 1000) * 1000;
+    const sb = 0.06 + 0.5 * Math.exp(-(pick - 1) / 40);
+    return { total, signingBonus: Math.round((total * sb) / 1000) * 1000, years, option: false };
+  }
   const share = 0.0155 + 0.1595 * Math.exp(-(pick - 1) / 22);
   const total = Math.round((cap * share * termsFor(year).rookieScale) / 1000) * 1000;
   const sbShare = 0.04 + 0.62 * Math.exp(-(pick - 1) / 40);

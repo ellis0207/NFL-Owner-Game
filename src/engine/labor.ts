@@ -24,7 +24,7 @@ import { inRecession } from "./economy";
 import { payCash } from "./finance";
 import { trustHit } from "./fans";
 import { formatFor } from "./format";
-import { CBA_2011 } from "./eras";
+import { CBA_2006, CBA_2011, UNCAPPED_2010 } from "./eras";
 import { money, news, send } from "./inbox";
 import { bindCaps, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { onCommittee } from "./leagueoffice";
@@ -102,8 +102,13 @@ export function labor(state: GameState): LaborState {
   const r = rngFor(state.seed, "union");
   const leader = `${FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(r() * LAST_NAMES.length)]}`;
   state.labor = {
-    // A start before 2021 opens under the 2011 agreement (eras.ts).
-    agreements: state.era && state.era.start <= 2020
+    // A start before 2021 opens under the 2011 agreement, one before 2011 under
+    // the 1993 agreement as extended in 2006 (eras.ts). With real history the
+    // owners' 2008 opt-out leaves 2010 uncapped.
+    agreements: state.era && state.era.start <= 2010
+      ? [{ from: 1993, through: state.era.alt ? 2010 : 2009, signed: "2006-03-08", terms: { ...CBA_2006 } },
+        ...(state.era.alt ? [] : [{ from: 2010, through: 2010, signed: "2008-05-20", terms: { ...UNCAPPED_2010 } }])]
+      : state.era && state.era.start <= 2020
       ? [{ from: 2011, through: 2020, signed: "2011-08-04", terms: { ...CBA_2011 } }]
       : [{ from: 2021, through: 2030, signed: "2020-03-15", terms: { ...BASE_TERMS } }],
     union: { leader, since: 2023, militancy: Math.round((0.3 + 0.4 * r()) * 100) / 100 },
@@ -321,9 +326,10 @@ function sign(state: GameState, terms: CbaTerms, yes: number): void {
   l.agreements.push(a);
   l.talks = undefined;
   bindLabor(state);
-  // Caps already announced for the new deal's years follow the new share.
+  // Caps already announced for the new deal's years follow the new share
+  // (under real history the caps are the real ones, set in setCap).
   const caps = state.league?.caps;
-  if (caps && terms.share !== old.share) {
+  if (caps && terms.share !== old.share && !(state.era && !state.era.alt)) {
     for (const y of Object.keys(caps).map(Number)) if (y >= from) caps[y] = Math.round(caps[y] * terms.share / old.share / 100_000) * 100_000;
     bindCaps(caps);
   }
@@ -476,6 +482,14 @@ export function laborDaily(state: GameState): void {
     bindLabor(state);
     note(state, "The players ratified a new agreement through 2030: a 48.5% share with the 17th game, and bigger minimums.");
     news(state, "labor", "Players ratify a new labor deal through 2030: a 17th game from 2021, an expanded playoff field and higher minimum salaries");
+    return;
+  }
+  // Real history: the agreement ran out in March 2011, the owners locked the
+  // players out on March 12, and the new deal ended it on July 25.
+  if (state.era && !state.era.alt && cur.through === 2010) {
+    if (!l.talks && state.date >= "2010-03-01") openTalks(state);
+    if (l.talks && !l.talks.lockout && state.date >= "2011-03-12") startLockout(state);
+    if (l.talks?.lockout && state.date >= "2011-07-25") sign(state, { ...CBA_2011 }, TEAMS.length);
     return;
   }
   if (!l.talks && !real2020 && state.date >= `${cur.through - 1}-03-01` && state.date < deadline(cur.through)) openTalks(state);

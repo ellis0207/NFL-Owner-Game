@@ -201,6 +201,8 @@ class GameSim extends SimPass {
     this.clock = this.game.type === "POST" ? QUARTER : LEAGUE_RULES.otMinutes * 60;
     this.t.away.timeouts = 2;
     this.t.home.timeouts = 2;
+    // Before 2012 the first score of any kind won.
+    if (LEAGUE_RULES.otRule === "sudden") this.ot.suddenDeath = true;
     const receiver: Side = this.rng() < 0.5 ? "away" : "home";
     this.kickoff(this.other(receiver));
   }
@@ -211,7 +213,8 @@ class GameSim extends SimPass {
     this.ot.possessions[by]++;
     const a = this.t.away.score;
     const h = this.t.home.score;
-    if (this.ot.possessions.away >= 1 && this.ot.possessions.home >= 1) {
+    if (this.ot.suddenDeath && a !== h) this.over = true;
+    else if (this.ot.possessions.away >= 1 && this.ot.possessions.home >= 1) {
       if (a !== h) this.over = true;
       else this.ot.suddenDeath = true;
     }
@@ -445,7 +448,9 @@ class GameSim extends SimPass {
     this.score(team, 6, text);
     if (this.rec.drive?.o === team.side) this.rec.why = "Touchdown";
     this.tdNote(" TOUCHDOWN.", F.score);
-    if (this.ot.active && this.ot.suddenDeath) {
+    // 2012-2024: a touchdown on the first possession of overtime ended the game.
+    const firstDrive = LEAGUE_RULES.otRule === "modified" && this.ot.possessions.away + this.ot.possessions.home === 0;
+    if (this.ot.active && (this.ot.suddenDeath || firstDrive)) {
       this.over = true;
       return;
     }

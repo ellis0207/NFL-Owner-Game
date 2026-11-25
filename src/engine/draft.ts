@@ -349,13 +349,14 @@ export function ourPicksLeft(state: GameState): Slot[] {
 
 // ---- Making picks ----
 
-/** Rookie scale contract: four years (a fifth-year option for first-rounders), set by the slot. */
+/** Rookie scale contract: four years (a fifth-year option for first-rounders), set by the slot; five for first-rounders before 2011. */
 export function rookieDeal(team: string, overall: number, date: string): Deal {
   const sc = rookieScale(overall, DRAFT_YEAR);
-  const mins = [0, 1, 2, 3].map((i) => minimumSalary(i, DRAFT_YEAR + i));
+  const n = sc.years;
+  const mins = Array.from({ length: n }, (_, i) => minimumSalary(i, DRAFT_YEAR + i));
   const extra = Math.max(0, sc.total - sc.signingBonus - mins.reduce((a, b) => a + b, 0));
-  const shape = [0.16, 0.22, 0.27, 0.35];
-  const proration = Math.round(sc.signingBonus / 4);
+  const shape = n === 5 ? [0.12, 0.16, 0.2, 0.24, 0.28] : [0.16, 0.22, 0.27, 0.35];
+  const proration = Math.round(sc.signingBonus / n);
   const years = mins.map((m, i) => {
     const base = m + Math.round(extra * shape[i]);
     // First-rounders are fully guaranteed; early second-rounders get most of it; everyone else gets the bonus.
@@ -364,7 +365,7 @@ export function rookieDeal(team: string, overall: number, date: string): Deal {
   });
   const total = sc.signingBonus + years.reduce((s, y) => s + y.base, 0);
   return {
-    team, signed: date, kind: "rookie", signingBonus: sc.signingBonus, total, apy: Math.round(total / 4),
+    team, signed: date, kind: "rookie", signingBonus: sc.signingBonus, total, apy: Math.round(total / n),
     guaranteedAtSigning: sc.signingBonus + years.reduce((s, y) => s + y.guaranteed, 0), years,
   };
 }

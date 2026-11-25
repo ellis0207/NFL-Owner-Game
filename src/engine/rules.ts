@@ -61,12 +61,15 @@ export interface RuleParams {
   premiumPool: number;
   /** Clubs in the playoff field: 14 since 2020, 12 before. */
   playoffTeams: number;
+  /** Overtime: sudden death (before 2012), a first-possession touchdown wins (2012-2024), both teams get the ball (2025 on). */
+  otRule: "sudden" | "modified" | "both";
 }
 
 const DEFAULTS: RuleParams = {
   playClock: 40, touchback: 35, xpLine: 15, twoPointLine: 2, otMinutes: 10, dpiCap: 99, fourthAndTwenty: false,
   hipDropBan: true, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
   games: 17, byes: 1, intlExtra: 0, skyJudge: false, safetyTech: false, gateShare: 0.34, premiumPool: 0, playoffTeams: 14,
+  otRule: "both",
 };
 
 /** The rules in force this season, bound per save (see bindRules). */
@@ -354,6 +357,11 @@ export function bindRules(state: GameState): void {
   LEAGUE_RULES = rulesFor(state);
   bindSeasonFormat(state);
   RULES.rosterLimits.practiceSquad = (state.era ? practiceSquadBase(state, RULES.season) : 17) + LEAGUE_RULES.extraPracticeSquad;
+  // Game-day actives: 45 (plus an emergency third quarterback) before 2011, 46 to 2019, 48 since.
+  if (state.era) {
+    const s = ruleSeason(state, RULES.season);
+    RULES.rosterLimits.gameDayActive = s < 2011 ? 45 : s < 2020 ? 46 : 48;
+  }
   if (LEAGUE_RULES.deadlineShift) {
     const k = RULES.keyDates;
     k.tradeDeadline = addDays(k.tradeDeadline, LEAGUE_RULES.deadlineShift);

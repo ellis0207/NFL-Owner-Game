@@ -1,5 +1,5 @@
 """Builds the real draft classes a save can play: every player drafted from
-2011 to 2026, the undrafted players who were invited to the combine or made
+2002 to 2026, the undrafted players who were invited to the combine or made
 a club, and the early 2027 board.
 
     python pipeline/draft_classes.py
@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE / "draft"))
 from schools import norm, slug  # noqa: E402
 from small_schools import CENTER, SMALL  # noqa: E402
 
-FIRST, LAST = 2011, 2026
+FIRST, LAST = 2002, 2026
 # Pro Football Reference club codes to the game's.
 TEAM_FIX = {"KAN": "KC", "SFO": "SF", "GNB": "GB", "NWE": "NE", "NOR": "NO", "TAM": "TB", "SDG": "LAC", "STL": "LA", "RAM": "LA",
             "LAR": "LA", "OAK": "LV", "RAI": "LV", "LVR": "LV", "SD": "LAC"}
@@ -63,7 +63,7 @@ def rating_history() -> dict:
             if r:
                 hist.setdefault(x["id"], {})[season] = (r["overall"], x["position"], r["traits"])
 
-    for y in range(2011, 2026):
+    for y in range(2002, 2026):
         p = json.load(gzip.open(ROOT / "data" / "packs" / f"{y}.json.gz"))
         add(y, p["players"], p["ratings"])
     add(2026, json.load(open(ROOT / "data/league-2026/players.json")), json.load(open(ROOT / "data/league-2026/hidden-ratings.json")))
@@ -204,9 +204,11 @@ def main():
         rows += und
         rows_by_year[year] = rows
 
-    # What a draft slot usually becomes, fitted on classes with three seasons behind them.
+    # What a draft slot usually becomes, fitted on classes with three seasons
+    # behind them (2011 on, as when the curve was first set, so the later
+    # classes read the same however far back the earlier ones go).
     pts = []
-    for year in range(FIRST, 2024):
+    for year in range(2011, 2024):
         for i, r in enumerate(rows_by_year[year]):
             if r["lvl"] is not None:
                 pts.append((r["pick"] or 270 + i * 0, r["lvl"]))
