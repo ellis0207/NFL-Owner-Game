@@ -14,6 +14,7 @@ import { playerModel, type Model3D } from "./anim/Players3D";
 import { buildTrack } from "./anim/build";
 import type { Track } from "./anim/book";
 import { readPrefs } from "./prefs";
+import { cue } from "./sound";
 
 const colorOf = (team: string): string => TEAM_COLORS[team]?.[0] ?? "#2b3a4a";
 
@@ -279,6 +280,18 @@ export function FollowGame({ r, log, box, onDone, limit, start, onClock }: { r: 
   const hurt = useMemo(() => log.plays.slice(0, seen).filter((p) => p[8] & F.injury)
     .map((p) => /INJURY: (.*?) is down after the play, ([^.]*)\./.exec(p[7])).filter((m) => m).map((m) => `${m![1]}, ${m![2]}`), [log, seen]);
   const alerts = seen > 0 ? stories[seen - 1] : [];
+  // The crowd: a roar when the home side scores, a groan when the visitors do, the whistle at the end.
+  // Only a play stepped to one at a time makes a sound, not a jump to the next drive or quarter.
+  const heard = useRef(seen);
+  useEffect(() => {
+    const was = heard.current;
+    heard.current = seen;
+    if (seen !== was + 1) return;
+    const before = castAt(log, was);
+    if (cast.final && !before.final) cue("whistle");
+    else if (cast.home > before.home) cue("cheer");
+    else if (cast.away > before.away) cue("groan");
+  }, [seen, log, cast]);
 
   // Both teams lined up for the next snap. Notes between plays (a timeout, the two-minute warning) are looked past.
   let stage: { track: Track; row: number } | null = play ? { track: play, row: at - 1 } : null;

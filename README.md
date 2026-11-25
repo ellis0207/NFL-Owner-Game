@@ -29,6 +29,13 @@ show what's waiting in them. The search box finds pages as well as people.
 On a phone the sidebar becomes a Menu button with the section's other pages
 under the date. Settings has a light, dark or device theme.
 
+The game answers back: our final scores and new achievements come up as
+toasts in the corner with a sound, the field view has a crowd that roars for
+the home side and a whistle at the end, and once the Super Bowl is played a
+recap of our season opens (record, finish, team leaders, achievements). The
+sounds are made in the browser (no files), on at a low volume by default, with
+a mute button in the header and Off/Low/Full in Settings.
+
 Each sidebar group is a room with its own look: the owner's desk, the film
 room, the cap office, the draft war room, the boardroom, the stadium and the
 game manual. Every page opens under a header picture of its room, rendered in
