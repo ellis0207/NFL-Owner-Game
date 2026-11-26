@@ -58,7 +58,7 @@ import { afterOurGame, contentMonthly, defaultContentNet } from "./teammedia";
 import { gateGrounds } from "./grounds";
 import { afterHomeGame, applyRenewals, gameTier, hospitalityRevenue, planRenewals, premiumUse, pslCash, recommendedIncrease, sellGeneral, tix, type Sale } from "./ticketing";
 import type { BusinessState, ConcessionTier, Dept, EventKind, GameResult, GameState, GameTier, LedgerCat, Promo, ScheduledGame, StadiumEvent, Zone } from "./types";
-import { PACK, REAL_CAPS, yearsFromMoneyYear } from "./pack";
+import { MONEY_YEAR, PACK, REAL_CAPS, yearsFromMoneyYear } from "./pack";
 
 const KEY = RULES.keyDates;
 const M = 1_000_000;
@@ -386,10 +386,17 @@ export function valuation(state: GameState, team: string): number {
 /** Rough yearly operating income at league-average budgets (for the league table). */
 export function operatingEstimate(state: GameState, team: string): number {
   const s = STADIUM_BY_TEAM[team];
-  const players = 300 * M * salaryCap(state, leagueYear(state.date)) / salaryCap(state, BASE_SEASON);
+  // Player costs track the cap: about $300 million under 2026's $301.2 million (a historical start's
+  // 2026 cap isn't set yet, so the ratio is to the real figure).
+  const players = salaryCap(state, leagueYear(state.date)) * 300 / 301.2;
   const year = leagueYear(state.date);
   const depts = (Object.keys(DEPTS) as Dept[]).reduce((t, d) => t + deptCost(d, 1, year) * (DEPTS[d].perGame ? homeDates(team).length : 1), 0);
-  const costs = players + (FOOTBALL_STAFF + BENEFITS * termsFor(year).benefits + businessOps(team)) * inflation(year, 0.05) + (LEAGUE_DUES + s.upkeep) * inflation(year) + depts + s.rent + s.debt + 4 * M;
+  // Before 2026 (a historical start) the rest of the costs scale back at the revenue estimate's own
+  // rate, as the whole business was smaller then; slower rates would leave most clubs losing money.
+  const back = year < MONEY_YEAR ? inflation(year, 0.06) : 0;
+  const costs = back
+    ? players + (FOOTBALL_STAFF + BENEFITS * termsFor(year).benefits + businessOps(team) + LEAGUE_DUES + s.upkeep + s.rent + s.debt + 4 * M) * back + depts * back / inflation(year)
+    : players + (FOOTBALL_STAFF + BENEFITS * termsFor(year).benefits + businessOps(team)) * inflation(year, 0.05) + (LEAGUE_DUES + s.upkeep) * inflation(year) + depts + s.rent + s.debt + 4 * M;
   return revenueEstimate(state, team) - Math.round(costs);
 }
 

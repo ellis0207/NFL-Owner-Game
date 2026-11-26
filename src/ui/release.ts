@@ -1,11 +1,13 @@
 // The game's version, what changed in it, and where its facts come from. The
 // About page, the title screen and the one-time "what's new" notice read this.
 
-export const VERSION = "1.3";
+export const VERSION = "1.4";
 export const RELEASED = "2026-11-26";
 
 /** What changed in this version, in the words the About page and the title screen show. */
 export const WHATS_NEW: { title: string; text: string }[] = [
+  { title: "Games that score like their era", text: "A historical start now plays like its season: about 20 points a team a game in the 1990s and early 2000s, rising to today's 23 by 2011, with sacks at each season's real rate. Settings > Scoring switches an old league to today's scoring. Old rosters sit on the same scale as today's, so a 1990s starter plays like a starter, and CPU clubs no longer run short of cash in early seasons." },
+  { title: "Seasons grouped by era", text: "New game lists the seasons by era: today, the 2020 and 2011 deals, the 32 clubs before the wage scale, the 31 clubs before Houston, and the first years of the cap." },
   { title: "Start as far back as 1994", text: "The first years of the salary cap: the Rams and Raiders in Los Angeles, the Oilers in Houston, Carolina and Jacksonville opening in 1995, the Browns moving to Baltimore and the new Browns arriving in 1999. Every call on the field stands until replay returns in 1999. Real draft classes from 1995; defenders and kickers from the 1990s are rated from their real careers." },
   { title: "Start in 1999, 2000 or 2001", text: "The league before Houston: 31 clubs in six divisions, the Browns back in Cleveland, Seattle in the AFC West and at Husky Stadium, and the real draft classes from 2000. Houston's Texans open in February 2002 with Dom Capers, Charley Casserly and an expansion draft, and the league realigns into eight divisions of four. Stadiums go by the names they had each season." },
   { title: "Fairer ratings before 2012", text: "Rookies in the 2000s no longer rate above the league's veterans: before snap counts existed, the game reads how much each player was used from his stats, and every club's estimated deals fit under its cap." },

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { VOLATILITY } from "../../engine/economy";
+import { bindRules } from "../../engine/rules";
 import type { GameState, Settings } from "../../engine/types";
 import { PlaySettings } from "./PlaySettings";
 import { SettingsLeague } from "./SettingsLeague";
@@ -45,6 +46,14 @@ export function SettingsScreen({ game, changed }: { game: GameState; changed: ()
               {Object.entries(VOLATILITY).map(([k, v]) => <option key={k} value={k}>{v.label}: {v.what}</option>)}
             </select>
           </label>
+          {game.era && (
+            <label className="field"><span className="label">Scoring</span>
+              <select value={game.settings.eraScoring ?? "era"} onChange={(e) => { set({ eraScoring: e.target.value as Settings["eraScoring"] }); bindRules(game); changed(); }}>
+                <option value="era">Of the era: games score like that season's league (about 20-21 points a team before 2007)</option>
+                <option value="modern">Modern: every season scores like today's league (about 22-23 points a team)</option>
+              </select>
+            </label>
+          )}
           <span className="muted">No setting shows a player's true rating. Precision changes how far your own staff's reads can be off; other teams see what they always saw.</span>
           <div className="stack tight">
             <strong>Ironman</strong>

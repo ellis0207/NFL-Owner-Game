@@ -35,6 +35,10 @@ export interface RuleParams {
   hipDropBan: boolean;
   /** Pushing the runner (the "tush push") is allowed. */
   tushPush: boolean;
+  /** Added to every pass's completion chance: below zero in early seasons under era scoring (eras.ts). */
+  passEra: number;
+  /** Scales a pressured passer's chance of being sacked: under 1 before 2026 (eras.ts). */
+  sackRate: number;
   /** Instant replay reviews calls (none from 1992 to 1998). */
   replay: boolean;
   /** Roughing-the-passer fouls can be reviewed. */
@@ -69,7 +73,7 @@ export interface RuleParams {
 
 const DEFAULTS: RuleParams = {
   playClock: 40, touchback: 35, xpLine: 15, twoPointLine: 2, otMinutes: 10, dpiCap: 99, fourthAndTwenty: false,
-  hipDropBan: true, replay: true, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
+  hipDropBan: true, replay: true, passEra: 0, sackRate: 1, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
   games: 17, byes: 1, intlExtra: 0, skyJudge: false, safetyTech: false, gateShare: 0.34, premiumPool: 0, playoffTeams: 14,
   otRule: "both",
 };
@@ -330,6 +334,8 @@ export const RULE_BY_ID: Record<string, RuleChange> = Object.fromEntries(RULE_CA
 export function rulesFor(state: GameState, season = RULES.season): RuleParams {
   // A historical start begins from the rulebook of its season (eras.ts), then the owners' votes apply.
   const r = state.era ? { ...DEFAULTS, ...eraRules(ruleSeason(state, season)) } : { ...DEFAULTS };
+  // Era scoring is a setting: "modern" plays every season at today's scoring.
+  if (state.settings?.eraScoring === "modern") r.passEra = 0;
   for (const a of state.owners?.rules ?? []) if (a.year <= season && (a.until === undefined || a.until >= season)) RULE_BY_ID[a.rule]?.apply(r);
   return r;
 }

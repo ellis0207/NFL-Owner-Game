@@ -2,6 +2,7 @@
 // moves: setLeagueSeason swaps in a later season's key dates and schedule, in
 // place, and modules that derive dates from them recompute through
 // onSeasonChange.
+import { scalePack, scaleStaff } from "./packscale";
 import playersJson from "../../data/league-2026/players.json";
 import ratingsJson from "../../data/league-2026/hidden-ratings.json";
 import teamsJson from "../../data/league-2026/teams.json";
@@ -77,12 +78,12 @@ export function bindCaps(caps: Record<number, number>): void {
  * True ratings. Only the engine (sim, AI roster decisions) may read these;
  * the owner never sees them. UI code must not import this.
  */
-export const HIDDEN_RATINGS = (PACK?.ratings ?? ratingsJson) as unknown as Record<string, HiddenRating>;
+export const HIDDEN_RATINGS = (PACK ? scalePack(PACK as never) : ratingsJson) as unknown as Record<string, HiddenRating>;
 
 export const STAFF = (PACK?.staff ?? staffJson) as unknown as StaffData;
 export const STAFF_BY_ID: Record<string, StaffPerson> = Object.fromEntries(STAFF.people.map((p) => [p.id, p]));
 /** True staff quality. Engine only, like HIDDEN_RATINGS. */
-export const HIDDEN_STAFF = (PACK?.hiddenStaff ?? hiddenStaffJson) as unknown as Record<string, StaffHidden>;
+export const HIDDEN_STAFF = (PACK ? scaleStaff(PACK as never) : hiddenStaffJson) as unknown as Record<string, StaffHidden>;
 
 export const GAMES_BY_DATE: Record<string, ScheduledGame[]> = {};
 for (const g of SCHEDULE) (GAMES_BY_DATE[g.date] ??= []).push(g);

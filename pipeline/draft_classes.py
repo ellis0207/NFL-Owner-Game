@@ -65,6 +65,39 @@ def fetch(path: str) -> Path:
 
 
 # Every player's hidden rating by season, from the game's own data.
+# The 2026 data's top of each position (mean, spread of the best `depth` a club): src/engine/packscale.ts.
+SCALE_2026 = {"QB": (2, 75.94, 11.01), "RB": (2, 83.83, 7.3), "WR": (5, 80.22, 8.71), "TE": (3, 78.95, 9.4), "OT": (3, 79.78, 9.34),
+              "OG": (3, 76.76, 10.78), "C": (2, 73.39, 11.92), "EDGE": (4, 78.99, 9.69), "IDL": (4, 78.09, 10.08), "LB": (4, 80.06, 8.9),
+              "CB": (5, 78.29, 9.92), "S": (3, 81.4, 8.28)}
+
+
+def scale_pack(p: dict) -> dict:
+    """A pack built from Week 1 lists (about 52 a club) on the 2026 camp-roster scale, as the engine reads it (packscale.ts)."""
+    clubs = len(p["teams"])
+    rostered = [x for x in p["players"] if x.get("team")]
+    r = p["ratings"]
+    if len(rostered) / clubs >= 75:
+        return r
+    fit = lambda v: max(25, min(99, int(math.floor(v + 0.5))))
+    for pos, (depth, rm, rsd) in SCALE_2026.items():
+        top = sorted((r[x["id"]]["overall"] for x in rostered if x["position"] == pos and x["id"] in r), reverse=True)[:depth * clubs]
+        if len(top) < 10:
+            continue
+        m = sum(top) / len(top)
+        sd = math.sqrt(sum((v - m) ** 2 for v in top) / len(top)) or rsd
+        a = max(0.8, min(1.25, rsd / sd))
+        b = rm - a * m
+        for x in p["players"]:
+            q = r.get(x["id"]) if x["position"] == pos else None
+            if not q:
+                continue
+            o = fit(a * q["overall"] + b)
+            q["potential"] = max(o, fit(a * q["potential"] + b))
+            q["overall"] = o
+            q["traits"] = {k: fit(a * v + b) for k, v in q["traits"].items()}
+    return r
+
+
 def rating_history() -> dict:
     hist: dict = {}
 
@@ -76,7 +109,7 @@ def rating_history() -> dict:
 
     for y in range(1994, 2026):
         p = json.load(gzip.open(ROOT / "data" / "packs" / f"{y}.json.gz"))
-        add(y, p["players"], p["ratings"])
+        add(y, p["players"], scale_pack(p))
     add(2026, json.load(open(ROOT / "data/league-2026/players.json")), json.load(open(ROOT / "data/league-2026/hidden-ratings.json")))
     return hist
 
