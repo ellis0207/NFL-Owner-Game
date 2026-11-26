@@ -1,6 +1,7 @@
 """Downloads (and caches) the open nflverse data files the league is built from."""
 
 from pathlib import Path
+import functools
 import urllib.request
 
 import pandas as pd
@@ -13,7 +14,9 @@ CACHE = Path(__file__).parent / ".cache"
 # Seasons of history used for stats and hidden ratings. 2026 in-season data is
 # deliberately never used for ratings: the game starts in August 2026.
 # nflverse player stats begin in 1999, so a 1999-2001 start has fewer.
-HISTORY_SEASONS = [y for y in (SEASON - 3, SEASON - 2, SEASON - 1) if y >= 1999]
+# Before 1999 the offensive totals come from Pro Football Reference instead
+# (old_stats.py), so a 1994-1998 start has its three seasons too.
+HISTORY_SEASONS = [y for y in (SEASON - 3, SEASON - 2, SEASON - 1) if y >= 1999 or SEASON < 1999]
 # Seasons the hidden ratings read. Before 2002 there aren't three seasons of
 # history, so the ratings also read the start season and the one after it
 # (what the club's staff would have seen in camp, judged by how the year went).
@@ -47,6 +50,11 @@ def load_all(refresh: bool = False) -> dict:
         "snaps": {},
     }
     for season in RATING_SEASONS:
+        if season < 1999:
+            from old_stats import season_frame
+            data["rating_stats"][season] = season_frame(season, old_roster(season, refresh))
+            data["stats"][season] = data["rating_stats"][season]
+            continue
         data["rating_stats"][season] = pd.read_csv(_fetch(f"stats_player/stats_player_reg_{season}.csv", refresh), low_memory=False)
         if season in HISTORY_SEASONS:
             data["stats"][season] = data["rating_stats"][season]
@@ -83,7 +91,7 @@ def season_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     one row per club. A player with two rows started the year with the club he
     left; anyone signed in season is in camp with the club he finished with.
     Approximate: a few late signings start in camp a little early."""
-    df = _fix_teams(pd.read_csv(_fetch(f"rosters/roster_{season}.csv", refresh), low_memory=False))
+    df = old_roster(season, refresh) if season < 1999 else _fix_teams(pd.read_csv(_fetch(f"rosters/roster_{season}.csv", refresh), low_memory=False))
     df = df[df.gsis_id.notna()].copy()
     df["_left"] = df.status.isin(LEFT)
     df = df.sort_values("_left", ascending=False).drop_duplicates("gsis_id")
@@ -114,6 +122,27 @@ def season_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     return df.drop(columns="_left")
 
 
+def old_roster(season: int, refresh: bool = False) -> pd.DataFrame:
+    """A season roster before 1999 with clubs as the game's ids (the Oilers are
+    Tennessee's club, the 1994-95 Browns Baltimore's, the Los Angeles Rams and
+    Raiders the LA and LV clubs)."""
+    from old_stats import old_roster_team
+    df = pd.read_csv(_fetch(f"rosters/roster_{season}.csv", refresh), low_memory=False)
+    df["team"] = df.team.map(lambda t: old_roster_team(t, season))
+    return df
+
+
+@functools.lru_cache(maxsize=None)
+def seasons_listed(first: int, last: int, refresh: bool = False) -> dict:
+    """How many seasons each player was on a club's roster, first through last."""
+    out: dict[str, int] = {}
+    for y in range(first, last + 1):
+        df = pd.read_csv(_fetch(f"rosters/roster_{y}.csv", refresh), usecols=["gsis_id", "status"], low_memory=False)
+        for g in set(df[df.gsis_id.notna() & ~df.status.isin(["CUT"])].gsis_id):
+            out[g] = out.get(g, 0) + 1
+    return out
+
+
 def fte_games(season: int) -> pd.DataFrame:
     """One season's games from FiveThirtyEight's NFL file (1920-2020: dates and
     scores only), shaped like nflverse's schedule for the seasons before 1999.
@@ -125,6 +154,9 @@ def fte_games(season: int) -> pd.DataFrame:
         "season": season, "gameday": df.date, "home_team": df.team1.replace(code), "away_team": df.team2.replace(code),
         "home_score": df.score1, "away_score": df.score2, "playoff": df.playoff,
     })
+    if season <= 1995:
+        # The Browns of 1995 and before are the club that moved to Baltimore.
+        out[["home_team", "away_team"]] = out[["home_team", "away_team"]].replace({"CLE": "BAL"})
     days = sorted(set(out[out.playoff == 1].gameday))
     # Playoff weekends: wild card, divisional, conference, then the Super Bowl.
     weekend = {d: i for i, d in enumerate(sorted({pd.Timestamp(d).to_period("W").start_time for d in days}))}

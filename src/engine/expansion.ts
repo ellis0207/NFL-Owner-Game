@@ -383,7 +383,9 @@ function vote(state: GameState, force = false): void {
     return;
   }
   x.stage = "approved";
-  x.clubs = realign(state, chosen);
+  // Clubs that joined earlier stay on the list: the league is laid over it at every load.
+  const fresh = realign(state, chosen);
+  x.clubs = [...x.clubs.filter((c) => c.activated), ...fresh];
   const fee = x.fee;
   // The fee is split among the existing clubs, paid over five league years.
   const share = Math.round((fee * SLOTS) / TEAMS.length);
@@ -391,14 +393,14 @@ function vote(state: GameState, force = false): void {
   x.shareLeft = share;
   x.shareYears = FEE_YEARS;
   payShare(state);
-  const lines = x.clubs.map((c) => `${c.city} ${c.name} (${c.group}) in the ${c.conference} ${c.division}`);
-  news(state, "league", `Owners approve expansion, ${yes}-${TEAMS.length - yes}: ${lines.join(" and ")}, from ${x.clubs[0].joins}`);
-  note(state, `Approved ${yes}-${TEAMS.length - yes}: ${lines.join("; ")}. They play from ${x.clubs[0].joins}. Our share of the fees, ${money(share)}, comes over ${FEE_YEARS} league years.`);
-  const mine = x.clubs.find((c) => c.user);
+  const lines = fresh.map((c) => `${c.city} ${c.name} (${c.group}) in the ${c.conference} ${c.division}`);
+  news(state, "league", `Owners approve expansion, ${yes}-${TEAMS.length - yes}: ${lines.join(" and ")}, from ${fresh[0].joins}`);
+  note(state, `Approved ${yes}-${TEAMS.length - yes}: ${lines.join("; ")}. They play from ${fresh[0].joins}. Our share of the fees, ${money(share)}, comes over ${FEE_YEARS} league years.`);
+  const mine = fresh.find((c) => c.user);
   if (tenure(state).role === "control") {
     send(state, "league", "League Office", "Expansion approved",
-      `The owners voted ${yes}-${TEAMS.length - yes} to add ${lines.join(" and ")}. They join for the ${x.clubs[0].joins} season, with five-club divisions and a schedule built around them. ` +
-      `Each club pays ${billions(fee)}; our share, ${money(share)}, comes over ${FEE_YEARS} league years, the first today. Two weeks before the new league year in ${x.clubs[0].joins}, ` +
+      `The owners voted ${yes}-${TEAMS.length - yes} to add ${lines.join(" and ")}. They join for the ${fresh[0].joins} season, with five-club divisions and a schedule built around them. ` +
+      `Each club pays ${billions(fee)}; our share, ${money(share)}, comes over ${FEE_YEARS} league years, the first today. Two weeks before the new league year in ${fresh[0].joins}, ` +
       `every club leaves ${EXPOSE} players exposed and the new clubs pick from them; no club loses more than ${MAX_LOST}.` +
       (mine ? ` Our group won ${mine.city}: we take over the ${mine.name} when the club opens, and the ${teamLabel(state.userTeam)} will be sold then.` : ""));
   }
@@ -482,6 +484,8 @@ function hire(state: GameState, team: string, role: StaffRole, mean: number, nam
   const s = staff(state);
   const free = Object.values(s.people).filter((p) => !p.retired && !p.team && !p.role && (!p.job || p.job.kind === "assistant") && canHold(p, role))
     .sort((a, b) => reputation(state, b) - reputation(state, a));
+  // A real name already working elsewhere in this league (Capers still coaching Carolina when Houston opens) is left to them.
+  if (name && !free.some((p) => p.name === name) && Object.values(s.people).some((p) => p.name === name)) name = undefined;
   let pick = name ? free.find((p) => p.name === name) : (role === "HC" || role === "GM") ? free[0] : undefined;
   if (!pick) {
     const r = rngFor(state.seed, `exp-staff:${team}:${role}`);
@@ -671,7 +675,7 @@ export function expansionDaily(state: GameState): void {
   if (x.stage === "floated" && x.voteDate && state.date >= x.voteDate) vote(state);
   if (state.date === RULES.keyDates.newLeagueYear && x.shareYears > 0 && x.stage !== "floated") payShare(state);
   if (x.stage !== "approved") return;
-  const c = x.clubs[0];
+  const c = x.clubs.find((k) => !k.activated);
   if (!c || RULES.season !== c.joins - 1) return;
   const day = activationDate(c);
   if (state.date === addDays(day, -21)) protectMemo(state, c);
@@ -687,10 +691,12 @@ export function expansionDaily(state: GameState): void {
 export function awardRealClub(state: GameState, c: ExpansionClub, feeYears: number): void {
   const x = expansion(state);
   if (x.clubs.some((k) => k.id === c.id)) return;
-  x.clubs = [c];
+  // A pair awarded together (Carolina and Jacksonville) shares one approval; earlier clubs stay listed.
+  const pending = x.stage === "approved" ? x.clubs.filter((k) => !k.activated && k.joins === c.joins) : [];
+  x.clubs = [...x.clubs.filter((k) => k.activated || pending.includes(k)), c];
   x.stage = "approved";
   x.fee = c.fee;
-  x.shareLeft = Math.round(c.fee / TEAMS.length);
+  x.shareLeft = Math.round([...pending, c].reduce((t, k) => t + k.fee, 0) / TEAMS.length);
   x.shareYears = feeYears;
   x.nextLook = c.joins + 8;
 }
@@ -708,8 +714,9 @@ export function forceExpansion(state: GameState, opts: { userMarket?: string; jo
   for (const b of x.bids) if (!b.user) b.score += 0.5;
   x.stance = "support";
   vote(state, true);
-  if (opts.joins) for (const c of x.clubs) c.joins = opts.joins;
-  return x.clubs;
+  const fresh = x.clubs.filter((c) => !c.activated);
+  if (opts.joins) for (const c of fresh) c.joins = opts.joins;
+  return fresh;
 }
 
 /** Test helper: open the approved clubs now (staff, the expansion draft, the draft order). */

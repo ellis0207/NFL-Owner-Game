@@ -42,6 +42,7 @@ export interface EraRuleOverlay {
   hipDropBan?: boolean;
   playoffTeams?: number;
   otRule?: "sudden" | "modified" | "both";
+  replay?: boolean;
 }
 
 /** What each change replaced, by the first season it applied (real). */
@@ -63,6 +64,8 @@ export function eraRules(season: number): EraRuleOverlay {
     // touchdown on the first possession won, a field goal gave the other side a
     // chance; both teams get the ball from 2025.
     otRule: season < 2012 ? "sudden" : season < 2025 ? "modified" : "both",
+    // No instant replay from 1992 until coaches' challenges came in 1999: every call on the field stood.
+    ...(season < 1999 ? { replay: false } : {}),
   };
 }
 
@@ -82,15 +85,46 @@ export function realCap(state: GameState, year: number): number | undefined {
   return e && !e.alt ? REAL_CAPS[year] : undefined;
 }
 
-/** The clubs whose city, name or stadium differed, by the season they changed (real). */
-export const HOMES: { team: string; until: number; market: string; city: string; name?: string; stadium: string; roof: "dome" | "outdoors" }[] = [
-  { team: "LA", until: 2016, market: "STL", city: "St. Louis", stadium: "Edward Jones Dome", roof: "dome" },
-  { team: "LAC", until: 2017, market: "SD", city: "San Diego", stadium: "Qualcomm Stadium", roof: "outdoors" },
-  { team: "LV", until: 2020, market: "OAK", city: "Oakland", stadium: "Oakland Coliseum", roof: "outdoors" },
+/**
+ * The clubs whose city, name or stadium differed, from the season `from` (the
+ * earliest pack when left out) until the season they changed (real). `market`
+ * is an open market's id or the 2026 club whose market it was; `names` the
+ * stadium's names by the last season each held.
+ */
+export const HOMES: { team: string; from?: number; until: number; market: string; city: string; name?: string; stadium: string; names?: [through: number, name: string][]; roof: "dome" | "outdoors" }[] = [
+  { team: "LA", from: 1995, until: 2016, market: "STL", city: "St. Louis", stadium: "Edward Jones Dome", names: [[2001, "Trans World Dome"], [2002, "Dome at America's Center"]], roof: "dome" },
+  { team: "LAC", until: 2017, market: "SD", city: "San Diego", stadium: "Qualcomm Stadium", names: [[1996, "Jack Murphy Stadium"]], roof: "outdoors" },
+  { team: "LV", from: 1995, until: 2020, market: "OAK", city: "Oakland", stadium: "Oakland Coliseum", roof: "outdoors" },
+  // The Raiders' Los Angeles years, the Oilers in Houston and the Browns who became the Ravens.
+  { team: "LV", until: 1995, market: "LA", city: "Los Angeles", stadium: "Los Angeles Memorial Coliseum", roof: "outdoors" },
+  { team: "TEN", until: 1997, market: "HOU", city: "Houston", name: "Oilers", stadium: "Astrodome", roof: "dome" },
+  { team: "BAL", until: 1996, market: "CLE", city: "Cleveland", name: "Browns", stadium: "Cleveland Stadium", roof: "outdoors" },
 ];
+
+/** The 2026 names of clubs an early pack names otherwise (the 1994-95 Browns are Baltimore's club). */
+const NAME_2026: Record<string, string> = { BAL: "Ravens", TEN: "Titans" };
+
+/** A club's name in a season of a historical start, where it isn't the pack's own. */
+export function eraTeamName(state: GameState, team: string, season: number): string | undefined {
+  if (!state.era) return undefined;
+  return oldHome(state, team, season)?.name ?? eraName(team, ruleSeason(state, season)) ?? NAME_2026[team];
+}
+
+/** Names a club played under in its 2026 city (real). */
+export function eraName(team: string, season: number): string | undefined {
+  if (team === "WAS") return washingtonName(season);
+  if (team === "TEN") return season <= 1998 ? "Oilers" : "Titans";
+  return undefined;
+}
 
 /** Temporary homes after a real move, until the new stadium opened. */
 export const TEMP_HOMES: { team: string; from: number; until: number; stadium: string }[] = [
+  // Carolina's first season at Clemson; the Ravens at Baltimore's old Memorial Stadium; the Oilers' two seasons at
+  // Memphis and Vanderbilt before Nashville's stadium opened.
+  { team: "CAR", from: 1995, until: 1996, stadium: "Memorial Stadium (Clemson)" },
+  { team: "BAL", from: 1996, until: 1998, stadium: "Memorial Stadium" },
+  { team: "TEN", from: 1997, until: 1998, stadium: "Liberty Bowl Memorial Stadium" },
+  { team: "TEN", from: 1998, until: 1999, stadium: "Vanderbilt Stadium" },
   // Seattle played at the University of Washington between the Kingdome and its new stadium; Chicago in Champaign while Soldier Field was rebuilt.
   { team: "SEA", from: 2000, until: 2002, stadium: "Husky Stadium" },
   { team: "CHI", from: 2002, until: 2003, stadium: "Memorial Stadium (Champaign)" },
@@ -104,21 +138,21 @@ export const TEMP_HOMES: { team: string; from: number; until: number; stadium: s
  */
 export const STADIUM_NAMES: Record<string, [through: number, name: string][]> = {
   ARI: [[2017, "University of Phoenix Stadium"]],
-  BAL: [[2001, "PSINet Stadium"], [2002, "Ravens Stadium"]],
-  BUF: [[2015, "Ralph Wilson Stadium"], [2019, "New Era Field"], [2020, "Bills Stadium"]],
+  BAL: [[1998, "Ravens Stadium at Camden Yards"], [2001, "PSINet Stadium"], [2002, "Ravens Stadium"]],
+  BUF: [[1997, "Rich Stadium"], [2015, "Ralph Wilson Stadium"], [2019, "New Era Field"], [2020, "Bills Stadium"]],
   CAR: [[2003, "Ericsson Stadium"]],
   CIN: [[2021, "Paul Brown Stadium"]],
   CLE: [[2013, "Cleveland Browns Stadium"], [2022, "FirstEnergy Stadium"]],
   DEN: [[2010, "Invesco Field at Mile High"], [2017, "Sports Authority Field at Mile High"], [2018, "Broncos Stadium at Mile High"]],
   HOU: [[2013, "Reliant Stadium"]],
-  JAX: [[2006, "Alltel Stadium"], [2009, "Jacksonville Municipal Stadium"], [2017, "EverBank Field"], [2022, "TIAA Bank Field"]],
+  JAX: [[1996, "Jacksonville Municipal Stadium"], [2006, "Alltel Stadium"], [2009, "Jacksonville Municipal Stadium"], [2017, "EverBank Field"], [2022, "TIAA Bank Field"]],
   KC: [[2020, "Arrowhead Stadium"]],
-  MIA: [[2004, "Pro Player Stadium"], [2006, "Dolphins Stadium"], [2009, "Dolphin Stadium"], [2015, "Sun Life Stadium"]],
+  MIA: [[1995, "Joe Robbie Stadium"], [2004, "Pro Player Stadium"], [2006, "Dolphins Stadium"], [2009, "Dolphin Stadium"], [2015, "Sun Life Stadium"]],
   NO: [[2010, "Louisiana Superdome"], [2020, "Mercedes-Benz Superdome"]],
   PIT: [[2021, "Heinz Field"]],
   SEA: [[2003, "Seahawks Stadium"], [2010, "Qwest Field"], [2019, "CenturyLink Field"]],
   TEN: [[2001, "Adelphia Coliseum"], [2005, "The Coliseum"], [2014, "LP Field"]],
-  WAS: [[2024, "FedExField"]],
+  WAS: [[1998, "Jack Kent Cooke Stadium"], [2024, "FedExField"]],
 };
 
 /** The season the league realigned into eight divisions of four (real). */
@@ -146,6 +180,31 @@ export const HOUSTON_2002 = {
   joins: 2002, fee: 700_000_000, place: [29.68, -95.41] as [number, number], staff: { HC: "Dom Capers", GM: "Charley Casserly" },
 };
 
+/**
+ * The real expansions, each with the season the league awarded it: Carolina
+ * (Jerry Richardson, Dom Capers coaching, Bill Polian as general manager) and
+ * Jacksonville (Wayne Weaver, Tom Coughlin) awarded in 1993 for 1995 at $140
+ * million; the new Cleveland Browns, promised in the 1996 settlement with the
+ * city and sold to Al Lerner for $530 million, opening in 1999 with Chris
+ * Palmer and Dwight Clark; then Houston. Each club comes in on the league's
+ * usual expansion path (expansion.ts).
+ */
+export interface RealClub {
+  id: string; market: string; city: string; name: string; group: string; conference: "AFC" | "NFC";
+  division: "East" | "Central" | "North" | "South" | "West"; joins: number; fee: number; place: [number, number];
+  staff: { HC?: string; GM?: string };
+}
+export const REAL_EXPANSION: { awarded: number; clubs: RealClub[] }[] = [
+  { awarded: 1993, clubs: [
+    { id: "CAR", market: "CAR", city: "Carolina", name: "Panthers", group: "Jerry Richardson", conference: "NFC", division: "West", joins: 1995, fee: 140_000_000, place: [35.23, -80.85], staff: { HC: "Dom Capers", GM: "Bill Polian" } },
+    { id: "JAX", market: "JAX", city: "Jacksonville", name: "Jaguars", group: "Wayne Weaver", conference: "AFC", division: "Central", joins: 1995, fee: 140_000_000, place: [30.32, -81.64], staff: { HC: "Tom Coughlin" } },
+  ] },
+  { awarded: 1996, clubs: [
+    { id: "CLE", market: "CLE", city: "Cleveland", name: "Browns", group: "Al Lerner", conference: "AFC", division: "Central", joins: 1999, fee: 530_000_000, place: [41.51, -81.7], staff: { HC: "Chris Palmer", GM: "Dwight Clark" } },
+  ] },
+  { awarded: 1999, clubs: [HOUSTON_2002] },
+];
+
 /** Washington's names (real). */
 export function washingtonName(season: number): string {
   return season <= 2019 ? "Redskins" : season <= 2021 ? "Football Team" : "Commanders";
@@ -155,14 +214,14 @@ export function washingtonName(season: number): string {
 export function oldHome(state: GameState | undefined, team: string, season: number): (typeof HOMES)[number] | undefined {
   const e = era(state);
   if (!e) return undefined;
-  const h = HOMES.find((x) => x.team === team);
-  if (!h || e.start >= h.until) return undefined;
-  return ruleSeason(state, season) < h.until ? h : undefined;
+  const s = ruleSeason(state, season);
+  return HOMES.find((h) => h.team === team && e.start < h.until && s < h.until && s >= (h.from ?? 0));
 }
 
 /** Who controlled each club before its 2026 owner, with the last season they did (real, approximate). */
 export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
-  ATL: [[2001, "Taylor Smith"]],
+  ATL: [[1997, "Rankin Smith"], [2001, "Taylor Smith"]],
+  ARI: [[2018, "Bill Bidwill"]],
   BAL: [[2003, "Art Modell"]],
   BUF: [[2013, "Ralph Wilson"]],
   CAR: [[2017, "Jerry Richardson"]],
@@ -175,13 +234,15 @@ export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   LA: [[2007, "Georgia Frontiere"], [2009, "Chip Rosenbloom and Lucia Rodriguez"]],
   LV: [[2011, "Al Davis"]],
   MIA: [[2008, "Wayne Huizenga"]],
-  MIN: [[2004, "Red McCombs"]],
+  MIN: [[1997, "the Vikings' board of ten owners"], [2004, "Red McCombs"]],
   NO: [[2017, "Tom Benson"]],
-  NYJ: [[1999, "the Leon Hess estate"]],
-  SEA: [[2018, "Paul Allen"]],
+  NYJ: [[1998, "Leon Hess"], [1999, "the Leon Hess estate"]],
+  SEA: [[1996, "Ken Behring"], [2018, "Paul Allen"]],
   TEN: [[2013, "Bud Adams"], [2014, "the Adams family trust"]],
-  WAS: [[2022, "Dan Snyder"]],
-  IND: [[2024, "Jim Irsay"]],
+  WAS: [[1996, "Jack Kent Cooke"], [1998, "the Jack Kent Cooke estate"], [2022, "Dan Snyder"]],
+  IND: [[1996, "Robert Irsay"], [2024, "Jim Irsay"]],
+  SF: [[1999, "Eddie DeBartolo Jr."], [2008, "John and Denise DeBartolo York"]],
+  TB: [[1994, "the Hugh Culverhouse estate"]],
 };
 
 /** Who controlled a club in a season, if not its 2026 owner. */
@@ -207,6 +268,13 @@ export const HISTORICAL = !!PACK;
 
 /** The real rule archive: changes that shaped the game, by the first season they applied (approximate wording). */
 export const RULE_ARCHIVE: [season: number, text: string][] = [
+  [1994, "The 1993 labor agreement's salary cap and free agency take effect"],
+  [1994, "The two-point conversion comes in, and kickoffs move back to the 30"],
+  [1995, "The Carolina Panthers and Jacksonville Jaguars join: 30 clubs"],
+  [1995, "The Rams move to St. Louis and the Raiders return to Oakland"],
+  [1996, "The Browns move to Baltimore as the Ravens; Cleveland keeps the name for a new club in 1999"],
+  [1997, "The Oilers leave Houston for Tennessee, playing in Memphis while Nashville builds"],
+  [1998, "The labor agreement is extended through 2003"],
   [1999, "Instant replay returns, now with coaches' challenges: two a game, a timeout lost if the call stands"],
   [1999, "The Browns return to Cleveland as an expansion club: 31 clubs in six divisions"],
   [1999, "Houston is awarded the 32nd club, to play from 2002"],

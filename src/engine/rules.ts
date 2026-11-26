@@ -35,6 +35,8 @@ export interface RuleParams {
   hipDropBan: boolean;
   /** Pushing the runner (the "tush push") is allowed. */
   tushPush: boolean;
+  /** Instant replay reviews calls (none from 1992 to 1998). */
+  replay: boolean;
   /** Roughing-the-passer fouls can be reviewed. */
   roughingReview: boolean;
   /** A missed field goal goes back to the line of scrimmage instead of the spot of the kick. */
@@ -67,7 +69,7 @@ export interface RuleParams {
 
 const DEFAULTS: RuleParams = {
   playClock: 40, touchback: 35, xpLine: 15, twoPointLine: 2, otMinutes: 10, dpiCap: 99, fourthAndTwenty: false,
-  hipDropBan: true, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
+  hipDropBan: true, replay: true, tushPush: true, roughingReview: false, missedFgAtLos: false, seedByRecord: false, extraPracticeSquad: 0, deadlineShift: 0,
   games: 17, byes: 1, intlExtra: 0, skyJudge: false, safetyTech: false, gateShare: 0.34, premiumPool: 0, playoffTeams: 14,
   otRule: "both",
 };

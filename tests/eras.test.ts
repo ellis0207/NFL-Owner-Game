@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Historical starts: each season's data pack (data/packs/<year>.json.gz, built
 // by pipeline/history_pack.py) replaces the 2026 files. The engine reads the
 // pack when its modules load, so every start gets fresh modules.
-const YEARS = Array.from({ length: 27 }, (_, i) => 1999 + i);
+const YEARS = Array.from({ length: 32 }, (_, i) => 1994 + i);
 const pack = (year: number) => JSON.parse(gunzipSync(readFileSync(new URL(`../data/packs/${year}.json.gz`, import.meta.url))).toString());
 
 async function engineFor(year: number | null) {
@@ -65,15 +65,20 @@ describe("historical starts", () => {
       expect(e.rulesFor(s).games).toBe(games);
       expect(e.rulesFor(s).playoffTeams).toBe(year < 2020 ? 12 : 14);
       // The 2022 Bills-Bengals game was never finished and isn't in the schedule.
-      // 31 clubs from 1999 to 2001, 32 after.
-      expect(e.TEAMS.length).toBe(year < 2002 ? 31 : 32);
+      // 28 clubs in 1994, 30 from 1995 (Carolina, Jacksonville; the Browns gone 1996-98, the new Browns in 1999), 31 to 2001, 32 after.
+      expect(e.TEAMS.length).toBe(year < 1995 ? 28 : year < 1999 ? 30 : year < 2002 ? 31 : 32);
       expect(e.SCHEDULE.filter((g) => g.type === "REG").length).toBe(games * e.TEAMS.length / 2 - (year === 2022 ? 1 : 0));
       // The clubs were where they really were.
-      expect(e.TEAM_BY_ID.LA.city).toBe(year < 2016 ? "St. Louis" : "Los Angeles");
+      expect(e.TEAM_BY_ID.LA.city).toBe(year < 1995 ? "Los Angeles" : year < 2016 ? "St. Louis" : "Los Angeles");
       expect(e.TEAM_BY_ID.LAC.city).toBe(year < 2017 ? "San Diego" : "Los Angeles");
-      expect(e.TEAM_BY_ID.LV.city).toBe(year < 2020 ? "Oakland" : "Las Vegas");
+      expect(e.TEAM_BY_ID.LV.city).toBe(year < 1995 ? "Los Angeles" : year < 2020 ? "Oakland" : "Las Vegas");
+      expect(`${e.TEAM_BY_ID.TEN.city} ${e.TEAM_BY_ID.TEN.name}`).toBe(year < 1997 ? "Houston Oilers" : year < 1999 ? "Tennessee Oilers" : "Tennessee Titans");
+      expect(`${e.TEAM_BY_ID.BAL.city} ${e.TEAM_BY_ID.BAL.name}`).toBe(year < 1996 ? "Cleveland Browns" : "Baltimore Ravens");
       expect(e.TEAM_BY_ID.WAS.name).toBe(e.washingtonName(year));
-      if (year < 2016) expect(e.TEAM_BY_ID.LA.stadium).toBe("Edward Jones Dome");
+      if (year < 1995) expect(e.TEAM_BY_ID.LA.stadium).toBe("Anaheim Stadium");
+      else if (year < 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Trans World Dome");
+      else if (year === 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Dome at America's Center");
+      else if (year < 2016) expect(e.TEAM_BY_ID.LA.stadium).toBe("Edward Jones Dome");
       else if (year < 2020) expect(e.TEAM_BY_ID.LA.stadium).toBe("Los Angeles Memorial Coliseum");
       // A few days of camp run without trouble.
       for (let i = 0; i < 5; i++) e.advanceDay(s);
@@ -94,6 +99,62 @@ describe("historical starts", () => {
     expect(Object.values(last.records).every((r) => r[0] + r[1] + (r[2] ?? 0) === 16)).toBe(true);
     expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
   }, 600_000);
+
+  it("a 1994 start: 28 clubs, then Carolina and Jacksonville open and the Rams and Raiders move for 1995", async () => {
+    const e = await engineFor(1994);
+    const coaches = await import("../src/engine/coaches");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(e.TEAMS.length).toBe(28);
+    expect(s.expansion).toMatchObject({ stage: "approved", clubs: [{ id: "CAR", joins: 1995 }, { id: "JAX", joins: 1995 }] });
+    expect(e.TEAM_BY_ID.LV.stadium).toBe("Los Angeles Memorial Coliseum");
+    expect(e.TEAM_BY_ID.TEN.stadium).toBe("Astrodome");
+    let guard = 0;
+    while (s.season === 1994 && guard++ < 400) e.advanceDay(s);
+    expect(s.season).toBe(1995);
+    expect(e.TEAMS.length).toBe(30);
+    expect(e.TEAM_BY_ID.CAR).toMatchObject({ city: "Carolina", conference: "NFC", division: "West", stadium: "Memorial Stadium (Clemson)" });
+    expect(e.TEAM_BY_ID.JAX).toMatchObject({ conference: "AFC", division: "Central", stadium: "Jacksonville Municipal Stadium" });
+    expect(e.TEAM_BY_ID.LA).toMatchObject({ city: "St. Louis", stadium: "Trans World Dome" });
+    expect(e.TEAM_BY_ID.LV.city).toBe("Oakland");
+    const car = Object.values(coaches.staff(s).people).filter((p) => p.team === "CAR").map((p) => `${p.role} ${p.name}`);
+    expect(car).toContain("HC Dom Capers");
+    expect(car).toContain("GM Bill Polian");
+    expect(s.schedule!.filter((g) => g.type === "REG").length).toBe(240);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
+  it("a 1995 start: the Browns move to Baltimore for 1996 and Cleveland's new club is awarded", async () => {
+    const e = await engineFor(1995);
+    const s = e.newGame("NE", "Test", { capRules: "real" }, 5);
+    expect(`${e.TEAM_BY_ID.BAL.city} ${e.TEAM_BY_ID.BAL.name}`).toBe("Cleveland Browns");
+    let guard = 0;
+    while (s.season === 1995 && guard++ < 400) e.advanceDay(s);
+    expect(s.season).toBe(1996);
+    expect(e.TEAM_BY_ID.BAL).toMatchObject({ city: "Baltimore", name: "Ravens", stadium: "Memorial Stadium" });
+    expect(e.TEAM_BY_ID.CLE).toBeUndefined();
+    expect(s.expansion!.clubs.find((c) => !c.activated)).toMatchObject({ id: "CLE", joins: 1999 });
+    expect(s.expansion!.clubs.filter((c) => c.activated).length).toBe(0);
+    expect(e.TEAMS.length).toBe(30);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
+  it("a 1997 start: the Oilers become the Titans and the new Browns open for 1999, then Houston is awarded", async () => {
+    const e = await engineFor(1997);
+    const coaches = await import("../src/engine/coaches");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(e.TEAM_BY_ID.TEN).toMatchObject({ city: "Tennessee", name: "Oilers", stadium: "Liberty Bowl Memorial Stadium" });
+    let guard = 0;
+    while (s.season < 1999 && guard++ < 800) e.advanceDay(s);
+    expect(s.season).toBe(1999);
+    expect(e.TEAMS.length).toBe(31);
+    expect(e.TEAM_BY_ID.TEN.name).toBe("Titans");
+    expect(e.TEAM_BY_ID.CLE).toMatchObject({ city: "Cleveland", name: "Browns", conference: "AFC", division: "Central" });
+    const cle = Object.values(coaches.staff(s).people).filter((p) => p.team === "CLE").map((p) => `${p.role} ${p.name}`);
+    expect(cle).toContain("HC Chris Palmer");
+    expect(s.expansion!.clubs.map((c) => c.id)).toEqual(["CLE", "HOU"]);
+    expect(s.expansion!.clubs[1]).toMatchObject({ joins: 2002 });
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 900_000);
 
   it("a 2001 start: 31 clubs in six divisions, then Houston opens and the league realigns for 2002", async () => {
     const e = await engineFor(2001);

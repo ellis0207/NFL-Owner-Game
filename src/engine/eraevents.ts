@@ -4,7 +4,7 @@
 // Under alternate history none of it happens. The 2020 labor deal is in
 // labor.ts, the caps in setCap (offseason.ts), the rules in rulesFor.
 
-import { eraOwner, HOMES, HOUSTON_2002, REALIGNED, washingtonName } from "./eras";
+import { eraName, eraOwner, HOMES, REAL_EXPANSION, REALIGNED } from "./eras";
 import { awardRealClub } from "./expansion";
 import { franchise, REAL_SALES } from "./franchisemarket";
 import { news } from "./inbox";
@@ -20,9 +20,20 @@ export function eraStartControl(state: GameState): void {
     const o = eraOwner(t.id, state.era.start);
     if (o) f.control[t.id] = o;
   }
-  // Houston was already awarded when a 1999-2001 season began: it opens for 2002 on the league's usual schedule.
-  if (!state.era.alt && state.era.start < HOUSTON_2002.joins && !TEAM_BY_ID.HOU) {
-    awardRealClub(state, { ...HOUSTON_2002, staff: { ...HOUSTON_2002.staff } }, HOUSTON_2002.joins - state.era.start);
+  // A real expansion already awarded when the season began (Carolina and Jacksonville before 1994,
+  // Cleveland's new Browns in 1996, Houston in 1999) opens on the league's usual schedule.
+  if (!state.era.alt) awardDue(state, state.era.start);
+}
+
+/** Awards the real expansion whose award season has come and whose clubs haven't joined, one at a time. */
+function awardDue(state: GameState, season: number): void {
+  const x = state.expansion;
+  if (x?.clubs.some((c) => !c.activated)) return;
+  const next = REAL_EXPANSION.find((r) => r.awarded <= season && r.clubs.some((c) => c.joins > season && !TEAM_BY_ID[c.id]));
+  if (!next) return;
+  for (const c of next.clubs) awardRealClub(state, { ...c, staff: { ...c.staff } }, c.joins - season);
+  if (season > state.era!.start) {
+    news(state, "league", `The league awards ${next.clubs.map((c) => `${c.city}'s ${c.name}`).join(" and ")}, to play from ${next.clubs[0].joins}`);
   }
 }
 
@@ -45,8 +56,12 @@ export function eraNewSeason(state: GameState): void {
   for (const h of HOMES) if (season === h.until && e.start < h.until && !state.relocation?.moves.some((m) => m.team === h.team)) {
     news(state, "ownership", `The ${TEAM_BY_ID[h.team].name} play their first season in ${TEAM_BY_ID[h.team].city} after leaving ${h.city}`);
   }
+  awardDue(state, season);
   if (season === REALIGNED && e.start < REALIGNED) news(state, "league", "The league plays its first season in eight divisions of four, with the Texans in the new AFC South");
-  if (washingtonName(season) !== washingtonName(season - 1)) news(state, "ownership", `Washington's club plays this season as the ${washingtonName(season)}`);
+  for (const id of ["WAS", "TEN"]) {
+    const now = eraName(id, season);
+    if (TEAM_BY_ID[id] && now !== eraName(id, season - 1) && !(id === "TEN" && season <= e.start)) news(state, "ownership", `${TEAM_BY_ID[id].city}'s club plays this season as the ${now}`);
+  }
 }
 
 /** The real sales of clubs, on the day the owners approved them. */
