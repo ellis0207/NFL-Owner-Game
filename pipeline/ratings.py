@@ -162,20 +162,24 @@ def _percentiles(values: dict) -> dict:
     return {pid: float(r) / n for pid, r in zip(ids, ranks)}
 
 
-def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozenset()) -> dict:
+def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozenset(), career: dict | None = None) -> dict:
+    """`career` (starts before 1999 only) is a career-outcome number per player:
+    the stand-in where no season totals survive (defense, linemen, kickers)."""
+    career = career or {}
     by_pos: dict[str, list] = {}
     for p in players:
         by_pos.setdefault(p["position"], []).append(p)
 
     ratings = {}
     for pos, group in by_pos.items():
-        signals = {"usage": {}, "production": {}, "market": {}, "draft": {}}
+        signals = {"usage": {}, "production": {}, "market": {}, "draft": {}, "career": {}}
         for p in group:
             for name, value in (
                 ("usage", _usage(p, snaps, stats.get(p["id"], []))),
                 ("production", _production(p, stats.get(p["id"], []))),
                 ("market", _market(p)),
                 ("draft", _draft(p)),
+                ("career", career.get(p["id"])),
             ):
                 if value is not None:
                     signals[name][p["id"]] = value
@@ -207,6 +211,8 @@ def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozen
             weights = {
                 "usage": 0.30, "production": 0.35 if pos not in ("OT", "OG", "C", "LS") else 0.0,
                 "market": 0.30, "draft": max(0.05, 0.6 - 0.2 * exp),
+                # Before 1999 only: what the career came to, the main read where there are no totals.
+                "career": 0.45 if pos in ("QB", "RB", "FB", "WR", "TE") else 0.9,
             }
             if exp == 0:
                 # Rookies are judged on draft slot alone, and even a top pick
@@ -217,7 +223,9 @@ def rate_players(players: list, stats: dict, snaps: dict, unsigned: set = frozen
             den = sum(w for s, w in weights.items() if pid in pct[s])
             # Missing usage for a veteran is itself a signal: he was not playing.
             # Before snap counts, linemen and long snappers have no usage to read.
-            if exp > 0 and pid not in pct["usage"] and (snaps or pos in STARTER_LOAD):
+            # Before 1999 only offense has totals: elsewhere a missing number says nothing.
+            no_totals = bool(career) and pos not in ("QB", "RB", "FB", "WR", "TE")
+            if exp > 0 and pid not in pct["usage"] and (snaps or pos in STARTER_LOAD) and not no_totals:
                 num += 0.30 * 0.05
                 den += 0.30
             blended[pid] = num / den if den else 0.1

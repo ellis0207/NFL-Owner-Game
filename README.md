@@ -1218,7 +1218,7 @@ its revenue. Saves from every earlier version still load, including ones
 that stopped on the day after the old final draft. Check a long career with
 `npx vite-node tests/longrun-report.ts [seasons] [seed]`.
 
-Start in any season from 1999 to 2025 as well as 2026. Each season's data
+Start in any season from 1994 to 2025 as well as 2026. Each season's data
 (that year's rosters and contracts, schedule, stadiums, salary cap and minimum
 salaries, and each player's real career back to 1999) is a separate file the
 page loads only when that season is chosen. Before about 2011 the open
@@ -1237,7 +1237,17 @@ the first pick of every round) and the league realigns into eight divisions of
 four. Stadiums go by the names they had that season. Records stand as they did
 before the start. With real history the league then follows the real timeline
 (the caps each year, the labor deals, the Rams', Chargers' and Raiders' moves,
-Washington's names, the clubs' sales from the Ravens in 2004 on). Alternate history,
+Washington's names, the clubs' sales from the Ravens in 2004 on). A 1994-1998
+start is the first years of the salary cap: 28 clubs in 1994 with the Rams and
+Raiders in Los Angeles and the Oilers in Houston; Carolina and Jacksonville open
+for 1995 with Dom Capers, Bill Polian and Tom Coughlin; the Rams move to St.
+Louis and the Raiders to Oakland; the Browns become the Baltimore Ravens in 1996
+(Memorial Stadium until 1998) and Cleveland's new Browns are awarded, opening in
+1999 with Chris Palmer and Dwight Clark; the Oilers play in Memphis and at
+Vanderbilt before Nashville. No instant replay before 1999. Season totals before
+1999 are offense only (Pro Football Reference, from an open copy on GitHub), so
+defenders, linemen and kickers are rated from their real careers. Real draft
+classes from 1995. Alternate history,
 at the start or later in Settings, freezes all of that so only the save's own
 votes, moves and sales change it. History > Rules lists the real rule changes.
 A custom league pack renames and repaints the clubs (city, name, colors); the
@@ -1337,8 +1347,8 @@ python pipeline/build_league.py --refresh  # re-downloads everything
 
 ### Historical packs
 
-`data/packs/<year>.json.gz` (1999-2025, 270-740 KB each) are built by
-`python pipeline/history_pack.py 1999 2025`, which reruns the league pipeline
+`data/packs/<year>.json.gz` (1994-2025, 250-740 KB each) are built by
+`python pipeline/history_pack.py 1994 2025`, which reruns the league pipeline
 with `NFL_SEASON` set: rosters and contracts as signed by that season (deals
 the archive lacks are priced by `pipeline/contract_model.py`), stats from the
 three seasons before it, the real schedule and playoff field, the cap and
@@ -1350,7 +1360,13 @@ Before 2002 nflverse has no weekly roster, so the camp roster comes from the
 season roster (`sources.season_roster`), the hidden ratings also read the start
 season (`RATING_SEASONS`), and the 1999 waiver order comes from FiveThirtyEight's
 1998 results. Before snap counts (2012) the ratings read each player's usage
-from his stat volume per game.
+from his stat volume per game. Before 1999 (no nflverse schedule or player
+stats) the season comes from FiveThirtyEight's file with stadiums and head
+coaches entered by hand (`pipeline/old_seasons.py`), the offensive totals from
+Pro Football Reference's yearly tables kept in the open fantasydatapros/data
+repository (`pipeline/old_stats.py`, matched to the rosters by name), and the
+rest of the ratings read a career signal: approximate value, Pro Bowls and
+seasons started a year from the draft record, or seasons on a roster.
 
 ### How the camp rosters are rebuilt
 

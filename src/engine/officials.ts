@@ -88,6 +88,11 @@ export class Officials {
     const wrong = this.rng() < WRONG[kind] * (LEAGUE_RULES.skyJudge ? 0.6 : 1);
     const onField = kind === "catch" ? (wrong ? "incomplete" : "complete") : kind === "drop" ? (wrong ? "a catch" : "incomplete") : wrong ? "down by contact" : "a fumble";
     const what = kind === "fumble" ? (wrong ? "Runner ruled down by contact" : "Fumble ruled on the field") : `Pass ruled ${onField}`;
+    if (!LEAGUE_RULES.replay) {
+      // No replay in the 1990s: what the officials saw stands.
+      if (wrong) this.calls.push({ q: c.q, clock: c.clock, team: hurt, text: `${what}; no replay then`, wrong: true });
+      return { stands: !wrong, note: "" };
+    }
     if (!wrong) {
       // A coach sometimes challenges a call that was right; the call stands.
       if (c.stake >= 15 && this.throwsFlag(other, c, false)) {

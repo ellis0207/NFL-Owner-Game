@@ -17,7 +17,7 @@ import { FileButton } from "./kit";
 import { classLabel, REAL_YEARS } from "../engine/realclasses";
 import { chooseDraftClass } from "../engine/classpick";
 
-/** The seasons a game can start in: the 2026 default and every season with a data pack (1999 on). */
+/** The seasons a game can start in: the 2026 default and every season with a data pack (1994 on). */
 const ERAS = [2026, ...Array.from({ length: LAST_PACK - FIRST_PACK + 1 }, (_, i) => LAST_PACK - i)];
 
 /** Saves a text file through the browser. */

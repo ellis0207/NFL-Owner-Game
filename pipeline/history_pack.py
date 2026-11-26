@@ -47,6 +47,8 @@ OUT = HERE.parent / "data" / "packs"
 
 # Real salary caps by league year (OverTheCap).
 CAPS = {
+    # The cap began with the 1993 agreement, in 1994.
+    1994: 34_608_000, 1995: 37_100_000, 1996: 40_753_000, 1997: 41_454_000, 1998: 52_388_000,
     1999: 57_288_000, 2000: 62_172_000, 2001: 67_405_000,
     2002: 71_101_000, 2003: 75_007_000, 2004: 80_582_000, 2005: 85_500_000, 2006: 102_000_000,
     2007: 109_000_000, 2008: 116_000_000, 2009: 123_000_000,
@@ -74,7 +76,9 @@ MINIMUMS = {
 # The 1993 agreement as extended in 2006: rookie minimum $225,000 in 2002 and
 # $320,000 in 2010; the steps between are approximate (about +3% a year).
 # Rookie minimums $175,000 in 1999, $193,000 in 2000 and $209,000 in 2001.
-for _y, _r in ((1999, 175_000), (2000, 193_000), (2001, 209_000)):
+# Rookie minimums $108,000 in 1994, $119,000 in 1995, $131,000 in 1996-97 and
+# $158,000 in 1998; the steps above them approximate.
+for _y, _r in ((1994, 108_000), (1995, 119_000), (1996, 131_000), (1997, 131_000), (1998, 158_000), (1999, 175_000), (2000, 193_000), (2001, 209_000)):
     MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
 for _y in range(2002, 2011):
     _r = 225_000 + round((_y - 2002) * 95_000 / 8, -4)
@@ -84,7 +88,7 @@ for _y in range(2011, 2020):
     MINIMUMS[_y] = (375_000 + _k, 450_000 + _k, 525_000 + _k, 600_000 + _k, 685_000 + _k, 810_000 + _k)
 
 # Practice squad: weekly pay (standard) and size by season.
-PS_WEEKLY = {1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
+PS_WEEKLY = {1994: 3_000, 1995: 3_200, 1996: 3_500, 1997: 3_500, 1998: 3_800, 1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
              2009: 5_200, 2010: 5_200, 2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
              2018: 7_600, 2019: 8_000, 2020: 8_400, 2021: 9_200, 2022: 11_500, 2023: 12_000, 2024: 12_500,
              2025: 13_000}
@@ -106,11 +110,15 @@ def identity(season: int) -> dict:
     """Clubs whose city or name differed that season (ids stay the current ones)."""
     out = {}
     if season <= 2015:
-        out["LA"] = ("St. Louis", "Rams")
+        out["LA"] = ("Los Angeles" if season <= 1994 else "St. Louis", "Rams")
     if season <= 2016:
         out["LAC"] = ("San Diego", "Chargers")
     if season <= 2019:
-        out["LV"] = ("Oakland", "Raiders")
+        out["LV"] = ("Los Angeles" if season <= 1994 else "Oakland", "Raiders")
+    if season <= 1998:
+        out["TEN"] = ("Houston" if season <= 1996 else "Tennessee", "Oilers")
+    if season <= 1995:
+        out["BAL"] = ("Cleveland", "Browns")
     out["WAS"] = ("Washington", "Redskins" if season <= 2019 else "Football Team" if season <= 2021 else "Commanders")
     return out
 
@@ -125,12 +133,12 @@ OLD_ALIGNMENT = {
 }
 
 
-def alignment(season: int, teams: list) -> list:
+def alignment(season: int, teams: list, present: set | None = None) -> list:
     """(abbr, city, name, conference, division) for the clubs that played that season."""
     if season >= 2002:
         return teams
     where = {t: (conf, div) for conf, divs in OLD_ALIGNMENT.items() for div, ids in divs.items() for t in ids}
-    return [(a, city, name, *where[a]) for a, city, name, _, _ in teams if a in where]
+    return [(a, city, name, *where[a]) for a, city, name, _, _ in teams if a in where and (present is None or a in present)]
 
 
 WEST = {"DEN", "LV", "LAC", "SF", "SEA", "ARI"}
@@ -397,6 +405,15 @@ def build(season: int) -> Path:
 
     data = load_all(False)
     games = data["games"]
+    if season < 1999:
+        # Before nflverse's schedule: the season itself from FiveThirtyEight, with the real stadiums and coaches.
+        import pandas as pd
+        from old_seasons import old_schedule
+        from sources import fte_games
+        fte = fte_games(season)
+        present = set(fte.home_team) | set(fte.away_team)
+        division = {t[0]: (t[3], t[4]) for t in alignment(season, TEAMS, present)}
+        games = pd.concat([games, old_schedule(fte, season, division)], ignore_index=True)
     if season - 1 < 1999:
         # nflverse games begin in 1999: last season's results (waiver order, playoff clubs) from FiveThirtyEight.
         import pandas as pd
@@ -414,7 +431,15 @@ def build(season: int) -> Path:
     for p in players:
         p["stats"] = stats.get(p["id"], [])
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
-    ratings = rate_players(players, rating_stats, snaps)
+    career = {}
+    if season < 1999:
+        # No defensive or kicking totals before 1999: careers fill in (old_stats.py).
+        import pandas as pd
+        from old_stats import career_signal
+        from sources import _fetch, seasons_listed
+        picks = pd.read_csv(_fetch("draft_picks/draft_picks.csv", False), low_memory=False)
+        career = career_signal(players, season, picks, seasons_listed(1985, 2010))
+    ratings = rate_players(players, rating_stats, snaps, career=career)
     free_agents = build_free_agents(data["weekly_rosters"], camp, data["players"], stats, snaps, rush)
     # A few old rows have no player id at all: they can't be tracked, so they're left out.
     rostered = {p["id"] for p in players}
@@ -422,7 +447,9 @@ def build(season: int) -> Path:
     for p in free_agents:
         p["stats"] = stats.get(p["id"], [])
         p["snaps"] = (snaps.get(p["ids"]["pfr"]) or {}) if p["ids"]["pfr"] else {}
-    combined = rate_players(players + free_agents, rating_stats, snaps, unsigned={p["id"] for p in free_agents})
+    if career:
+        career.update(career_signal(free_agents, season, picks, seasons_listed(1985, 2010)))
+    combined = rate_players(players + free_agents, rating_stats, snaps, unsigned={p["id"] for p in free_agents}, career=career)
     for p in free_agents:
         ratings[p["id"]] = combined[p["id"]]
     traits = build_traits(players + free_agents, ratings, data["rating_stats"], data["combine"])
@@ -441,7 +468,7 @@ def build(season: int) -> Path:
     players = [p for p in players if p["team"] is not None]
     free_agents = released + free_agents
 
-    league = alignment(season, TEAMS)
+    league = alignment(season, TEAMS, set(games[games.season == season].home_team))
     team_ids = [t[0] for t in league]
     sch.DIVISION = {t[0]: (t[3], t[4]) for t in league}
     sch.HALL_OF_FAME_GAME, sch.PRESEASON_GAMES = preseason(season, rules["keyDates"], team_ids)

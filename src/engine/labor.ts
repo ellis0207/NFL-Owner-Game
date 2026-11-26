@@ -106,7 +106,7 @@ export function labor(state: GameState): LaborState {
     // the 1993 agreement as extended in 2006 (eras.ts). With real history the
     // owners' 2008 opt-out leaves 2010 uncapped.
     agreements: state.era && state.era.start <= 2010
-      ? [{ from: 1993, through: state.era.alt ? 2010 : 2009, signed: state.era.start < 2006 ? "1998-02-26" : "2006-03-08", terms: { ...CBA_2006 } },
+      ? [{ from: 1993, through: state.era.alt ? 2010 : 2009, signed: state.era.start < 1998 ? "1993-06-29" : state.era.start < 2006 ? "1998-02-26" : "2006-03-08", terms: { ...CBA_2006 } },
         ...(state.era.alt ? [] : [{ from: 2010, through: 2010, signed: "2008-05-20", terms: { ...UNCAPPED_2010 } }])]
       : state.era && state.era.start <= 2020
       ? [{ from: 2011, through: 2020, signed: "2011-08-04", terms: { ...CBA_2011 } }]
