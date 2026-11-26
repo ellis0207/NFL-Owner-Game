@@ -691,6 +691,8 @@ export interface Settings {
   economy?: "calm" | "normal" | "volatile";
   /** A historical start: false follows the real timeline after the start; true leaves it to the save (engine/eras.ts). */
   altHistory?: boolean;
+  /** A historical start: "era" (the default) scores games like that season's league; "modern" at today's scoring (engine/eras.ts). */
+  eraScoring?: "era" | "modern";
   /** How hard the world pushes back: what agents and other GMs ask of us and how fast patience runs out (engine/difficulty.ts). */
   difficulty?: "rookie" | "standard" | "veteran" | "legend";
 }

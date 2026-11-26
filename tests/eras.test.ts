@@ -231,9 +231,9 @@ describe("historical starts", () => {
     expect(eraRules(2014)).toMatchObject({ games: 16, playoffTeams: 12, touchback: 20, xpLine: 2, otMinutes: 15, hipDropBan: false });
     expect(eraRules(2020)).toMatchObject({ games: 16, touchback: 25 });
     expect(eraRules(2020).playoffTeams).toBeUndefined();
-    expect(eraRules(2024)).toEqual({ touchback: 30, otRule: "modified" });
+    expect(eraRules(2024)).toEqual({ touchback: 30, otRule: "modified", sackRate: 0.88 });
     expect(eraRules(2008)).toMatchObject({ otRule: "sudden", playoffTeams: 12, xpLine: 2 });
-    expect(eraRules(2025)).toEqual({ touchback: 35, otRule: "both" });
+    expect(eraRules(2025)).toEqual({ touchback: 35, otRule: "both", sackRate: 0.88 });
     expect(eraRules(2026)).toEqual({});
     const st = (start: number) => ({ era: { start, alt: false } }) as never;
     expect(practiceSquadBase(st(2002), 2002)).toBe(5);
@@ -294,5 +294,39 @@ describe("a 2011 save", () => {
     for (let i = 0; i < 10; i++) e.advanceDay(s);
     expect(s.date > from).toBe(true);
     expect(Number.isFinite(e.capSummary(s, s.userTeam).space)).toBe(true);
+  }, 120_000);
+});
+
+describe("a 1994 save from version 1.3", () => {
+  const file = new URL("./saves/pr138-1994-10-02.json.gz", import.meta.url);
+  it.skipIf(!existsSync(file))("loads with the 1994 pack, picks up era scoring and keeps playing", async () => {
+    const e = await engineFor(1994);
+    const s = e.parseSaveFile(gunzipSync(readFileSync(file)).toString());
+    expect(s.era?.start).toBe(1994);
+    e.applySeason(s);
+    expect(e.TEAMS.length).toBe(28);
+    expect(e.TEAM_BY_ID.TEN.city).toBe("Houston");
+    expect(e.rulesFor(s).passEra).toBeLessThan(0);
+    expect(e.rulesFor(s).sackRate).toBeLessThan(1);
+    const from = s.date;
+    for (let i = 0; i < 10; i++) e.advanceDay(s);
+    expect(s.date > from).toBe(true);
+    expect(Number.isFinite(e.capSummary(s, s.userTeam).space)).toBe(true);
+  }, 120_000);
+});
+
+describe("era scoring and the pack scale", () => {
+  it("an early pack sits on the 2026 scale, and Modern scoring turns the era's passing off", async () => {
+    const e = await engineFor(1996);
+    // The top five corners a club read like 2026's (mean about 78), not the Week 1 list's ~70.
+    const cbs = e.PLAYERS.filter((p) => p.team && p.position === "CB").map((p) => e.HIDDEN_RATINGS[p.id]?.overall ?? 0)
+      .sort((a, b) => b - a).slice(0, 5 * e.TEAMS.length);
+    const mean = cbs.reduce((a, b) => a + b, 0) / cbs.length;
+    expect(Math.abs(mean - 78.3)).toBeLessThan(1.5);
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 3);
+    expect(e.rulesFor(s).passEra).toBeCloseTo(-0.085);
+    expect(e.rulesFor(s).sackRate).toBeCloseTo(0.88);
+    s.settings.eraScoring = "modern";
+    expect(e.rulesFor(s).passEra).toBe(0);
   }, 120_000);
 });

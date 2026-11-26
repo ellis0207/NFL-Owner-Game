@@ -19,6 +19,15 @@ import { chooseDraftClass } from "../engine/classpick";
 
 /** The seasons a game can start in: the 2026 default and every season with a data pack (1994 on). */
 const ERAS = [2026, ...Array.from({ length: LAST_PACK - FIRST_PACK + 1 }, (_, i) => LAST_PACK - i)];
+/** The seasons grouped by the league's eras, newest first (real: the 2020, 2011 and 1993 labor deals; Houston's 2002 realignment). */
+const ERA_GROUPS: { label: string; from: number; to: number }[] = [
+  { label: "Today", from: 2026, to: 2026 },
+  { label: "The 2020 labor deal (17 games from 2021)", from: 2020, to: 2025 },
+  { label: "The 2011 labor deal", from: 2011, to: 2019 },
+  { label: "32 clubs, before the rookie wage scale", from: 2002, to: 2010 },
+  { label: "31 clubs, before Houston", from: 1999, to: 2001 },
+  { label: "The first years of the cap", from: 1994, to: 1998 },
+];
 
 /** Saves a text file through the browser. */
 export function download(name: string, text: string): void {
@@ -74,7 +83,14 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           {step(1, "When you start")}
           <label className="field"><span className="label">Starting season</span>
             <select value={BASE_SEASON} onChange={(e) => void switchEra(Number(e.target.value), undefined, true)}>
-              {ERAS.map((y) => <option key={y} value={y}>{y === 2026 ? "2026 (today)" : `${y} season`}</option>)}
+              {ERA_GROUPS.map((g) => {
+                const years = ERAS.filter((y) => y >= g.from && y <= g.to);
+                return years.length ? (
+                  <optgroup key={g.label} label={g.label}>
+                    {years.map((y) => <option key={y} value={y}>{y === 2026 ? "2026 (today)" : `${y} season`}</option>)}
+                  </optgroup>
+                ) : null;
+              })}
             </select>
           </label>
           {PACK_ERROR && <span className="bad">{PACK_ERROR}</span>}

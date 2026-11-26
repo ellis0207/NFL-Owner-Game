@@ -43,7 +43,34 @@ export interface EraRuleOverlay {
   playoffTeams?: number;
   otRule?: "sudden" | "modified" | "both";
   replay?: boolean;
+  passEra?: number;
+  sackRate?: number;
 }
+
+/**
+ * Era scoring: how much less often passes were completed, by season, so games
+ * score like that season's. Fitted to real points a team a game (FiveThirtyEight
+ * to 1998, nflverse after, three-season averages): 20-21 points in the 1990s and
+ * early 2000s against about 22.6 now, at a point for each 0.05 off a pass's
+ * completion chance in this sim. None from 2011, when scoring reached today's.
+ */
+const PASS_ERA: Record<number, number> = {
+  1994: -0.1, 1995: -0.095, 1996: -0.085, 1997: -0.09, 1998: -0.085, 1999: -0.085, 2000: -0.1, 2001: -0.085, 2002: -0.085,
+  2003: -0.065, 2004: -0.08, 2005: -0.085, 2006: -0.08, 2007: -0.055, 2008: -0.045, 2009: -0.04, 2010: -0.035,
+};
+
+/**
+ * How often a pressured passer went down, against the 2026 league, by season.
+ * Real sacks a team a game (nflverse, three-season averages) ran 2.0-2.5,
+ * against about 2.5 now; and a league built from a historical pack takes about
+ * a tenth more sacks than its real season did (thinner lines behind the
+ * starters), so each figure carries 0.9 for that. 1994-1998 use 1999-2001's.
+ */
+const SACK_ERA: Record<number, number> = {
+  1994: 0.88, 1995: 0.88, 1996: 0.88, 1997: 0.88, 1998: 0.9, 1999: 0.89, 2000: 0.88, 2001: 0.86, 2002: 0.82, 2003: 0.81,
+  2004: 0.81, 2005: 0.83, 2006: 0.8, 2007: 0.77, 2008: 0.76, 2009: 0.76, 2010: 0.8, 2011: 0.82, 2012: 0.86, 2013: 0.86,
+  2014: 0.87, 2015: 0.82, 2016: 0.82, 2017: 0.84, 2018: 0.88, 2019: 0.87, 2020: 0.86,
+};
 
 /** What each change replaced, by the first season it applied (real). */
 export function eraRules(season: number): EraRuleOverlay {
@@ -66,6 +93,8 @@ export function eraRules(season: number): EraRuleOverlay {
     otRule: season < 2012 ? "sudden" : season < 2025 ? "modified" : "both",
     // No instant replay from 1992 until coaches' challenges came in 1999: every call on the field stood.
     ...(season < 1999 ? { replay: false } : {}),
+    ...(PASS_ERA[season] ? { passEra: PASS_ERA[season] } : {}),
+    sackRate: SACK_ERA[season] ?? 0.88,
   };
 }
 

@@ -1247,7 +1247,12 @@ Louis and the Raiders to Oakland; the Browns become the Baltimore Ravens in 1996
 Vanderbilt before Nashville. No instant replay before 1999. Season totals before
 1999 are offense only (Pro Football Reference, from an open copy on GitHub), so
 defenders, linemen and kickers are rated from their real careers. Real draft
-classes from 1995. Alternate history,
+classes from 1995. Games score like their season (era scoring: passes
+complete less often, about 20 points a team in the 1990s against 23 today,
+fitted to real points; sacks at each season's real rate), and Settings >
+Scoring switches an old league to today's. Packs built from Week 1 lists (50-70
+a club) are laid on the 2026 camp-roster scale position by position at load
+(`packscale.ts`), so old starters rate like starters. Alternate history,
 at the start or later in Settings, freezes all of that so only the save's own
 votes, moves and sales change it. History > Rules lists the real rule changes.
 A custom league pack renames and repaints the clubs (city, name, colors); the
@@ -1298,7 +1303,7 @@ npm run build   # dist/index.html (single file) and dist/game.html (claude.ai pa
   The field view's animated players are `ui/anim/` (`read.ts` reads a row of the log as a play, `build.ts` works it out frame by frame for all 22 players from the lineups the log keeps and the play book, `book.ts` holds the shapes, `assets.ts` loads and tints the sprites, `FieldPlayers.tsx` draws them); the art in `assets/anim/` is made by the Blender scripts in `pipeline/anim/` (see its README) and ships beside the page as `anim/`.
   The play-by-play recorder and drive chart are `playlog.ts`, the field view's reading of a log `gamecast.ts` (drawn by `ui/GameCast.tsx`), officials and replay `officials.ts`, and game-day operations checks and questions to the league office `gameops.ts`.
   Local sponsors and radio/TV deals are `commerce.ts` (with `sponsors.ts` for rights, naming, deliverables and defaults), the ticket office `ticketing.ts`, the fan base and market `fans.ts`, merchandise and the brand `merch.ts`, team media `teammedia.ts`, game-day operations `venue.ts`, building upkeep `facilities.ts`, the foundation and player services `community.ts`, travel, security and technology `departments.ts`, stadium and facility projects `projects.ts`, the home-game price calls and the spring budget review `ownercalls.ts`, the stadium's grounds (seating sections, parking lots, transit, closures for work) `grounds.ts`, and offseason grades, fan expectations and storylines `review.ts`.
-  Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `custompack.ts` checks and applies custom league packs.
+  Historical starts: `pack.ts` loads a season's pack (`data/packs/<year>.json.gz`, from `pipeline/history_pack.py`) before the engine; `eras.ts` holds the era rules, real caps, old homes, names and owners; `eraevents.ts` plays the real timeline forward; `packscale.ts` lays small packs' ratings and staff on the 2026 scale; `custompack.ts` checks and applies custom league packs.
 - `src/ui/` React screens. `nav.ts` groups the pages for the sidebar and page search, and names each group's room; `Masthead.tsx` is every page's header (room picture, title, hint) and the sidebar icons; `kit.tsx` holds shared tiles, cards, callouts and meters; styles are in `ui/styles/` (`base.css`, `masthead.css`, `kit.css`, one file per room in `rooms/`, and the field view, hover cards, Hall of Fame and media front pages in their own files). The room pictures in `assets/art/` come from the Blender scenes in `pipeline/art/` and ship beside the page as `art/`; `Tabs.tsx` sets long tab lists out in labeled rows (the Business page). Hover cards: `tip.ts` (`tip(kind, ...)` marks an element), `tips.tsx` (each card, read from live state), `TipLayer.tsx` (hover, nested cards, long press, plain `title` text in the same style).
 - `src/save/` autosave (IndexedDB), cloud saves and save files.
 

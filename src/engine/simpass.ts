@@ -1,6 +1,7 @@
 // The passing game: the call, the read, protection, the throw and the catch.
 // Part of the game sim (sim.ts); the teams and lineups are in simteam.ts.
 import { PLAYER_BY_ID } from "./league";
+import { LEAGUE_RULES } from "./rules";
 import { gaussian } from "./rng";
 import { type CallContext } from "./officials";
 import { coverage as coverShell, formation, PLAY_FLAGS as F, spotText } from "./playlog";
@@ -72,7 +73,7 @@ export abstract class SimPass extends SimTeams {
     }
 
     if (pressured && depth !== "screen") {
-      const pSack = clamp(0.23 - (tr(qb, "mobility") - 80) * 0.004 - (tr(qb, "decisions") - 80) * 0.002 + (depth === "deep" ? 0.06 : 0), 0.07, 0.42);
+      const pSack = clamp(0.23 - (tr(qb, "mobility") - 80) * 0.004 - (tr(qb, "decisions") - 80) * 0.002 + (depth === "deep" ? 0.06 : 0), 0.07, 0.42) * LEAGUE_RULES.sackRate;
       const r = this.rng();
       if (r < pSack) return this.sack(o, d, qb, [...rushers, ...blitzers], pairs.blocker, { blitzers, free: blitz && !pickedUp, chasers: [...def.lb, ...def.s].filter((id) => !blitzers.includes(id)) });
       const pScramble = clamp(0.1 + (tr(qb, "mobility") - 80) * 0.007, 0.02, 0.32);
@@ -129,6 +130,8 @@ export abstract class SimPass extends SimTeams {
     // The field shrinks inside the twenty; the most accurate passers still find the small windows.
     const compressed = this.ydl >= 80 ? 0.11 - clamp((accuracy - 88) * 0.006, 0, 0.04) : 0;
     let pComp = baseComp - compressed - this.cond.comp[depth] + sep * 0.008 + (accuracy - 80) * 0.0045 + (tr(target, "hands") - 80) * 0.0025 - (pressured ? 0.19 : 0);
+    // Era scoring (eras.ts): passing completed less often in the 1990s and 2000s.
+    pComp += LEAGUE_RULES.passEra;
     pComp = clamp(pComp, 0.1, 0.93);
     const decisions = tr(qb, "decisions") - d.def.disguise * 5;
     const baseInt = { screen: 0.004, short: 0.012, inter: 0.024, deep: 0.039 }[depth];

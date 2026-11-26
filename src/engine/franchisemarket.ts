@@ -61,7 +61,17 @@ export const REASONS: Record<Listing["reason"], string> = {
   offer: "An offer came in that the owner decided not to refuse.",
 };
 
-const GROUPS = ["the Alder Ridge group", "the Harcastle partnership", "a group led by a technology founder", "the Pemberton family", "a group led by a hedge-fund founder", "the Vance & Sorel partnership", "a group led by a former team president"];
+// Made-up buying groups.
+const GROUPS = ["the Alder Ridge group", "the Harcastle partnership", "a group led by a technology founder", "the Pemberton family", "a group led by a hedge-fund founder", "the Vance & Sorel partnership", "a group led by a former team president",
+  "the Okafor family", "the Linden Street partnership", "a group led by a private-equity founder", "the Marchetti family", "the Greystone group", "a group led by a shipping heir", "the Whitcombe partnership"];
+
+/** A buyer who doesn't already control a club (the league allows one club an owner); after decades of sales, a numbered group. */
+function freeGroup(state: GameState, pick: number): string {
+  const taken = new Set(TEAMS.map((t) => controller(state, t.id)));
+  const open = GROUPS.filter((g) => !taken.has(g));
+  if (open.length) return open[Math.floor(pick * open.length)];
+  for (let n = 2; ; n++) { const g = `${GROUPS[Math.floor(pick * GROUPS.length)]} (${n === 2 ? "II" : n === 3 ? "III" : n})`; if (!taken.has(g)) return g; }
+}
 
 export function franchise(state: GameState): FranchiseMarketState {
   // A historical start knows only the sales before it; the later ones happen as the years come (eraevents.ts).
@@ -149,7 +159,7 @@ function settleListing(state: GameState, l: Listing): void {
     note(state, `The ${TEAM_BY_ID[l.team].name} sale was called off.`);
     return;
   }
-  const buyer = GROUPS[Math.floor(r() * GROUPS.length)];
+  const buyer = freeGroup(state, r());
   const price = Math.round(l.ask * (0.95 + r() * 0.1) / (50 * M)) * 50 * M;
   sold(state, l.team, price, buyer);
   l.status = "sold";
@@ -212,7 +222,7 @@ function rivalBids(state: GameState, deal: ClubDeal): RivalBid[] {
   const n = 1 + Math.floor(r() * 3) - (inRecession(state) ? 1 : 0);
   const out: RivalBid[] = [];
   for (let i = 0; i < Math.max(0, n); i++) {
-    const name = GROUPS[Math.floor(r() * GROUPS.length)];
+    const name = freeGroup(state, r());
     if (out.some((b) => b.name === name)) continue;
     const cash = r() < 0.5;
     out.push({ name, price: Math.round(value * (0.95 + r() * 0.12) / (25 * M)) * 25 * M, cash, note: cash ? "All cash, no financing condition" : "Subject to its lenders' approval" });
