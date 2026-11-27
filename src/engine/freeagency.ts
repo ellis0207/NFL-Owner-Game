@@ -38,7 +38,7 @@ import { offerValue, STARTERS, teamQuality } from "./negotiation";
 import { lockedSpace } from "./capplan";
 import { faClass, futureRoom, isOffseason, NEXT, off, plannedSpace, tenderCompensation } from "./offseason";
 import { gaussian, rngFor } from "./rng";
-import { claimView, depthChart, logMove, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
+import { bodiesAt, claimView, depthChart, logMove, MAX_ON_90, practiceSquad, releasePlayer, rosterRoom, rosterStatusNow, weakestOnRoster } from "./roster";
 import { perceivedAbility, schemeFit, staffEffects, teamStaff } from "./staff";
 import type { Deal, FaOffer, FreeAgent, GameState, OfferTerms, Position } from "./types";
 import { lockMatchedSheet, transferOwnPick } from "./trades";
@@ -672,18 +672,26 @@ export function approveSigning(state: GameState, id: string, terms: OfferTerms |
  * 90) signs a camp body at the position.
  */
 function cpuCampBodies(state: GameState): void {
-  if (state.date >= KEY.rosterCutdown || leagueYear(state.date) !== RULES.season) return;
+  const camp = state.date < KEY.rosterCutdown && leagueYear(state.date) === RULES.season;
+  // In the spring, once the new league year has opened, teams only patch real holes: an empty
+  // kicker, punter or snapper spot, or a room short of bodies for the offseason program.
+  const spring = isOffseason(state.date) && state.date >= KEY.newLeagueYear;
+  if (!camp && !spring) return;
+  const year = leagueYear(state.date);
   for (const t of TEAMS) {
     const team = t.id;
+    if (spring && team === state.userTeam) continue;
     if (rosterRoom(state, team) <= 1) continue;
     const rng = rngFor(state.seed, `camp:${team}:${state.date}`);
     if (rng() > 0.25) continue;
-    const need = needs(state, team, RULES.season);
-    const pos = (Object.entries(need) as [Position, Need][])
-      .map(([pos, n]) => ({ pos, gap: n.depth + 2 - n.have })).sort((a, b) => b.gap - a.gap)[0]?.pos;
-    if (!pos) continue;
+    const need = needs(state, team, year);
+    const top = (Object.entries(need) as [Position, Need][])
+      .filter(([pos]) => bodiesAt(state, team, pos) < (MAX_ON_90[pos] ?? 99))
+      .map(([pos, n]) => ({ pos, gap: (spring ? n.depth : n.depth + 2) - n.have + (n.have === 0 ? 3 : 0) })).sort((a, b) => b.gap - a.gap)[0];
+    if (!top || (spring && top.gap < 1)) continue;
+    const pos = top.pos;
     const pick = Object.values(market(state))
-      .filter((fa) => fa.status === "open" && PLAYER_BY_ID[fa.player].position === pos && state.players[fa.player]?.status === "fa" && !onWaivers(state, fa.player) && fa.floor <= minFor(fa.player, RULES.season) * 1.05)
+      .filter((fa) => fa.status === "open" && PLAYER_BY_ID[fa.player].position === pos && state.players[fa.player]?.status === "fa" && !onWaivers(state, fa.player) && fa.floor <= minFor(fa.player, year) * 1.05)
       .map((fa) => ({ id: fa.player, v: claimView(state, team, fa.player) + rng() * 3 }))
       .sort((a, b) => b.v - a.v)[0];
     if (!pick) continue;
@@ -710,8 +718,10 @@ function cpuFutures(state: GameState): void {
     }).length;
     const target = 9 + Math.floor(rngFor(state.seed, `futures-target:${team}`)() * 5);
     if (futures + 0.75 * practiceSquad(state, team).length >= target) continue;
+    // A futures deal is a camp body: nobody signs a fifth quarterback for the spring.
     const pick = Object.values(market(state))
       .filter((fa) => fa.status === "open" && state.players[fa.player]?.status === "fa" && !onWaivers(state, fa.player) && fa.floor <= minNext(fa.player) * 1.05 && PLAYER_BY_ID[fa.player].yearsExp <= 4)
+      .filter((fa) => { const pos = PLAYER_BY_ID[fa.player].position; return bodiesAt(state, team, pos) < Math.min(MAX_ON_90[pos] ?? 99, DEPTH[pos] + 2); })
       .map((fa) => ({ id: fa.player, v: claimView(state, team, fa.player) + rng() * 4 }))
       .sort((a, b) => b.v - a.v)[0];
     if (!pick) continue;
@@ -948,7 +958,8 @@ function fillRosters(state: GameState): void {
     const eye = staffEffects(team).gmEval;
     const rng = rngFor(state.seed, `fill:${team}:${state.date}`);
     for (let k = 0; k < Math.min(2, target - count); k++) {
-      const pick = pool.filter((fa) => fa.status === "open")
+      // Bodies for the spring program go where the room is short, not to a fifth quarterback.
+      const pick = pool.filter((fa) => fa.status === "open" && bodiesAt(state, team, PLAYER_BY_ID[fa.player].position) < (MAX_ON_90[PLAYER_BY_ID[fa.player].position] ?? 99))
         .map((fa) => {
           const n = need[PLAYER_BY_ID[fa.player].position];
           const gap = n ? Math.max(0, n.depth - n.have) : 0;
@@ -1100,6 +1111,7 @@ export function faDaily(state: GameState): void {
   decide(state, day);
   decay(state);
   fillRosters(state);
+  cpuCampBodies(state);
   cpuOfferSheets(state);
   sheetsDue(state);
   rumors(state);

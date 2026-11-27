@@ -18,8 +18,27 @@ import { claimView, logMove, releasePlayer, rosterLimit, rosterCount, signToPrac
 import { staffEffects, teamStaff } from "./staff";
 import { standings, winPct } from "./standings";
 import type { Deal, GameState, WaiverEntry } from "./types";
+import { lockedSpace } from "./capplan";
+import { teamValue } from "./market";
+import { REAL_CAPS } from "./pack";
 
 const KEY = RULES.keyDates;
+
+/**
+ * Whether a team can and would carry a claimed contract: this year's salary
+ * under its cap, and next year's salary both inside next year's plan and no
+ * more than the team thinks he's worth. A cap casualty cut in February comes
+ * with next year's big number, so nobody claims him to cut him again.
+ */
+function claimFits(state: GameState, team: string, id: string, deal: Deal | null): boolean {
+  if (state.settings.capRules !== "real") return true;
+  const claimed = claimedDeal(deal, team, state.date, PLAYER_BY_ID[id].yearsExp);
+  const year = leagueYear(state.date);
+  if (dealCapHit(claimed, year) > capSummary(state, team).space - 1_000_000) return false;
+  const next = dealCapHit(claimed, year + 1);
+  if (next <= 1_500_000 * (RULES.salaryCap / REAL_CAPS[2026])) return true;
+  return next <= lockedSpace(state, team, year + 1) && next <= 1.2 * teamValue(state, team, id, year + 1);
+}
 
 export function waivers(state: GameState): Record<string, WaiverEntry> {
   return (state.waivers ??= {});
@@ -117,8 +136,7 @@ function cpuWants(state: GameState, team: string, w: WaiverEntry): string | null
     const since = addDays(state.date, -7);
     if ((state.transactions ?? []).some((t) => t.team === team && t.kind === "claimed" && t.date > since)) return false;
   } else if (churnRoll > 0.5) return false;
-  const hit = dealCapHit(claimedDeal(w.deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date));
-  if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) return false;
+  if (!claimFits(state, team, id, w.deal)) return false;
   const view = claimView(state, team, id);
   const atPosIds = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status));
   const thin = atPosIds.length < 2 && view > 45;
@@ -255,8 +273,7 @@ export function claimOdds(state: GameState, id: string): number {
   let miss = 1;
   for (const { id: team } of TEAMS) {
     if (team === from) continue;
-    const hit = deal ? dealCapHit(claimedDeal(deal, team, state.date, PLAYER_BY_ID[id].yearsExp), leagueYear(state.date)) : 0;
-    if (state.settings.capRules === "real" && hit > capSummary(state, team).space - 1_000_000) continue;
+    if (deal && !claimFits(state, team, id, deal)) continue;
     const mates = teamPlayerIds(state, team).filter((x) => PLAYER_BY_ID[x].position === pos && ["active", "camp"].includes(state.players[x].status));
     const view = claimView(state, team, id);
     const worst = mates.reduce((m, x) => Math.min(m, claimView(state, team, x)), Infinity);

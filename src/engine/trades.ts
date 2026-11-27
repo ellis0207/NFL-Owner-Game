@@ -50,7 +50,7 @@ import { ability, perceivedAbility, schemeFit, staffEffects, teamStaff, upside }
 import { standings } from "./standings";
 import type { GameState, Position, TradeAsset, TradeDeal, TradeOffer, TradeRecord, TradeState } from "./types";
 import { liveIds } from "./live";
-import { PACK } from "./pack";
+import { PACK, REAL_CAPS } from "./pack";
 
 const KEY = RULES.keyDates;
 /** Picks in the next three drafts can be traded. */
@@ -278,8 +278,54 @@ export function pickValue(state: GameState, team: string, id: string): number {
 /** Whose eyes: a team's front office, the press (the consensus), or the truth (for grading later). */
 export type Eye = "gm" | "public" | "truth";
 
-/** Dollars of value over a contract for one point on the chart. */
+/** Dollars of value over a contract for one point on the chart, at the 2026 cap. */
 const DOLLARS_PER_POINT = 220_000;
+
+/**
+ * One chart point in a league year's dollars: the same share of that year's
+ * cap, so players keep their price in picks as the cap grows, and in a
+ * historical start's smaller caps.
+ */
+function pointDollars(state: GameState, year: number): number {
+  return DOLLARS_PER_POINT * (salaryCap(state, year) / REAL_CAPS[2026]);
+}
+
+/** Where a player sits in a position room, by rank: starter, the first backup, or depth. */
+function roleAtRank(pos: Position, rank: number): number {
+  const starters = STARTERS[pos] ?? 1;
+  if (rank < starters) return 1;
+  if (rank < starters + 1) return pos === "QB" ? 0.3 : 0.5;
+  return 0.22;
+}
+
+/**
+ * What the rest of a position room makes up when a player leaves, or gives
+ * up when one arrives, in this season's market dollars: the next man up takes
+ * the snaps, or the old starter goes to the bench. A team trading from depth
+ * loses little; one trading its only good player at a spot loses all of him.
+ */
+function roomShift(state: GameState, eye: Eye, team: string, id: string, without: Set<string>, year: number): number {
+  const pos = PLAYER_BY_ID[id].position;
+  const mine = viewFor(state, eye, team, id);
+  const others: number[] = [];
+  for (const x of teamPlayerIds(state, team)) {
+    if (x === id || without.has(x) || PLAYER_BY_ID[x].position !== pos) continue;
+    const ps = state.players[x];
+    if (ps.status === "ps" || ps.status === "future" || ps.injury?.seasonEnding) continue;
+    others.push(viewFor(state, eye, team, x));
+  }
+  others.sort((a, b) => b - a);
+  const cap = salaryCap(state, year);
+  let shift = 0;
+  // Everyone below him moves up a rank when he leaves (or down one when he arrives).
+  others.forEach((v, rank) => {
+    if (v > mine) return;
+    const below = rank;
+    const above = rank + 1;
+    shift += (roleAtRank(pos, below) - roleAtRank(pos, above)) * shareFor(state, pos, v) * cap;
+  });
+  return shift;
+}
 
 // Views are steady within a day; trades price hundreds of players, so they're kept until the date changes.
 const viewCache = new WeakMap<GameState, { date: string; views: Map<string, number> }>();
@@ -303,7 +349,8 @@ function computeView(state: GameState, eye: Eye, team: string, id: string): numb
   if (eye === "truth") return ability(state, id) + 0.35 * schemeFit(state, id, team);
   if (eye === "public") return marketView(state, id);
   const fx = staffEffects(team);
-  const own = Math.max(0.5, Math.min(0.9, 0.5 + (fx.gmEval - 50) / 100));
+  // A trade is a public bet: front offices check their own read against the league's before making one.
+  const own = Math.max(0.35, Math.min(0.7, 0.35 + (fx.gmEval - 50) / 100));
   return own * (perceivedAbility(state, id, `gm:${team}`, fx.gmEval) + productionBump(state, id)) + (1 - own) * marketView(state, id) + 0.35 * schemeFit(state, id, team);
 }
 
@@ -374,8 +421,16 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
   if (inj && inj.returnDate > date) playable = inj.seasonEnding ? 0 : Math.max(0, weeksLeft - Math.ceil(daysBetween(date, inj.returnDate) / 7));
   const holdout = state.players[id]?.holdout?.kind === "holdout" ? 0.85 : 1;
 
+  // This season the market is mostly picked over: the next man up fills the hole, and money saved
+  // can't buy much until the spring. Contenders care least about this year's money.
+  const camp = date >= addDays(KEY.rosterCutdown, -40) && !isOffseason(date);
+  const fill = camp ? 0.3 : 0.85;
+  const thisYearMoney = camp ? (OUTLOOK[direction(state, team)].picks > 1 ? 0.9 : 0.7) : 1;
+  const shift = (1 - fill) * roomShift(state, eye, team, id, opts.without ?? new Set(), year);
+  const holds = state.players[id]?.team === team;
   let total = 0;
   let worth0 = 0;
+  let onField = 0;
   const real = deal.years.filter((y) => y.year >= year && !y.void);
   const seasonWorth = (k: number) => {
     const a = view + Math.min(k + (inSeason ? 0.5 : 0), 3) * growth * 0.22;
@@ -390,19 +445,31 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
     const s = seasonWorth(k);
     const frac = k === 0 ? playable / FORMAT.weeks : 1;
     const hit = dealCapHit(deal, real[k].year);
-    const value = s.star * role * frac * (k === 0 ? holdout : 1) - hit;
-    if (k === 0) worth0 = s.star * role;
-    total += w[k] * value;
+    let value = k === 0 ? (s.star * role * holdout - shift) * frac - hit * thisYearMoney : s.star * role - hit;
+    // A later year that costs more than he's worth is only as bad as cutting him: whoever holds
+    // the deal can release him and owe just the guaranteed part.
+    if (k > 0 || !camp) value = Math.max(value, -real[k].guaranteed);
+    // The team that has him controls what happens next (a restructure, a pay cut, a release, or
+    // a better year than the market expects), so it weighs a later overpay at half.
+    if (k > 0 && value < 0 && holds) value *= 0.5;
+    if (k === 0) {
+      worth0 = s.star * role;
+      onField = (w[0] * (s.star * role * holdout - shift) * frac) / pointDollars(state, real[0].year);
+    }
+    total += (w[k] * value) / pointDollars(state, real[k].year);
   }
+  // In camp and the season a starter is worth at least most of what he gives the team on the
+  // field this year: nobody sends one away for a late pick because his deal runs rich later.
+  if (holds && camp && role === 1 && direction(state, team) !== "rebuild") total = Math.max(total, 0.6 * onField);
   // Rights to re-sign: two more seasons at a market price keep only the part a contract can't pay for.
   const end = real.length;
   if (age + end <= 31) {
     for (let j = 0; j < 2 && end + j < w.length; j++) {
       const s = seasonWorth(end + j);
-      total += w[end + j] * 0.55 * role * Math.max(0, s.star - s.market);
+      total += (w[end + j] * 0.55 * role * Math.max(0, s.star - s.market)) / pointDollars(state, year + end + j);
     }
   }
-  return { points: total / DOLLARS_PER_POINT, worth: worth0, cost: dealCapHit(deal, year), role };
+  return { points: total, worth: worth0, cost: dealCapHit(deal, year), role };
 }
 
 export function assetValue(state: GameState, eye: Eye, team: string, a: TradeAsset, opts: { without?: Set<string>; date?: string } = {}): number {
@@ -429,7 +496,7 @@ export function tradeBalance(state: GameState, eye: Eye, deal: TradeDeal, side: 
     outValue += v > 0 ? v * own : v;
   }
   // Bonus money already paid stays behind: front offices weigh the dead money a trade pushes onto next year.
-  if (without.size) outValue += (0.5 * capAfter(state, deal, side).deadNext) / DOLLARS_PER_POINT;
+  if (without.size) outValue += (0.5 * capAfter(state, deal, side).deadNext) / pointDollars(state, leagueYear(date) + 1);
   let inValue = 0;
   for (const a of inc) inValue += assetValue(state, eye, team, a, { without, date });
   // A front office won't take on next year's money it would have no way to get under.
@@ -661,6 +728,8 @@ function cornerstone(state: GameState, team: string, id: string): boolean {
   const v = playerValue(state, "gm", team, id);
   if (direction(state, team) === "rebuild" && age >= 28) return false;
   if (p.position === "QB" && v.role === 1 && age <= 34 && v.points >= 120) return true;
+  // A young star starting for us: the kind of player a front office drafts and builds around.
+  if (v.role === 1 && age <= 26 && !["K", "P", "LS"].includes(p.position) && marketView(state, id) >= 92) return true;
   return v.points >= 330 && age <= 27;
 }
 
@@ -1261,10 +1330,20 @@ export function swapDeal(state: GameState, a: string, b: string, rng: () => numb
     .slice(0, 6);
   const fromA = side(a, b), fromB = side(b, a);
   let best: { deal: TradeDeal; score: number } | null = null;
+  const starts = (team: string, id: string) => playerValue(state, "gm", team, id, { date }).role === 1;
   for (const x of fromA) for (const y of fromB) {
     if (x.pos === y.pos) continue;
     // Close in size: a swap, not a star for a backup.
     if (Math.min(x.other, y.other) < 0.55 * Math.max(x.other, y.other)) continue;
+    // Close in standing around the league, too: a team doesn't send out a starter for a
+    // player clearly a level below him, or for one who wouldn't start for it.
+    const mx = marketView(state, x.id), my = marketView(state, y.id);
+    if (Math.abs(mx - my) > 7) continue;
+    if (starts(a, x.id) && (!starts(a, y.id) || my < mx - 4)) continue;
+    // A club doesn't swap away its starting quarterback for a player at another position.
+    if (x.pos === "QB" && starts(a, x.id) && direction(state, a) !== "rebuild") continue;
+    if (b !== state.userTeam && y.pos === "QB" && starts(b, y.id) && direction(state, b) !== "rebuild") continue;
+    if (b !== state.userTeam && starts(b, y.id) && (!starts(b, x.id) || mx < my - 4)) continue;
     const base: TradeDeal = { teams: [a, b], send: [[{ kind: "player", id: x.id }], [{ kind: "player", id: y.id }]] };
     if (!checkTrade(state, base).ok) continue;
     const ga = tradeBalance(state, "gm", base, 0), gb = tradeBalance(state, "gm", base, 1);
@@ -1333,6 +1412,8 @@ function callsToOwner(state: GameState): void {
 
   const make = (deal: TradeDeal, note: string) => {
     if (ts.offers.some((o) => o.status === "open" && o.teams[0] === deal.teams[0])) return;
+    // The same test a CPU-to-CPU deal passes: no front office calls with a deal the league would laugh at.
+    if (!looksSane(state, deal)) return;
     const offer: TradeOffer = { ...deal, id: nextId(state, "offer"), date: state.date, expires, note, status: "open" };
     ts.offers.unshift(offer);
     if (ts.offers.length > 60) ts.offers.length = 60;
@@ -1401,11 +1482,13 @@ export function tradesDaily(state: GameState): void {
   if (w.open) {
     const rng = rngFor(state.seed, `cpu-trades:${state.date}`);
     const rate = tradeRate(state.date);
-    // Each try lands about a third of the time.
-    const tries = Math.floor(rate * 3) + (rng() < (rate * 3) % 1 ? 1 : 0);
+    // Each try lands about a fifth of the time: sellers now want their starters' worth on the field paid for.
+    // (The spring market moves on free agency and the draft, so fewer calls turn into trades then.)
+    const per = isOffseason(state.date) ? 3 : 4.5;
+    const tries = Math.floor(rate * per) + (rng() < (rate * per) % 1 ? 1 : 0);
     for (let i = 0; i < tries; i++) cpuTry(state, rng);
     // Now and then two clubs swap players instead of trading for picks.
-    if (rng() < rate * 0.25) {
+    if (rng() < rate * 0.35) {
       const cpu = TEAMS.map((t) => t.id).filter((t) => t !== state.userTeam);
       const a = cpu[Math.floor(rng() * cpu.length)], b = cpu[Math.floor(rng() * cpu.length)];
       const deal = a !== b ? swapDeal(state, a, b, rng) : null;
