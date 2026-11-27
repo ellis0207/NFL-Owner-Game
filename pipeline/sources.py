@@ -109,6 +109,24 @@ def season_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     rnd = m.draft_round.values
     df["draft_number"] = [None if pd.isna(k) else (r - 1) * 30 + 15 if r > 1 and k < (r - 1) * 28 else k for k, r in zip(m.draft_pick.values, rnd)]
     df["draft_club"] = m.draft_team.values
+    if SEASON < SYNTH_FROM:
+        # Made-up ids: experience from the first season listed, the draft by name.
+        first = first_listed(season)
+        made = df.gsis_id.str.startswith("h-")
+        for col in ("rookie_year", "entry_year", "years_exp", "draft_number"):
+            df[col] = df[col].astype(float)
+        df["draft_club"] = df.draft_club.astype(object)
+        df["college"] = df.college.astype(object)
+        df.loc[made, "rookie_year"] = df.loc[made, "entry_year"] = [first.get(g, season) for g in df.gsis_id[made]]
+        df.loc[made, "years_exp"] = season - df.loc[made, "rookie_year"]
+        picks = draft_by_name(refresh)
+        for i in df.index[made]:
+            y0 = int(df.at[i, "rookie_year"])
+            r = next((picks[k] for k in ((_slug(df.at[i, "full_name"]), y0), (_slug(df.at[i, "full_name"]), y0 - 1)) if k in picks), None)
+            if r is not None:
+                df.at[i, "draft_number"] = r.pick if r.round <= 1 or r.pick >= (r.round - 1) * 28 else (r.round - 1) * 30 + 15
+                df.at[i, "draft_club"] = r.team
+                df.at[i, "college"] = df.at[i, "college"] if pd.notna(df.at[i, "college"]) else r.college
     df["college"] = df.college.fillna(pd.Series(m.college_name.values, index=df.index))
     df["pfr_id"] = df.pfr_id.fillna(pd.Series(m.pfr_id.values, index=df.index))
     # Old position labels: OT and SAF, and a plain DB where the master table has
@@ -129,7 +147,45 @@ def old_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     from old_stats import old_roster_team
     df = pd.read_csv(_fetch(f"rosters/roster_{season}.csv", refresh), low_memory=False)
     df["team"] = df.team.map(lambda t: old_roster_team(t, season))
+    if SEASON < SYNTH_FROM:
+        df = with_ids(df)
     return df
+
+
+# Before about 1990 most season-roster rows carry no player id. Starts before
+# 1994 give those players one made from the name and birth date, the same in
+# every season's file. Starts from 1994 keep the rosters they were built with.
+SYNTH_FROM = 1994
+
+
+def _slug(s) -> str:
+    import re
+    return re.sub(r"[^a-z]", "", str(s).lower())
+
+
+def with_ids(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["gsis_id"] = df.gsis_id.astype(object)
+    miss = df.gsis_id.isna() & df.full_name.notna()
+    df.loc[miss, "gsis_id"] = ["h-" + _slug(n)[:16] + "-" + str(b or "")[:10].replace("-", "") for n, b in zip(df.full_name[miss], df.birth_date[miss].fillna(""))]
+    return df
+
+
+@functools.lru_cache(maxsize=None)
+def first_listed(last: int) -> dict:
+    """The first season each player was on a club's roster (1960 on), by id (made-up ids included)."""
+    out: dict[str, int] = {}
+    for y in range(1960, last + 1):
+        df = with_ids(pd.read_csv(_fetch(f"rosters/roster_{y}.csv", False), usecols=["gsis_id", "full_name", "birth_date"], low_memory=False))
+        for g in df.gsis_id.dropna():
+            out.setdefault(g, y)
+    return out
+
+
+def draft_by_name(refresh: bool = False) -> dict:
+    """Draft rows by (name, draft season) for players with no id in the master table."""
+    dp = pd.read_csv(_fetch("draft_picks/draft_picks.csv", refresh), low_memory=False)
+    return {(_slug(n), int(s)): r for n, s, r in zip(dp.pfr_player_name, dp.season, dp.itertuples(index=False))}
 
 
 @functools.lru_cache(maxsize=None)
@@ -137,7 +193,9 @@ def seasons_listed(first: int, last: int, refresh: bool = False) -> dict:
     """How many seasons each player was on a club's roster, first through last."""
     out: dict[str, int] = {}
     for y in range(first, last + 1):
-        df = pd.read_csv(_fetch(f"rosters/roster_{y}.csv", refresh), usecols=["gsis_id", "status"], low_memory=False)
+        df = pd.read_csv(_fetch(f"rosters/roster_{y}.csv", refresh), usecols=["gsis_id", "status", "full_name", "birth_date"], low_memory=False)
+        if SEASON < SYNTH_FROM:
+            df = with_ids(df)
         for g in set(df[df.gsis_id.notna() & ~df.status.isin(["CUT"])].gsis_id):
             out[g] = out.get(g, 0) + 1
     return out

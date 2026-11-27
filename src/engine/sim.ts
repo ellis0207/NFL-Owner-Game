@@ -461,7 +461,7 @@ class GameSim extends SimPass {
     const chart = late && [-2, -5, -10, 1, 5, -13, -16].includes(diff);
     // A longer extra point or a shorter two-point try sends more coaches for two.
     const twoBias = (LEAGUE_RULES.twoPointLine === 1 ? 0.1 : 0) + (LEAGUE_RULES.xpLine - 15) * 0.006;
-    const goForTwo = (!this.ot.active || !this.ot.suddenDeath) && (chart || this.rng() < 0.03 + twoBias + (team.fx.gameManagement - 70) * 0.001);
+    const goForTwo = LEAGUE_RULES.twoPoint !== false && (!this.ot.active || !this.ot.suddenDeath) && (chart || this.rng() < 0.03 + twoBias + (team.fx.gameManagement - 70) * 0.001);
     const kicker = this.specialist(team, "K");
     this.snaps(team, [kicker, this.specialist(team, "LS"), ...this.coverage(team)], "stSnaps");
     const last = this.scoring[this.scoring.length - 1];

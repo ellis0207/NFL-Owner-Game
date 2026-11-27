@@ -866,6 +866,8 @@ export interface OffseasonState {
   sheets: OfferSheet[];
   /** Draft picks owed for offer sheets that weren't matched (the draft is a later step). */
   picksOwed: { from: string; to: string; pick: string; player: string }[];
+  /** Plan B (1989-1992): the 37 players each club protected for the coming league year; the rest whose deals end may sign anywhere. */
+  planB?: { year: number; protected: string[] };
 }
 
 /** A released player on the waiver wire: other teams can claim the contract until the deadline. */

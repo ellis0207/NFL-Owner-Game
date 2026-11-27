@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Historical starts: each season's data pack (data/packs/<year>.json.gz, built
 // by pipeline/history_pack.py) replaces the 2026 files. The engine reads the
 // pack when its modules load, so every start gets fresh modules.
-const YEARS = Array.from({ length: 32 }, (_, i) => 1994 + i);
+const YEARS = Array.from({ length: 36 }, (_, i) => 1990 + i);
 const pack = (year: number) => JSON.parse(gunzipSync(readFileSync(new URL(`../data/packs/${year}.json.gz`, import.meta.url))).toString());
 
 async function engineFor(year: number | null) {
@@ -75,6 +75,7 @@ describe("historical starts", () => {
       expect(`${e.TEAM_BY_ID.TEN.city} ${e.TEAM_BY_ID.TEN.name}`).toBe(year < 1997 ? "Houston Oilers" : year < 1999 ? "Tennessee Oilers" : "Tennessee Titans");
       expect(`${e.TEAM_BY_ID.BAL.city} ${e.TEAM_BY_ID.BAL.name}`).toBe(year < 1996 ? "Cleveland Browns" : "Baltimore Ravens");
       expect(e.TEAM_BY_ID.WAS.name).toBe(e.washingtonName(year));
+      expect(e.TEAM_BY_ID.ARI.city).toBe(year < 1994 ? "Phoenix" : "Arizona");
       if (year < 1995) expect(e.TEAM_BY_ID.LA.stadium).toBe("Anaheim Stadium");
       else if (year < 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Trans World Dome");
       else if (year === 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Dome at America's Center");
@@ -97,6 +98,42 @@ describe("historical starts", () => {
     expect(e.TEAM_BY_ID.LA.stadium).toBe("Los Angeles Memorial Coliseum");
     const last = e.history(s).seasons.at(-1)!;
     expect(Object.values(last.records).every((r) => r[0] + r[1] + (r[2] ?? 0) === 16)).toBe(true);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
+  it("a 1991 start: Plan B lists in February, no tags, the 1992 payroll ceiling", async () => {
+    const e = await engineFor(1991);
+    const off = await import("../src/engine/offseason");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(e.rulesFor(s).twoPoint).toBe(false);
+    expect(e.rulesFor(s).boothOnly).toBe(true);
+    let guard = 0;
+    while (s.date < "1992-02-02" && guard++ < 400) e.advanceDay(s);
+    const lists = off.off(s).planB!;
+    expect(lists.year).toBe(1992);
+    expect(lists.protected.length).toBeGreaterThan(28 * 36);
+    const loose = e.TEAMS.flatMap((t) => off.pendingFreeAgents(s, t.id)).filter((id) => !lists.protected.includes(id));
+    expect(loose.length).toBeGreaterThan(50);
+    expect(loose.every((id) => off.faClass(id) === "UFA")).toBe(true);
+    const kept = lists.protected.find((id) => off.isPendingFreeAgent(s, id))!;
+    expect(off.faClass(kept)).not.toBe("UFA");
+    while (s.season === 1991 && guard++ < 800) e.advanceDay(s);
+    expect(s.season).toBe(1992);
+    expect(Object.keys(off.off(s).tags ?? {}).length).toBe(0);
+    expect(s.league?.caps[1992]).toBe(e.REAL_CAPS[1992]);
+    expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 900_000);
+
+  it("a 1993 start plays into 1994: the cap arrives, every club gets under it, Phoenix becomes Arizona", async () => {
+    const e = await engineFor(1993);
+    const s = e.newGame("NE", "Test", { capRules: "real" }, 5);
+    expect(e.TEAMS.length).toBe(28);
+    let guard = 0;
+    while (s.season === 1993 && guard++ < 400) e.advanceDay(s);
+    expect(s.season).toBe(1994);
+    expect(s.league?.caps[1994]).toBe(e.REAL_CAPS[1994]);
+    expect(e.TEAM_BY_ID.ARI.city).toBe("Arizona");
+    expect(s.expansion).toMatchObject({ clubs: [{ id: "CAR", joins: 1995 }, { id: "JAX", joins: 1995 }] });
     expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
   }, 600_000);
 

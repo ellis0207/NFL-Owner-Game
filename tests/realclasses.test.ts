@@ -10,15 +10,15 @@ import { collegeKickoff } from "../src/engine/college";
 
 // Real draft classes (realclasses.ts, built by pipeline/draft_classes.py).
 describe("real draft classes", () => {
-  it("has every real class from 1995 to 2026 and the 2027 board", () => {
-    expect(REAL_YEARS[0]).toBe(1995);
+  it("has every real class from 1991 to 2026 and the 2027 board", () => {
+    expect(REAL_YEARS[0]).toBe(1991);
     expect(REAL_YEARS.at(-1)).toBe(2027);
     for (const y of REAL_YEARS.filter((y) => y <= 2026)) {
       const rows = realRows(y);
-      // Every pick of the draft (240 in 1997, 246 in 2001, about 255 most years), plus the undrafted
-      // (combine invitees only from 2000, so the 1990s classes run shorter).
-      expect(rows.filter((r) => r[7]).length).toBeGreaterThanOrEqual(240);
-      expect(rows.length).toBeGreaterThan(y < 2000 ? 330 : 420);
+      // Every pick of the draft (12 rounds to 1992, 224 in 1993, 222 in 1994, 240 in 1997, 246 in 2001, about
+      // 255 most years), plus the undrafted (combine invitees only from 2000, so the 1990s classes run shorter).
+      expect(rows.filter((r) => r[7]).length).toBeGreaterThanOrEqual(y === 1993 || y === 1994 ? 222 : 240);
+      expect(rows.length).toBeGreaterThan(y < 1995 ? 300 : y < 2000 ? 330 : 420);
       for (const r of rows) expect(COLLEGE_TEAM[r[1]], `${r[0]}'s school ${r[1]}`).toBeTruthy();
     }
     expect(realRows(2027).length).toBe(150);

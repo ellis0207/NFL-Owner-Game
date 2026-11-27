@@ -497,9 +497,11 @@ export function baseClub(id: string): { stadium: Stadium; metro: (typeof METRO)[
 const OPEN_AIR: Record<string, Climate> = {
   LA: { temp: [83, 79, 74, 69, 68], wind: 7, wet: 0.08, snow: 0 },
   HOU: { temp: [91, 83, 73, 66, 63], wind: 8, wet: 0.1, snow: 0 },
+  // The Phoenix Cardinals' Sun Devil Stadium (to 1993).
+  ARI: { temp: [100, 88, 75, 66, 67], wind: 6, wet: 0.05, snow: 0 },
 };
 /** The 2026 cities of the clubs a historical pack places elsewhere. */
-const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas", TEN: "Tennessee", BAL: "Baltimore" };
+const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas", TEN: "Tennessee", BAL: "Baltimore", ARI: "Arizona" };
 /** The stadium names in a historical pack's first season. */
 const PACK_STADIUM: Record<string, string> = Object.fromEntries(((PACK?.teams ?? []) as { id: string; stadium: string }[]).map((t) => [t.id, t.stadium]));
 function original(): Originals {

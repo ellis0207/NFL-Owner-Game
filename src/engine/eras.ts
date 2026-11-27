@@ -43,6 +43,8 @@ export interface EraRuleOverlay {
   playoffTeams?: number;
   otRule?: "sudden" | "modified" | "both";
   replay?: boolean;
+  boothOnly?: boolean;
+  twoPoint?: boolean;
   passEra?: number;
   sackRate?: number;
 }
@@ -92,7 +94,11 @@ export function eraRules(season: number): EraRuleOverlay {
     // chance; both teams get the ball from 2025.
     otRule: season < 2012 ? "sudden" : season < 2025 ? "modified" : "both",
     // No instant replay from 1992 until coaches' challenges came in 1999: every call on the field stood.
+    // From 1986 to 1991 an official in the booth reviewed plays on his own.
     ...(season < 1999 ? { replay: false } : {}),
+    ...(season >= 1986 && season <= 1991 ? { boothOnly: true } : {}),
+    // The two-point try came in 1994.
+    ...(season < 1994 ? { twoPoint: false } : {}),
     ...(PASS_ERA[season] ? { passEra: PASS_ERA[season] } : {}),
     sackRate: SACK_ERA[season] ?? 0.88,
   };
@@ -128,6 +134,8 @@ export const HOMES: { team: string; from?: number; until: number; market: string
   { team: "LV", until: 1995, market: "LA", city: "Los Angeles", stadium: "Los Angeles Memorial Coliseum", roof: "outdoors" },
   { team: "TEN", until: 1997, market: "HOU", city: "Houston", name: "Oilers", stadium: "Astrodome", roof: "dome" },
   { team: "BAL", until: 1996, market: "CLE", city: "Cleveland", name: "Browns", stadium: "Cleveland Stadium", roof: "outdoors" },
+  // The Cardinals were Phoenix's until they took the state's name in 1994 (same market, same stadium).
+  { team: "ARI", until: 1994, market: "ARI", city: "Phoenix", stadium: "Sun Devil Stadium", roof: "outdoors" },
 ];
 
 /** The 2026 names of clubs an early pack names otherwise (the 1994-95 Browns are Baltimore's club). */
@@ -262,7 +270,12 @@ export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   KC: [[2006, "Lamar Hunt"]],
   LA: [[2007, "Georgia Frontiere"], [2009, "Chip Rosenbloom and Lucia Rodriguez"]],
   LV: [[2011, "Al Davis"]],
-  MIA: [[2008, "Wayne Huizenga"]],
+  MIA: [[1989, "Joe Robbie"], [1993, "the Robbie family"], [2008, "Wayne Huizenga"]],
+  NE: [[1991, "Victor Kiam"], [1993, "James Orthwein"]],
+  PHI: [[1993, "Norman Braman"]],
+  LAC: [[1993, "Alex Spanos"]],
+  NYG: [[1990, "Wellington and Tim Mara"]],
+  CIN: [[1990, "Paul Brown"]],
   MIN: [[1997, "the Vikings' board of ten owners"], [2004, "Red McCombs"]],
   NO: [[2017, "Tom Benson"]],
   NYJ: [[1998, "Leon Hess"], [1999, "the Leon Hess estate"]],
@@ -271,7 +284,7 @@ export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   WAS: [[1996, "Jack Kent Cooke"], [1998, "the Jack Kent Cooke estate"], [2022, "Dan Snyder"]],
   IND: [[1996, "Robert Irsay"], [2024, "Jim Irsay"]],
   SF: [[1999, "Eddie DeBartolo Jr."], [2008, "John and Denise DeBartolo York"]],
-  TB: [[1994, "the Hugh Culverhouse estate"]],
+  TB: [[1993, "Hugh Culverhouse"], [1994, "the Hugh Culverhouse estate"]],
 };
 
 /** Who controlled a club in a season, if not its 2026 owner. */
@@ -286,6 +299,16 @@ export function eraOwner(team: string, season: number): string | undefined {
  */
 export const CBA_2006 = { share: 0.5, minScale: 1, rookieScale: 1, benefits: 0.75, practice: 24, games: 16 as const, safety: 0, cashFloor: 0, noWageScale: true };
 
+/**
+ * 1989-1992, with no labor agreement after the 1987 strike: no cap, Plan B
+ * free agency (37 protected a club, the rest whose contracts ended free to
+ * sign anywhere), no tags, no rookie wage scale.
+ */
+export const PLAN_B_1989 = { ...CBA_2006, uncapped: true, planB: true, noTags: true };
+
+/** 1993, the first year of the 1993 agreement: true free agency after five seasons and the franchise tag, the cap a year off. */
+export const FIRST_FA_1993 = { ...CBA_2006, uncapped: true, ufaSeasons: 5 };
+
 /** 2010, the year the owners' 2008 opt-out left without a cap: free agency only after six seasons. */
 export const UNCAPPED_2010 = { ...CBA_2006, uncapped: true, ufaSeasons: 6 };
 
@@ -297,6 +320,11 @@ export const HISTORICAL = !!PACK;
 
 /** The real rule archive: changes that shaped the game, by the first season they applied (approximate wording). */
 export const RULE_ARCHIVE: [season: number, text: string][] = [
+  [1989, "Plan B free agency: each club protects 37 players, and the rest of those whose contracts are up may sign anywhere"],
+  [1990, "The playoff field grows from 10 to 12 clubs"],
+  [1992, "Instant replay, used since 1986, is voted out"],
+  [1993, "A new labor agreement after the players' antitrust wins: free agency after five seasons, and a salary cap from 1994"],
+  [1993, "The draft shrinks from 12 rounds to 8"],
   [1994, "The 1993 labor agreement's salary cap and free agency take effect"],
   [1994, "The two-point conversion comes in, and kickoffs move back to the 30"],
   [1995, "The Carolina Panthers and Jacksonville Jaguars join: 30 clubs"],

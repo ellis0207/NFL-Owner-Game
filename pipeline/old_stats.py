@@ -99,12 +99,15 @@ def career_signal(players: list, season: int, draft_picks: pd.DataFrame, seasons
     Bowls a season from the draft record, or, for players drafted before 1980
     or not at all, how many seasons a club carried him. {id: value}."""
     dp = draft_picks[draft_picks.gsis_id.notna()].drop_duplicates("gsis_id").set_index("gsis_id")
+    # Players with a made-up id (sources.with_ids) are found by name and draft year.
+    by_name = {(_name(n), int(y)): r for n, y, (_, r) in zip(draft_picks.pfr_player_name, draft_picks.season, draft_picks.iterrows())}
     out = {}
     for p in players:
         pid = p["id"]
         listed = seasons_listed.get(pid, 0)
-        if pid in dp.index:
-            r = dp.loc[pid]
+        y0 = p.get("rookieYear") or 0
+        r = dp.loc[pid] if pid in dp.index else next((by_name[k] for k in ((_name(p.get("name")), y0), (_name(p.get("name")), y0 - 1)) if k in by_name), None) if pid.startswith("h-") else None
+        if r is not None:
             years = max(1, (r["to"] if pd.notna(r["to"]) else season) - r["season"] + 1)
             av = (r.w_av if pd.notna(r.w_av) else 0) / years
             pb = (r.probowls if pd.notna(r.probowls) else 0) / years

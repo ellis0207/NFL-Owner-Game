@@ -47,6 +47,12 @@ OUT = HERE.parent / "data" / "packs"
 
 # Real salary caps by league year (OverTheCap).
 CAPS = {
+    # No cap before 1994: each figure is the league's payroll ceiling, a yardstick
+    # about a fifth over the clubs' average payroll (the average salary ran
+    # about $352,000 in 1990, $415,000 in 1991, $488,000 in 1992 and $737,000 in
+    # the first free-agent year, 1993). Clubs' payrolls are set below it by their
+    # owners' budgets (price_contracts). Approximate.
+    1990: 24_000_000, 1991: 28_000_000, 1992: 33_000_000, 1993: 40_000_000,
     # The cap began with the 1993 agreement, in 1994.
     1994: 34_608_000, 1995: 37_100_000, 1996: 40_753_000, 1997: 41_454_000, 1998: 52_388_000,
     1999: 57_288_000, 2000: 62_172_000, 2001: 67_405_000,
@@ -80,6 +86,10 @@ MINIMUMS = {
 # $158,000 in 1998; the steps above them approximate.
 for _y, _r in ((1994, 108_000), (1995, 119_000), (1996, 131_000), (1997, 131_000), (1998, 158_000), (1999, 175_000), (2000, 193_000), (2001, 209_000)):
     MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
+# Before the 1993 agreement: rookie minimums about $50,000 in 1990 rising to
+# $75,000 in 1992, then $100,000 in 1993 (approximate).
+for _y, _r in ((1990, 50_000), (1991, 60_000), (1992, 75_000), (1993, 100_000)):
+    MINIMUMS[_y] = (_r, _r + 25_000, _r + 50_000, _r + 75_000, _r + 110_000, _r + 175_000)
 for _y in range(2002, 2011):
     _r = 225_000 + round((_y - 2002) * 95_000 / 8, -4)
     MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
@@ -88,7 +98,7 @@ for _y in range(2011, 2020):
     MINIMUMS[_y] = (375_000 + _k, 450_000 + _k, 525_000 + _k, 600_000 + _k, 685_000 + _k, 810_000 + _k)
 
 # Practice squad: weekly pay (standard) and size by season.
-PS_WEEKLY = {1994: 3_000, 1995: 3_200, 1996: 3_500, 1997: 3_500, 1998: 3_800, 1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
+PS_WEEKLY = {1990: 1_000, 1991: 1_000, 1992: 1_000, 1993: 3_000, 1994: 3_000, 1995: 3_200, 1996: 3_500, 1997: 3_500, 1998: 3_800, 1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
              2009: 5_200, 2010: 5_200, 2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
              2018: 7_600, 2019: 8_000, 2020: 8_400, 2021: 9_200, 2022: 11_500, 2023: 12_000, 2024: 12_500,
              2025: 13_000}
@@ -109,6 +119,8 @@ def ps_size(season: int) -> int:
 def identity(season: int) -> dict:
     """Clubs whose city or name differed that season (ids stay the current ones)."""
     out = {}
+    if season <= 1993:
+        out["ARI"] = ("Phoenix", "Cardinals")
     if season <= 2015:
         out["LA"] = ("Los Angeles" if season <= 1994 else "St. Louis", "Rams")
     if season <= 2016:
@@ -230,7 +242,7 @@ def rules_for(season: int, games) -> dict:
         "season": season,
         # 2010 had no cap: the game's ceiling sits about 6% over 2009's (pack.ts REAL_CAPS).
         "salaryCap": 130_000_000 if season == 2010 else CAPS[season],
-        **({"uncapped": True} if season == 2010 else {}),
+        **({"uncapped": True} if season == 2010 or season < 1994 else {}),
         "minimumSalary": table(m),
         "minimumSalaryNextYear": table(n),
         "practiceSquadWeekly": {"standard": weekly, "veteranMin": round(weekly * 1.33, -1), "veteranMax": round(weekly * 1.66, -1)},
@@ -369,7 +381,8 @@ def price_contracts(season: int, players: list, ratings: dict) -> None:
     for team, mine in by_team.items():
         hit = lambda p: next((s["capHit"] for s in p["contract"]["seasons"] if s["year"] == season), 0)
         total = sum(hit(p) for p in mine)
-        target = cap * _rng(f"payroll:{season}:{team}").uniform(0.90, 0.98)
+        # Before the cap each owner set his own budget: payrolls ran from about two-thirds of the ceiling to nearly all of it.
+        target = cap * _rng(f"payroll:{season}:{team}").uniform(*((0.66, 0.94) if season < 1994 else (0.90, 0.98)))
         flex = [p for p in mine if p["contract"]["source"] == "modeled" and p["contract"]["type"] == "UFA"]
         room = sum(hit(p) for p in flex)
         if not room:

@@ -68,8 +68,37 @@ export type FaClass = "UFA" | "RFA" | "ERFA";
 /** Accrued seasons after this one decide the kind of free agent: 4+ unrestricted, 3 restricted, fewer exclusive rights. */
 export function faClass(id: string): FaClass {
   const accrued = PLAYER_BY_ID[id].yearsExp + 1;
+  // Plan B: a protected player stays his club's (restricted, or exclusive early in his career); anyone left
+  // unprotected may sign anywhere. Before the lists are filed, nobody is free.
+  if (termsFor(NEXT).planB) return PLAN_B && !PLAN_B.has(id) ? "UFA" : accrued >= 3 ? "RFA" : "ERFA";
   // In the uncapped 2010 year, unrestricted free agency took six seasons.
   return accrued >= (termsFor(NEXT).ufaSeasons ?? 4) ? "UFA" : accrued >= 3 ? "RFA" : "ERFA";
+}
+
+/** Plan B's protected players for the coming league year (null when the lists aren't filed or there's no Plan B). */
+let PLAN_B: Set<string> | null = null;
+export const PLAN_B_PROTECTED = 37;
+
+/** Binds the save's protected lists for `faClass`. Called when a season is applied and when the lists are filed. */
+export function bindPlanB(state: GameState): void {
+  const p = state.offseason?.planB;
+  PLAN_B = p && p.year === RULES.season + 1 ? new Set(p.protected) : null;
+}
+
+/** February 1 under Plan B: each club files the 37 players it protects, its staff's best by value. */
+function filePlanB(state: GameState): void {
+  if (!termsFor(NEXT).planB) return;
+  const kept: string[] = [];
+  for (const t of TEAMS) {
+    const ids = teamPlayerIds(state, t.id).filter((id) => state.players[id].status !== "ps");
+    kept.push(...ids.map((id) => ({ id, v: teamValue(state, t.id, id, NEXT) })).sort((a, b) => b.v - a.v).slice(0, PLAN_B_PROTECTED).map((x) => x.id));
+  }
+  off(state).planB = { year: NEXT, protected: kept };
+  bindPlanB(state);
+  const loose = pendingFreeAgents(state, state.userTeam).filter((id) => faClass(id) === "UFA");
+  news(state, "contracts", `Plan B lists are in: each club protects ${PLAN_B_PROTECTED} players, and the rest whose contracts are up may sign anywhere from today`);
+  send(state, "transaction", gmOf(state.userTeam), "Our Plan B list",
+    `We've filed our ${PLAN_B_PROTECTED} protected players. ${loose.length ? `Left unprotected with expiring deals, free to sign elsewhere: ${loose.map((id) => PLAYER_BY_ID[id].name).join(", ")}.` : "Nobody with an expiring deal is left unprotected."}`);
 }
 
 /** Under contract now, with nothing past this league year. */
@@ -102,6 +131,7 @@ export function canTag(state: GameState, team: string, id: string): { ok: boolea
   if (state.date < KEY.franchiseTagWindowOpens) return { ok: false, reason: `Tags can be used from ${shortDate(KEY.franchiseTagWindowOpens)}.` };
   if (pastDeadline(state, KEY.franchiseTagDeadline)) return { ok: false, reason: "The tag deadline (4 PM ET) has passed." };
   if (state.players[id]?.team !== team || !isPendingFreeAgent(state, id)) return { ok: false, reason: "Only our players with expiring deals can be tagged." };
+  if (termsFor(NEXT).noTags) return { ok: false, reason: "There are no franchise or transition tags before the 1993 labor agreement." };
   if (faClass(id) === "ERFA") return { ok: false, reason: "Exclusive-rights players get a tender, not a tag." };
   if (off(state).tags[team]) return { ok: false, reason: "We've already used our tag this year." };
   return { ok: true };
@@ -372,6 +402,7 @@ function cpuTeams(state: GameState): string[] {
  * money can be found, not whether it is free today. About six a year.
  */
 function cpuTags(state: GameState): void {
+  if (termsFor(NEXT).noTags) return;
   const scale = capScale(state, NEXT);
   for (const team of cpuTeams(state)) {
     if (off(state).tags[team]) continue;
@@ -785,6 +816,7 @@ export function offseasonDaily(state: GameState): void {
     planRetirements(state);
   }
   careersDaily(state);
+  if (d === `${NEXT}-02-01` || (d === OFFSEASON_START && d > `${NEXT}-02-01`)) filePlanB(state);
   if (d === KEY.negotiatingWindowOpens) recordExpiring(state);
   if (d === CAP_SET_DATE) setCap(state);
   if (d === KEY.newLeagueYear) newLeagueYear(state);

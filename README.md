@@ -1218,7 +1218,7 @@ its revenue. Saves from every earlier version still load, including ones
 that stopped on the day after the old final draft. Check a long career with
 `npx vite-node tests/longrun-report.ts [seasons] [seed]`.
 
-Start in any season from 1994 to 2025 as well as 2026. Each season's data
+Start in any season from 1990 to 2025 as well as 2026. Each season's data
 (that year's rosters and contracts, schedule, stadiums, salary cap and minimum
 salaries, and each player's real career back to 1999) is a separate file the
 page loads only when that season is chosen. Before about 2011 the open
@@ -1244,10 +1244,19 @@ for 1995 with Dom Capers, Bill Polian and Tom Coughlin; the Rams move to St.
 Louis and the Raiders to Oakland; the Browns become the Baltimore Ravens in 1996
 (Memorial Stadium until 1998) and Cleveland's new Browns are awarded, opening in
 1999 with Chris Palmer and Dwight Clark; the Oilers play in Memphis and at
-Vanderbilt before Nashville. No instant replay before 1999. Season totals before
+Vanderbilt before Nashville. No instant replay before 1999. A 1990-1993 start
+comes before the cap: the cap figure is the league's payroll ceiling, with each
+owner's budget below it; Plan B free agency (1989-92: each club files 37
+protected players on February 1, and the rest whose deals end may sign
+anywhere; protected ones are restricted), no tags and no compensatory picks
+until the 1993 agreement, true free agency in 1993 and the cap in 1994. The
+Cardinals play in Phoenix, there's no two-point try, and a replay official in
+the booth reviews plays in 1990-91. Old rosters' players with no id get one
+from name and birth date (`with_ids` in `pipeline/sources.py`). Real draft
+classes from 1991; the game's drafts stay at seven rounds. Season totals before
 1999 are offense only (Pro Football Reference, from an open copy on GitHub), so
 defenders, linemen and kickers are rated from their real careers. Real draft
-classes from 1995. Games score like their season (era scoring: passes
+classes from 1991 (see above). Games score like their season (era scoring: passes
 complete less often, about 20 points a team in the 1990s against 23 today,
 fitted to real points; sacks at each season's real rate), and Settings >
 Scoring switches an old league to today's. Packs built from Week 1 lists (50-70
@@ -1352,8 +1361,8 @@ python pipeline/build_league.py --refresh  # re-downloads everything
 
 ### Historical packs
 
-`data/packs/<year>.json.gz` (1994-2025, 250-740 KB each) are built by
-`python pipeline/history_pack.py 1994 2025`, which reruns the league pipeline
+`data/packs/<year>.json.gz` (1990-2025, 250-740 KB each) are built by
+`python pipeline/history_pack.py 1990 2025`, which reruns the league pipeline
 with `NFL_SEASON` set: rosters and contracts as signed by that season (deals
 the archive lacks are priced by `pipeline/contract_model.py`), stats from the
 three seasons before it, the real schedule and playoff field, the cap and

@@ -24,7 +24,7 @@ import { inRecession } from "./economy";
 import { payCash } from "./finance";
 import { trustHit } from "./fans";
 import { formatFor } from "./format";
-import { CBA_2006, CBA_2011, UNCAPPED_2010 } from "./eras";
+import { CBA_2006, CBA_2011, FIRST_FA_1993, PLAN_B_1989, UNCAPPED_2010 } from "./eras";
 import { money, news, send } from "./inbox";
 import { bindCaps, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { onCommittee } from "./leagueoffice";
@@ -106,7 +106,9 @@ export function labor(state: GameState): LaborState {
     // the 1993 agreement as extended in 2006 (eras.ts). With real history the
     // owners' 2008 opt-out leaves 2010 uncapped.
     agreements: state.era && state.era.start <= 2010
-      ? [{ from: 1993, through: state.era.alt ? 2010 : 2009, signed: state.era.start < 1998 ? "1993-06-29" : state.era.start < 2006 ? "1998-02-26" : "2006-03-08", terms: { ...CBA_2006 } },
+      ? [...(state.era.start < 1993 ? [{ from: 1989, through: 1992, signed: "1989-02-01", terms: { ...PLAN_B_1989 } }] : []),
+        ...(state.era.start < 1994 ? [{ from: 1993, through: 1993, signed: "1993-06-29", terms: { ...FIRST_FA_1993 } }] : []),
+        { from: 1994 - (state.era.start < 1994 ? 0 : 1), through: state.era.alt ? 2010 : 2009, signed: state.era.start < 1998 ? "1993-06-29" : state.era.start < 2006 ? "1998-02-26" : "2006-03-08", terms: { ...CBA_2006 } },
         ...(state.era.alt ? [] : [{ from: 2010, through: 2010, signed: "2008-05-20", terms: { ...UNCAPPED_2010 } }])]
       : state.era && state.era.start <= 2020
       ? [{ from: 2011, through: 2020, signed: "2011-08-04", terms: { ...CBA_2011 } }]
