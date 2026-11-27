@@ -27,7 +27,8 @@ import { addDays, shortDate, weekday } from "./dates";
 import { FIRST_MOCK } from "./draft";
 import { money, news, send } from "./inbox";
 import { updateTrends } from "./strategy";
-import { BASE_SCHEDULE, BASE_SEASON, bindCaps, GAME_BY_ID, PLAYER_BY_ID, PLAYERS, RULES, setLeagueSeason, TEAMS, teamLabel } from "./league";
+import { BASE_SCHEDULE, BASE_SEASON, bindCaps, bindFutureCaps, GAME_BY_ID, PLAYER_BY_ID, PLAYERS, RULES, setLeagueSeason, TEAMS, teamLabel } from "./league";
+import { PACK, REAL_CAPS } from "./pack";
 import { invalidateMarket } from "./market";
 import { setCarry } from "./prospects";
 import { bindClassChoices, ensureDraftClasses } from "./realclasses";
@@ -82,6 +83,7 @@ export function applySeason(state: GameState): void {
   bindExpansion(state);
   setLeagueSeason(season, keyDatesFor(season), schedule, season === BASE_SEASON ? undefined : state.waiverOrder);
   bindCaps(state.league?.caps ?? {});
+  bindFutureCaps(PACK && state.era && !state.era.alt ? REAL_CAPS : {});
   bindRules(state);
   bindLabor(state);
   bindHosts(state);

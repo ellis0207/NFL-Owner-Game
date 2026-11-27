@@ -146,3 +146,17 @@ describe("the free agent pool", () => {
     else expect(deadMoney(state, "NYJ")).toBe(deadBefore + cost.deadThisYear);
   }, 30_000);
 });
+
+describe("signings in the playoffs", () => {
+  it("a club still playing signs a player for this season at the minimum, so he counts for its games", async () => {
+    const { signStreetFreeAgent, stillPlaying } = await import("../src/engine/freeagency");
+    const s = stateAt("NYG", 7, "2027-01-13");
+    const team = TEAMS.map((t) => t.id).find((t) => stillPlaying(s, t))!;
+    expect(team).toBeTruthy();
+    const id = Object.keys(s.players).find((p) => s.players[p].status === "fa" && freeAgentPrice(s, p) > 1_500_000)!;
+    signStreetFreeAgent(s, team, id);
+    const d = dealOf(s, id)!;
+    expect(d.years[0].year).toBe(RULES.season);
+    expect(d.apy).toBeLessThan(1_500_000);
+  }, 600_000);
+});

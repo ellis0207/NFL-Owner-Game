@@ -1,7 +1,7 @@
 // The game's version, what changed in it, and where its facts come from. The
 // About page, the title screen and the one-time "what's new" notice read this.
 
-export const VERSION = "1.4";
+export const VERSION = "1.4.1";
 export const RELEASED = "2026-11-26";
 
 /** What changed in this version, in the words the About page and the title screen show. */
