@@ -487,11 +487,17 @@ export function primeOriginals(): void {
  */
 export function baseClub(id: string): { stadium: Stadium; metro: (typeof METRO)[string]; market: (typeof MARKETS)[string]; climate: Climate; place: [number, number] } | undefined {
   const o = original();
-  if (!o.stadium[id] || !o.metro[id] || !o.market[id] || !o.climate[id] || !o.place[id]) return undefined;
-  return { stadium: o.stadium[id], metro: o.metro[id], market: o.market[id], climate: o.climate[id], place: o.place[id] };
+  const climate = o.climate[id] ?? OPEN_AIR[id];
+  if (!o.stadium[id] || !o.metro[id] || !o.market[id] || !climate || !o.place[id]) return undefined;
+  return { stadium: o.stadium[id], metro: o.metro[id], market: o.market[id], climate, place: o.place[id] };
 }
 /** Open-air weather for 2026 roofed cities an early club played outdoors in (public normals, rounded). */
-const OPEN_AIR: Record<string, Climate> = { LA: { temp: [83, 79, 74, 69, 68], wind: 7, wet: 0.08, snow: 0 } };
+// Houston's is for the weather outside its building (the club joins in 2002 under a roof that opens):
+// without it a reloaded save lost the club, which the 2026 tables keep only under its roof.
+const OPEN_AIR: Record<string, Climate> = {
+  LA: { temp: [83, 79, 74, 69, 68], wind: 7, wet: 0.08, snow: 0 },
+  HOU: { temp: [91, 83, 73, 66, 63], wind: 8, wet: 0.1, snow: 0 },
+};
 /** The 2026 cities of the clubs a historical pack places elsewhere. */
 const CITY_2026: Record<string, string> = { LA: "Los Angeles", LAC: "Los Angeles", LV: "Las Vegas", TEN: "Tennessee", BAL: "Baltimore" };
 /** The stadium names in a historical pack's first season. */

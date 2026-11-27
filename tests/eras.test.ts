@@ -330,3 +330,15 @@ describe("era scoring and the pack scale", () => {
     expect(e.rulesFor(s).passEra).toBe(0);
   }, 120_000);
 });
+
+describe("Houston in an early start", () => {
+  it("the club the 2026 data keeps under a roof comes back on reload with its own building", async () => {
+    const e = await engineFor(1994);
+    const { baseClub } = await import("../src/engine/relocation");
+    expect(baseClub("HOU")?.climate.temp.length).toBe(5);
+    // Following real history, the clubs plan on the caps the league really set (the flat 2011 cap included).
+    e.newGame("DAL", "Test", { capRules: "real" }, 3);
+    const { projectedCap } = await import("../src/engine/contracts");
+    expect(projectedCap(2011)).toBe(120_000_000);
+  }, 120_000);
+});

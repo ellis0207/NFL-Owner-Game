@@ -75,6 +75,17 @@ export function bindCaps(caps: Record<number, number>): void {
 }
 
 /**
+ * A historical start that follows real history: the caps the league really set
+ * in the years ahead, which the clubs' projections read (pack.ts REAL_CAPS).
+ * Empty otherwise, and the cap is projected from growth.
+ */
+export let FUTURE_CAPS: Record<number, number> = {};
+
+export function bindFutureCaps(caps: Record<number, number>): void {
+  FUTURE_CAPS = caps;
+}
+
+/**
  * True ratings. Only the engine (sim, AI roster decisions) may read these;
  * the owner never sees them. UI code must not import this.
  */

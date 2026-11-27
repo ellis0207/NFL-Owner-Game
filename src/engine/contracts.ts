@@ -7,7 +7,7 @@ import { termsFor } from "./cbaterms";
 import { FORMAT } from "./format";
 import { addDays, daysBetween } from "./dates";
 import { keyDatesFor, newLeagueYearDate } from "./calendar";
-import { BASE_SEASON, KNOWN_CAPS, PLAYER_BY_ID, RULES } from "./league";
+import { BASE_SEASON, FUTURE_CAPS, KNOWN_CAPS, PLAYER_BY_ID, RULES } from "./league";
 import type { Deal, DealKind, DealYear, GameState, PlayerData } from "./types";
 import { PACK } from "./pack";
 
@@ -55,6 +55,11 @@ export function salaryCap(state: GameState | undefined, year: number): number {
  * the league and union forecast (8.5% into 2027, about 7% a year after that).
  */
 export function projectedCap(year: number): number {
+  // Following real history, the clubs plan on the caps the league really set: a
+  // projection growing 7% through the flat years (2011-2013, 2021) priced deals on
+  // caps that never came, read every one as a bigger share of the cap afterwards,
+  // pushed each market up, and left clubs over the cap when the league year opened.
+  if (FUTURE_CAPS[year] && !KNOWN_CAPS[year]) return FUTURE_CAPS[year];
   let base = RULES.salaryCap;
   let from = BASE_SEASON;
   for (const [y, cap] of Object.entries(KNOWN_CAPS)) {

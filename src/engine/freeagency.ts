@@ -448,8 +448,12 @@ function signAgreed(state: GameState): void {
  * minimum deal counts like a two-year player's minimum on the cap.
  */
 export function signStreetFreeAgent(state: GameState, team: string, id: string, opts: { guaranteedWeeks?: number; salary?: number } = {}): void {
-  const year = marketYear(state.date);
-  const price = Math.max(minFor(id, year), opts.salary ?? freeAgentPrice(state, id));
+  // A club still in the playoffs signs a player for the games it has left, at this season's minimum.
+  // After the regular season the street prices next year's deals, and a deal for next year doesn't
+  // cover these games: the player never counted on the roster, so the club signed another every day.
+  const postseason = state.date > KEY.regularSeasonEnd && leagueYear(state.date) === RULES.season && stillPlaying(state, team);
+  const year = postseason ? leagueYear(state.date) : marketYear(state.date);
+  const price = postseason ? minFor(id, year) : Math.max(minFor(id, year), opts.salary ?? freeAgentPrice(state, id));
   const min = minFor(id, year);
   let deal: Deal;
   if (price <= min * 1.02) {

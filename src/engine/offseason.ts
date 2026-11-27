@@ -517,10 +517,12 @@ function cpuCapWindow(state: GameState): void {
  */
 function restructureCandidates(state: GameState, team: string, squeeze = false): { id: string; age: number }[] {
   const year = leagueYear(state.date);
-  // In a real squeeze a team goes back to the same deals and to its older veterans.
+  // In a real squeeze a team goes to its older veterans too, but still not to a deal it restructured last
+  // year: going back every spring left a star at the minimum with the whole deal pushed into one balloon
+  // year and its void years, and the club couldn't get under the cap when that came due.
   return teamPlayerIds(state, team)
     .map((id) => ({ id, hit: capHit(id, NEXT, state), age: ageOn(PLAYER_BY_ID[id].birthDate, state.date) ?? 26, deal: dealOf(state, id) }))
-    .filter((x) => squeeze ? x.age <= 32 && (x.deal?.restructured ?? 0) < year : x.age <= 30 && (x.deal?.restructured ?? 0) < year - 1)
+    .filter((x) => (squeeze ? x.age <= 32 : x.age <= 30) && (x.deal?.restructured ?? 0) < year - 1)
     .sort((a, b) => b.hit - a.hit)
     .slice(0, squeeze ? 10 : 6);
 }
@@ -568,8 +570,12 @@ export function comply(state: GameState, team: string, floor = 60): void {
   // First every deal that can still be restructured, whoever it belongs to.
   for (const id of teamPlayerIds(state, team)) {
     if (capSummary(state, team).space >= 0) return;
-    const yearsLeft = (lastYear(dealOf(state, id)!) ?? 0) - year;
-    if (state.players[id].status !== "ps" && !inAgreedTrade(state, id)) restructure(state, id, yearsLeft >= 1 ? 2 : 0);
+    const d = dealOf(state, id)!;
+    const yearsLeft = (lastYear(d) ?? 0) - year;
+    // Void years only on a deal not reworked last year: stacking them every spring is how a club's dead
+    // money snowballs past what any roster can carry when the cap stops growing.
+    const voids = yearsLeft >= 1 && (d.restructured ?? 0) < year - 1 ? 2 : 0;
+    if (state.players[id].status !== "ps" && !inAgreedTrade(state, id)) restructure(state, id, voids);
   }
   const rest = teamPlayerIds(state, team)
     .map((id) => ({ id, saved: releaseCost(id, state).savingsThisYear, v: teamValue(state, team, id, year) }))
