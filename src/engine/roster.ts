@@ -30,6 +30,19 @@ export const MIN_ON_53: Partial<Record<Position, number>> = {
 /** Most a GM keeps at each position on the 53. */
 const MAX_ON_53: Partial<Record<Position, number>> = { QB: 3, FB: 1, K: 1, P: 1, LS: 1, RB: 5, TE: 4, C: 3 };
 
+/** Most a team carries at each position on an offseason or camp roster of 90. */
+export const MAX_ON_90: Partial<Record<Position, number>> = { QB: 4, RB: 6, FB: 2, WR: 11, TE: 5, OT: 8, OG: 8, C: 4, EDGE: 9, IDL: 9, LB: 8, CB: 11, S: 7, K: 2, P: 2, LS: 1 };
+
+/** Players a team has at a position for the coming season: the roster, plus reserve/future deals. */
+export function bodiesAt(state: GameState, team: string, pos: Position): number {
+  let n = 0;
+  for (const id of teamPlayerIds(state, team)) {
+    const st = state.players[id].status;
+    if ((st === "camp" || st === "active" || st === "future") && PLAYER_BY_ID[id].position === pos) n++;
+  }
+  return n;
+}
+
 /** What the front office thinks a player is worth keeping: GM and coaches' view, upside, and money already committed. */
 export function keepValue(state: GameState, team: string, id: string): number {
   const p = PLAYER_BY_ID[id];
@@ -658,8 +671,11 @@ export function fillEmergencies(state: GameState, team: string): RosterMove[] {
   const moves: RosterMove[] = [];
   const need: Partial<Record<Position, number>> = { QB: 2, RB: 2, WR: 4, TE: 2, OT: 2, OG: 2, C: 1, EDGE: 3, IDL: 3, LB: 3, CB: 4, S: 3, K: 1, P: 1, LS: 1 };
   const healthy: Partial<Record<Position, number>> = {};
+  // A player due back within a few days still counts: teams don't sign and cut a body for one practice.
+  const soon = addDays(state.date, 4);
   for (const id of teamPlayerIds(state, team)) {
-    if (state.players[id].status !== "active" || isHurt(state, id)) continue;
+    const inj = state.players[id].injury;
+    if (state.players[id].status !== "active" || (isHurt(state, id) && !(inj && !inj.seasonEnding && inj.returnDate <= soon))) continue;
     const pos = PLAYER_BY_ID[id].position;
     healthy[pos] = (healthy[pos] ?? 0) + 1;
   }
@@ -673,6 +689,9 @@ export function fillEmergencies(state: GameState, team: string): RosterMove[] {
       if (!move) break;
       moves.push(move);
       have++;
+      // The emergency signing sticks around for a couple of weeks, not until the next man is healthy.
+      const last = state.transactions?.[0];
+      if (last && last.team === team && state.players[last.player]?.team === team) state.players[last.player].keepUntil = addDays(state.date, 14);
     }
   }
   return moves;

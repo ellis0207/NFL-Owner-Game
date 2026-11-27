@@ -2,7 +2,7 @@
 import { careDrag } from "./playercare";
 import { trustNudge } from "./clubhouse";
 import { retrainEffect } from "./training";
-import { HIDDEN_RATINGS, HIDDEN_STAFF, PLAYER_BY_ID, PLAYERS, STAFF } from "./league";
+import { HIDDEN_RATINGS, HIDDEN_STAFF, PLAYER_BY_ID, PLAYERS, RULES, STAFF } from "./league";
 import { gaussian, rngFor } from "./rng";
 import { DEFENSE, OFFENSE } from "./schemes";
 import type { DefenseScheme, GameState, OffenseScheme, Position, StaffHidden, StaffPerson, StaffRole } from "./types";
@@ -218,11 +218,66 @@ export function perceivedAbility(state: GameState, id: string, evaluatorKey: str
   let z = errorCache.get(key);
   if (z === undefined) {
     if (errorCache.size > 300_000) errorCache.clear();
-    z = gaussian(rngFor(state.seed, `eval:${evaluatorKey}:${id}`));
+    // A read can be badly wrong, but not wildly: the error is held to about two spreads.
+    z = Math.max(-2.2, Math.min(2.2, gaussian(rngFor(state.seed, `eval:${evaluatorKey}:${id}`))));
     errorCache.set(key, z);
   }
-  const sd = Math.max(0.8, (100 - skill) / 7) * (evaluatorKey.endsWith(`:${state.userTeam}`) ? fogOf(state) : 1);
-  return ability(state, id) + z * sd;
+  const sd = Math.max(0.8, (100 - skill) / 7) * (evaluatorKey.endsWith(`:${state.userTeam}`) ? fogOf(state) : 1) * tapeSpread(id);
+  const tape = tapeWeight(state, id);
+  if (tape >= 1) return ability(state, id) + z * sd;
+  // Little NFL tape yet: the read leans on where he was drafted.
+  return tape * ability(state, id) + (1 - tape) * draftPrior(state, id) + z * sd;
+}
+
+/**
+ * How far one evaluator can be off on a player: years of NFL tape narrow it,
+ * so nobody misreads a 12-year veteran the way they can a second-year player.
+ */
+function tapeSpread(id: string): number {
+  const p = PLAYER_BY_ID[id];
+  if (!p) return 1;
+  const exp = p.rookieYear != null ? RULES.season - p.rookieYear : p.yearsExp;
+  return exp <= 1 ? 1 : exp <= 3 ? 0.8 : exp <= 6 ? 0.6 : 0.5;
+}
+
+/**
+ * How much of a young player's level the league can see on NFL tape: a
+ * rookie is judged mostly by where he was drafted, and the tape takes over
+ * through his first two seasons. Veterans are fully on tape.
+ */
+function tapeWeight(state: GameState, id: string): number {
+  const p = PLAYER_BY_ID[id];
+  if (!p) return 1;
+  const exp = p.rookieYear != null ? RULES.season - p.rookieYear : p.yearsExp;
+  if (exp >= 2) return 1;
+  const K = RULES.keyDates;
+  // Through each season the games pile up: from camp to the last week of the regular season.
+  const into = state.date <= K.rosterCutdown ? 0 : state.date >= K.regularSeasonEnd ? 1 : 0.5;
+  return exp <= 0 ? 0.45 + 0.25 * into : 0.8 + 0.2 * into;
+}
+
+/** What players drafted in each round (0 for undrafted) are as young players in this league: what a team expects of a pick. */
+// Kept for one game day: a reloaded save has to read players the same way a game left running would.
+const priorCache = new WeakMap<GameState, { date: string; byRound: number[] }>();
+function draftPrior(state: GameState, id: string): number {
+  let c = priorCache.get(state);
+  if (c?.date !== state.date) {
+    const sum = Array(8).fill(0), n = Array(8).fill(0);
+    for (const [pid, ps] of Object.entries(state.players)) {
+      const pl = PLAYER_BY_ID[pid];
+      if (!ps.team || !pl || !HIDDEN_RATINGS[pid]) continue;
+      const exp = pl.rookieYear != null ? RULES.season - pl.rookieYear : pl.yearsExp;
+      if (exp > 2) continue;
+      const r = Math.min(7, pl.draft?.round ?? 0);
+      sum[r] += HIDDEN_RATINGS[pid].overall + (ps.dev ?? 0);
+      n[r]++;
+    }
+    const all = sum.reduce((a, b) => a + b, 0) / Math.max(1, n.reduce((a, b) => a + b, 0));
+    // Thin rounds borrow from the whole group, so one player never sets his own prior.
+    c = { date: state.date, byRound: sum.map((v, r) => (v + 8 * all) / (n[r] + 8)) };
+    priorCache.set(state, c);
+  }
+  return c.byRound[Math.min(7, PLAYER_BY_ID[id].draft?.round ?? 0)];
 }
 
 /** The owner's chosen scouting precision: it widens or narrows our own staff's reads, never anyone else's. */

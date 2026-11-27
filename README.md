@@ -274,7 +274,12 @@ the player's consent. Every front office values a trade through its GM's eye:
 what a player is worth for the ability they see, against what he costs, at
 the role he'd have, and where the team is headed (contenders pay for now,
 rebuilders want picks and youth); picks are valued on a draft chart at their
-projected slot. CPU teams trade with each other all year, most of all in the
+projected slot. In camp and the season the next man up has to fill a traded
+starter's snaps, so clubs trade from depth and don't send a starter away for
+a backup; a later year that runs over a player's worth counts only as much as
+cutting him would, values follow the era's cap, a rookie is read mostly by
+where he was drafted until he has tape, and every offer has to pass the
+league's eye test. CPU teams trade with each other all year, most of all in the
 last week before the deadline, and unhappy players ask out. The owner can
 propose deals, ask what a player would cost, shop players on the trade block
 and take or leave calls from other teams. Three outlets grade every trade.
