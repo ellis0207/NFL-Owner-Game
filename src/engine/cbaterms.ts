@@ -28,6 +28,10 @@ export interface CbaTerms {
   uncapped?: boolean;
   /** Accrued seasons for unrestricted free agency when not four (six in 2010). */
   ufaSeasons?: number;
+  /** Plan B (1989-1992): each club protects 37 players; the others whose contracts end are free to sign anywhere. */
+  planB?: boolean;
+  /** No franchise or transition tags (before the 1993 agreement). */
+  noTags?: boolean;
 }
 
 /** The 2020 agreement: 48.5% with the 17th game, 16 padded practices in camp, the 89% cash floor. */

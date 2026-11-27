@@ -88,6 +88,13 @@ export class Officials {
     const wrong = this.rng() < WRONG[kind] * (LEAGUE_RULES.skyJudge ? 0.6 : 1);
     const onField = kind === "catch" ? (wrong ? "incomplete" : "complete") : kind === "drop" ? (wrong ? "a catch" : "incomplete") : wrong ? "down by contact" : "a fumble";
     const what = kind === "fumble" ? (wrong ? "Runner ruled down by contact" : "Fumble ruled on the field") : `Pass ruled ${onField}`;
+    if (LEAGUE_RULES.boothOnly) {
+      // 1986-1991: the replay official upstairs stopped play for some of the clear misses, and overturned few.
+      if (!wrong) return { stands: true, note: "" };
+      if (this.rng() < 0.35 && this.rng() < CLEAR_VIDEO) return { stands: true, note: ` Ruled ${onField} on the field. The replay official reviewed it, and the ruling was reversed.` };
+      this.calls.push({ q: c.q, clock: c.clock, team: hurt, text: `${what}; the replay official let it stand`, wrong: true });
+      return { stands: false, note: "" };
+    }
     if (!LEAGUE_RULES.replay) {
       // No replay in the 1990s: what the officials saw stands.
       if (wrong) this.calls.push({ q: c.q, clock: c.clock, team: hurt, text: `${what}; no replay then`, wrong: true });

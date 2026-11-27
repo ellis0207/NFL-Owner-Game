@@ -41,6 +41,10 @@ export interface RuleParams {
   sackRate: number;
   /** Instant replay reviews calls (none from 1992 to 1998). */
   replay: boolean;
+  /** 1986-1991: an official in the booth reviews calls on his own; coaches can't challenge. */
+  boothOnly?: boolean;
+  /** False before 1994: no two-point try, only the kick. */
+  twoPoint?: boolean;
   /** Roughing-the-passer fouls can be reviewed. */
   roughingReview: boolean;
   /** A missed field goal goes back to the line of scrimmage instead of the spot of the kick. */

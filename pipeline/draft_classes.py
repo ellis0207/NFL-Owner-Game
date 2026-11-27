@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE / "draft"))
 from schools import norm, slug  # noqa: E402
 from small_schools import CENTER, SMALL  # noqa: E402
 
-FIRST, LAST = 1995, 2026
+FIRST, LAST = 1991, 2026
 # Pro Football Reference club codes to the game's.
 TEAM_FIX = {"KAN": "KC", "SFO": "SF", "GNB": "GB", "NWE": "NE", "NOR": "NO", "TAM": "TB", "SDG": "LAC", "STL": "LA", "RAM": "LA",
             "LAR": "LA", "OAK": "LV", "RAI": "LV", "LVR": "LV", "SD": "LAC"}
@@ -98,6 +98,9 @@ def scale_pack(p: dict) -> dict:
     return r
 
 
+ALIAS: dict = {}
+
+
 def rating_history() -> dict:
     hist: dict = {}
 
@@ -107,9 +110,13 @@ def rating_history() -> dict:
             if r:
                 hist.setdefault(x["id"], {})[season] = (r["overall"], x["position"], r["traits"])
 
-    for y in range(1994, 2026):
+    for y in range(1990, 2026):
         p = json.load(gzip.open(ROOT / "data" / "packs" / f"{y}.json.gz"))
         add(y, p["players"], scale_pack(p))
+        # Players the early rosters list with no id carry a made-up one (pipeline/sources.py): found again by name and first season.
+        for x in p["players"]:
+            if x["id"].startswith("h-"):
+                ALIAS.setdefault((slug(x["name"]), x.get("rookieYear")), x["id"])
     add(2026, json.load(open(ROOT / "data/league-2026/players.json")), json.load(open(ROOT / "data/league-2026/hidden-ratings.json")))
     return hist
 
@@ -209,6 +216,9 @@ def main():
         drafted_pfr = set(d.pfr_player_id.dropna())
         drafted_gsis = set(d.gsis_id.dropna())
         for _, x in d.iterrows():
+            if not isinstance(x.gsis_id, str):
+                x = x.copy()
+                x["gsis_id"] = ALIAS.get((slug(x.pfr_player_name), year)) or ALIAS.get((slug(x.pfr_player_name), year + 1))
             pl = by_gsis.loc[x.gsis_id] if isinstance(x.gsis_id, str) and x.gsis_id in by_gsis.index else None
             if isinstance(pl, pd.DataFrame):
                 pl = pl.iloc[0]

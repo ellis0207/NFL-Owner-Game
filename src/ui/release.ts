@@ -1,11 +1,12 @@
 // The game's version, what changed in it, and where its facts come from. The
 // About page, the title screen and the one-time "what's new" notice read this.
 
-export const VERSION = "1.4.1";
-export const RELEASED = "2026-11-26";
+export const VERSION = "1.5";
+export const RELEASED = "2026-11-27";
 
 /** What changed in this version, in the words the About page and the title screen show. */
 export const WHATS_NEW: { title: string; text: string }[] = [
+  { title: "Start as far back as 1990, before the cap", text: "The last years with no salary cap: each owner sets his own payroll under the league's ceiling, and from 1990 to 1992 Plan B free agency lets every club protect 37 players while the rest whose deals are up sign anywhere. 1993 brings true free agency and the franchise tag, and the cap arrives in 1994, when clubs have to cut down to it. The Cardinals play in Phoenix, there's no two-point try, a replay official watches from the booth in 1990-91, and real draft classes go back to 1991." },
   { title: "Games that score like their era", text: "A historical start now plays like its season: about 20 points a team a game in the 1990s and early 2000s, rising to today's 23 by 2011, with sacks at each season's real rate. Settings > Scoring switches an old league to today's scoring. Old rosters sit on the same scale as today's, so a 1990s starter plays like a starter, and CPU clubs no longer run short of cash in early seasons." },
   { title: "Seasons grouped by era", text: "New game lists the seasons by era: today, the 2020 and 2011 deals, the 32 clubs before the wage scale, the 31 clubs before Houston, and the first years of the cap." },
   { title: "Start as far back as 1994", text: "The first years of the salary cap: the Rams and Raiders in Los Angeles, the Oilers in Houston, Carolina and Jacksonville opening in 1995, the Browns moving to Baltimore and the new Browns arriving in 1999. Every call on the field stands until replay returns in 1999. Real draft classes from 1995; defenders and kickers from the 1990s are rated from their real careers." },
@@ -23,9 +24,9 @@ export const WHATS_NEW: { title: string; text: string }[] = [
 
 /** Where the real league comes from. Each line names the source and what the game takes from it. */
 export const SOURCES: { name: string; what: string }[] = [
-  { name: "nflverse", what: "Open NFL data: 2026 rosters, player bios and draft history, contracts (gathered from OverTheCap), the schedule, combine testing, weekly player stats since 1999 and snap counts. Historical starts from 1994 to 2025 come from the same files (season rosters before 2002); contracts the archive lacks before about 2011 are estimated by the game." },
-  { name: "FiveThirtyEight", what: "Game dates and results before 1999 (the NFL Elo game file): the 1994-1998 schedules and the early starts' waiver orders." },
-  { name: "Pro Football Reference", what: "Season passing, rushing and receiving totals from 1991 to 1998, from the yearly tables kept in the open fantasydatapros/data repository on GitHub." },
+  { name: "nflverse", what: "Open NFL data: 2026 rosters, player bios and draft history, contracts (gathered from OverTheCap), the schedule, combine testing, weekly player stats since 1999 and snap counts. Historical starts from 1990 to 2025 come from the same files (season rosters before 2002; before about 1992 many players there have no id, so the game gives them one from name and birth date); contracts the archive lacks before about 2011 are estimated by the game." },
+  { name: "FiveThirtyEight", what: "Game dates and results before 1999 (the NFL Elo game file): the 1990-1998 schedules and the early starts' waiver orders." },
+  { name: "Pro Football Reference", what: "Season passing, rushing and receiving totals from 1987 to 1998, from the yearly tables kept in the open fantasydatapros/data repository on GitHub." },
   { name: "OverTheCap", what: "Contract details, and each club's 2026 cap space, dead money and adjusted cap (a snapshot from October 27, 2026)." },
   { name: "Pro Football Reference", what: "Career totals, Pro Bowls, first-team All-Pros and Hall of Fame status for every drafted player since 1980, by way of nflverse's draft table." },
   { name: "Pro Football Hall of Fame", what: "Every class from 1963 to 2026 and its enshrinees, plus hand-compiled careers for the people the draft table doesn't reach." },
@@ -41,7 +42,7 @@ export const MADE_UP = [
   "The commissioner, committee members, minority partners, sponsors' contacts, investors and executives.",
   "Future draft prospects and recruits beyond the real classes, generated coaches, trainers and scouts.",
   "Everything that happens after camps open in July 2026.",
-  "In historical starts: most contracts before about 2011 (priced from each player's standing, draft slot and the cap), coordinators, general managers and the preseason schedule; kickoff times before 2000; before 1999, expected points and target counts estimated from box scores; before 2002, the camp rosters are rebuilt from the season's roster.",
+  "In historical starts: most contracts before about 2011 (priced from each player's standing, draft slot and the cap), coordinators, general managers and the preseason schedule; kickoff times before 2000; before 1999, expected points and target counts estimated from box scores; before 2002, the camp rosters are rebuilt from the season's roster; before 1994, the payroll ceiling, the owners' budgets, minimum salaries and practice-squad pay (approximate).",
 ];
 
 export const BUILT_WITH = [

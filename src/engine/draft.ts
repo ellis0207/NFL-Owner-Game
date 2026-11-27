@@ -142,13 +142,14 @@ export function projectedOrder(state: GameState, rounds = 7): string[] {
 function awardCompPicks(state: GameState, quiet = false): void {
   const d = draftState(state);
   const count: Record<string, number> = {};
-  const list = DRAFT_YEAR === 2027 && !PACK ? COMP_2027 : compPicksFor(state);
+  // Compensatory picks began with the 1994 draft, the 1993 agreement's first.
+  const list = DRAFT_YEAR === 2027 && !PACK ? COMP_2027 : DRAFT_YEAR < 1994 ? [] : compPicksFor(state);
   d.comp = list.map(([team, round, player, to]) => {
     const n = (count[`${team}-${round}`] = (count[`${team}-${round}`] ?? 0) + 1);
     return { pick: `${DRAFT_YEAR}-${round}-${team}-c${n}`, player, to };
   });
   d.order = buildOrder(state);
-  if (quiet) return;
+  if (quiet || !d.comp.length && DRAFT_YEAR < 1994) return;
   news(state, "draft", `The league awards ${d.comp.length} compensatory picks for the ${DRAFT_YEAR} draft`);
   const lines = [3, 4, 5, 6, 7].map((r) => `Round ${r}: ${d.comp!.filter((c) => parsePick(c.pick).round === r)
     .map((c) => `${parsePick(c.pick).from} (No. ${pickOverall(state, c.pick)}, for ${c.player})`).join(", ")}`);

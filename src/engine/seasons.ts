@@ -25,6 +25,7 @@ import { bindCfb, cfbRollover, closeCfbSeason } from "./cfbworld";
 import { bindDraftModel } from "./outcomes";
 import { addDays, shortDate, weekday } from "./dates";
 import { FIRST_MOCK } from "./draft";
+import { bindPlanB } from "./offseason";
 import { money, news, send } from "./inbox";
 import { updateTrends } from "./strategy";
 import { BASE_SCHEDULE, BASE_SEASON, bindCaps, bindFutureCaps, GAME_BY_ID, PLAYER_BY_ID, PLAYERS, RULES, setLeagueSeason, TEAMS, teamLabel } from "./league";
@@ -86,6 +87,7 @@ export function applySeason(state: GameState): void {
   bindFutureCaps(PACK && state.era && !state.era.alt ? REAL_CAPS : {});
   bindRules(state);
   bindLabor(state);
+  bindPlanB(state);
   bindHosts(state);
   bindLeases(state);
   bindConstruction(state);
