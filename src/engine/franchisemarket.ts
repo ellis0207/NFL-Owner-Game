@@ -39,6 +39,15 @@ const M = 1_000_000;
 
 /** Real changes of control, approximately: headline price, buyer. */
 export const REAL_SALES = [
+  // The 1980s (dates approximate to the month).
+  { team: "DEN", date: "1984-03-23", price: 70 * M, pct: 1, buyer: "Pat Bowlen", real: true },
+  { team: "DAL", date: "1984-05-18", price: 85 * M, pct: 1, buyer: "Bum Bright", real: true },
+  { team: "LAC", date: "1984-08-01", price: 48 * M, pct: 0.6, buyer: "Alex Spanos", real: true },
+  { team: "PHI", date: "1985-04-29", price: 65 * M, pct: 1, buyer: "Norman Braman", real: true },
+  { team: "NO", date: "1985-05-31", price: 70 * M, pct: 1, buyer: "Tom Benson", real: true },
+  { team: "SEA", date: "1988-08-29", price: 80 * M, pct: 1, buyer: "Ken Behring", real: true },
+  { team: "NE", date: "1988-10-27", price: 84 * M, pct: 1, buyer: "Victor Kiam", real: true },
+  { team: "DAL", date: "1989-02-25", price: 140 * M, pct: 1, buyer: "Jerry Jones", real: true },
   { team: "NE", date: "1992-05-11", price: 110 * M, pct: 1, buyer: "James Orthwein", real: true },
   { team: "NE", date: "1994-01-21", price: 172 * M, pct: 1, buyer: "Robert Kraft", real: true },
   { team: "PHI", date: "1994-05-06", price: 185 * M, pct: 1, buyer: "Jeffrey Lurie", real: true },

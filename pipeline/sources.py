@@ -140,6 +140,18 @@ def season_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     return df.drop(columns="_left")
 
 
+def without_replacements(df: pd.DataFrame, refresh: bool = False) -> pd.DataFrame:
+    """1987's list holds everyone who played, the strike's replacement players
+    too. Keep those who were in the league the season before or after, and
+    that spring's draft picks."""
+    def key(x):
+        return set(zip(x.full_name, x.birth_date.astype(str)))
+    known = key(pd.read_csv(_fetch("rosters/roster_1986.csv", refresh), low_memory=False)) | key(
+        pd.read_csv(_fetch("rosters/roster_1988.csv", refresh), low_memory=False))
+    keep = [(n, b) in known or (e == 1987 and isinstance(c, str)) for n, b, e, c in zip(df.full_name, df.birth_date.astype(str), df.entry_year, df.draft_club)]
+    return df[keep].copy()
+
+
 def old_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     """A season roster before 1999 with clubs as the game's ids (the Oilers are
     Tennessee's club, the 1994-95 Browns Baltimore's, the Los Angeles Rams and
@@ -147,14 +159,16 @@ def old_roster(season: int, refresh: bool = False) -> pd.DataFrame:
     from old_stats import old_roster_team
     df = pd.read_csv(_fetch(f"rosters/roster_{season}.csv", refresh), low_memory=False)
     df["team"] = df.team.map(lambda t: old_roster_team(t, season))
+    if season == 1987:
+        df = without_replacements(df, refresh)
     if SEASON < SYNTH_FROM:
         df = with_ids(df)
     return df
 
 
 # Before about 1990 most season-roster rows carry no player id. Starts before
-# 1994 give those players one made from the name and birth date, the same in
-# every season's file. Starts from 1994 keep the rosters they were built with.
+# 1994 take the master table's id where name and birth date match, and give the
+# rest one made from the name and birth date, the same in every season's file. Starts from 1994 keep the rosters they were built with.
 SYNTH_FROM = 1994
 
 
@@ -163,9 +177,19 @@ def _slug(s) -> str:
     return re.sub(r"[^a-z]", "", str(s).lower())
 
 
+@functools.lru_cache(maxsize=None)
+def _master_ids() -> dict:
+    """The master player table's ids by (name, birth date): it knows many old players the season rosters list without one."""
+    m = pd.read_csv(_fetch("players/players.csv", False), usecols=["gsis_id", "display_name", "birth_date"], low_memory=False).dropna()
+    return {(_slug(n), str(b)[:10]): g for n, b, g in zip(m.display_name, m.birth_date, m.gsis_id)}
+
+
 def with_ids(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["gsis_id"] = df.gsis_id.astype(object)
+    master = _master_ids()
+    gap = df.gsis_id.isna() & df.full_name.notna()
+    df.loc[gap, "gsis_id"] = [master.get((_slug(n), str(b)[:10])) for n, b in zip(df.full_name[gap], df.birth_date[gap])]
     miss = df.gsis_id.isna() & df.full_name.notna()
     df.loc[miss, "gsis_id"] = ["h-" + _slug(n)[:16] + "-" + str(b or "")[:10].replace("-", "") for n, b in zip(df.full_name[miss], df.birth_date[miss].fillna(""))]
     return df

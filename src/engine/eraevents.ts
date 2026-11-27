@@ -64,10 +64,26 @@ export function eraNewSeason(state: GameState): void {
   }
 }
 
+/**
+ * The USFL, a spring league from 1983 to 1985, for the wire only: the game
+ * doesn't take its players away (the real rosters of 1983-1985 already lack
+ * the ones who went there, and real draft classes keep theirs in the league).
+ */
+const USFL_WIRE: Record<string, string> = {
+  "1983-03-06": "A new spring league, the USFL, plays its first games, with some of last fall's college stars on its rosters",
+  "1984-01-20": "The USFL outbids the league for more of this year's college stars, and salaries climb on both sides",
+  "1986-07-29": "A jury finds the league broke the antitrust laws against the USFL but awards it one dollar",
+  "1986-08-04": "The USFL calls off its fall season; its players may now sign with the clubs that hold their league rights",
+};
+
 /** The real sales of clubs, on the day the owners approved them. */
 export function erasDaily(state: GameState): void {
   const e = state.era;
   if (!e || e.alt) return;
+  if (USFL_WIRE[state.date] && e.start <= 1986) news(state, "league", USFL_WIRE[state.date]);
+  // 1987: three weeks of games with replacement players, while some veterans cross the line.
+  if (state.date === "1987-10-02" && e.start <= 1987) news(state, "labor", "This weekend's games go ahead with replacement players, and a few veterans cross the picket line");
+  if (state.date === "1987-10-15" && e.start <= 1987) news(state, "labor", "The players end their strike without a deal and return to work; the union takes the league to court");
   for (const x of REAL_SALES) {
     if (x.date !== state.date || x.team === state.userTeam) continue;
     const f = franchise(state);

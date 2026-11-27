@@ -43,8 +43,22 @@ def _fetch(year: int) -> Path:
     return target
 
 
+def pfr_club(code: str, season: int) -> str:
+    """A Pro Football Reference club code as the game's id. In the 1980s STL is
+    the Cardinals (St. Louis through 1987) and BAL the Colts (through 1983)."""
+    if code == "STL" and season <= 1987:
+        return "ARI"
+    if code == "BAL" and season <= 1983:
+        return "IND"
+    return PFR_CODE.get(code, code)
+
+
 def old_roster_team(code: str, season: int) -> str:
     """An nflverse season-roster club code before 1999, as the game's id."""
+    if code == "BAL" and season <= 1983:
+        return "IND"  # the Baltimore Colts, who moved to Indianapolis in 1984
+    if code == "STL" and season <= 1987:
+        return "ARI"  # the St. Louis Cardinals, in Phoenix from 1988
     if code == "CLE" and season <= 1995:
         return "BAL"  # the Browns who moved to Baltimore in 1996
     if code == "HOU" and season <= 1996:
@@ -58,7 +72,7 @@ def season_frame(year: int, roster: pd.DataFrame) -> pd.DataFrame:
     df = pd.read_csv(_fetch(year))
     df = df[df.Player.notna()].copy()
     df["key"] = df.Player.map(_name)
-    df["club"] = df.Tm.map(lambda t: PFR_CODE.get(t, t))
+    df["club"] = df.Tm.map(lambda t: pfr_club(t, year))
     r = roster[roster.gsis_id.notna()].copy()
     r["key"] = r.full_name.map(_name)
     by_club = {(k, t): g for k, t, g in zip(r.key, r.team, r.gsis_id)}

@@ -52,6 +52,10 @@ CAPS = {
     # about $352,000 in 1990, $415,000 in 1991, $488,000 in 1992 and $737,000 in
     # the first free-agent year, 1993). Clubs' payrolls are set below it by their
     # owners' budgets (price_contracts). Approximate.
+    # The 1980s ceilings follow the average salary the same way (about $79,000
+    # in 1980, $163,000 in 1984 and $300,000 in 1989).
+    1980: 5_000_000, 1981: 5_500_000, 1982: 6_500_000, 1983: 8_500_000, 1984: 10_000_000,
+    1985: 12_000_000, 1986: 12_000_000, 1987: 12_500_000, 1988: 14_500_000, 1989: 18_000_000,
     1990: 24_000_000, 1991: 28_000_000, 1992: 33_000_000, 1993: 40_000_000,
     # The cap began with the 1993 agreement, in 1994.
     1994: 34_608_000, 1995: 37_100_000, 1996: 40_753_000, 1997: 41_454_000, 1998: 52_388_000,
@@ -90,6 +94,12 @@ for _y, _r in ((1994, 108_000), (1995, 119_000), (1996, 131_000), (1997, 131_000
 # $75,000 in 1992, then $100,000 in 1993 (approximate).
 for _y, _r in ((1990, 50_000), (1991, 60_000), (1992, 75_000), (1993, 100_000)):
     MINIMUMS[_y] = (_r, _r + 25_000, _r + 50_000, _r + 75_000, _r + 110_000, _r + 175_000)
+# The 1980s: rookie minimums about $22,000 in 1980, $30,000 under the 1982
+# agreement, $50,000 by 1986; the steps above them in the same proportions as
+# 1990's (approximate).
+for _y, _r in ((1980, 22_000), (1981, 25_000), (1982, 30_000), (1983, 35_000), (1984, 40_000), (1985, 45_000),
+               (1986, 50_000), (1987, 50_000), (1988, 50_000), (1989, 50_000)):
+    MINIMUMS[_y] = tuple(int(round(_r * k, -3)) for k in (1, 1.5, 2, 2.5, 3.2, 4.5))
 for _y in range(2002, 2011):
     _r = 225_000 + round((_y - 2002) * 95_000 / 8, -4)
     MINIMUMS[_y] = (_r, _r + 75_000, _r + 150_000, _r + 225_000, _r + 310_000, _r + 435_000)
@@ -98,7 +108,9 @@ for _y in range(2011, 2020):
     MINIMUMS[_y] = (375_000 + _k, 450_000 + _k, 525_000 + _k, 600_000 + _k, 685_000 + _k, 810_000 + _k)
 
 # Practice squad: weekly pay (standard) and size by season.
-PS_WEEKLY = {1990: 1_000, 1991: 1_000, 1992: 1_000, 1993: 3_000, 1994: 3_000, 1995: 3_200, 1996: 3_500, 1997: 3_500, 1998: 3_800, 1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
+# The league's developmental squad began in 1989; before that the game keeps
+# a five-man squad at the same pay (an approximation).
+PS_WEEKLY = {**{_y: 1_000 for _y in range(1980, 1990)}, 1990: 1_000, 1991: 1_000, 1992: 1_000, 1993: 3_000, 1994: 3_000, 1995: 3_200, 1996: 3_500, 1997: 3_500, 1998: 3_800, 1999: 4_000, 2000: 4_150, 2001: 4_250, 2002: 4_350, 2003: 4_350, 2004: 4_700, 2005: 4_700, 2006: 4_700, 2007: 5_200, 2008: 5_200,
              2009: 5_200, 2010: 5_200, 2011: 5_700, 2012: 5_700, 2013: 6_000, 2014: 6_300, 2015: 6_600, 2016: 6_900, 2017: 7_200,
              2018: 7_600, 2019: 8_000, 2020: 8_400, 2021: 9_200, 2022: 11_500, 2023: 12_000, 2024: 12_500,
              2025: 13_000}
@@ -120,13 +132,15 @@ def identity(season: int) -> dict:
     """Clubs whose city or name differed that season (ids stay the current ones)."""
     out = {}
     if season <= 1993:
-        out["ARI"] = ("Phoenix", "Cardinals")
+        out["ARI"] = ("St. Louis" if season <= 1987 else "Phoenix", "Cardinals")
+    if season <= 1983:
+        out["IND"] = ("Baltimore", "Colts")
     if season <= 2015:
         out["LA"] = ("Los Angeles" if season <= 1994 else "St. Louis", "Rams")
     if season <= 2016:
         out["LAC"] = ("San Diego", "Chargers")
     if season <= 2019:
-        out["LV"] = ("Los Angeles" if season <= 1994 else "Oakland", "Raiders")
+        out["LV"] = ("Oakland" if season <= 1981 or season >= 1995 else "Los Angeles", "Raiders")
     if season <= 1998:
         out["TEN"] = ("Houston" if season <= 1996 else "Tennessee", "Oilers")
     if season <= 1995:

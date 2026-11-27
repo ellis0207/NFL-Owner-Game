@@ -1,11 +1,12 @@
-"""The 1990-1998 seasons, which nflverse's schedule file doesn't reach.
+"""The 1980-1998 seasons, which nflverse's schedule file doesn't reach.
 
 Dates and scores come from FiveThirtyEight (sources.fte_games). Kickoff times
 are the usual slots of the day (history_pack.fill_times). Home stadiums, the
 Super Bowl sites and opening-day head coaches are the real ones, entered by
 hand below. Ids are the game's: the Oilers are Tennessee's club, the 1994-95
 Browns Baltimore's (they moved in 1996), the Los Angeles Rams and Raiders the
-LA and LV clubs.
+LA and LV clubs, the Baltimore Colts Indianapolis's and the St. Louis
+Cardinals Arizona's.
 """
 
 import datetime as dt
@@ -14,43 +15,48 @@ import pandas as pd
 
 # (first season, last season, stadium, roof, surface) for each club's home.
 _HOMES = {
-    "ARI": [(1990, 1998, "Sun Devil Stadium", "outdoors", "grass")],
-    "ATL": [(1990, 1991, "Atlanta-Fulton County Stadium", "outdoors", "grass"), (1992, 1998, "Georgia Dome", "dome", "astroturf")],
-    "BAL": [(1990, 1995, "Cleveland Stadium", "outdoors", "grass"), (1996, 1997, "Memorial Stadium", "outdoors", "grass"),
+    "ARI": [(1980, 1987, "Busch Memorial Stadium", "outdoors", "astroturf"), (1988, 1998, "Sun Devil Stadium", "outdoors", "grass")],
+    "ATL": [(1980, 1991, "Atlanta-Fulton County Stadium", "outdoors", "grass"), (1992, 1998, "Georgia Dome", "dome", "astroturf")],
+    "BAL": [(1980, 1995, "Cleveland Stadium", "outdoors", "grass"), (1996, 1997, "Memorial Stadium", "outdoors", "grass"),
             (1998, 1998, "Ravens Stadium at Camden Yards", "outdoors", "grass")],
-    "BUF": [(1990, 1997, "Rich Stadium", "outdoors", "astroturf"), (1998, 1998, "Ralph Wilson Stadium", "outdoors", "astroturf")],
+    "BUF": [(1980, 1997, "Rich Stadium", "outdoors", "astroturf"), (1998, 1998, "Ralph Wilson Stadium", "outdoors", "astroturf")],
     "CAR": [(1995, 1995, "Memorial Stadium (Clemson)", "outdoors", "grass"), (1996, 1998, "Ericsson Stadium", "outdoors", "grass")],
-    "CHI": [(1990, 1998, "Soldier Field", "outdoors", "grass")],
-    "CIN": [(1990, 1996, "Riverfront Stadium", "outdoors", "astroturf"), (1997, 1998, "Cinergy Field", "outdoors", "astroturf")],
-    "DAL": [(1990, 1998, "Texas Stadium", "outdoors", "astroturf")],
-    "DEN": [(1990, 1998, "Mile High Stadium", "outdoors", "grass")],
-    "DET": [(1990, 1998, "Pontiac Silverdome", "dome", "astroturf")],
-    "GB": [(1990, 1998, "Lambeau Field", "outdoors", "grass")],
-    "IND": [(1990, 1993, "Hoosier Dome", "dome", "astroturf"), (1994, 1998, "RCA Dome", "dome", "astroturf")],
+    "CHI": [(1980, 1987, "Soldier Field", "outdoors", "astroturf"), (1988, 1998, "Soldier Field", "outdoors", "grass")],
+    "CIN": [(1980, 1996, "Riverfront Stadium", "outdoors", "astroturf"), (1997, 1998, "Cinergy Field", "outdoors", "astroturf")],
+    "DAL": [(1980, 1998, "Texas Stadium", "outdoors", "astroturf")],
+    "DEN": [(1980, 1998, "Mile High Stadium", "outdoors", "grass")],
+    "DET": [(1980, 1998, "Pontiac Silverdome", "dome", "astroturf")],
+    "GB": [(1980, 1998, "Lambeau Field", "outdoors", "grass")],
+    "IND": [(1980, 1983, "Memorial Stadium", "outdoors", "grass"), (1984, 1993, "Hoosier Dome", "dome", "astroturf"), (1994, 1998, "RCA Dome", "dome", "astroturf")],
     "JAX": [(1995, 1996, "Jacksonville Municipal Stadium", "outdoors", "grass"), (1997, 1998, "Alltel Stadium", "outdoors", "grass")],
-    "KC": [(1990, 1993, "Arrowhead Stadium", "outdoors", "astroturf"), (1994, 1998, "Arrowhead Stadium", "outdoors", "grass")],
-    "LA": [(1990, 1994, "Anaheim Stadium", "outdoors", "grass"), (1995, 1998, "Trans World Dome", "dome", "astroturf")],
-    "LAC": [(1990, 1996, "Jack Murphy Stadium", "outdoors", "grass"), (1997, 1998, "Qualcomm Stadium", "outdoors", "grass")],
-    "LV": [(1990, 1994, "Los Angeles Memorial Coliseum", "outdoors", "grass"), (1995, 1998, "Oakland Coliseum", "outdoors", "grass")],
-    "MIA": [(1990, 1995, "Joe Robbie Stadium", "outdoors", "grass"), (1996, 1998, "Pro Player Stadium", "outdoors", "grass")],
-    "MIN": [(1990, 1998, "Hubert H. Humphrey Metrodome", "dome", "astroturf")],
-    "NE": [(1990, 1998, "Foxboro Stadium", "outdoors", "grass")],
-    "NO": [(1990, 1998, "Louisiana Superdome", "dome", "astroturf")],
-    "NYG": [(1990, 1998, "Giants Stadium", "outdoors", "astroturf")],
-    "NYJ": [(1990, 1998, "Giants Stadium", "outdoors", "astroturf")],
-    "PHI": [(1990, 1998, "Veterans Stadium", "outdoors", "astroturf")],
-    "PIT": [(1990, 1998, "Three Rivers Stadium", "outdoors", "astroturf")],
-    "SEA": [(1990, 1998, "Kingdome", "dome", "astroturf")],
-    "SF": [(1990, 1995, "Candlestick Park", "outdoors", "grass"), (1996, 1998, "3Com Park", "outdoors", "grass")],
-    "TB": [(1990, 1995, "Tampa Stadium", "outdoors", "grass"), (1996, 1997, "Houlihan's Stadium", "outdoors", "grass"),
+    "KC": [(1980, 1993, "Arrowhead Stadium", "outdoors", "astroturf"), (1994, 1998, "Arrowhead Stadium", "outdoors", "grass")],
+    "LA": [(1980, 1994, "Anaheim Stadium", "outdoors", "grass"), (1995, 1998, "Trans World Dome", "dome", "astroturf")],
+    "LAC": [(1980, 1980, "San Diego Stadium", "outdoors", "grass"), (1981, 1996, "Jack Murphy Stadium", "outdoors", "grass"), (1997, 1998, "Qualcomm Stadium", "outdoors", "grass")],
+    "LV": [(1980, 1981, "Oakland-Alameda County Coliseum", "outdoors", "grass"), (1982, 1994, "Los Angeles Memorial Coliseum", "outdoors", "grass"), (1995, 1998, "Oakland Coliseum", "outdoors", "grass")],
+    "MIA": [(1980, 1986, "Miami Orange Bowl", "outdoors", "grass"), (1987, 1995, "Joe Robbie Stadium", "outdoors", "grass"), (1996, 1998, "Pro Player Stadium", "outdoors", "grass")],
+    "MIN": [(1980, 1981, "Metropolitan Stadium", "outdoors", "grass"), (1982, 1998, "Hubert H. Humphrey Metrodome", "dome", "astroturf")],
+    "NE": [(1980, 1982, "Schaefer Stadium", "outdoors", "astroturf"), (1983, 1989, "Sullivan Stadium", "outdoors", "astroturf"), (1990, 1998, "Foxboro Stadium", "outdoors", "grass")],
+    "NO": [(1980, 1998, "Louisiana Superdome", "dome", "astroturf")],
+    "NYG": [(1980, 1998, "Giants Stadium", "outdoors", "astroturf")],
+    "NYJ": [(1980, 1983, "Shea Stadium", "outdoors", "grass"), (1984, 1998, "Giants Stadium", "outdoors", "astroturf")],
+    "PHI": [(1980, 1998, "Veterans Stadium", "outdoors", "astroturf")],
+    "PIT": [(1980, 1998, "Three Rivers Stadium", "outdoors", "astroturf")],
+    "SEA": [(1980, 1998, "Kingdome", "dome", "astroturf")],
+    "SF": [(1980, 1995, "Candlestick Park", "outdoors", "grass"), (1996, 1998, "3Com Park", "outdoors", "grass")],
+    "TB": [(1980, 1995, "Tampa Stadium", "outdoors", "grass"), (1996, 1997, "Houlihan's Stadium", "outdoors", "grass"),
            (1998, 1998, "Raymond James Stadium", "outdoors", "grass")],
-    "TEN": [(1990, 1996, "Astrodome", "dome", "astroturf"), (1997, 1997, "Liberty Bowl Memorial Stadium", "outdoors", "grass"),
+    "TEN": [(1980, 1996, "Astrodome", "dome", "astroturf"), (1997, 1997, "Liberty Bowl Memorial Stadium", "outdoors", "grass"),
             (1998, 1998, "Vanderbilt Stadium", "outdoors", "grass")],
-    "WAS": [(1990, 1996, "RFK Stadium", "outdoors", "grass"), (1997, 1998, "Jack Kent Cooke Stadium", "outdoors", "grass")],
+    "WAS": [(1980, 1996, "RFK Stadium", "outdoors", "grass"), (1997, 1998, "Jack Kent Cooke Stadium", "outdoors", "grass")],
 }
 
 # Super Bowl sites by the season they closed (neutral).
 SUPER_BOWL = {
+    1979: ("Rose Bowl", "outdoors", "grass"), 1980: ("Louisiana Superdome", "dome", "astroturf"),
+    1981: ("Pontiac Silverdome", "dome", "astroturf"), 1982: ("Rose Bowl", "outdoors", "grass"),
+    1983: ("Tampa Stadium", "outdoors", "grass"), 1984: ("Stanford Stadium", "outdoors", "grass"),
+    1985: ("Louisiana Superdome", "dome", "astroturf"), 1986: ("Rose Bowl", "outdoors", "grass"),
+    1987: ("Jack Murphy Stadium", "outdoors", "grass"), 1988: ("Joe Robbie Stadium", "outdoors", "grass"),
     1989: ("Louisiana Superdome", "dome", "astroturf"), 1990: ("Tampa Stadium", "outdoors", "grass"),
     1991: ("Hubert H. Humphrey Metrodome", "dome", "astroturf"), 1992: ("Rose Bowl", "outdoors", "grass"),
     1993: ("Georgia Dome", "dome", "astroturf"), 1994: ("Joe Robbie Stadium", "outdoors", "grass"),
@@ -101,6 +107,24 @@ _C = {
           "NYG Jim Fassel|NYJ Bill Parcells|PHI Ray Rhodes|PIT Bill Cowher|SEA Dennis Erickson|SF Steve Mariucci|TB Tony Dungy|"
           "TEN Jeff Fisher|WAS Norv Turner",
 }
+# The 1980s: 1980's opening-day staff, then each season's changes (real).
+_C80 = {1980: 'ARI Jim Hanifan|ATL Leeman Bennett|BAL Sam Rutigliano|BUF Chuck Knox|CHI Neill Armstrong|CIN Forrest Gregg|DAL Tom Landry|DEN Red Miller|DET Monte Clark|GB Bart Starr|IND Mike McCormack|KC Marv Levy|LA Ray Malavasi|LAC Don Coryell|LV Tom Flores|MIA Don Shula|MIN Bud Grant|NE Ron Erhardt|NO Dick Nolan|NYG Ray Perkins|NYJ Walt Michaels|PHI Dick Vermeil|PIT Chuck Noll|SEA Jack Patera|SF Bill Walsh|TB John McKay|TEN Bum Phillips|WAS Jack Pardee'}
+_C80_CHANGES = {
+    1981: 'DEN Dan Reeves|TEN Ed Biles|NO Bum Phillips|WAS Joe Gibbs',
+    1982: 'CHI Mike Ditka|IND Frank Kush|NE Ron Meyer',
+    1983: 'ATL Dan Henning|BUF Kay Stephenson|KC John Mackovic|LA John Robinson|NYG Bill Parcells|NYJ Joe Walton|PHI Marion Campbell|SEA Chuck Knox',
+    1984: 'CIN Sam Wyche|GB Forrest Gregg|TEN Hugh Campbell|MIN Les Steckel|TB Leeman Bennett',
+    1985: 'BAL Marty Schottenheimer|DET Darryl Rogers|IND Rod Dowhower|MIN Bud Grant|NE Raymond Berry',
+    1986: 'BUF Hank Bullough|TEN Jerry Glanville|MIN Jerry Burns|NO Jim Mora|PHI Buddy Ryan|ARI Gene Stallings',
+    1987: 'ATL Marion Campbell|BUF Marv Levy|IND Ron Meyer|KC Frank Gansz|LAC Al Saunders|TB Ray Perkins',
+    1988: 'GB Lindy Infante|LV Mike Shanahan',
+    1989: 'BAL Bud Carson|DAL Jimmy Johnson|DET Wayne Fontes|KC Marty Schottenheimer|LAC Dan Henning|SF George Seifert',
+}
+for _y in range(1981, 1990):
+    _prev = dict(x.split(" ", 1) for x in _C80[_y - 1].split("|"))
+    _prev.update(x.split(" ", 1) for x in _C80_CHANGES[_y].split("|"))
+    _C80[_y] = "|".join(f"{k} {v}" for k, v in sorted(_prev.items()))
+_C = {**_C80, **_C}
 COACHES = {y: dict(x.split(" ", 1) for x in s.split("|")) for y, s in _C.items()}
 
 

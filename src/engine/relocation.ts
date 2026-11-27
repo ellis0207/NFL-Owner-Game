@@ -608,6 +608,11 @@ function eraHomes(state: GameState, season: number): void {
     if (name) {
       st.name = name;
       TEAM_BY_ID[t.id].stadium = name;
+      // A building between the start's and the 2026 one: its own roof (the Metrodome, the Hoosier Dome).
+      if (temp?.roof) {
+        st.roof = temp.roof === "outdoors" ? "open" : "dome";
+        TEAM_BY_ID[t.id].roof = temp.roof;
+      }
     } else {
       // In its 2026 building now, shown by the name it had that season (the building keeps its
       // 2026 name underneath: renovations and the Stadium Lab know it by that).
