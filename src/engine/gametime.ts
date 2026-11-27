@@ -1,7 +1,7 @@
 // Games on the clock: each kicks off at its scheduled time, runs about three
 // hours (shown a play at a time as the clock moves) and goes final at the
 // whistle, when the result, the box score and the reports that follow land.
-import { cancelGame, lockedOut } from "./labor";
+import { cancelGame, cancelStruckGame, lockedOut, struckGame } from "./labor";
 import { businessGame } from "./business";
 import { superBowlName } from "./calendar";
 import { DAY, gameLength, minuteOf } from "./clock";
@@ -35,6 +35,7 @@ export function kickoffGame(state: GameState, g: ScheduledGame): boolean {
   if (!m) return false;
   // No games are played during a lockout.
   if (lockedOut(state)) { cancelGame(state, g); return false; }
+  if (struckGame(state, g)) { cancelStruckGame(state, g); return false; }
   if (g.type !== "PRE") {
     for (const team of [m.away, m.home]) {
       const up = gameDayElevations(state, team);

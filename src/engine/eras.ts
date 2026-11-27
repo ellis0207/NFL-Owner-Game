@@ -41,6 +41,8 @@ export interface EraRuleOverlay {
   otMinutes?: number;
   hipDropBan?: boolean;
   playoffTeams?: number;
+  /** 1982: the strike season's 16-club tournament, eight a conference by record, divisions ignored. */
+  tournament?: boolean;
   otRule?: "sudden" | "modified" | "both";
   replay?: boolean;
   boothOnly?: boolean;
@@ -57,6 +59,9 @@ export interface EraRuleOverlay {
  * completion chance in this sim. None from 2011, when scoring reached today's.
  */
 const PASS_ERA: Record<number, number> = {
+  // 1980-1993 by the same rule from real points a team a game (about 20-21 in the 1980s, 18.7 in 1992-93), not yet refitted in the sim.
+  1980: -0.105, 1981: -0.11, 1982: -0.09, 1983: -0.075, 1984: -0.075, 1985: -0.08, 1986: -0.085, 1987: -0.095, 1988: -0.105,
+  1989: -0.115, 1990: -0.13, 1991: -0.16, 1992: -0.18, 1993: -0.16,
   1994: -0.1, 1995: -0.095, 1996: -0.085, 1997: -0.09, 1998: -0.085, 1999: -0.085, 2000: -0.1, 2001: -0.085, 2002: -0.085,
   2003: -0.065, 2004: -0.08, 2005: -0.085, 2006: -0.08, 2007: -0.055, 2008: -0.045, 2009: -0.04, 2010: -0.035,
 };
@@ -69,6 +74,9 @@ const PASS_ERA: Record<number, number> = {
  * starters), so each figure carries 0.9 for that. 1994-1998 use 1999-2001's.
  */
 const SACK_ERA: Record<number, number> = {
+  // The 1980s took more sacks than today (about 2.7 a team a game); 1990-1993 about today's.
+  1980: 0.95, 1981: 0.95, 1982: 0.95, 1983: 0.97, 1984: 0.97, 1985: 0.97, 1986: 0.95, 1987: 0.95, 1988: 0.93, 1989: 0.92,
+  1990: 0.9, 1991: 0.9, 1992: 0.9, 1993: 0.88,
   1994: 0.88, 1995: 0.88, 1996: 0.88, 1997: 0.88, 1998: 0.9, 1999: 0.89, 2000: 0.88, 2001: 0.86, 2002: 0.82, 2003: 0.81,
   2004: 0.81, 2005: 0.83, 2006: 0.8, 2007: 0.77, 2008: 0.76, 2009: 0.76, 2010: 0.8, 2011: 0.82, 2012: 0.86, 2013: 0.86,
   2014: 0.87, 2015: 0.82, 2016: 0.82, 2017: 0.84, 2018: 0.88, 2019: 0.87, 2020: 0.86,
@@ -80,7 +88,8 @@ export function eraRules(season: number): EraRuleOverlay {
   return {
     // The 17th game came in 2021; the 14-team field in 2020.
     ...(season < 2021 ? { games: 16 } : {}),
-    ...(season < 2020 ? { playoffTeams: 12 } : {}),
+    ...(season < 2020 ? { playoffTeams: season === 1982 ? 16 : season < 1990 ? 10 : 12 } : {}),
+    ...(season === 1982 ? { tournament: true } : {}),
     // Kickoff touchbacks: the 20 until 2016, the 25 through 2023, the 30 in 2024's new kickoff, the 35 from 2025.
     touchback: season < 2016 ? 20 : season < 2024 ? 25 : season < 2025 ? 30 : 35,
     // Extra points moved back to the 15 in 2015.
@@ -128,14 +137,18 @@ export function realCap(state: GameState, year: number): number | undefined {
  */
 export const HOMES: { team: string; from?: number; until: number; market: string; city: string; name?: string; stadium: string; names?: [through: number, name: string][]; roof: "dome" | "outdoors" }[] = [
   { team: "LA", from: 1995, until: 2016, market: "STL", city: "St. Louis", stadium: "Edward Jones Dome", names: [[2001, "Trans World Dome"], [2002, "Dome at America's Center"]], roof: "dome" },
-  { team: "LAC", until: 2017, market: "SD", city: "San Diego", stadium: "Qualcomm Stadium", names: [[1996, "Jack Murphy Stadium"]], roof: "outdoors" },
+  { team: "LAC", until: 2017, market: "SD", city: "San Diego", stadium: "Qualcomm Stadium", names: [[1980, "San Diego Stadium"], [1996, "Jack Murphy Stadium"]], roof: "outdoors" },
   { team: "LV", from: 1995, until: 2020, market: "OAK", city: "Oakland", stadium: "Oakland Coliseum", roof: "outdoors" },
   // The Raiders' Los Angeles years, the Oilers in Houston and the Browns who became the Ravens.
-  { team: "LV", until: 1995, market: "LA", city: "Los Angeles", stadium: "Los Angeles Memorial Coliseum", roof: "outdoors" },
+  { team: "LV", until: 1982, market: "OAK", city: "Oakland", stadium: "Oakland-Alameda County Coliseum", roof: "outdoors" },
+  { team: "LV", from: 1982, until: 1995, market: "LA", city: "Los Angeles", stadium: "Los Angeles Memorial Coliseum", roof: "outdoors" },
   { team: "TEN", until: 1997, market: "HOU", city: "Houston", name: "Oilers", stadium: "Astrodome", roof: "dome" },
   { team: "BAL", until: 1996, market: "CLE", city: "Cleveland", name: "Browns", stadium: "Cleveland Stadium", roof: "outdoors" },
+  // The Colts in Baltimore until their move in March 1984; the Cardinals in St. Louis until 1988.
+  { team: "IND", until: 1984, market: "BAL", city: "Baltimore", stadium: "Memorial Stadium", roof: "outdoors" },
+  { team: "ARI", until: 1988, market: "STL", city: "St. Louis", stadium: "Busch Memorial Stadium", roof: "outdoors" },
   // The Cardinals were Phoenix's until they took the state's name in 1994 (same market, same stadium).
-  { team: "ARI", until: 1994, market: "ARI", city: "Phoenix", stadium: "Sun Devil Stadium", roof: "outdoors" },
+  { team: "ARI", from: 1988, until: 1994, market: "ARI", city: "Phoenix", stadium: "Sun Devil Stadium", roof: "outdoors" },
 ];
 
 /** The 2026 names of clubs an early pack names otherwise (the 1994-95 Browns are Baltimore's club). */
@@ -155,7 +168,16 @@ export function eraName(team: string, season: number): string | undefined {
 }
 
 /** Temporary homes after a real move, until the new stadium opened. */
-export const TEMP_HOMES: { team: string; from: number; until: number; stadium: string }[] = [
+export const TEMP_HOMES: { team: string; from: number; until: number; stadium: string; roof?: "dome" | "outdoors" }[] = [
+  // Buildings between an early start's and the club's 2026 home (for saves from the 1980s).
+  { team: "MIN", from: 1982, until: 2014, stadium: "Hubert H. Humphrey Metrodome", roof: "dome" },
+  { team: "NYJ", from: 1984, until: 2010, stadium: "Giants Stadium", roof: "outdoors" },
+  { team: "NE", from: 1983, until: 1990, stadium: "Sullivan Stadium" },
+  { team: "NE", from: 1990, until: 2002, stadium: "Foxboro Stadium" },
+  { team: "IND", from: 1984, until: 1994, stadium: "Hoosier Dome", roof: "dome" },
+  { team: "IND", from: 1994, until: 2008, stadium: "RCA Dome", roof: "dome" },
+  { team: "ARI", from: 1994, until: 2006, stadium: "Sun Devil Stadium", roof: "outdoors" },
+  { team: "ATL", from: 1992, until: 2017, stadium: "Georgia Dome", roof: "dome" },
   // Carolina's first season at Clemson; the Ravens at Baltimore's old Memorial Stadium; the Oilers' two seasons at
   // Memphis and Vanderbilt before Nashville's stadium opened.
   { team: "CAR", from: 1995, until: 1996, stadium: "Memorial Stadium (Clemson)" },
@@ -259,31 +281,32 @@ export function oldHome(state: GameState | undefined, team: string, season: numb
 export const ERA_OWNERS: Record<string, [through: number, owner: string][]> = {
   ATL: [[1997, "Rankin Smith"], [2001, "Taylor Smith"]],
   ARI: [[2018, "Bill Bidwill"]],
+  DAL: [[1983, "Clint Murchison Jr."], [1988, "Bum Bright"]],
+  SF: [[1976, "the Morabito family"], [1999, "Eddie DeBartolo Jr."], [2008, "John and Denise DeBartolo York"]],
+  LA: [[1978, "Carroll Rosenbloom"], [2007, "Georgia Frontiere"], [2009, "Chip Rosenbloom and Lucia Rodriguez"]],
+  NO: [[1984, "John Mecom Jr."], [2017, "Tom Benson"]],
+  SEA: [[1987, "the Nordstrom family"], [1996, "Ken Behring"], [2018, "Paul Allen"]],
+  DEN: [[1983, "Edgar Kaiser Jr."], [2013, "Pat Bowlen"], [2021, "the Pat Bowlen trust"]],
+  LAC: [[1983, "Gene Klein"], [1993, "Alex Spanos"]],
+  NE: [[1987, "Billy Sullivan"], [1991, "Victor Kiam"], [1993, "James Orthwein"]],
+  PHI: [[1984, "Leonard Tose"], [1993, "Norman Braman"]],
   BAL: [[2003, "Art Modell"]],
   BUF: [[2013, "Ralph Wilson"]],
   CAR: [[2017, "Jerry Richardson"]],
   CLE: [[2002, "Al Lerner"], [2011, "Randy Lerner"]],
-  DEN: [[2013, "Pat Bowlen"], [2021, "the Pat Bowlen trust"]],
   DET: [[2013, "William Clay Ford"], [2019, "Martha Firestone Ford"]],
   HOU: [[2018, "Bob McNair"]],
   JAX: [[2011, "Wayne Weaver"]],
   KC: [[2006, "Lamar Hunt"]],
-  LA: [[2007, "Georgia Frontiere"], [2009, "Chip Rosenbloom and Lucia Rodriguez"]],
   LV: [[2011, "Al Davis"]],
   MIA: [[1989, "Joe Robbie"], [1993, "the Robbie family"], [2008, "Wayne Huizenga"]],
-  NE: [[1991, "Victor Kiam"], [1993, "James Orthwein"]],
-  PHI: [[1993, "Norman Braman"]],
-  LAC: [[1993, "Alex Spanos"]],
   NYG: [[1990, "Wellington and Tim Mara"]],
   CIN: [[1990, "Paul Brown"]],
   MIN: [[1997, "the Vikings' board of ten owners"], [2004, "Red McCombs"]],
-  NO: [[2017, "Tom Benson"]],
   NYJ: [[1998, "Leon Hess"], [1999, "the Leon Hess estate"]],
-  SEA: [[1996, "Ken Behring"], [2018, "Paul Allen"]],
   TEN: [[2013, "Bud Adams"], [2014, "the Adams family trust"]],
   WAS: [[1996, "Jack Kent Cooke"], [1998, "the Jack Kent Cooke estate"], [2022, "Dan Snyder"]],
   IND: [[1996, "Robert Irsay"], [2024, "Jim Irsay"]],
-  SF: [[1999, "Eddie DeBartolo Jr."], [2008, "John and Denise DeBartolo York"]],
   TB: [[1993, "Hugh Culverhouse"], [1994, "the Hugh Culverhouse estate"]],
 };
 
@@ -304,6 +327,9 @@ export const CBA_2006 = { share: 0.5, minScale: 1, rookieScale: 1, benefits: 0.7
  * free agency (37 protected a club, the rest whose contracts ended free to
  * sign anywhere), no tags, no rookie wage scale.
  */
+/** The 1977 and 1982 agreements: a veteran whose deal ran out could talk to other clubs, but his old club could match any offer or take draft picks for him, so almost nobody moved (restricted free agency for everyone). */
+export const RIGHTS_1982 = { ...CBA_2006, uncapped: true, noTags: true, ufaSeasons: 99 };
+
 export const PLAN_B_1989 = { ...CBA_2006, uncapped: true, planB: true, noTags: true };
 
 /** 1993, the first year of the 1993 agreement: true free agency after five seasons and the franchise tag, the cap a year off. */
@@ -320,6 +346,14 @@ export const HISTORICAL = !!PACK;
 
 /** The real rule archive: changes that shaped the game, by the first season they applied (approximate wording). */
 export const RULE_ARCHIVE: [season: number, text: string][] = [
+  [1980, "The league plays 16 games, with a 10-club playoff field: three division winners and two wild cards a conference"],
+  [1982, "The Raiders move from Oakland to Los Angeles after winning their antitrust suit"],
+  [1982, "A players' strike cancels seven weeks: a nine-game season and a 16-club playoff tournament"],
+  [1983, "The USFL opens in the spring, bidding against the league for players until it folds in 1986"],
+  [1984, "The Colts leave Baltimore for Indianapolis overnight in March"],
+  [1986, "Instant replay comes in: an official in the booth reviews plays"],
+  [1987, "A players' strike: one week cancelled, three played by replacement players"],
+  [1988, "The Cardinals move from St. Louis to Phoenix"],
   [1989, "Plan B free agency: each club protects 37 players, and the rest of those whose contracts are up may sign anywhere"],
   [1990, "The playoff field grows from 10 to 12 clubs"],
   [1992, "Instant replay, used since 1986, is voted out"],

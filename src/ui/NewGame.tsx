@@ -17,7 +17,7 @@ import { FileButton } from "./kit";
 import { classLabel, REAL_YEARS } from "../engine/realclasses";
 import { chooseDraftClass } from "../engine/classpick";
 
-/** The seasons a game can start in: the 2026 default and every season with a data pack (1990 on). */
+/** The seasons a game can start in: the 2026 default and every season with a data pack (1980 on). */
 const ERAS = [2026, ...Array.from({ length: LAST_PACK - FIRST_PACK + 1 }, (_, i) => LAST_PACK - i)];
 /** The seasons grouped by the league's eras, newest first (real: the 2020, 2011 and 1993 labor deals; Houston's 2002 realignment). */
 const ERA_GROUPS: { label: string; from: number; to: number }[] = [
@@ -27,7 +27,8 @@ const ERA_GROUPS: { label: string; from: number; to: number }[] = [
   { label: "32 clubs, before the rookie wage scale", from: 2002, to: 2010 },
   { label: "31 clubs, before Houston", from: 1999, to: 2001 },
   { label: "The first years of the cap", from: 1994, to: 1998 },
-  { label: "Before the cap: Plan B free agency", from: 1990, to: 1993 },
+  { label: "Before the cap: Plan B free agency", from: 1989, to: 1993 },
+  { label: "The 1980s: strikes and the USFL", from: 1980, to: 1988 },
 ];
 
 /** Saves a text file through the browser. */

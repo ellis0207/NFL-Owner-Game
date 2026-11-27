@@ -11,6 +11,7 @@ import { ability, perceivedAbility, schemeFit, staffEffects } from "./staff";
 import { seasonTotals } from "./stats";
 import type { Deal, GameState, Position } from "./types";
 import { PACK, REAL_CAPS } from "./pack";
+import { termsFor } from "./cbaterms";
 
 // ---- Tags, tenders and options ----
 
@@ -173,7 +174,7 @@ export function injuryDiscount(state: GameState, id: string): number {
 
 // ---- Market curves ----
 
-interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number; floorViews: number[]; floorShares: number[] }
+interface Curve { views: number[]; shares: number[]; top: number; spill: number; ceiling: number; floorViews: number[]; floorShares: number[]; capShares?: number[] }
 // Kept for one game day at most: the curves read rosters and the league's view of players,
 // which move from day to day, and a save loaded tomorrow has to price players the same
 // way a game left running would.
@@ -238,6 +239,11 @@ function curves(state: GameState): Record<string, Curve> {
     const real = [...(start[pos] ?? [])].reverse().slice(0, 32);
     c[pos].floorViews = list.sort((a, b) => b - a).slice(0, real.length);
     c[pos].floorShares = real.map((s) => s * FLOOR);
+    // Before 1989 a player whose deal ran out could only re-sign with his club (eras.ts RIGHTS_1982), so
+    // hardly any veteran deals are signed and a thin curve would hand the going rate at the top to
+    // anyone above its few points. The r-th best player then commands at most a quarter over what the
+    // r-th biggest deal paid when the game started.
+    if ((termsFor(leagueYear(state.date)).ufaSeasons ?? 0) >= 99 && real.length) c[pos].capShares = real.map((s) => s * 1.25);
   }
   // Spillover: when the top of one market jumps, agents at neighboring positions point to it.
   const base = baselineTops(state);
@@ -333,7 +339,8 @@ export function shareFor(state: GameState, pos: Position, view: number): number 
   const c = curves(state)[pos];
   if (!c || !c.views.length) return 0.003;
   const rank = c.floorViews.filter((v) => v > view + 0.5).length;
-  return Math.min(c.ceiling, Math.max(rank < c.floorShares.length ? c.floorShares[rank] : 0, curveShare(c, view)));
+  const share = Math.min(c.ceiling, Math.max(rank < c.floorShares.length ? c.floorShares[rank] : 0, curveShare(c, view)));
+  return c.capShares ? Math.min(share, c.capShares[Math.min(rank, c.capShares.length - 1)]) : share;
 }
 
 const FLOOR = 0.8;

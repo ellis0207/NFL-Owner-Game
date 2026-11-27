@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Historical starts: each season's data pack (data/packs/<year>.json.gz, built
 // by pipeline/history_pack.py) replaces the 2026 files. The engine reads the
 // pack when its modules load, so every start gets fresh modules.
-const YEARS = Array.from({ length: 36 }, (_, i) => 1990 + i);
+const YEARS = Array.from({ length: 46 }, (_, i) => 1980 + i);
 const pack = (year: number) => JSON.parse(gunzipSync(readFileSync(new URL(`../data/packs/${year}.json.gz`, import.meta.url))).toString());
 
 async function engineFor(year: number | null) {
@@ -53,29 +53,32 @@ describe("historical starts", () => {
       expect(s.season).toBe(year);
       expect(s.era).toEqual({ start: year, alt: false });
       expect(e.RULES.salaryCap).toBe(e.REAL_CAPS[year]);
-      // Every club has its roster. Through 2016 the source lists only the 53 and
+      // Every club has its roster (the 1980s carried 45 to 49). Through 2016 the source lists only the 53 and
       // the reserve lists at the first game, so those camps open nearer 53 than 90.
       for (const t of e.TEAMS) {
         const n = e.PLAYERS.filter((p) => p.team === t.id).length;
-        expect(n, t.id).toBeGreaterThanOrEqual(year < 2017 ? 48 : 75);
+        expect(n, t.id).toBeGreaterThanOrEqual(year < 1990 ? 45 : year < 2017 ? 48 : 75);
         expect(n, t.id).toBeLessThanOrEqual(91);
       }
-      // 16 games before 2021, 17 after; 12 playoff clubs before 2020.
+      // 16 games before 2021, 17 after; 12 playoff clubs before 2020, 10 before 1990 (16 in 1982).
       const games = year < 2021 ? 16 : 17;
       expect(e.rulesFor(s).games).toBe(games);
-      expect(e.rulesFor(s).playoffTeams).toBe(year < 2020 ? 12 : 14);
+      expect(e.rulesFor(s).playoffTeams).toBe(year === 1982 ? 16 : year < 1990 ? 10 : year < 2020 ? 12 : 14);
       // The 2022 Bills-Bengals game was never finished and isn't in the schedule.
       // 28 clubs in 1994, 30 from 1995 (Carolina, Jacksonville; the Browns gone 1996-98, the new Browns in 1999), 31 to 2001, 32 after.
       expect(e.TEAMS.length).toBe(year < 1995 ? 28 : year < 1999 ? 30 : year < 2002 ? 31 : 32);
-      expect(e.SCHEDULE.filter((g) => g.type === "REG").length).toBe(games * e.TEAMS.length / 2 - (year === 2022 ? 1 : 0));
+      // The strikes: seven weeks lost in 1982, one in 1987.
+      const lost = year === 2022 ? 1 : year === 1982 ? 7 * 14 : year === 1987 ? 14 : 0;
+      expect(e.SCHEDULE.filter((g) => g.type === "REG").length).toBe(games * e.TEAMS.length / 2 - lost);
       // The clubs were where they really were.
       expect(e.TEAM_BY_ID.LA.city).toBe(year < 1995 ? "Los Angeles" : year < 2016 ? "St. Louis" : "Los Angeles");
       expect(e.TEAM_BY_ID.LAC.city).toBe(year < 2017 ? "San Diego" : "Los Angeles");
-      expect(e.TEAM_BY_ID.LV.city).toBe(year < 1995 ? "Los Angeles" : year < 2020 ? "Oakland" : "Las Vegas");
+      expect(e.TEAM_BY_ID.LV.city).toBe(year < 1982 ? "Oakland" : year < 1995 ? "Los Angeles" : year < 2020 ? "Oakland" : "Las Vegas");
+      expect(e.TEAM_BY_ID.IND.city).toBe(year < 1984 ? "Baltimore" : "Indianapolis");
       expect(`${e.TEAM_BY_ID.TEN.city} ${e.TEAM_BY_ID.TEN.name}`).toBe(year < 1997 ? "Houston Oilers" : year < 1999 ? "Tennessee Oilers" : "Tennessee Titans");
       expect(`${e.TEAM_BY_ID.BAL.city} ${e.TEAM_BY_ID.BAL.name}`).toBe(year < 1996 ? "Cleveland Browns" : "Baltimore Ravens");
       expect(e.TEAM_BY_ID.WAS.name).toBe(e.washingtonName(year));
-      expect(e.TEAM_BY_ID.ARI.city).toBe(year < 1994 ? "Phoenix" : "Arizona");
+      expect(e.TEAM_BY_ID.ARI.city).toBe(year < 1988 ? "St. Louis" : year < 1994 ? "Phoenix" : "Arizona");
       if (year < 1995) expect(e.TEAM_BY_ID.LA.stadium).toBe("Anaheim Stadium");
       else if (year < 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Trans World Dome");
       else if (year === 2002) expect(e.TEAM_BY_ID.LA.stadium).toBe("Dome at America's Center");
@@ -99,6 +102,25 @@ describe("historical starts", () => {
     const last = e.history(s).seasons.at(-1)!;
     expect(Object.values(last.records).every((r) => r[0] + r[1] + (r[2] ?? 0) === 16)).toBe(true);
     expect(e.TEAMS.filter((t) => e.capSummary(s, t.id).space < 0).length).toBe(0);
+  }, 600_000);
+
+  it("a 1982 start: nine games, then a 16-club tournament; strikes cancel games in later seasons", async () => {
+    const e = await engineFor(1982);
+    const labor = await import("../src/engine/labor");
+    const s = e.newGame("DAL", "Test", { capRules: "real" }, 5);
+    expect(e.TEAM_BY_ID.LV.city).toBe("Los Angeles");
+    // The pack's own season is already short; a save that started earlier loses the struck weeks.
+    const g = e.SCHEDULE.find((x) => x.type === "REG")!;
+    expect(labor.struckGame(s, { ...g, date: "1982-10-10" })).toBe(false);
+    s.era!.start = 1981;
+    expect(labor.struckGame(s, { ...g, date: "1982-10-10" })).toBe(true);
+    expect(labor.struckGame(s, { ...g, date: "1982-11-21" })).toBe(false);
+    s.era!.start = 1982;
+    let guard = 0;
+    while (s.date < e.RULES.keyDates.divisionalRound && guard++ < 300) e.advanceDay(s);
+    const wc = e.SCHEDULE.filter((x) => x.type === "POST" && x.round === "WC");
+    expect(wc.length).toBe(8);
+    expect(new Set(wc.flatMap((x) => Object.values(s.playoffTeams[x.id] ?? {}))).size).toBe(16);
   }, 600_000);
 
   it("a 1991 start: Plan B lists in February, no tags, the 1992 payroll ceiling", async () => {

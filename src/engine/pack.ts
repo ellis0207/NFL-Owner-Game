@@ -21,7 +21,7 @@ export interface LeaguePack {
 export const ERA_KEY = "nfl-era";
 
 /** The first and last seasons with a data pack. */
-export const FIRST_PACK = 1990;
+export const FIRST_PACK = 1980;
 export const LAST_PACK = 2025;
 
 function requested(): number | null {
@@ -70,6 +70,8 @@ export const REAL_CAPS: Record<number, number> = {
   // No cap before 1994: the league's payroll ceiling, about a fifth over the
   // clubs' average payroll, each owner spending to his own budget below it
   // (pipeline/history_pack.py). Approximate.
+  1980: 5_000_000, 1981: 5_500_000, 1982: 6_500_000, 1983: 8_500_000, 1984: 10_000_000,
+  1985: 12_000_000, 1986: 12_000_000, 1987: 12_500_000, 1988: 14_500_000, 1989: 18_000_000,
   1990: 24_000_000, 1991: 28_000_000, 1992: 33_000_000, 1993: 40_000_000,
   1994: 34_608_000, 1995: 37_100_000, 1996: 40_753_000, 1997: 41_454_000, 1998: 52_388_000,
   1999: 57_288_000, 2000: 62_172_000, 2001: 67_405_000,

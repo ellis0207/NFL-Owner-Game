@@ -36,7 +36,7 @@ sys.path.insert(0, str(HERE / "draft"))
 from schools import norm, slug  # noqa: E402
 from small_schools import CENTER, SMALL  # noqa: E402
 
-FIRST, LAST = 1991, 2026
+FIRST, LAST = 1981, 2026
 # Pro Football Reference club codes to the game's.
 TEAM_FIX = {"KAN": "KC", "SFO": "SF", "GNB": "GB", "NWE": "NE", "NOR": "NO", "TAM": "TB", "SDG": "LAC", "STL": "LA", "RAM": "LA",
             "LAR": "LA", "OAK": "LV", "RAI": "LV", "LVR": "LV", "SD": "LAC"}
@@ -48,6 +48,12 @@ def club(code: str, year: int) -> str:
         return "BAL"
     if code == "HOU" and year <= 1996:
         return "TEN"
+    if code == "STL" and year <= 1987:
+        return "ARI"  # the St. Louis Cardinals
+    if code == "BAL" and year <= 1983:
+        return "IND"  # the Baltimore Colts
+    if code == "PHO":
+        return "ARI"
     return TEAM_FIX.get(code, code)
 
 
@@ -110,7 +116,7 @@ def rating_history() -> dict:
             if r:
                 hist.setdefault(x["id"], {})[season] = (r["overall"], x["position"], r["traits"])
 
-    for y in range(1990, 2026):
+    for y in range(1980, 2026):
         p = json.load(gzip.open(ROOT / "data" / "packs" / f"{y}.json.gz"))
         add(y, p["players"], scale_pack(p))
         # Players the early rosters list with no id carry a made-up one (pipeline/sources.py): found again by name and first season.
@@ -185,7 +191,8 @@ def main():
             missing[n] = missing.get(n, 0) + 1
             info = ("??", None)
         sid = slug(info[1] or n)
-        if sid not in small:
+        # A spelling with a known place wins over one seen first without it.
+        if sid not in small or (small[sid][1] == "??" and info[0] != "??"):
             lat, lon = CENTER.get(info[0], CENTER["??"])
             small[sid] = [info[1] or n, info[0], lat, lon, REGION.get(info[0], "Midwest")]
         return sid

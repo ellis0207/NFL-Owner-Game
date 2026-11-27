@@ -94,6 +94,10 @@ def build_free_agents(weekly: pd.DataFrame, camp: pd.DataFrame, master: pd.DataF
     # 2. In the league in 2025, on nobody's roster in 2026.
     seen = {r["id"] for r in rows}
     gone = master[(master.last_season == SEASON - 1) & ~master.index.isin(on_2026)]
+    if SEASON == 1988:
+        # 1987's strike replacement players are no free agents (sources.without_replacements).
+        from sources import old_roster
+        gone = gone[gone.index.isin(set(old_roster(1987).gsis_id.dropna()))]
     for gid, m in gone.iterrows():
         if gid in seen or m.status == "RET" or _norm(m.display_name) in retired:
             continue

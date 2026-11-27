@@ -722,6 +722,18 @@ function playoffSlots(season: number, field = 14): ScheduledGame[] {
   });
   const sb = superBowlSite(season);
   const nfcFirst = season % 2 === 0;
+  // The 10-team field (1978-1989): two Wild Card games; 1982's 16-club tournament: eight.
+  if (field === 10 || field === 16) {
+    const wcs = field === 10
+      ? [slot(1, "WC", wc, "12:30"), slot(2, "WC", addDays(wc, 1), "16:00")]
+      : [0, 1, 2, 3, 4, 5, 6, 7].map((i) => slot(i + 1, "WC", addDays(wc, i < 4 ? 0 : 1), ["12:30", "16:00", "12:30", "16:00"][i % 4]));
+    const k = wcs.length;
+    return [...wcs,
+      slot(k + 1, "DIV", div, "12:30"), slot(k + 2, "DIV", div, "16:00"), slot(k + 3, "DIV", addDays(div, 1), "12:30"), slot(k + 4, "DIV", addDays(div, 1), "16:00"),
+      slot(k + 5, "CONF", conf, "12:30", { conference: nfcFirst ? "NFC" : "AFC" }), slot(k + 6, "CONF", conf, "16:00", { conference: nfcFirst ? "AFC" : "NFC" }),
+      slot(k + 7, "SB", kd.superBowl, "18:00", { neutral: true, stadium: sb.stadium, city: sb.city, label: superBowlName(season) }),
+    ];
+  }
   // The 12-team field (before 2020): four Wild Card games.
   if (field === 12) return [
     slot(1, "WC", wc, "16:30"), slot(2, "WC", wc, "20:15"), slot(3, "WC", addDays(wc, 1), "13:00"), slot(4, "WC", addDays(wc, 1), "16:30"),

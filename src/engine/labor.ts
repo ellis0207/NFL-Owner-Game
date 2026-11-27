@@ -24,7 +24,7 @@ import { inRecession } from "./economy";
 import { payCash } from "./finance";
 import { trustHit } from "./fans";
 import { formatFor } from "./format";
-import { CBA_2006, CBA_2011, FIRST_FA_1993, PLAN_B_1989, UNCAPPED_2010 } from "./eras";
+import { CBA_2006, CBA_2011, FIRST_FA_1993, PLAN_B_1989, RIGHTS_1982, UNCAPPED_2010 } from "./eras";
 import { money, news, send } from "./inbox";
 import { bindCaps, PLAYER_BY_ID, RULES, SCHEDULE, TEAMS, teamLabel } from "./league";
 import { onCommittee } from "./leagueoffice";
@@ -83,6 +83,40 @@ export interface LaborState {
   /** Regular-season games lost to work stoppages, league-wide, by season. */
   lost: Record<number, number>;
   log: { date: string; text: string }[];
+  /** Games the real 1982 and 1987 strikes cancelled in this save. */
+  struck?: string[];
+}
+
+/**
+ * The real players' strikes, for saves that play through them: 1982's, from
+ * September 21 to November 16, cut the season to nine games (here weeks three
+ * through nine go) and the playoffs became a 16-club tournament; 1987's cost
+ * one week, and the next three were played by replacement players (here the
+ * clubs' own rosters play them, an approximation). Dates of the cancelled games.
+ */
+export const REAL_STRIKES: { season: number; from: string; to: string }[] = [
+  { season: 1982, from: "1982-09-21", to: "1982-11-09" },
+  { season: 1987, from: "1987-09-22", to: "1987-09-29" },
+];
+
+/** A real strike cancels this game (a start in that very season already has the shortened schedule). */
+export function struckGame(state: GameState, g: ScheduledGame): boolean {
+  const e = state.era;
+  if (!e || e.alt || g.type !== "REG" || RULES.season <= e.start) return false;
+  return REAL_STRIKES.some((x) => x.season === RULES.season && g.date >= x.from && g.date <= x.to);
+}
+
+export function cancelStruckGame(state: GameState, g: ScheduledGame): void {
+  const l = labor(state);
+  const list = (l.struck ??= []);
+  if (list.includes(g.id)) return;
+  const first = !list.some((id) => id.startsWith(`${RULES.season}_`));
+  list.push(g.id);
+  l.lost[RULES.season] = (l.lost[RULES.season] ?? 0) + 1;
+  if (g.home === state.userTeam && !g.neutral) refundDeposit(state, g);
+  if (first) news(state, "labor", RULES.season === 1982
+    ? "The players strike: the league cancels games until a deal is reached, and the season will be cut short"
+    : "The players strike: this week's games are cancelled, and the clubs bring in replacement players");
 }
 
 /** What each side opens with: owners want a lower share, a cheaper rookie pool and an 18th game; the union wants the reverse plus health and safety. */
@@ -106,7 +140,9 @@ export function labor(state: GameState): LaborState {
     // the 1993 agreement as extended in 2006 (eras.ts). With real history the
     // owners' 2008 opt-out leaves 2010 uncapped.
     agreements: state.era && state.era.start <= 2010
-      ? [...(state.era.start < 1993 ? [{ from: 1989, through: 1992, signed: "1989-02-01", terms: { ...PLAN_B_1989 } }] : []),
+      ? [...(state.era.start < 1982 ? [{ from: 1977, through: 1981, signed: "1977-03-01", terms: { ...RIGHTS_1982 } }] : []),
+        ...(state.era.start < 1989 ? [{ from: 1982, through: 1988, signed: "1982-12-05", terms: { ...RIGHTS_1982 } }] : []),
+        ...(state.era.start < 1993 ? [{ from: 1989, through: 1992, signed: "1989-02-01", terms: { ...PLAN_B_1989 } }] : []),
         ...(state.era.start < 1994 ? [{ from: 1993, through: 1993, signed: "1993-06-29", terms: { ...FIRST_FA_1993 } }] : []),
         { from: 1994 - (state.era.start < 1994 ? 0 : 1), through: state.era.alt ? 2010 : 2009, signed: state.era.start < 1998 ? "1993-06-29" : state.era.start < 2006 ? "1998-02-26" : "2006-03-08", terms: { ...CBA_2006 } },
         ...(state.era.alt ? [] : [{ from: 2010, through: 2010, signed: "2008-05-20", terms: { ...UNCAPPED_2010 } }])]

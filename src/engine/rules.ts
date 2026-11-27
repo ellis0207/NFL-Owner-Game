@@ -69,8 +69,10 @@ export interface RuleParams {
   gateShare: number;
   /** Share of premium-seating revenue pooled and split evenly. */
   premiumPool: number;
-  /** Clubs in the playoff field: 14 since 2020, 12 before. */
+  /** Clubs in the playoff field: 14 since 2020, 12 from 1990, 10 before (16 in 1982). */
   playoffTeams: number;
+  /** 1982: the field seeded by record alone, divisions set aside. */
+  tournament?: boolean;
   /** Overtime: sudden death (before 2012), a first-possession touchdown wins (2012-2024), both teams get the ball (2025 on). */
   otRule: "sudden" | "modified" | "both";
 }

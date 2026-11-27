@@ -93,6 +93,11 @@ export function divisionStandings(state: GameState): { conference: string; divis
 }
 
 export function seedConference(state: GameState, conference: "AFC" | "NFC"): string[] {
+  // 1982's strike tournament: the best eight in each conference by record, divisions set aside.
+  if (LEAGUE_RULES.tournament) {
+    const table = standings(state);
+    return TEAMS.filter((t) => t.conference === conference).map((t) => table[t.id]).sort((a, b) => compare(a, b, false)).slice(0, LEAGUE_RULES.playoffTeams / 2).map((r) => r.team);
+  }
   const divisions = divisionStandings(state).filter((d) => d.conference === conference);
   const winners = divisions.map((d) => d.rows[0]).sort((a, b) => compare(a, b, false));
   const winnerIds = new Set(winners.map((w) => w.team));
@@ -118,8 +123,12 @@ function winner(state: GameState, gameId: string): string | undefined {
 export function fillWildCard(state: GameState): void {
   const seeds = { AFC: seedConference(state, "AFC"), NFC: seedConference(state, "NFC") };
   state.seeds = seeds;
-  // Before 2020 the field was 12: the top two seeds rested, 3v6 and 4v5.
-  const pairs: ["AFC" | "NFC", number, number][] = slots("WC").length === 4
+  // Before 2020 the field was 12: the top two seeds rested, 3v6 and 4v5. Before 1990 it was 10: the wild
+  // cards met, and the division winners rested. In 1982 all sixteen played the first round.
+  const n = slots("WC").length;
+  const pairs: ["AFC" | "NFC", number, number][] = n === 2 ? [["AFC", 4, 5], ["NFC", 4, 5]]
+    : n === 8 ? [["AFC", 1, 8], ["NFC", 1, 8], ["AFC", 2, 7], ["NFC", 2, 7], ["AFC", 3, 6], ["NFC", 3, 6], ["AFC", 4, 5], ["NFC", 4, 5]]
+    : n === 4
     ? [["AFC", 4, 5], ["NFC", 4, 5], ["AFC", 3, 6], ["NFC", 3, 6]]
     : [["AFC", 4, 5], ["NFC", 4, 5], ["AFC", 3, 6], ["NFC", 2, 7], ["AFC", 2, 7], ["NFC", 3, 6]];
   slots("WC").forEach((g, i) => {
@@ -143,7 +152,7 @@ function survivors(state: GameState, round: PlayoffRound, conference: "AFC" | "N
 export function fillDivisional(state: GameState): void {
   const games: { home: string; away: string }[] = [];
   for (const conf of ["AFC", "NFC"] as const) {
-    const byes = slots("WC").length === 4 ? 2 : 1;
+    const byes = ({ 2: 3, 4: 2, 8: 0 } as Record<number, number>)[slots("WC").length] ?? 1;
     const left = [...state.seeds![conf].slice(0, byes), ...survivors(state, "WC", conf)].sort((a, b) => seedOf(state, a) - seedOf(state, b));
     games.push({ home: left[0], away: left[3] }, { home: left[1], away: left[2] });
   }
