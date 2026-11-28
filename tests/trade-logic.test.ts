@@ -3,7 +3,7 @@ import { teamPlayerIds } from "../src/engine/cap";
 import { PLAYER_BY_ID, TEAMS } from "../src/engine/league";
 import { marketView } from "../src/engine/market";
 import { ability, perceivedAbility } from "../src/engine/staff";
-import { canTradePlayer, cpuAnswer, playerValue, swapDeal } from "../src/engine/trades";
+import { canTradePlayer, cpuAnswer, pickValue, picksOf, playerValue, swapDeal } from "../src/engine/trades";
 import type { TradeDeal } from "../src/engine/types";
 import { stateAt } from "./fixtures";
 
@@ -64,5 +64,19 @@ describe("CPU trade sense", () => {
     for (const id of vets) for (const t of ["CHI", "NYJ", "SEA"]) worst = Math.max(worst, Math.abs(perceivedAbility(state, id, `gm:${t}`, 60) - ability(state, id)));
     // A poor evaluator's error on a rookie can run past ten points; on a veteran it stays under seven.
     expect(worst).toBeLessThan(7);
+  });
+
+  it("discounts a pick about a round for each year it's away, and prices a good starting QB like a top pick", () => {
+    const state = stateAt(US, 5, "tradeDeadline");
+    const firsts = picksOf(state, "CHI").filter((p) => p.split("-")[1] === "1").sort();
+    const [next, later] = [pickValue(state, "CHI", firsts[0]), pickValue(state, "CHI", firsts[firsts.length - 1])];
+    expect(later).toBeLessThan(0.5 * next);
+    // Every club's starting quarterback the league rates highly is worth at least a late first to his own club.
+    for (const t of TEAMS.map((x) => x.id).filter((x) => x !== US)) {
+      const qb = teamPlayerIds(state, t).filter((id) => PLAYER_BY_ID[id].position === "QB")
+        .map((id) => ({ id, v: playerValue(state, "gm", t, id), mv: marketView(state, id) }))
+        .find((x) => x.v.role === 1 && x.mv >= 90 && (state.players[x.id].injury?.seasonEnding !== true));
+      if (qb) expect(qb.v.points, `${t} ${PLAYER_BY_ID[qb.id].name}`).toBeGreaterThan(200);
+    }
   });
 });

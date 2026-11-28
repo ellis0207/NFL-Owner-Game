@@ -279,7 +279,10 @@ starter's snaps, so clubs trade from depth and don't send a starter away for
 a backup; a later year that runs over a player's worth counts only as much as
 cutting him would, values follow the era's cap, a rookie is read mostly by
 where he was drafted until he has tape, and every offer has to pass the
-league's eye test. CPU teams trade with each other all year, most of all in the
+league's eye test. A good starting quarterback is priced like a top pick and
+no contender trades one away, a pick two drafts out is worth about a round
+less than next year's, a newcomer needs time to learn the playbook, and a club
+with cap room left takes on salary more easily than one at the limit. CPU teams trade with each other all year, most of all in the
 last week before the deadline, and unhappy players ask out. The owner can
 propose deals, ask what a player would cost, shop players on the trade block
 and take or leave calls from other teams. Three outlets grade every trade.
