@@ -33,7 +33,7 @@ import { lockedSpace } from "./capplan";
 import { redoStandoff } from "./redo";
 import { conditionalValue, conditionProblem, conditionsDaily, describeCondition, maybeAddCondition, openCondition, recordConditions } from "./conditions";
 import { agentFor, changeMorale, morale, priorities } from "./agents";
-import { addDeadMoney, capHit, capLimit, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
+import { addDeadMoney, capHit, capLimit, capSummary, deadMoney, invalidateRosters, isTop51, psCapHit, teamPlayerIds } from "./cap";
 import { dealCapHit, dealOf, lastYear, leagueYear, salaryCap, tradeCharges, tradedDeal, weeksPaid } from "./contracts";
 import { addDays, ageOn, daysBetween, shortDate } from "./dates";
 import { OUTLETS, letter } from "./grades";
@@ -272,7 +272,9 @@ export function pickValue(state: GameState, team: string, id: string): number {
   const out = Math.max(0, year - DRAFT_YEAR);
   // Once the order is set, a pick is worth its exact slot on the chart.
   const overall = pickOverall(state, id) ?? (round - 1) * 32 + projectedSlot(state, from, year);
-  return chartValue(overall) * Math.pow(0.8, out) * OUTLOOK[direction(state, team)].picks;
+  // Front offices discount a pick about a round for each year it's away: nobody knows yet who'll be
+  // drafting, or where.
+  return chartValue(overall) * Math.pow(0.62, out) * OUTLOOK[direction(state, team)].picks;
 }
 
 /** Whose eyes: a team's front office, the press (the consensus), or the truth (for grading later). */
@@ -288,6 +290,29 @@ const DOLLARS_PER_POINT = 220_000;
  */
 function pointDollars(state: GameState, year: number): number {
   return DOLLARS_PER_POINT * (salaryCap(state, year) / REAL_CAPS[2026]);
+}
+
+// Each club's cap room, read once a day: valuations run for hundreds of players.
+const roomCache = new WeakMap<GameState, { date: string; byTeam: Map<string, number> }>();
+
+/**
+ * How much a club minds this year's salary: one with room to spare would
+ * otherwise leave it unspent, so it takes on a contract more easily, the way
+ * cap-rich clubs absorb deals for a pick.
+ */
+function roomFactor(state: GameState, team: string, year: number): number {
+  if (state.settings.capRules !== "real") return 1;
+  let c = roomCache.get(state);
+  if (c?.date !== state.date) {
+    c = { date: state.date, byTeam: new Map() };
+    roomCache.set(state, c);
+  }
+  let share = c.byTeam.get(team);
+  if (share === undefined) {
+    share = capSummary(state, team).space / salaryCap(state, year);
+    c.byTeam.set(team, share);
+  }
+  return share >= 0.15 ? 0.6 : share >= 0.08 ? 0.8 : 1;
 }
 
 /** Where a player sits in a position room, by rank: starter, the first backup, or depth. */
@@ -425,7 +450,7 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
   // can't buy much until the spring. Contenders care least about this year's money.
   const camp = date >= addDays(KEY.rosterCutdown, -40) && !isOffseason(date);
   const fill = camp ? 0.3 : 0.85;
-  const thisYearMoney = camp ? (OUTLOOK[direction(state, team)].picks > 1 ? 0.9 : 0.7) : 1;
+  const thisYearMoney = (camp ? (OUTLOOK[direction(state, team)].picks > 1 ? 0.9 : 0.7) : 1) * roomFactor(state, team, year);
   const shift = (1 - fill) * roomShift(state, eye, team, id, opts.without ?? new Set(), year);
   const holds = state.players[id]?.team === team;
   let total = 0;
@@ -438,6 +463,12 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
     const market = shareFor(state, p.position, a) * cap * ageFactor(p.position, Math.round(age + k));
     // Specialists are cheap to replace: nobody pays a premium for one.
     if (p.position === "K" || p.position === "P" || p.position === "LS") return { market, star: market * 0.6 };
+    // A starting-caliber quarterback can't be bought at his market price: there are never enough
+    // of them, so a good one is worth far more than his contract, and an elite one most of all.
+    if (p.position === "QB") {
+      const qb = Math.max(0, Math.min(1, (a - 82) / 14));
+      return { market, star: market * (1 + 1.8 * qb * qb) * durability };
+    }
     const q = Math.max(0, Math.min(1, (a - 88) / 11));
     return { market, star: market * (1 + 0.6 * q * q) * durability };
   };
@@ -445,7 +476,9 @@ export function playerValue(state: GameState, eye: Eye, team: string, id: string
     const s = seasonWorth(k);
     const frac = k === 0 ? playable / FORMAT.weeks : 1;
     const hit = dealCapHit(deal, real[k].year);
-    let value = k === 0 ? (s.star * role * holdout - shift) * frac - hit * thisYearMoney : s.star * role - hit;
+    // A player who arrives in camp or the season has a new playbook to learn: he gives less at first.
+    const learn = k === 0 && camp && !holds ? (p.position === "QB" ? 0.6 : 0.8) : 1;
+    let value = k === 0 ? (s.star * role * holdout * learn - shift) * frac - hit * thisYearMoney : s.star * role - hit;
     // A later year that costs more than he's worth is only as bad as cutting him: whoever holds
     // the deal can release him and owe just the guaranteed part.
     if (k > 0 || !camp) value = Math.max(value, -real[k].guaranteed);
@@ -726,6 +759,11 @@ function cornerstone(state: GameState, team: string, id: string): boolean {
   const p = PLAYER_BY_ID[id];
   const age = ageOn(p.birthDate, state.date) ?? 26;
   const v = playerValue(state, "gm", team, id);
+  // A good starting quarterback isn't moved in the middle of a season, however it's going: only a
+  // rebuilding club, in the spring, will listen on one past thirty.
+  if (p.position === "QB" && v.role === 1 && age <= 38 && marketView(state, id) >= 86) {
+    if (!(direction(state, team) === "rebuild" && age >= 31 && isOffseason(state.date))) return true;
+  }
   if (direction(state, team) === "rebuild" && age >= 28) return false;
   if (p.position === "QB" && v.role === 1 && age <= 34 && v.points >= 120) return true;
   // A young star starting for us: the kind of player a front office drafts and builds around.

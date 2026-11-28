@@ -57,9 +57,10 @@ describe("the locker room on the field", () => {
     const { advanceDay } = await import("../src/engine/season");
     // Only a starter the league thinks well of speaks up (lockerroom.ts).
     const id = starters(s, TEAM).find((x) => s.players[x].status === "active" && marketView(s, x) >= 75)!;
-    s.players[id].morale = 20;
+    // Low enough that Tuesday's move toward his target still leaves him under the line.
+    s.players[id].morale = 5;
     for (let i = 0; i < 8 && !openMemos(s).some((m) => m.payload?.locker === id); i++) {
-      s.players[id].morale = 20;
+      s.players[id].morale = 5;
       advanceDay(s);
     }
     const m = openMemos(s).find((x) => x.payload?.locker === id);

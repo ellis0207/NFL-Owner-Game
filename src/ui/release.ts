@@ -1,11 +1,12 @@
 // The game's version, what changed in it, and where its facts come from. The
 // About page, the title screen and the one-time "what's new" notice read this.
 
-export const VERSION = "1.7";
+export const VERSION = "1.7.1";
 export const RELEASED = "2026-11-27";
 
 /** What changed in this version, in the words the About page and the title screen show. */
 export const WHATS_NEW: { title: string; text: string }[] = [
+  { title: "Quarterbacks and far-off picks priced like the real market", text: "A good starting quarterback now costs what a top pick does, and a contender won't move one for a future first; a backup is no longer worth a first to a club with a weak starter. Picks two drafts away are worth about a round less than next year's, a player traded in during camp or the season needs time to learn the playbook, and clubs with cap room take on salary more easily. Early historical starts trade at about the modern rate." },
   { title: "Trades front offices would make", text: "CPU clubs no longer offer a starter for one of your backups. In camp and the season a team has to fill a traded starter's snaps from its own bench, so clubs trade from depth; a contract that runs rich later counts only as much as cutting the player would; values follow the era's cap; rookies are judged mostly by where they were drafted until there's tape on them; and nobody misreads a ten-year veteran. Every call to your office has to pass the league's eye test, swaps pair players of about the same standing, and no club swaps away its starting quarterback." },
   { title: "Steadier CPU rosters", text: "Cap casualties cut in February no longer bounce from club to club on waivers, emergency signings stay a couple of weeks instead of being cut when the starter heals, spring rosters stop at four quarterbacks, and every club has a kicker, punter and snapper on its offseason roster." },
   { title: "Start as far back as 1980", text: "The 1980s: the Raiders in Oakland until 1982, the Colts in Baltimore until 1984 and the Cardinals in St. Louis until 1988, with each move played out. Ten clubs make the playoffs, the 1982 strike cuts the season to nine games and a 16-club tournament, and the 1987 strike costs a week before replacement games. The USFL comes and goes on the wire, free agents can't really move until Plan B in 1989, and real draft classes go back to 1981. 1990s starts now use the players' real ids and score like their era." },
